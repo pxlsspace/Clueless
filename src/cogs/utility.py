@@ -67,9 +67,9 @@ class Utility(commands.Cog):
             return
 
 
-    @commands.command(aliases = ["rl"], hidden=True)
+    @commands.command(hidden=True)
     @commands.has_permissions(administrator=True)
-    async def reload(self,ctx,extension):
+    async def rl(self,ctx,extension):
         try:
             self.client.reload_extension("cogs."+extension)
         except Exception as e:

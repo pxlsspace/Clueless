@@ -25,6 +25,8 @@ class HelpCommand(commands.HelpCommand):
             name = f'**{cog.qualified_name}**'
             value = ""
             for command in cog.get_commands():
+                if command.hidden == True:
+                    continue
                 value += f"• `{prefix}{command.name}{command.usage or ''}`: {command.description or 'N/A'}\n"
             if value != "":
                 emb.add_field(name=name,value=value,inline=False)
@@ -34,10 +36,12 @@ class HelpCommand(commands.HelpCommand):
 
     # function called on ">help <cog name>"
     async def send_cog_help(self, cog):
-        return await self.get_destination().send("❌ Invalid command name.")
+        return await self.get_destination().send(f'No command called "{self.context.message.content}" found.')
 
     # function called on ">help <group command>"
     async def send_group_help(self, group):
+        if group.hidden == True:
+            return await self.get_destination().send(f'No command called "{group}" found.')
         prefix = DEFAULT_PREFIX
         emb = discord.Embed(title = f'**Command {group.name}**',color = EMBED_COLOR)
         emb.add_field(name="Description: ",value=group.description or "N/A",inline=False)
@@ -53,6 +57,8 @@ class HelpCommand(commands.HelpCommand):
         if group.commands != None and len(group.commands) > 0:
             commands_value = ""
             for command in group.commands:
+                if command.hidden == True:
+                    continue
                 commands_value += f"• `{command.name}{command.usage or ''}`: {command.description or 'N/A'}\n"
             emb.add_field(name="Sub-commands: ",value=commands_value,inline=False)
 
@@ -61,6 +67,8 @@ class HelpCommand(commands.HelpCommand):
 
     # function called on ">help <command>"
     async def send_command_help(self, command):
+        if command.hidden == True:
+            return await self.get_destination().send(f'No command called "{command}" found.')
         prefix = DEFAULT_PREFIX
         emb = discord.Embed(title = f'**Command {command.name}**',color = EMBED_COLOR)
         emb.add_field(name="Usage:",value=f"`{prefix}{command.name}{command.usage or ''}`",inline=False)

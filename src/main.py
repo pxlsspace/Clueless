@@ -9,13 +9,13 @@ from discord.ext import tasks
 from dotenv import load_dotenv
 
 from cogs.utils.database import *
-
+from cogs.utils.help import *
 
 DEFAULT_PREFIX = "$"
 load_dotenv()
 
-client = commands.Bot(command_prefix=get_prefix)
-client.remove_command("help")
+client = commands.Bot(command_prefix=get_prefix,help_command=HelpCommand())
+#client.remove_command("help")
 
 ### on event functions ###
 @client.event
@@ -50,33 +50,22 @@ async def on_guild_join(guild):
     create_server(guild.id,DEFAULT_PREFIX)
     print("joined a new server id: "+str(guild.id))
 
-### help commands ###
-@client.group(invoke_without_command=True)
-async def help(ctx):
-    prefix = ctx.prefix
-    embed=discord.Embed(title="Help", description="Use `>help [command]` to get extended informations on a specific command.", color=0xc2ebff)
-    embed.add_field(name=f"`{prefix}echo <text>`", value="Repeats your text.", inline=False)
-    embed.add_field(name=f"`{prefix}prefix [prefix]`", value="Changes the bot prefix for this server.", inline=False)
-    embed.add_field(name=f"`{prefix}cd [nb of users]`", value="Shows the current pxls cooldown.", inline=False)
-    embed.add_field(name=f"`{prefix}stats <pxls user> [-c]`", value="Shows the stats for a pxls user, all-time by default, canvas with `-c`.", inline=False)
-    embed.add_field(name=f"`{prefix}convert <amount> <currency>`", value="Converts currency from euro to rand or rand to euro.", inline=False)
-    embed.add_field(name=f"`{prefix}addemote <name> <image>`", value="Adds the image as custom emote to ther server.", inline=False)
-    embed.add_field(name=f"`{prefix}generalstats`", value="Shows the current general stats from pxls.space/stats.", inline=False)
-    embed.add_field(name=f"`{prefix}milestones [add|remove|list|channel|setchannel]`", value="Tracks pxls users stats and sends an alert in a chosen channel when a new milestone is hit.", inline=False)
-
-
-    embed.set_footer(text="<> is a required argument. [] is an optional argument. {} is a set of required items, you must choose one.")
-    await ctx.send(embed=embed)
 ### commands ###
-@client.command()
+@client.command(description="`>ping`: pong!")
 async def ping(ctx):
     await ctx.send("pong!") 
 
-@client.command()
-async def echo(ctx,arg):
-    await ctx.send(arg)
+@client.command(
+    usage = " <text>",
+    description = "Repeats your text."
+)
+async def echo(ctx,text):
+    await ctx.send(text)
 
-@client.command()
+@client.command(
+    usage = " [prefix]",
+    description = "Changes the bot prefix for this server or shows the server prefix."
+)
 async def prefix(ctx,prefix=None):
     if prefix == None:
         prefix = ctx.prefix
@@ -85,7 +74,10 @@ async def prefix(ctx,prefix=None):
         update_prefix(prefix,ctx.guild.id)
         await ctx.send("Prefix set to `"+prefix+"`")
 
-@client.command()
+@client.command(
+    usage = " <amount> <currency>",
+    description = "Converts currency from euro to rand or rand to euro."
+)
 async def convert(ctx,*args):
     apikey = os.environ.get("CURRCONV_API_KEY")
     r = requests.get(f'https://free.currconv.com/api/v7/convert?q=EUR_ZAR,ZAR_EUR&compact=ultra&apiKey={apikey}')

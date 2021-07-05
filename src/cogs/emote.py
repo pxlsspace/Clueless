@@ -11,11 +11,20 @@ class Emote(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @commands.group(aliases = ["emoji"], invoke_without_command = True)
+    @commands.group(
+        usage=" [add|remove|list|number]",
+        description ="Manages the server custom emotes.",
+        aliases = ["emoji"],
+        invoke_without_command = True)
     async def emote(self, ctx):
         return
 
-    @emote.command()
+    @emote.command(
+        usage = " <name> <url|image>",
+        description = """Adds the image as a custom emoji.
+        If the server space is exceeded, will try to add it as an animated GIF.
+        (Requires manage_emojis permissions)"""
+    )
     @commands.has_permissions(manage_emojis=True)
     async def add(self, ctx, name, url=None):
 
@@ -71,7 +80,11 @@ class Emote(commands.Cog):
         await ctx.send("✅ Successfully added the emoji {0.name} <{1}:{0.name}:{0.id}>".format(emoji, "a" if emoji.animated else ""))
 
 
-    @emote.command(aliases=["delete"])
+    @emote.command(
+        usage = " <name>",
+        description="""Removes the custom emoji <name> from the server.
+        (Requires manage_emojis permissions)""",
+        aliases=["delete"])
     @commands.has_permissions(manage_emojis=True)
     async def remove(self, ctx, name):
         emotes = [x for x in ctx.guild.emojis if x.name == name]
@@ -82,7 +95,10 @@ class Emote(commands.Cog):
             await emote.delete()
         await ctx.send(f"✅ {nb_emote} emote(s) with the name :`{name}`: have been deleted")
 
-    @emote.command(aliases=["show"])
+    @emote.command(
+        description="Shows all of the server custom emojis and their names.",
+        aliases=["show"]
+    )
     async def list(self, ctx):
         emotes = ctx.guild.emojis
         if len(emotes) == 0:
@@ -102,7 +118,9 @@ class Emote(commands.Cog):
         for msg in res:
             await ctx.send(msg)
 
-    @emote.command(aliases = ["nb"])
+    @emote.command(
+        description="Gives the number of emojis and animated emojis on the server",
+        aliases = ["nb"])
     async def number(self,ctx):
         emojis = await ctx.guild.fetch_emojis()
         nb_static = 0
@@ -113,17 +131,6 @@ class Emote(commands.Cog):
             else:
                 nb_static += 1
         await ctx.send(f"There are {nb_anim+nb_static} emojis in this server:\n\t- {nb_static} emojis\n\t- {nb_anim} animated emojis")
-
-    @commands.command()
-    async def testimage(self,ctx,url=None):
-        if url == None:
-            if len(ctx.message.attachments) == 0:
-                return await ctx.send("❌ You must give an image to add")
-            if "image" not in ctx.message.attachments[0].content_type:
-                return await ctx.send("❌ Invalid file type. Only images are supported.")
-            await ctx.send(ctx.message.attachments[0].url)
-
-        return
 
 
 def setup(client):

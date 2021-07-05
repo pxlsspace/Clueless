@@ -10,7 +10,7 @@ from cogs.utils.scrapping import *
 
 from cogs.utils.cooldown import *
 
-class PxlsMilestones(commands.Cog):
+class PxlsMilestones(commands.Cog, name="Pxls.space"):
 
     def __init__(self, client):
         self.client = client
@@ -70,7 +70,9 @@ class PxlsMilestones(commands.Cog):
     """
 
     ### Discord commands ###
-    @commands.command()
+    @commands.command(
+        usage = " <pxls user> [-c]",
+        description = "Shows the pixel count for a pxls user, all-time by default, canvas with `-c`.")
     async def stats(self,ctx,*args):
         table = []
         text = ""
@@ -86,20 +88,31 @@ class PxlsMilestones(commands.Cog):
         else:
             await ctx.send ("❌ User not found.")
 
-    @commands.command()
+    @commands.command(
+        description = "Shows the current general stats from pxls.space/stats."
+    )
     async def generalstats(self,ctx):
         text= scrape_general_stats(self.stats_source_page)
         await ctx.send(text)
 
-    @commands.command()
+    @commands.command(
+        usage =" [nb user]",
+        description = "Shows the current pxls cooldown.")
     async def cd(self,ctx,*args):
         await ctx.send(get_cds(args))
 
-    @commands.group(aliases = ["ms"], invoke_without_command = True)
+    @commands.group(
+        usage = " [add|remove|list|channel|setchannel]",
+        description = "Tracks pxls users stats and sends an alert in a chosen channel when a new milestone is hit.",
+        aliases = ["ms"],
+        invoke_without_command = False)
     async def milestones(self,ctx,args):
         return
     
-    @milestones.command()
+    @milestones.command(
+        usage = " <name>",
+        description = "Add the user <name> to the tracker."
+    )
     async def add(self,ctx,name=None):
         # checking valid paramter
         if name == None:
@@ -117,7 +130,11 @@ class PxlsMilestones(commands.Cog):
             return
         await ctx.send ("✅ Tracking "+name+"'s all-time counter.")
 
-    @milestones.command(aliases=["delete"])
+    @milestones.command(
+        usage = " <name>",
+        description = "Removes the user <name> from the tracker.",
+        aliases=["delete"]
+        )
     async def remove(self,ctx,name=None):
         if name == None:
             return await ctx.send("❌ You need to specify a username.")
@@ -127,7 +144,9 @@ class PxlsMilestones(commands.Cog):
             return await ctx.send("❌ User not found.")
 
     
-    @milestones.command(aliases=["ls"])
+    @milestones.command(
+        description="Shows the list of users being tracked.",
+        aliases=["ls"])
     async def list(self,ctx):
         users = get_all_server_users(ctx.guild.id)
         if len(users) == 0:
@@ -138,7 +157,10 @@ class PxlsMilestones(commands.Cog):
             text+="\t- **"+u[0]+":** "+str(u[1])+" pixels\n"
         await ctx.send(text)
 
-    @milestones.command(aliases=["setchannel"])
+    @milestones.command(
+        usage = " [#channel|here|none]",
+        description = "Sets the milestone alerts to be sent in a channe, shows the current alert channel if no parameter is given.",
+        aliases=["setchannel"])
     @commands.has_permissions(manage_channels=True)
     async def channel(self,ctx,channel=None):
         if channel == None:

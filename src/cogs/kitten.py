@@ -85,7 +85,9 @@ class Kitten(commands.Cog):
 
         return e
 
-    @commands.command()
+    @commands.command(
+        aliases=["kitty","cat"],
+        description = "Sends a random kitten image.")
     async def kitten(self,ctx):
         start_time = int(round(time.time() * 1000))
 

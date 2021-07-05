@@ -8,8 +8,6 @@ from discord.ext import commands
 from discord.ext import tasks
 from dotenv import load_dotenv
 
-from cogs.utils.scrapping import *
-from cogs.utils.cooldown import get_cds
 from cogs.utils.database import *
 
 
@@ -27,13 +25,6 @@ async def on_ready():
 
     # create db tables if they dont exist
     create_tables()
-
-    # initiate the source page when starting the bot
-    #global stats_source_page
-    #stats_source_page = get_page_source(driver)
-
-    # starts the loop to update every 15min
-    #update_stats.start()
 
 @client.event
 async def on_command_error(ctx,error):

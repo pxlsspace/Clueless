@@ -53,7 +53,7 @@ async def on_guild_join(guild):
 ### commands ###
 @client.command(description="`>ping`: pong!")
 async def ping(ctx):
-    await ctx.send("pong!") 
+    await ctx.send(f"pong! (bot latency: `{round(client.latency*1000,2)}` ms)")
 
 @client.command(
     usage = " <text>",

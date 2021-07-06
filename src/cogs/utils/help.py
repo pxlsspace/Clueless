@@ -16,8 +16,8 @@ class HelpCommand(commands.HelpCommand):
         description = f'Use `{prefix}help [command]` to gain more information about that command.\n'
         emb = discord.Embed(title='Command help',
             color=EMBED_COLOR,
-            description=description)       
-
+            description=description)
+        emb.set_thumbnail(url=self.context.me.avatar_url)
         for cog in mapping:
             # ignore cog if it's empty or has no command
             if cog == None or len(cog.get_commands()) == 0:
@@ -44,6 +44,7 @@ class HelpCommand(commands.HelpCommand):
             return await self.get_destination().send(f'No command called "{group}" found.')
         prefix = DEFAULT_PREFIX
         emb = discord.Embed(title = f'**Command {group.name}**',color = EMBED_COLOR)
+        emb.set_thumbnail(url=self.context.me.avatar_url)
         emb.add_field(name="Description: ",value=group.description or "N/A",inline=False)
         emb.add_field(name="Usage:",value=f"`{prefix}{group.name}{group.usage or ''}`",inline=False)
 
@@ -71,6 +72,7 @@ class HelpCommand(commands.HelpCommand):
             return await self.get_destination().send(f'No command called "{command}" found.')
         prefix = DEFAULT_PREFIX
         emb = discord.Embed(title = f'**Command {command.name}**',color = EMBED_COLOR)
+        emb.set_thumbnail(url=self.context.me.avatar_url)
         emb.add_field(name="Usage:",value=f"`{prefix}{command.name}{command.usage or ''}`",inline=False)
         emb.add_field(name="Description:",value=command.description or "N/A",inline=False)
 

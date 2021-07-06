@@ -1,26 +1,23 @@
 import discord
 from discord.ext import commands
 from discord.ext import tasks
-from discord.ext.commands.core import command
-import selenium
+from discord.ext.commands.core import command, cooldown
 from datetime import datetime
 import time
 from cogs.utils.database import *
-from cogs.utils.scrapping import *
-
 from cogs.utils.cooldown import *
+from cogs.utils.pxls_stats import *
+
 
 class PxlsMilestones(commands.Cog, name="Pxls.space"):
 
     def __init__(self, client):
         self.client = client
-        self.driver = init_driver()
-        self.stats_source_page = get_page_source(self.driver)
         self.update_stats.start()
+        self.stats = PxlsStats()
         
     def cog_unload(self):
         self.update_stats.cancel()
-        driver.close()
 
     ### Loop tasks ###
     @tasks.loop(seconds=60)
@@ -29,24 +26,20 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
         min = now.strftime("%M")
 
         if min in ['01','16','31','46']:
-            # updating the stats source page
-            
-            try:
-                self.stats_source_page = get_page_source(self.driver)
-            except selenium.TimeoutException as e:
-                print(e)
+            # refresh the stats data
+            time = now.strftime("[%H:%M:%S]")
+            self.stats.refresh()
+            if self.stats.stats_json == None:
+                print(time + ": stats page unreachable")
                 return
-
-            print(now.strftime("[%H:%M:%S]")+": STATS SOURCE PAGE UPDATED")
+            print(time +": STATS SOURCE PAGE UPDATED")
 
             # checking miletones
-            table=scrape_alltime_leaderboard(self.stats_source_page)
-            # get all users from the db
             users = get_all_users()
             for user in users:
                 name = user[0]
                 old_count = user[1]
-                new_count = get_stats(name,table)
+                new_count = self.stats.get_alltime_stat(name)
                 if new_count%1000 < old_count%1000:
                     # send alert in all the servers tracking user
                     channels = get_all_channels(name)
@@ -55,57 +48,80 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
                             channel = self.client.get_channel(c)
                             await channel.send("New milestone for **"+name+"**! New count: "+str(new_count))
                 if new_count != old_count:
-                    # updating the new count in the db
+                    # update the new count in the db
                     update_pixel_count(name,new_count)
     
-    # waits for the bot to be ready before starting the task
+    # wait for the bot to be ready before starting the task
     @update_stats.before_loop
     async def before_update_stats(self):
         await self.client.wait_until_ready()
-
-    """
-    ### Discord events ###
-    @commands.Cog.listener()
-    async def on_ready(self):
-    """
 
     ### Discord commands ###
     @commands.command(
         usage = " <pxls user> [-c]",
         description = "Shows the pixel count for a pxls user, all-time by default, canvas with `-c`.")
-    async def stats(self,ctx,*args):
-        table = []
-        text = ""
-        if len(args)>1 and args[1] == "-c":
-            table = scrape_canvas_leaderboard(self.stats_source_page)
+    async def stats(self,ctx,name,option=None):
+
+        if option == "-c":
+            number = self.stats.get_canvas_stat(name)
             text = "Canvas"
         else:
-            table = scrape_alltime_leaderboard(self.stats_source_page)
+            number = self.stats.get_alltime_stat(name)
             text = "All-time"
-        res = get_stats(args[0],table)
-        if res != -1:
-            await ctx.send("**"+text+" stats for "+args[0]+"**: "+str(res)+" pixels")
+
+        if not number:
+            return await ctx.send ("❌ User not found.")
         else:
-            await ctx.send ("❌ User not found.")
+            msg = f'**{text} stats for {name}**: {number} pixels.'
+            return await ctx.send(msg)
 
     @commands.command(
         description = "Shows the current general stats from pxls.space/stats."
     )
     async def generalstats(self,ctx):
-        text= scrape_general_stats(self.stats_source_page)
+        gen_stats = self.stats.get_general_stats()
+        text = ""
+        for element in gen_stats:
+             # formating the number (123456 -> 123 456)
+            num = f'{int(gen_stats[element]):,}'
+            num = num.replace(","," ")
+            text += f"**{element.replace('_',' ').title()}**: {num}\n"
+        text += f'*Last updated: {self.stats.get_last_updated()}*'
         await ctx.send(text)
 
     @commands.command(
         usage =" [nb user]",
-        description = "Shows the current pxls cooldown.")
-    async def cd(self,ctx,*args):
-        await ctx.send(get_cds(args))
+        description = "Shows the current pxls cooldown.",
+        aliases = ["cd","timer"])
+    async def cooldown(self,ctx,number=None):
+        if number:
+            online = int(number)
+        else:
+            r = requests.get('https://pxls.space/users')
+            online = json.loads(r.text)["count"]
+
+        text = ""
+        i = 0
+        total = 0
+        cooldowns = get_cds(online)
+        dash = '-' * 40
+        text = dash + "\n"
+        text = ""
+        for cd in cooldowns:
+            i+=1
+            total += cd
+            text+=f'• **{i}/6** -> `{time_convert(cd)}`    (total: `{time_convert(total)}`)\n'
+            #text += '{:<5s}{:>10s}{:>10s}\n'.format(f'{i}/6',time_convert(cd),time_convert(total))
+        embed = discord.Embed(title=f"Pxls cooldown for `{online}` users")
+        embed.add_field(name=dash,value=text)
+        await ctx.send(embed=embed)
+        
 
     @commands.group(
         usage = " [add|remove|list|channel|setchannel]",
         description = "Tracks pxls users stats and sends an alert in a chosen channel when a new milestone is hit.",
         aliases = ["ms"],
-        invoke_without_command = False)
+        invoke_without_command = True)
     async def milestones(self,ctx,args):
         return
     
@@ -119,9 +135,8 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
             return await ctx.send("❌ You need to specify a username.")
 
         # checking if the user exists
-        table = scrape_alltime_leaderboard(self.stats_source_page)
-        count = get_stats(name,table)
-        if count == -1:
+        count = self.stats.get_alltime_stat(name)
+        if count == None:
             await ctx.send("❌ User not found.")
             return
 
@@ -143,7 +158,6 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
         else:
             return await ctx.send("❌ User not found.")
 
-    
     @milestones.command(
         description="Shows the list of users being tracked.",
         aliases=["ls"])
@@ -187,7 +201,7 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
         # checks if the bot has write perms in the alert channel
         channel = self.client.get_channel(channel_id)
         if not ctx.message.guild.me.permissions_in(channel).send_messages:
-            await ctx.send(f"❌ I dont not have permissions to send mesages in <#{channel_id}>")
+            await ctx.send(f"❌ I don't not have permissions to send mesages in <#{channel_id}>")
         else:
             # saves the new channel id in the db
             update_alert_channel(channel_id,ctx.guild.id)

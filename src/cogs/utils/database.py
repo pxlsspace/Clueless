@@ -180,8 +180,8 @@ def get_alert_channel(server_id):
         return None
     return rows[0][0]    
 
-# returns a list of channels_id for the servers tracking the user "name"
 def get_all_channels(name):
+    '''returns a list of channels_id for the servers tracking the user "name"'''
     sql = '''SELECT alert_channel_id 
             FROM servers
             INNER JOIN server_pxls_users
@@ -210,8 +210,8 @@ def get_all_server_users(server_id):
     rows = cur.fetchall()
     return rows
 
-# returns all the users tracked in any server
 def get_all_users():
+    ''' Get all the users ([name,pixel count]) tracked in at least one server'''
     sql = "SELECT name, pixel_count from pxls_users"
     conn = create_connection(DB_FILE)
     cur = conn.cursor()

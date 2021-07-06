@@ -3,7 +3,6 @@ from discord.embeds import Embed
 from discord.ext import commands
 
 EMBED_COLOR = 0xffd1ec
-DEFAULT_PREFIX = ">"
 class HelpCommand(commands.HelpCommand):
 
     def __init__(self, **options):
@@ -11,7 +10,7 @@ class HelpCommand(commands.HelpCommand):
 
     # function called on ">help"
     async def send_bot_help(self, mapping):
-        prefix = DEFAULT_PREFIX
+        prefix = self.context.prefix
 
         description = f'Use `{prefix}help [command]` to gain more information about that command.\n'
         emb = discord.Embed(title='Command help',
@@ -42,7 +41,7 @@ class HelpCommand(commands.HelpCommand):
     async def send_group_help(self, group):
         if group.hidden == True:
             return await self.get_destination().send(f'No command called "{group}" found.')
-        prefix = DEFAULT_PREFIX
+        prefix = self.context.prefix
         emb = discord.Embed(title = f'**Command {group.name}**',color = EMBED_COLOR)
         emb.set_thumbnail(url=self.context.me.avatar_url)
         emb.add_field(name="Description: ",value=group.description or "N/A",inline=False)
@@ -70,7 +69,7 @@ class HelpCommand(commands.HelpCommand):
     async def send_command_help(self, command):
         if command.hidden == True:
             return await self.get_destination().send(f'No command called "{command}" found.')
-        prefix = DEFAULT_PREFIX
+        prefix = self.context.prefix
         emb = discord.Embed(title = f'**Command {command.name}**',color = EMBED_COLOR)
         emb.set_thumbnail(url=self.context.me.avatar_url)
         emb.add_field(name="Usage:",value=f"`{prefix}{command.name}{command.usage or ''}`",inline=False)

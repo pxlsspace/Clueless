@@ -1,9 +1,9 @@
 import sqlite3
 from sqlite3 import Error
+from datetime import datetime
 
-#connection = sqlite3.connect('emotes.db')
+
 DB_FILE = 'database.db'
-
 
 create_server_table = """CREATE TABLE IF NOT EXISTS servers(
                             server_id INTEGER PRIMARY KEY, 
@@ -28,11 +28,20 @@ create_server_user_table = """ CREATE TABLE IF NOT EXISTS server_pxls_users(
                             FOREIGN KEY(name) REFERENCES pxls_user(name),
                             PRIMARY KEY(name,server_id)
                         );"""
+
+create_pxls_user_stats_table = """ CREATE TABLE IF NOT EXISTS pxls_user_stats(
+                            name TEXT,
+                            alltime_count INTEGER,
+                            canvas_count INTEGER,
+                            date TIMESTAMP,
+                            PRIMARY KEY (name, date)
+                            );"""
+
 # create a database connection to the SQLite database specified by db_file
 def create_connection(db_file):
     conn = None
     try:
-        conn = sqlite3.connect(db_file)
+        conn = sqlite3.connect(db_file,detect_types=sqlite3.PARSE_DECLTYPES)
         return conn
     except Error as e:
         print(e)
@@ -117,6 +126,7 @@ def create_tables():
     create_table(conn,create_server_table)
     create_table(conn,create_pxls_user_table)
     create_table(conn,create_server_user_table)
+    create_table(conn,create_pxls_user_stats_table)
     return
 
 # adds a user to the server_pxls_user table and pxls_user table if not added
@@ -258,27 +268,106 @@ def get_prefix(client,message):
     rows = cur.fetchall()
     if (len(rows))==0:
         return None
-    return rows[0][0]   
+    return rows[0][0]
 
+def create_pxls_user_stats(name, alltime_count,canvas_count,time):
+    conn = create_connection(DB_FILE)
+    sql = ''' INSERT INTO pxls_user_stats(name, alltime_count,canvas_count,date)
+              VALUES(?,?,?,?) '''
+    cur = conn.cursor()
+
+    cur.execute(sql, (name,alltime_count,canvas_count,time))
+    conn.commit()
+
+def get_alltime_pxls_count(user,time):
+    sql = """SELECT alltime_count, date
+            FROM pxls_user_stats
+            WHERE date <= ? AND name = ?
+            ORDER BY date DESC"""
+    conn = create_connection(DB_FILE)
+    cur = conn.cursor()
+    cur.execute(sql,(time,user))
+    res = cur.fetchone()
+    if not res:
+        return (None,None)
+    else:
+        return res
+
+def get_canvas_pxls_count(user,time):
+    sql = """SELECT canvas_count, date
+            FROM pxls_user_stats
+            WHERE date <= ? AND name = ?
+            ORDER BY date DESC"""
+    conn = create_connection(DB_FILE)
+    cur = conn.cursor()
+    cur.execute(sql,(time,user))
+    res = cur.fetchone()
+    if not res:
+        return (None,None)
+    else:
+        return res
+
+def update_pxls_stats(user,time,alltime=None,canvas=None):
+    if alltime == None and canvas == None:
+        return None
+
+    if canvas == None:
+        sql = """INSERT INTO pxls_user_stats(name, date, alltime_count) 
+                VALUES (?,?,?)
+                ON CONFLICT (name,date) 
+                DO UPDATE SET
+                    alltime_count = ?"""
+        param = (user,time,alltime,alltime)
+    elif alltime == None:
+        sql = """INSERT INTO pxls_user_stats(name, date, canvas_count) 
+                VALUES (?,?,?)
+                ON CONFLICT (name,date) 
+                DO UPDATE SET
+                    canvas_count = ?"""
+        param = (user,time,canvas,canvas)
+    else:
+        sql = """INSERT INTO pxls_user_stats(name, date, alltime_count, canvas_count) 
+                VALUES (?,?,?,?)
+                ON CONFLICT (name,date) 
+                DO UPDATE SET
+                    alltime_count = ?,
+                    canvas_count = ? """
+        param = (user,time,alltime,canvas,alltime,canvas)
+
+    sql_update(sql,param)
+
+def sql_select(query,param):
+    conn = create_connection(DB_FILE)
+    cur = conn.cursor()
+    cur.execute(query,tuple(param))
+    return cur.fetchall()
+
+def sql_update(query,param):
+    conn = create_connection(DB_FILE)
+    cur = conn.cursor()
+    cur.execute(query,tuple(param))
+    conn.commit()
+    if (conn.total_changes == 0):
+        # no changes have been made
+        return -1
 
 def main():
-    #DB_FILE = "test.db"
+    ''' Test/debug code '''
+    DB_FILE = "test.db"
     # create db connection
     conn = create_connection(DB_FILE)
+    create_tables()
     if (conn == None):
         print("Error! cannot create the database connection.")
         return
     
-    print(get_all_servers())
+    #create_pxls_user_stats("someone",2070,2046,datetime.utcnow())
+    
+    d = datetime(2021, 7, 7, 12, 0, 0)
+    update_pxls_stats("someone",d,2000,200)
 
-    sql ="SELECT * FROM servers"
-
-    cursor = conn.cursor()
-    cursor.execute(sql)
-    conn.commit()
-
-    print(cursor.fetchall())
-    print("done")
+    (number, time) = get_canvas_pxls_count("someone",d)
+    print(number,time)
 
 if __name__ == "__main__":
     main()

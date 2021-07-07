@@ -1,5 +1,6 @@
 import requests
 import json
+from datetime import datetime
 
 class PxlsStats():
     ''' A helper to get data from pxls.space/stats'''
@@ -25,6 +26,12 @@ class PxlsStats():
     def get_last_updated(self):
         return self.stats_json["generatedAt"]
 
+    @staticmethod
+    def last_updated_to_date(lastupdated):
+        lastupdated = lastupdated[:21]
+        date_time_obj = datetime.strptime(lastupdated, '%Y/%m/%d - %H:%M:%S')
+        return date_time_obj
+        
     def get_alltime_stat(self,name):
         at_table = self.stats_json["toplist"]["alltime"]
         for user in at_table:
@@ -46,8 +53,12 @@ class PxlsStats():
         return self.stats_json["toplist"]["canvas"]
 
 if __name__ == "__main__":
+    ''' test/debug code'''
     p = PxlsStats()
-    print(p.get_all_alltime_stats())
+    for user in p.get_all_canvas_stats():
+        name = user["username"]
+        alltime_count = user["pixels"]
+        print(f'{name}: {alltime_count} pixels')
 
         
 

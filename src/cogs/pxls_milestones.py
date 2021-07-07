@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from discord.ext import tasks
 from discord.ext.commands.core import command, cooldown
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 from cogs.utils.database import *
 from cogs.utils.cooldown import *
@@ -34,7 +34,19 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
                 return
             print(time +": STATS SOURCE PAGE UPDATED")
 
-            # checking miletones
+            # save the stats data in the database
+            lastupdated_string = self.stats.get_last_updated()
+            lastupdated = PxlsStats.last_updated_to_date(lastupdated_string)
+            for user in self.stats.get_all_alltime_stats():
+                name = user["username"]
+                alltime_count = user["pixels"]
+                update_pxls_stats(name,lastupdated,alltime_count,None)
+            for user in self.stats.get_all_canvas_stats():
+                name = user["username"]
+                canvas_count = user["pixels"]
+                update_pxls_stats(name,lastupdated,None,canvas_count)
+
+            # check milestones
             users = get_all_users()
             for user in users:
                 name = user[0]
@@ -74,6 +86,42 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
         else:
             msg = f'**{text} stats for {name}**: {number} pixels.'
             return await ctx.send(msg)
+
+    @commands.command(usage=" <name> <time>[h|d]",
+    description = "Show the average speed of a user in the last x hours or days")
+    async def speed(self,ctx,name,time):
+        if not time[:-1].isdigit():
+            return await ctx.send(f"❌ Invalid `time` parameter, format must be `{ctx.prefix}speed <name> <time>[h|d]`.")
+        now = datetime.now()
+
+        if time.endswith("h"):
+            time = int(time[:-1])
+            query_time = now - timedelta(hours=time)
+        elif time.endswith("d"):
+            time = int(time[:-1])
+            query_time = now - timedelta(days=time)
+        else:
+            return await ctx.send(f"❌ Invalid `time` parameter, format must be `{ctx.prefix}speed <name> <time>[h|d]`.")
+
+        (now_count , now_time) = get_alltime_pxls_count(name,now)
+        (past_count, past_time) = get_alltime_pxls_count(name,query_time)
+
+        if now_count == None:
+            return await ctx.send("❌ User not found.")
+        if past_count == None:
+            return await ctx.send("❌ No database entry for this time.")
+
+        nb_hours = (now_time-past_time)/timedelta(hours=1)
+        nb_days = (now_time-past_time)/timedelta(days=1)
+
+        diff_pixel = now_count-past_count
+        speed_px_h = round(diff_pixel/nb_hours,2)
+        speed_px_d = round(diff_pixel/nb_days,2)
+
+        if nb_days < 1:
+            await ctx.send(f'{name} placed `{diff_pixel}` pixels in the last {round(nb_hours)} hour(s).\n (Average of `{speed_px_h}` px/h)')
+        else:
+            await ctx.send(f'{name} placed `{diff_pixel}` pixels in the last {round(nb_days)} day(s)\n (average of `{speed_px_h}` px/h or `{speed_px_d}` px/day)')
 
     @commands.command(
         description = "Shows the current general stats from pxls.space/stats."
@@ -164,7 +212,7 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
     async def list(self,ctx):
         users = get_all_server_users(ctx.guild.id)
         if len(users) == 0:
-            await ctx.send("❌ No user added yet.\n*(use `"+ctx.prefix+"miletones add <username>` to add a new user.*)")
+            await ctx.send("❌ No user added yet.\n*(use `"+ctx.prefix+"milestones add <username>` to add a new user.*)")
             return
         text="**List of users tracked:**\n"
         for u in users:
@@ -183,7 +231,7 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
             if channel_id == None:
                 return await ctx.send(f"❌ No alert channel set\n (use `{ctx.prefix}milestones setchannel <#channel|here|none>`)")
             else:
-                return await ctx.send("✅ Milestones alerts are set to <#"+str(channel_id)+">")
+                return await ctx.send("Milestones alerts are set to <#"+str(channel_id)+">")
             #return await ctx.send("you need to give a valid channel")
         channel_id = 0
         if len(ctx.message.channel_mentions) == 0:

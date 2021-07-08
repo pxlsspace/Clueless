@@ -2,12 +2,11 @@ import discord
 from discord.ext import commands
 from discord.ext import tasks
 from discord.ext.commands.core import command, cooldown
-from datetime import datetime, timedelta
-import time
+from datetime import datetime, timedelta, timezone
 from cogs.utils.database import *
 from cogs.utils.cooldown import *
 from cogs.utils.pxls_stats import *
-
+from cogs.utils.time_converter import *
 
 class PxlsMilestones(commands.Cog, name="Pxls.space"):
 
@@ -87,21 +86,15 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
             msg = f'**{text} stats for {name}**: {number} pixels.'
             return await ctx.send(msg)
 
-    @commands.command(usage=" <name> <time>[h|d]",
-    description = "Show the average speed of a user in the last x hours or days")
+    @commands.command(usage=" <name> <?d?h?m?s>",
+    description = "Show the average speed of a user in the last x min, hours or days")
     async def speed(self,ctx,name,time):
-        if not time[:-1].isdigit():
-            return await ctx.send(f"❌ Invalid `time` parameter, format must be `{ctx.prefix}speed <name> <time>[h|d]`.")
-        now = datetime.now()
 
-        if time.endswith("h"):
-            time = int(time[:-1])
-            query_time = now - timedelta(hours=time)
-        elif time.endswith("d"):
-            time = int(time[:-1])
-            query_time = now - timedelta(days=time)
-        else:
-            return await ctx.send(f"❌ Invalid `time` parameter, format must be `{ctx.prefix}speed <name> <time>[h|d]`.")
+        input_time = str_to_td(time)        
+        if not input_time:
+            return await ctx.send(f"❌ Invalid `time` parameter, format must be `{ctx.prefix}{ctx.command.name}{ctx.command.usage}`.")
+        now = datetime.now()
+        query_time = now - input_time
 
         (now_count , now_time) = get_alltime_pxls_count(name,now)
         (past_count, past_time) = get_alltime_pxls_count(name,query_time)
@@ -110,18 +103,20 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
             return await ctx.send("❌ User not found.")
         if past_count == None:
             return await ctx.send("❌ No database entry for this time.")
-
-        nb_hours = (now_time-past_time)/timedelta(hours=1)
-        nb_days = (now_time-past_time)/timedelta(days=1)
+        if now_time == past_time:
+            return await ctx.send("❌ The time given is too short.")
+        diff_time = (now_time - past_time)
+        nb_hours = diff_time/timedelta(hours=1)
+        nb_days = diff_time/timedelta(days=1)
 
         diff_pixel = now_count-past_count
         speed_px_h = round(diff_pixel/nb_hours,2)
         speed_px_d = round(diff_pixel/nb_days,2)
 
         if nb_days < 1:
-            await ctx.send(f'{name} placed `{diff_pixel}` pixels in the last {round(nb_hours)} hour(s).\n (Average of `{speed_px_h}` px/h)')
+            return await ctx.send(f'**{name}** placed `{diff_pixel}` pixels between {format_datetime(past_time)} and {format_datetime(now_time)}.\nAverage speed: `{speed_px_h}` px/h')
         else:
-            await ctx.send(f'{name} placed `{diff_pixel}` pixels in the last {round(nb_days)} day(s)\n (average of `{speed_px_h}` px/h or `{speed_px_d}` px/day)')
+            return await ctx.send(f'**{name}** placed `{diff_pixel}` pixels between {format_datetime(past_time)} and {format_datetime(now_time)}.\nAverage speed: `{speed_px_h}` px/h or `{speed_px_d}` px/day')
 
     @commands.command(
         description = "Shows the current general stats from pxls.space/stats."

@@ -39,7 +39,7 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
             for user in self.stats.get_all_alltime_stats():
                 name = user["username"]
                 alltime_count = user["pixels"]
-                update_pxls_stats(name,lastupdated,alltime_count,None)
+                update_pxls_stats(name,lastupdated,alltime_count,0)
             for user in self.stats.get_all_canvas_stats():
                 name = user["username"]
                 canvas_count = user["pixels"]
@@ -100,7 +100,10 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
         (past_count, past_time) = get_alltime_pxls_count(name,query_time)
 
         if now_count == None:
-            return await ctx.send("❌ User not found.")
+            (now_count , now_time) = get_canvas_pxls_count(name,now)
+            (past_count, past_time) = get_canvas_pxls_count(name,query_time)
+            if now_count == None:
+                return await ctx.send("❌ User not found.")
         if past_count == None:
             return await ctx.send("❌ No database entry for this time.")
         if now_time == past_time:

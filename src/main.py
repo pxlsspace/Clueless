@@ -1,21 +1,16 @@
 import os
-import requests
-import json
-import discord
-
-from discord import embeds
+import sys
 from discord.ext import commands
-from discord.ext import tasks
 from dotenv import load_dotenv
 
 from cogs.utils.database import *
 from cogs.utils.help import *
+import traceback
 
 DEFAULT_PREFIX = "$"
 load_dotenv()
 
 client = commands.Bot(command_prefix=get_prefix,help_command=HelpCommand())
-#client.remove_command("help")
 
 ### on event functions ###
 @client.event
@@ -30,7 +25,8 @@ async def on_ready():
 async def on_command_error(ctx,error):
     await ctx.message.add_reaction(r'a:peepoLeaveNope:822571977390817340')
     await ctx.send(error)
-    raise(error)
+    print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
+    traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
 
 @client.event
 async def on_message(message):

@@ -52,8 +52,8 @@ def td_format(td_object:timedelta):
         ('month', 60*60*24*30),
         ('day', 60*60*24),
         ('hour', 60*60),
-        ('minutes', 60),
-        ('seconds', 1)]
+        ('minute', 60),
+        ('second', 1)]
     strings=[]
     for period_name, period_seconds in periods:
         if seconds >= period_seconds:

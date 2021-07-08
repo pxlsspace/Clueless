@@ -5,6 +5,7 @@ import json
 import os
 from dotenv import load_dotenv
 from cogs.utils.database import *
+from cogs.utils.time_converter import str_to_td, td_format
 
 class Utility(commands.Cog):
     ''' Various utility commands'''
@@ -65,6 +66,18 @@ class Utility(commands.Cog):
             
             await ctx.send(f'{amount} rand = {round(amount*ZAR_EUR,2)}€')
             return
+
+
+    @commands.command(
+        usage=" <?d?h?m?s>",
+        description = "Converts time formats.",
+        aliases = ["timeconvert","tconvert","time"]
+        )
+    async def converttime(self,ctx,input):
+        time = str_to_td(input)
+        if not time:
+            return await ctx.send(f"❌ Invalid `time` parameter, format must be `{ctx.prefix}{ctx.command.name}{ctx.command.usage}`.")
+        await ctx.send(f"{input} = {td_format(time)}.")
 
 
     @commands.command(hidden=True)

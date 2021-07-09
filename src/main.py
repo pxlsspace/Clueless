@@ -23,6 +23,13 @@ async def on_ready():
 
 @client.event
 async def on_command_error(ctx,error):
+    if isinstance(error,commands.MissingRequiredArgument):
+        text = "❌ " + str(error) + "\n"
+        text += f'Usage: `{ctx.prefix}{ctx.command.qualified_name}{ctx.command.usage}`'
+        return await ctx.send(text)
+    if isinstance(error, commands.CommandNotFound):
+        return await ctx.send("❌ " + str(error))
+
     await ctx.message.add_reaction(r'a:peepoLeaveNope:822571977390817340')
     await ctx.send(error)
     print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)

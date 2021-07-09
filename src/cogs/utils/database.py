@@ -338,13 +338,13 @@ def update_pxls_stats(user,time,alltime=None,canvas=None):
 
 def get_last_leaderboard(canvas=False):
     if canvas == True:
-        sql = """SELECT ROW_NUMBER() OVER(ORDER BY canvas_count DESC) AS rank, name, canvas_count, MAX(date) as date
+        sql = """SELECT ROW_NUMBER() OVER(ORDER BY canvas_count DESC) AS rank, name, canvas_count, date, MAX(date) as date2
                 FROM pxls_user_stats
                 GROUP BY name
                 ORDER BY canvas_count DESC
                 """
     else:
-        sql = """SELECT ROW_NUMBER() OVER(ORDER BY alltime_count DESC) AS rank, name, alltime_count, MAX(date) as date
+        sql = """SELECT ROW_NUMBER() OVER(ORDER BY alltime_count DESC) AS rank, name, alltime_count,date, MAX(date) as date2
                 FROM pxls_user_stats
                 WHERE alltime_count is not NULL
                 GROUP BY name

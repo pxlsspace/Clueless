@@ -1,3 +1,4 @@
+from os import stat
 import discord
 from discord.ext import commands
 from discord.ext import tasks
@@ -137,45 +138,81 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
         canvas = False
         if "-c" in options:
             canvas = True
+
         ldb = get_last_leaderboard(canvas)
+        column_names = ["Rank","Username","pixels"]
+        date = ldb[0][3]
         if username:
-            # looking for the index of the given user
+            column_names.append("diff")
+            # looking for the index and pixel count of the given user
             name_index = None
             for index,line in enumerate(ldb):
-                rank, name, pixels, date = line
+                name = list(line)[1]
+                pixels = list(line)[2]
                 if name == username:
                     name_index = index
+                    user_pixels = pixels
                     break
 
             if name_index == None:
                 return await ctx.send("❌ User not found")
 
+            # calucluate the indexes around the user
             min_idx = max(0,(name_index-round(nb_line/2)))
             max_idx = min(len(ldb)-1,name_index+round(nb_line/2)+1)
+            # if one of the idx hits the limit, we change the other idx to show more lines
+            if min_idx == 0:
+                max_idx = min_idx + nb_line
+            if max_idx == len(ldb)-1:
+                min_idx = max_idx - nb_line
             ldb = ldb[min_idx:max_idx]
         else:
             ldb = ldb[0:nb_line]
 
-        DASH = 40*"-"
-        text = "```diff\n" + DASH + "\n"
-        if canvas:
-            text += " {:<5}| {:<20s}| {:<10s}\n".format("rank","username","canvas px")
-        else:
-            text += " {:<5}| {:<20s}| {:<10s}\n".format("rank","username","all-time px")
-        text += DASH + "\n"
-        for line in ldb:
-            rank, name, pixels, date = line
-            pixels = f'{int(pixels):,}'
-            pixels = pixels.replace(","," ")
-            if username and name == username:
-                text += "+ {:<4d}| {:<20s}| {:<10s}\n".format(rank,name,pixels)
-            else:
-                text += "  {:<4d}| {:<20s}| {:<10s}\n".format(rank,name,pixels)
+        for i in range(len(ldb)):
+            ldb[i] = list(ldb[i][0:3]) # convert tuples to list and only keep first 3 col
+            if username:
+                # add the diff values
+                diff = user_pixels-ldb[i][2] # int
+                diff = f'{int(diff):,}'.replace(","," ") # string
+                ldb[i].append(diff)
+            ldb[i][2] = f'{int(ldb[i][2]):,}'.replace(","," ") # format the number of pixels in a string
 
+        text = "```diff\n"
+        text += self.format_leaderboard(ldb,column_names,username)
         text += "```"
-        emb = discord.Embed(title="Leaderboard",description=text)
-        emb.set_footer(text="Last updated: "+date) # TODO: display timezone date
+
+        if canvas:
+            emb = discord.Embed(title="Canvas Leaderboard",description=text)
+        else:
+            emb = discord.Embed(title="All-time Leaderboard",description=text)
+        emb.set_footer(text=f"Last updated: {format_datetime(date)}")
         await ctx.send(embed=emb)
+
+    @staticmethod
+    def format_leaderboard(table,column_names,name=None):
+        ''' Format the leaderboard in a string to be printed '''
+        if not table:
+            return
+        if len(table[0]) != len(column_names):
+            raise ValueError("The number of column in table and column_names don't match.")
+
+        # find the longest columns
+        table.insert(0,column_names)
+        longest_cols = [
+            (max([len(str(row[i])) for row in table]) + 1)
+            for i in range(len(table[0]))]
+
+        # format the header
+        LINE = "-"*(sum(longest_cols) + len(table[0]*2))
+        row_format = "|".join([" {:<" + str(longest_col) + "}" for longest_col in longest_cols])
+        str_table = f'{LINE}\n {row_format.format(*table[0])}\n{LINE}\n'
+
+        # format the body
+        for row in table[1:]:
+            str_table += ("+" if row[1] == name else " ") + row_format.format(*row) + "\n"
+
+        return str_table
 
     @commands.command(
         description = "Shows the current general stats from pxls.space/stats."

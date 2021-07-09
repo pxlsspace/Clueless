@@ -122,6 +122,62 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
             return await ctx.send(f'**{name}** placed `{diff_pixel}` pixels between {format_datetime(past_time)} and {format_datetime(now_time)}.\nAverage speed: `{speed_px_h}` px/h or `{speed_px_d}` px/day')
 
     @commands.command(
+        usage = " <lines> [username] [-c]",
+        description = "Shows the all-time or canvas leaderboard.",
+        aliases=["ldb"]
+        )
+    async def leaderboard(self,ctx,nb_line="20",username=None,*options):
+
+        # check on params
+        if not nb_line.isdigit():
+            return await ctx.send("❌ The number of lines to show must be a number.")
+        nb_line = int(nb_line)
+        if nb_line > 40:
+            return await ctx.send("❌ Can't show more than 40 lines")
+        canvas = False
+        if "-c" in options:
+            canvas = True
+        ldb = get_last_leaderboard(canvas)
+        if username:
+            # looking for the index of the given user
+            name_index = None
+            for index,line in enumerate(ldb):
+                rank, name, pixels, date = line
+                if name == username:
+                    name_index = index
+                    break
+
+            if name_index == None:
+                return await ctx.send("❌ User not found")
+
+            min_idx = max(0,(name_index-round(nb_line/2)))
+            max_idx = min(len(ldb)-1,name_index+round(nb_line/2)+1)
+            ldb = ldb[min_idx:max_idx]
+        else:
+            ldb = ldb[0:nb_line]
+
+        DASH = 40*"-"
+        text = "```diff\n" + DASH + "\n"
+        if canvas:
+            text += " {:<5}| {:<20s}| {:<10s}\n".format("rank","username","canvas px")
+        else:
+            text += " {:<5}| {:<20s}| {:<10s}\n".format("rank","username","all-time px")
+        text += DASH + "\n"
+        for line in ldb:
+            rank, name, pixels, date = line
+            pixels = f'{int(pixels):,}'
+            pixels = pixels.replace(","," ")
+            if username and name == username:
+                text += "+ {:<4d}| {:<20s}| {:<10s}\n".format(rank,name,pixels)
+            else:
+                text += "  {:<4d}| {:<20s}| {:<10s}\n".format(rank,name,pixels)
+
+        text += "```"
+        emb = discord.Embed(title="Leaderboard",description=text)
+        emb.set_footer(text="Last updated: "+date) # TODO: display timezone date
+        await ctx.send(embed=emb)
+
+    @commands.command(
         description = "Shows the current general stats from pxls.space/stats."
     )
     async def generalstats(self,ctx):

@@ -336,10 +336,30 @@ def update_pxls_stats(user,time,alltime=None,canvas=None):
 
     sql_update(sql,param)
 
-def sql_select(query,param):
+def get_last_leaderboard(canvas=False):
+    if canvas == True:
+        sql = """SELECT ROW_NUMBER() OVER(ORDER BY canvas_count DESC) AS rank, name, canvas_count, MAX(date) as date
+                FROM pxls_user_stats
+                GROUP BY name
+                ORDER BY canvas_count DESC
+                """
+    else:
+        sql = """SELECT ROW_NUMBER() OVER(ORDER BY alltime_count DESC) AS rank, name, alltime_count, MAX(date) as date
+                FROM pxls_user_stats
+                WHERE alltime_count is not NULL
+                GROUP BY name
+                ORDER BY alltime_count DESC"""
+
+    return sql_select(sql)
+
+def sql_select(query,param=None):
     conn = create_connection(DB_FILE)
     cur = conn.cursor()
-    cur.execute(query,tuple(param))
+    if param == None:
+        cur.execute(query)
+    else:
+        cur.execute(query,tuple(param))
+
     return cur.fetchall()
 
 def sql_update(query,param):
@@ -353,7 +373,7 @@ def sql_update(query,param):
 
 def main():
     ''' Test/debug code '''
-    DB_FILE = "test.db"
+    #DB_FILE = "test.db"
     # create db connection
     conn = create_connection(DB_FILE)
     create_tables()
@@ -362,12 +382,26 @@ def main():
         return
     
     #create_pxls_user_stats("someone",2070,2046,datetime.utcnow())
+
+    ldb = get_last_leaderboard(True)
+    nb_line = 10
+
+    i = 0
+    DASH = 40*"-"
+    text = "```" + DASH + "\n"
+    text += "{:<5}| {:<15s}| {:<10s}\n".format("rank","username","canvas px")
+    text += DASH + "\n"
+    for line in ldb:
+        i+=1
+        #print(line)
+        rank,name, pixels, date = line
+        pixels = f'{int(pixels):,}'
+        pixels = pixels.replace(","," ")
+        text += " {:<4d}| {:<15s}| {:<10s}\n".format(rank,name,pixels)
+        if i == nb_line:
+            break
+    text += "```"
+    print(text)
     
-    d = datetime(2021, 7, 7, 12, 0, 0)
-    update_pxls_stats("someone",d,2000,200)
-
-    (number, time) = get_canvas_pxls_count("someone",d)
-    print(number,time)
-
 if __name__ == "__main__":
     main()

@@ -33,10 +33,10 @@ def format_datetime(date:datetime):
     date = date.replace(tzinfo=timezone(timedelta(hours=utc_offset)))
     # convert date to utc
     date = date.astimezone(timezone.utc)
-    if date.date() == datetime.now().date():
+    if date.date() == datetime.utcnow().date():
         date.utcoffset()
         return "today " + date.strftime("%H:%M (%Z)")
-    elif date.date() == (datetime.now() - timedelta(days=1)).date():
+    elif date.date() == (datetime.utcnow() - timedelta(days=1)).date():
         return "yesterday " + date.strftime("%H:%M (%Z)")
     else:
         return date.strftime("%d/%m/%Y at %H:%M (%Z)")

@@ -87,37 +87,58 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
             msg = f'**{text} stats for {name}**: {number} pixels.'
             return await ctx.send(msg)
 
+    @staticmethod
+    def get_speed(name:str,date1:datetime,date2:datetime):
+        ''' Get the speed of a user between 2 dates (in pixels/hour)
+
+        return:
+         - speed: the average speed in pixels/hour between the 2 dates,
+         - diff_pixels the number of pixels placed between the 2 dates,
+         - past_time: tthe closest datetime to date1 in the database',
+         - recent_time the closest datetime to date2 in the database'''
+
+        if date1 > date2:
+            raise ValueError("date1 must be smaller than date2")
+        (past_count, past_time) = get_alltime_pxls_count(name,date1)
+        (recent_count, recent_time) = get_alltime_pxls_count(name,date2)
+
+        if recent_count == None:
+            # try to compare canvas pixels if cant find alltime pixels
+            (past_count, past_time) = get_canvas_pxls_count(name,date1)
+            (recent_count, recent_time) = get_canvas_pxls_count(name,date2)
+            if recent_count == None:
+                raise ValueError(f'User **{name}** was not found.')
+        if past_time == None:
+            raise ValueError(f'No database entry for this time.')
+        if past_time == recent_time:
+            raise ValueError("The time given is too short.")
+
+        diff_pixels = recent_count - past_count
+        diff_time = recent_time - past_time
+        nb_hours = diff_time/timedelta(hours=1)
+        speed = diff_pixels/nb_hours
+        return speed, diff_pixels, past_time, recent_time
+
     @commands.command(usage=" <name> <?d?h?m?s>",
     description = "Show the average speed of a user in the last x min, hours or days")
-    async def speed(self,ctx,name,time):
-
+    async def speed(self,ctx,name,time="5h"):
+        ''' Show the average speed of a user in the last x min, hours or days '''
         input_time = str_to_td(time)        
         if not input_time:
             return await ctx.send(f"❌ Invalid `time` parameter, format must be `{ctx.prefix}{ctx.command.name}{ctx.command.usage}`.")
         now = datetime.now()
         query_time = now - input_time
 
-        (now_count , now_time) = get_alltime_pxls_count(name,now)
-        (past_count, past_time) = get_alltime_pxls_count(name,query_time)
+        try:
+             speed_px_h, diff_pixel, past_time,now_time = self.get_speed(name,query_time,now)
+        except ValueError as e:
+            return await ctx.send(f'❌ {e}')
 
-        if now_count == None:
-            (now_count , now_time) = get_canvas_pxls_count(name,now)
-            (past_count, past_time) = get_canvas_pxls_count(name,query_time)
-            if now_count == None:
-                return await ctx.send("❌ User not found.")
-        if past_count == None:
-            return await ctx.send("❌ No database entry for this time.")
-        if now_time == past_time:
-            return await ctx.send("❌ The time given is too short.")
-        diff_time = (now_time - past_time)
-        nb_hours = diff_time/timedelta(hours=1)
-        nb_days = diff_time/timedelta(days=1)
+        speed_px_d = round(speed_px_h*24,1)
+        speed_px_h = round(speed_px_h,1)
+        nb_days = (now_time - past_time)/timedelta(days=1)
 
-        diff_pixel = now_count-past_count
-        speed_px_h = round(diff_pixel/nb_hours,2)
-        speed_px_d = round(diff_pixel/nb_days,2)
-
-        if nb_days < 1:
+        if round(nb_days,1) < 1:
             return await ctx.send(f'**{name}** placed `{diff_pixel}` pixels between {format_datetime(past_time)} and {format_datetime(now_time)}.\nAverage speed: `{speed_px_h}` px/h')
         else:
             return await ctx.send(f'**{name}** placed `{diff_pixel}` pixels between {format_datetime(past_time)} and {format_datetime(now_time)}.\nAverage speed: `{speed_px_h}` px/h or `{speed_px_d}` px/day')
@@ -128,6 +149,7 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
         aliases=["ldb"]
         )
     async def leaderboard(self,ctx,nb_line="20",username=None,*options):
+        ''' Shows the pxls.space leaderboard '''
 
         # check on params
         if not nb_line.isdigit():
@@ -135,15 +157,20 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
         nb_line = int(nb_line)
         if nb_line > 40:
             return await ctx.send("❌ Can't show more than 40 lines")
-        canvas = False
+        canvas_opt = False
         if "-c" in options:
-            canvas = True
+            canvas_opt = True
+        speed_opt = False
+        if "-speed" in options:
+            speed_opt = True
+            date1 = datetime.now() - timedelta(hours=1)
+            date2 = datetime.now()
 
-        ldb = get_last_leaderboard(canvas)
-        column_names = ["Rank","Username","pixels"]
+        ldb = get_last_leaderboard(canvas_opt)
+        column_names = ["Rank","Username","Pixels"]
         date = ldb[0][3]
         if username:
-            column_names.append("diff")
+            column_names.append("Diff")
             # looking for the index and pixel count of the given user
             name_index = None
             for index,line in enumerate(ldb):
@@ -153,7 +180,6 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
                     name_index = index
                     user_pixels = pixels
                     break
-
             if name_index == None:
                 return await ctx.send("❌ User not found")
 
@@ -169,24 +195,40 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
         else:
             ldb = ldb[0:nb_line]
 
+        if speed_opt:
+            column_names.append("Speed")
+
         for i in range(len(ldb)):
             ldb[i] = list(ldb[i][0:3]) # convert tuples to list and only keep first 3 col
             if username:
                 # add the diff values
-                diff = user_pixels-ldb[i][2] # int
-                diff = f'{int(diff):,}'.replace(","," ") # string
+                diff = user_pixels-ldb[i][2]
+                diff = f'{int(diff):,}'.replace(","," ") # convert to string
                 ldb[i].append(diff)
+            if speed_opt:
+                # add speed values
+                speed, diff_pixels, past_time, recent_time = self.get_speed(ldb[i][1],date1,date2)
+                speed = f'{int(speed):,}'.replace(","," ") # convert to string
+                ldb[i].append(speed+" px/h")
             ldb[i][2] = f'{int(ldb[i][2]):,}'.replace(","," ") # format the number of pixels in a string
 
         text = "```diff\n"
         text += self.format_leaderboard(ldb,column_names,username)
         text += "```"
 
-        if canvas:
+        if canvas_opt:
             emb = discord.Embed(title="Canvas Leaderboard",description=text)
         else:
             emb = discord.Embed(title="All-time Leaderboard",description=text)
-        emb.set_footer(text=f"Last updated: {format_datetime(date)}")
+
+        if speed_opt:
+            emb.set_footer(text="Last updated: {}\nSpeed values between {} and {}.".format(
+                format_datetime(date),
+                format_datetime(past_time),
+                format_datetime(recent_time)
+            ))
+        else:
+            emb.set_footer(text=f"Last updated: {format_datetime(date)}")
         await ctx.send(embed=emb)
 
     @staticmethod

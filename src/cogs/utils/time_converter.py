@@ -28,9 +28,10 @@ def format_datetime(date:datetime):
     - `today HH:MM (UTC)`
     - `yesterday HH:MM (UTC)`
     - `dd/mm/yyy HH:MM (UTC)` '''
-    # set the date to the local utc offset
-    utc_offset = time.localtime().tm_gmtoff/3600
-    date = date.replace(tzinfo=timezone(timedelta(hours=utc_offset)))
+    if date.tzinfo == None:
+        # if no timzeone in the date, we assume it's in the local timzone
+        utc_offset = time.localtime().tm_gmtoff/3600
+        date = date.replace(tzinfo=timezone(timedelta(hours=utc_offset)))
     # convert date to utc
     date = date.astimezone(timezone.utc)
     if date.date() == datetime.utcnow().date():
@@ -61,3 +62,13 @@ def td_format(td_object:timedelta):
             has_s = 's' if period_value > 1 else ''
             strings.append("%s %s%s" % (period_value, period_name, has_s))
     return ", ".join(strings)
+
+
+def utc_to_local(dt):
+    utc_offset = time.localtime().tm_gmtoff/3600
+    dt = dt.replace(tzinfo=timezone(timedelta(hours=utc_offset)))
+
+    return dt + timedelta(hours = utc_offset)
+
+def local_to_utc(dt):
+    return dt.astimezone(timezone.utc)

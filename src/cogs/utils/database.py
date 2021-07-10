@@ -1,6 +1,9 @@
 import sqlite3
 from sqlite3 import Error
-from datetime import datetime
+from datetime import datetime,timezone, timedelta
+import time
+
+from cogs.utils.time_converter import utc_to_local
 
 
 DB_FILE = 'database.db'
@@ -279,28 +282,42 @@ def create_pxls_user_stats(name, alltime_count,canvas_count,time):
     cur.execute(sql, (name,alltime_count,canvas_count,time))
     conn.commit()
 
-def get_alltime_pxls_count(user,time):
+def get_alltime_pxls_count(user,dt):
     sql = """SELECT alltime_count, date
             FROM pxls_user_stats
             WHERE date <= ? AND name = ?
             ORDER BY date DESC"""
+
+    # convert the time to the db timezone
+    dt =  dt.astimezone(timezone.utc)
+    dt = utc_to_local(dt)
+
+    dt = dt + timedelta(minutes = 1)
+
     conn = create_connection(DB_FILE)
     cur = conn.cursor()
-    cur.execute(sql,(time,user))
+    cur.execute(sql,(dt,user))
     res = cur.fetchone()
     if not res:
         return (None,None)
     else:
         return res
 
-def get_canvas_pxls_count(user,time):
+def get_canvas_pxls_count(user,dt):
     sql = """SELECT canvas_count, date
             FROM pxls_user_stats
             WHERE date <= ? AND name = ?
             ORDER BY date DESC"""
+
+    # convert the time to the db timezone
+    dt =  dt.astimezone(timezone.utc)
+    dt = utc_to_local(dt)
+
+    dt = dt + timedelta(minutes = 1)
+
     conn = create_connection(DB_FILE)
     cur = conn.cursor()
-    cur.execute(sql,(time,user))
+    cur.execute(sql,(dt,user))
     res = cur.fetchone()
     if not res:
         return (None,None)

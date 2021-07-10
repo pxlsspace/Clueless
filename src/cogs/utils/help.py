@@ -26,7 +26,7 @@ class HelpCommand(commands.HelpCommand):
             for command in cog.get_commands():
                 if command.hidden == True:
                     continue
-                value += f"• `{prefix}{command.name}{command.usage or ''}`: {command.description or 'N/A'}\n"
+                value += f"• `{prefix}{command.name}`: {command.description or 'N/A'}\n"
             if value != "":
                 emb.add_field(name=name,value=value,inline=False)
 

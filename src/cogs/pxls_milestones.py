@@ -8,6 +8,7 @@ from cogs.utils.database import *
 from cogs.utils.cooldown import *
 from cogs.utils.pxls_stats import *
 from cogs.utils.time_converter import *
+from cogs.utils.arguments_parser import *
 
 class PxlsMilestones(commands.Cog, name="Pxls.space"):
 
@@ -119,18 +120,30 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
         speed = diff_pixels/nb_hours
         return speed, diff_pixels, past_time, recent_time
 
-    @commands.command(usage=" <name> <?d?h?m?s>",
+    @commands.command(usage=" <name> [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
     description = "Show the average speed of a user in the last x min, hours or days")
-    async def speed(self,ctx,name,time="5h"):
+    #async def speed(self,ctx,name,time="5h"):
+    async def speed(self,ctx,name,*args):
         ''' Show the average speed of a user in the last x min, hours or days '''
-        input_time = str_to_td(time)        
-        if not input_time:
-            return await ctx.send(f"❌ Invalid `time` parameter, format must be `{ctx.prefix}{ctx.command.name}{ctx.command.usage}`.")
-        now = datetime.now()
-        query_time = now - input_time
 
         try:
-             speed_px_h, diff_pixel, past_time,now_time = self.get_speed(name,query_time,now)
+            param = parse_speed_args(args)
+        except ValueError as e:
+            return await ctx.send(f'❌ {e}')
+
+        if param["before"] == None and param["after"] == None:
+            date = param["last"]
+            input_time = str_to_td(date)
+            if not input_time:
+                return await ctx.send(f"❌ Invalid `last` parameter, format must be `{ctx.prefix}{ctx.command.name}{ctx.command.usage}`.")
+            recent_time = datetime.now(timezone.utc)
+            old_time = datetime.now(timezone.utc) - input_time
+        else:
+            old_time = param["after"] or datetime(2021,7,7,14,15,10) # To change to oldest database entry
+            recent_time = param["before"] or datetime.now(timezone.utc)
+
+        try:
+             speed_px_h, diff_pixel, past_time,now_time = self.get_speed(name,old_time,recent_time)
         except ValueError as e:
             return await ctx.send(f'❌ {e}')
 
@@ -143,28 +156,42 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
         else:
             return await ctx.send(f'**{name}** placed `{diff_pixel}` pixels between {format_datetime(past_time)} and {format_datetime(now_time)}.\nAverage speed: `{speed_px_h}` px/h or `{speed_px_d}` px/day')
 
+    # TODO: option to sort
+    # TODO: allow adding multiple users to compare
+    # TODO: change of the help command to show parameters
     @commands.command(
-        usage = " <lines> [username] [-c]",
+        usage = " [name] [-canvas] [-lines <number>] [-speed [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]] ",
         description = "Shows the all-time or canvas leaderboard.",
         aliases=["ldb"]
         )
-    async def leaderboard(self,ctx,nb_line="20",username=None,*options):
+    #async def leaderboard(self,ctx,nb_line="20",username=None,*options):
+    async def leaderboard(self,ctx,*args):
         ''' Shows the pxls.space leaderboard '''
 
+        try:
+            param = parse_leaderboard_args(args)
+        except ValueError as e:
+            return await ctx.send(f'❌ {e}')
+        username = param["name"]
+        nb_line = param["lines"]
+        canvas_opt = param["canvas"]
+        speed_opt = param["speed"]
+
         # check on params
-        if not nb_line.isdigit():
-            return await ctx.send("❌ The number of lines to show must be a number.")
+        if param["before"] == None and param["after"] == None:
+            date = param["last"]
+            input_time = str_to_td(date)
+            if not input_time:
+                return await ctx.send(f"❌ Invalid `last` parameter, format must be `{ctx.prefix}{ctx.command.name}{ctx.command.usage}`.")
+            date2 = datetime.now(timezone.utc)
+            date1 = datetime.now(timezone.utc) - input_time
+        else:
+            date1 = param["after"] or datetime(2021,7,7,14,15,10) # To change to oldest database entry
+            date2 = param["before"] or datetime.now(timezone.utc)
+
         nb_line = int(nb_line)
         if nb_line > 40:
-            return await ctx.send("❌ Can't show more than 40 lines")
-        canvas_opt = False
-        if "-c" in options:
-            canvas_opt = True
-        speed_opt = False
-        if "-speed" in options:
-            speed_opt = True
-            date1 = datetime.now() - timedelta(hours=1)
-            date2 = datetime.now()
+            return await ctx.send("❌ Can't show more than 40 lines.")
 
         ldb = get_last_leaderboard(canvas_opt)
         column_names = ["Rank","Username","Pixels"]
@@ -222,10 +249,11 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
             emb = discord.Embed(title="All-time Leaderboard",description=text)
 
         if speed_opt:
-            emb.set_footer(text="Last updated: {}\nSpeed values between {} and {}.".format(
+            emb.set_footer(text="Last updated: {}\nSpeed values between {} and {} ({}).".format(
                 format_datetime(date),
                 format_datetime(past_time),
-                format_datetime(recent_time)
+                format_datetime(recent_time),
+                td_format(recent_time-past_time)
             ))
         else:
             emb.set_footer(text=f"Last updated: {format_datetime(date)}")

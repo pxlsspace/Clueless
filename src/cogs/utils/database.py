@@ -355,17 +355,16 @@ def update_pxls_stats(user,time,alltime=None,canvas=None):
 
 def get_last_leaderboard(canvas=False):
     if canvas == True:
-        sql = """SELECT ROW_NUMBER() OVER(ORDER BY canvas_count DESC) AS rank, name, canvas_count, date, MAX(date) as date2
+        sql = """SELECT ROW_NUMBER() OVER(ORDER BY canvas_count DESC) AS rank, name, canvas_count, date
                 FROM pxls_user_stats
-                GROUP BY name
-                ORDER BY canvas_count DESC
-                """
+                WHERE date = (select max(date) from pxls_user_stats)
+                ORDER by canvas_count desc"""
     else:
-        sql = """SELECT ROW_NUMBER() OVER(ORDER BY alltime_count DESC) AS rank, name, alltime_count,date, MAX(date) as date2
+        sql = """ SELECT ROW_NUMBER() OVER(ORDER BY alltime_count DESC) AS rank, name, alltime_count, date
                 FROM pxls_user_stats
-                WHERE alltime_count is not NULL
-                GROUP BY name
-                ORDER BY alltime_count DESC"""
+                WHERE date = (select max(date) from pxls_user_stats)
+                AND alltime_count IS NOT NULL
+                ORDER by alltime_count desc"""
 
     return sql_select(sql)
 
@@ -388,6 +387,7 @@ def sql_update(query,param):
         # no changes have been made
         return -1
 
+import time
 def main():
     ''' Test/debug code '''
     #DB_FILE = "test.db"
@@ -400,12 +400,15 @@ def main():
     
     #create_pxls_user_stats("someone",2070,2046,datetime.utcnow())
 
+    start = time.time()
     ldb = get_last_leaderboard(True)
+    getldbtime = (time.time() - start)*1000
+    print("time: ",getldbtime,"ms")
     nb_line = 10
 
     i = 0
     DASH = 40*"-"
-    text = "```" + DASH + "\n"
+    text = DASH + "\n"
     text += "{:<5}| {:<15s}| {:<10s}\n".format("rank","username","canvas px")
     text += DASH + "\n"
     for line in ldb:
@@ -417,7 +420,6 @@ def main():
         text += " {:<4d}| {:<15s}| {:<10s}\n".format(rank,name,pixels)
         if i == nb_line:
             break
-    text += "```"
     print(text)
     
 if __name__ == "__main__":

@@ -166,7 +166,6 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
         description = "Shows the all-time or canvas leaderboard.",
         aliases=["ldb"]
         )
-    #async def leaderboard(self,ctx,nb_line="20",username=None,*options):
     async def leaderboard(self,ctx,*args):
         ''' Shows the pxls.space leaderboard '''
 
@@ -180,16 +179,17 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
         speed_opt = param["speed"]
 
         # check on params
-        if param["before"] == None and param["after"] == None:
-            date = param["last"]
-            input_time = str_to_td(date)
-            if not input_time:
-                return await ctx.send(f"❌ Invalid `last` parameter, format must be `{ctx.prefix}{ctx.command.name}{ctx.command.usage}`.")
-            date2 = datetime.now(timezone.utc)
-            date1 = datetime.now(timezone.utc) - input_time
-        else:
-            date1 = param["after"] or datetime(2021,7,7,14,15,10) # To change to oldest database entry
-            date2 = param["before"] or datetime.now(timezone.utc)
+        if speed_opt:
+            if param["before"] == None and param["after"] == None:
+                date = param["last"]
+                input_time = str_to_td(date)
+                if not input_time:
+                    return await ctx.send(f"❌ Invalid `last` parameter, format must be `{ctx.prefix}{ctx.command.name}{ctx.command.usage}`.")
+                date2 = datetime.now(timezone.utc)
+                date1 = datetime.now(timezone.utc) - input_time
+            else:
+                date1 = param["after"] or datetime(2021,7,7,14,15,10) # To change to oldest database entry
+                date2 = param["before"] or datetime.now(timezone.utc)
 
         nb_line = int(nb_line)
         if nb_line > 40:
@@ -214,11 +214,11 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
 
             # calucluate the indexes around the user
             min_idx = max(0,(name_index-round(nb_line/2)))
-            max_idx = min(len(ldb)-1,name_index+round(nb_line/2)+1)
+            max_idx = min(len(ldb),name_index+round(nb_line/2)+1)
             # if one of the idx hits the limit, we change the other idx to show more lines
             if min_idx == 0:
                 max_idx = min_idx + nb_line
-            if max_idx == len(ldb)-1:
+            if max_idx == len(ldb):
                 min_idx = max_idx - nb_line
             ldb = ldb[min_idx:max_idx]
         else:

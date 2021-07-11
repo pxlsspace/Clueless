@@ -290,10 +290,6 @@ def get_alltime_pxls_count(user,dt):
             FROM pxls_user_stats
             WHERE name = ? """
 
-    # convert the time to the db timezone
-    dt =  dt.astimezone(timezone.utc)
-    dt = utc_to_local(dt)
-
     conn = create_connection(DB_FILE)
     cur = conn.cursor()
     cur.execute(sql,(dt,user))
@@ -310,10 +306,6 @@ def get_canvas_pxls_count(user,dt):
                 min(abs(JulianDay(date) - JulianDay(?)))*24*3600 as diff_with_query
             FROM pxls_user_stats
             WHERE name = ? """
-
-    # convert the time to the db timezone
-    dt =  dt.astimezone(timezone.utc)
-    dt = utc_to_local(dt)
 
     conn = create_connection(DB_FILE)
     cur = conn.cursor()
@@ -378,10 +370,13 @@ def sql_select(query,param=None):
 
     return cur.fetchall()
 
-def sql_update(query,param):
+def sql_update(query,param=None):
     conn = create_connection(DB_FILE)
     cur = conn.cursor()
-    cur.execute(query,tuple(param))
+    if param:
+        cur.execute(query,tuple(param))
+    else:
+        cur.execute(query)
     conn.commit()
     if (conn.total_changes == 0):
         # no changes have been made

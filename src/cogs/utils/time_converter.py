@@ -28,12 +28,11 @@ def format_datetime(date:datetime):
     - `today HH:MM (UTC)`
     - `yesterday HH:MM (UTC)`
     - `dd/mm/yyy HH:MM (UTC)` '''
+
+    # if no timzeone in the date, we assume it's in UTC
     if date.tzinfo == None:
-        # if no timzeone in the date, we assume it's in the local timzone
-        utc_offset = time.localtime().tm_gmtoff/3600
-        date = date.replace(tzinfo=timezone(timedelta(hours=utc_offset)))
-    # convert date to utc
-    date = date.astimezone(timezone.utc)
+        date = date.replace(tzinfo = timezone.utc)
+
     if date.date() == datetime.utcnow().date():
         date.utcoffset()
         return "today " + date.strftime("%H:%M (%Z)")

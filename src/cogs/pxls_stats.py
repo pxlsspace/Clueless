@@ -38,6 +38,8 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
             # save the stats data in the database
             lastupdated_string = self.stats.get_last_updated()
             lastupdated = PxlsStats.last_updated_to_date(lastupdated_string)
+            lastupdated = local_to_utc(lastupdated) #save the time in UTC in the db
+            lastupdated = lastupdated.replace(tzinfo=None)
             for user in self.stats.get_all_alltime_stats():
                 name = user["username"]
                 alltime_count = user["pixels"]
@@ -95,7 +97,7 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
         return:
          - speed: the average speed in pixels/hour between the 2 dates,
          - diff_pixels the number of pixels placed between the 2 dates,
-         - past_time: tthe closest datetime to date1 in the database',
+         - past_time: the closest datetime to date1 in the database',
          - recent_time the closest datetime to date2 in the database'''
 
         if date1 > date2:
@@ -143,7 +145,7 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
             recent_time = param["before"] or datetime.now(timezone.utc)
 
         try:
-             speed_px_h, diff_pixel, past_time,now_time = self.get_speed(name,old_time,recent_time)
+            speed_px_h, diff_pixel, past_time,now_time = self.get_speed(name,old_time,recent_time)
         except ValueError as e:
             return await ctx.send(f'❌ {e}')
 

@@ -255,15 +255,17 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
         else:
             emb = discord.Embed(title="All-time Leaderboard",description=text)
 
+        footer_text = "Last updated: {} ({} ago).".format(
+            format_datetime(date),
+            td_format(datetime.utcnow()-date)
+            )
         if speed_opt:
-            emb.set_footer(text="Last updated: {}\nSpeed values between {} and {} ({}).".format(
-                format_datetime(date),
+            footer_text += "\nSpeed values between {} and {} ({}).".format(
                 format_datetime(past_time),
                 format_datetime(recent_time),
                 td_format(recent_time-past_time)
-            ))
-        else:
-            emb.set_footer(text=f"Last updated: {format_datetime(date)}")
+            )
+        emb.set_footer(text=footer_text)
         await ctx.send(embed=emb)
 
     @staticmethod

@@ -283,16 +283,16 @@ def create_pxls_user_stats(name, alltime_count,canvas_count,time):
     conn.commit()
 
 def get_alltime_pxls_count(user,dt):
-    sql = """SELECT alltime_count, date
+    sql = """SELECT
+                alltime_count,
+                date,
+                min(abs(JulianDay(date) - JulianDay(?)))*24*3600 as diff_with_query
             FROM pxls_user_stats
-            WHERE date <= ? AND name = ?
-            ORDER BY date DESC"""
+            WHERE name = ? """
 
     # convert the time to the db timezone
     dt =  dt.astimezone(timezone.utc)
     dt = utc_to_local(dt)
-
-    dt = dt + timedelta(minutes = 1)
 
     conn = create_connection(DB_FILE)
     cur = conn.cursor()
@@ -304,16 +304,16 @@ def get_alltime_pxls_count(user,dt):
         return res
 
 def get_canvas_pxls_count(user,dt):
-    sql = """SELECT canvas_count, date
+    sql = """SELECT
+                canvas_count,
+                date,
+                min(abs(JulianDay(date) - JulianDay(?)))*24*3600 as diff_with_query
             FROM pxls_user_stats
-            WHERE date <= ? AND name = ?
-            ORDER BY date DESC"""
+            WHERE name = ? """
 
     # convert the time to the db timezone
     dt =  dt.astimezone(timezone.utc)
     dt = utc_to_local(dt)
-
-    dt = dt + timedelta(minutes = 1)
 
     conn = create_connection(DB_FILE)
     cur = conn.cursor()

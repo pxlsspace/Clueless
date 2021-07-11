@@ -100,13 +100,13 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
 
         if date1 > date2:
             raise ValueError("date1 must be smaller than date2")
-        (past_count, past_time) = get_alltime_pxls_count(name,date1)
-        (recent_count, recent_time) = get_alltime_pxls_count(name,date2)
+        (past_count, past_time,diff) = get_alltime_pxls_count(name,date1)
+        (recent_count, recent_time,diff) = get_alltime_pxls_count(name,date2)
 
         if recent_count == None:
             # try to compare canvas pixels if cant find alltime pixels
-            (past_count, past_time) = get_canvas_pxls_count(name,date1)
-            (recent_count, recent_time) = get_canvas_pxls_count(name,date2)
+            (past_count, past_time,diff) = get_canvas_pxls_count(name,date1)
+            (recent_count, recent_time,diff) = get_canvas_pxls_count(name,date2)
             if recent_count == None:
                 raise ValueError(f'User **{name}** was not found.')
         if past_time == None:
@@ -157,8 +157,10 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
             return await ctx.send(f'**{name}** placed `{diff_pixel}` pixels between {format_datetime(past_time)} and {format_datetime(now_time)}.\nAverage speed: `{speed_px_h}` px/h or `{speed_px_d}` px/day')
 
     # TODO: option to sort
+    # TODO: option to show speed in px/day
     # TODO: allow adding multiple users to compare
     # TODO: change of the help command to show parameters
+    # TODO: align speed values on the right
     @commands.command(
         usage = " [name] [-canvas] [-lines <number>] [-speed [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]] ",
         description = "Shows the all-time or canvas leaderboard.",
@@ -234,7 +236,10 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
                 ldb[i].append(diff)
             if speed_opt:
                 # add speed values
-                speed, diff_pixels, past_time, recent_time = self.get_speed(ldb[i][1],date1,date2)
+                try:
+                    speed, diff_pixels, past_time, recent_time = self.get_speed(ldb[i][1],date1,date2)
+                except ValueError as e:
+                     return await ctx.send(f'❌ {e}')
                 speed = f'{int(speed):,}'.replace(","," ") # convert to string
                 ldb[i].append(speed+" px/h")
             ldb[i][2] = f'{int(ldb[i][2]):,}'.replace(","," ") # format the number of pixels in a string

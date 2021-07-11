@@ -54,8 +54,10 @@ async def on_guild_join(guild):
     print("joined a new server id: "+str(guild.id))
 
 if __name__ == "__main__":
+
     # loading cogs
-    for extension in os.listdir("./src/cogs"):
+    commands_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cogs")
+    for extension in os.listdir(commands_dir):
         if extension.endswith('.py'):
             try:
                 client.load_extension("cogs." + extension[:-3])

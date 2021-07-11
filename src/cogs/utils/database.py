@@ -1,12 +1,12 @@
 import sqlite3
 from sqlite3 import Error
-from datetime import datetime,timezone, timedelta
-import time
+from datetime import timezone
+import os
 
 from cogs.utils.time_converter import utc_to_local
 
 
-DB_FILE = 'database.db'
+DB_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "database.db")
 
 create_server_table = """CREATE TABLE IF NOT EXISTS servers(
                             server_id INTEGER PRIMARY KEY, 

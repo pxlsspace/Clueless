@@ -9,13 +9,16 @@ from cogs.utils.cooldown import *
 from cogs.utils.pxls_stats import *
 from cogs.utils.time_converter import *
 from cogs.utils.arguments_parser import *
+from handlers.setup import stats
+
+# TODO: sperate milestones commands and leaderboard/speed commands
 
 class PxlsMilestones(commands.Cog, name="Pxls.space"):
 
     def __init__(self, client):
         self.client = client
         self.update_stats.start()
-        self.stats = PxlsStats()
+        self.stats = stats
         
     def cog_unload(self):
         self.update_stats.cancel()
@@ -29,11 +32,12 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
         if min in ['01','16','31','46']:
             # refresh the stats data
             time = now.strftime("[%H:%M:%S]")
+            print(time +": updating stats data.",end='',flush=True)
             self.stats.refresh()
             if self.stats.stats_json == None:
                 print(time + ": stats page unreachable")
                 return
-            print(time +": STATS SOURCE PAGE UPDATED")
+            print(".",end='',flush=True)
 
             # save the stats data in the database
             lastupdated_string = self.stats.get_last_updated()
@@ -44,11 +48,12 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
                 name = user["username"]
                 alltime_count = user["pixels"]
                 update_pxls_stats(name,lastupdated,alltime_count,0)
+            print(".",end='',flush=True)
             for user in self.stats.get_all_canvas_stats():
                 name = user["username"]
                 canvas_count = user["pixels"]
                 update_pxls_stats(name,lastupdated,None,canvas_count)
-
+            print(".",end='',flush=True)
             # check milestones
             users = get_all_users()
             for user in users:
@@ -65,7 +70,7 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
                 if new_count != old_count:
                     # update the new count in the db
                     update_pixel_count(name,new_count)
-    
+            print(". done!")
     # wait for the bot to be ready before starting the task
     @update_stats.before_loop
     async def before_update_stats(self):
@@ -158,8 +163,8 @@ class PxlsMilestones(commands.Cog, name="Pxls.space"):
         else:
             return await ctx.send(f'**{name}** placed `{diff_pixel}` pixels between {format_datetime(past_time)} and {format_datetime(now_time)}.\nAverage speed: `{speed_px_h}` px/h or `{speed_px_d}` px/day')
 
-    # TODO: option to sort
-    # TODO: option to show speed in px/day
+    # TODO: option to sort by speed
+    # TODO: option to show speed in px/day or amount
     # TODO: allow adding multiple users to compare
     # TODO: change of the help command to show parameters
     # TODO: align speed values on the right

@@ -52,6 +52,9 @@ class PxlsStats():
     def get_all_canvas_stats(self):
         return self.stats_json["toplist"]["canvas"]
 
+    def get_palette(self):
+        return self.stats_json["board_info"]["palette"]
+
 if __name__ == "__main__":
     ''' test/debug code'''
     p = PxlsStats()

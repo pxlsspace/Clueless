@@ -79,6 +79,21 @@ def parse_speed_args(args):
 
     return vars(res)
 
+def parse_outline_args(args):
+    parser  = MyParser(add_help=False)
+
+    parser.add_argument('color', type=str, nargs=1,
+        help='Color of the outline.')
+    parser.add_argument('url', type=str, nargs='?',
+        help='URL of the image.')
+    parser.add_argument('-sparse', '-thin', action='store_true', default=False,
+        help="To get a sparse outline instead of full")
+    parser.add_argument('-width',metavar="<number>", action='store', type=int, default=1,
+        help="Width of the outline (in pixels)")
+
+    res = parser.parse_args(args)
+    return vars(res)
+
 def valid_datetime_type(arg_datetime_str):
     """Check if the given string is a valid datetime"""
     try:

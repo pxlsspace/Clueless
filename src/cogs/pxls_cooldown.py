@@ -2,7 +2,7 @@ from discord.ext import commands
 import discord
 import requests
 import json
-from cogs.utils.cooldown import get_cds, time_convert
+from utils.cooldown import get_cds, time_convert
 
 class PxlsCooldown(commands.Cog):
 

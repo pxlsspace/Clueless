@@ -1,4 +1,4 @@
-from cogs.utils.scrapping import get_page_source
+from utils.scrapping import get_page_source
 import requests
 import json
 import math

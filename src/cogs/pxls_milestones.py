@@ -1,5 +1,5 @@
 from discord.ext import commands
-from cogs.utils.database import *
+from utils.database import *
 
 class PxlsMilestones(commands.Cog):
 

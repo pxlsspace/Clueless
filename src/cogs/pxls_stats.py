@@ -1,5 +1,5 @@
 from discord.ext import commands
-from handlers.setup import stats
+from utils.setup import stats
 
 class PxlsStats(commands.Cog):
 

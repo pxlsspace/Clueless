@@ -3,8 +3,8 @@ import sys
 from discord.ext import commands
 from dotenv import load_dotenv
 
-from cogs.utils.database import *
-from cogs.utils.help import *
+from utils.database import *
+from utils.help import *
 import traceback
 
 DEFAULT_PREFIX = "$"

@@ -1,8 +1,8 @@
 from discord.ext import commands, tasks
-from cogs.utils.database import *
+from utils.database import *
 from datetime import datetime
-from handlers.setup import stats
-from cogs.utils.time_converter import local_to_utc
+from utils.setup import stats
+from utils.time_converter import local_to_utc
 
 class Clock(commands.Cog):
     """ A class used to manage background periodic tasks.

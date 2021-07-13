@@ -6,8 +6,8 @@ from PIL import Image, ImageColor
 from discord.ext import commands
 from io import BytesIO
 
-from handlers.setup import stats
-from cogs.utils.arguments_parser import parse_outline_args
+from utils.setup import stats
+from utils.arguments_parser import parse_outline_args
 
 HEX_COLOR_REGEX = r'^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
 

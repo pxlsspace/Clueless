@@ -1,15 +1,11 @@
-from os import stat
 import discord
 from discord.ext import commands
-from discord.ext import tasks
-from discord.ext.commands.core import command, cooldown
 from datetime import datetime, timedelta, timezone
-from cogs.utils.database import *
-from cogs.utils.cooldown import *
-from cogs.utils.pxls_stats_manager import *
-from cogs.utils.time_converter import *
-from cogs.utils.arguments_parser import *
-from handlers.setup import stats
+from utils.database import *
+
+from utils.time_converter import *
+from utils.arguments_parser import parse_leaderboard_args, parse_speed_args
+from utils.setup import stats
 
 
 class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):

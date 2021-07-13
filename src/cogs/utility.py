@@ -4,8 +4,8 @@ import requests
 import json
 import os
 from dotenv import load_dotenv
-from cogs.utils.database import *
-from cogs.utils.time_converter import str_to_td, td_format
+from utils.database import update_prefix
+from utils.time_converter import str_to_td, td_format
 
 class Utility(commands.Cog):
     ''' Various utility commands'''

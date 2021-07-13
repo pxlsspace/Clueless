@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 import requests
 import asyncio
-from cogs.utils.img_to_gif import *
+from utils.img_to_gif import img_to_animated_gif
 from PIL import Image
 from io import BytesIO
 

@@ -1,14 +1,15 @@
 from discord.ext import commands
 from utils.database import *
-
+from utils.setup import stats
 class PxlsMilestones(commands.Cog):
 
     def __init__(self,client):
         self.client = client
+        self.stats = stats
 
     @commands.group(
         usage = " [add|remove|list|channel|setchannel]",
-        description = "Tracks pxls users stats and sends an alert in a chosen channel when a new milestone is hit.",
+        description = "Tracks pxls users milestones.",
         aliases = ["ms"],
         invoke_without_command = True)
     async def milestones(self,ctx,args):

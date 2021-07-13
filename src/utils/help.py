@@ -12,25 +12,26 @@ class HelpCommand(commands.HelpCommand):
     async def send_bot_help(self, mapping):
         prefix = self.context.prefix
 
-        text = ""
-
+        text = "```\n"
         for cog in mapping:
             # ignore cog if it's empty or has no command
             if cog == None or len(cog.get_commands()) == 0:
                 continue
-            name = f'**{cog.qualified_name}**'
             #value = ""
             for command in cog.get_commands():
                 if command.hidden == True:
                     continue
-                text += f"• `{prefix}{command.name}`: {command.description or 'N/A'}\n"
-
+                text += "• {:<13}: {}\n".format(
+                    prefix + command.name,
+                    command.description or 'N/A'
+                )
+        text+="```"
         #description = f'Use `{prefix}help [command]` to gain more information about that command.\n'
 
         emb = discord.Embed(title='Command help',
             color=EMBED_COLOR,
             description=text)
-        emb.set_thumbnail(url=self.context.me.avatar_url)
+        #emb.set_thumbnail(url=self.context.me.avatar_url)
         emb.set_footer(text=f'Use {prefix}help [command] to see more information about a command.\n')
         await self.get_destination().send(embed=emb)
 

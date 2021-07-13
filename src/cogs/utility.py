@@ -42,7 +42,7 @@ class Utility(commands.Cog):
 
     @commands.command(
         usage = "<amount> <currency>",
-        description = "Convert currency between Euro and South African Rand.",
+        description = "Convert currency between Euro and SA Rand.",
         help = """- `<amount>`: a number to convert
                   - `<currency>`: either: 'euros', 'euro', 'EUR', '€', 'e' or 'rand', 'ZAR', 'R' (not case-sensitive)"""
     )

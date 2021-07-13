@@ -9,7 +9,7 @@ class PxlsMilestones(commands.Cog):
 
     @commands.group(
         usage = "[add|remove|list|channel|setchannel]",
-        description = "Track pxls users milestones (every 1000 pixels).",
+        description = "Track pxls users milestones.",
         aliases = ["ms"],
         invoke_without_command = True)
     async def milestones(self,ctx,args):

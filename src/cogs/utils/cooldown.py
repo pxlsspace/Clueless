@@ -19,9 +19,9 @@ def time_convert(seconds):
     min, sec = divmod(seconds, 60)
     hour, min = divmod(min, 60)
     if hour == 0:
-        return "%02dm%02ds" % (min, round(sec,2))
+        return "%02d:%05.2f" % (min, sec)
     else:
-        return "%02dh%02dm%02ds" % (hour, min, round(sec,2))
+        return "%02d:%02d:%05.2f" % (hour, min, sec)
 
 def get_cds(online):
 

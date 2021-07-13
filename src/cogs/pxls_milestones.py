@@ -8,16 +8,16 @@ class PxlsMilestones(commands.Cog):
         self.stats = stats
 
     @commands.group(
-        usage = " [add|remove|list|channel|setchannel]",
-        description = "Tracks pxls users milestones.",
+        usage = "[add|remove|list|channel|setchannel]",
+        description = "Track pxls users milestones (every 1000 pixels).",
         aliases = ["ms"],
         invoke_without_command = True)
     async def milestones(self,ctx,args):
         return
     
     @milestones.command(
-        usage = " <name>",
-        description = "Add the user <name> to the tracker."
+        usage = "<name>",
+        description = "Add a user to the tracker."
     )
     async def add(self,ctx,name=None):
         # checking valid paramter
@@ -33,12 +33,15 @@ class PxlsMilestones(commands.Cog):
         if (add_user(ctx.guild.id,name,count)) == -1:
             await ctx.send("❌ This user is already being tracked.")
             return
-        await ctx.send ("✅ Tracking "+name+"'s all-time counter.")
-
+        msg = "✅ Tracking "+name+"'s all-time counter."
+        
+        if get_alert_channel(ctx.guild.id) == None:
+            msg += f"\nYou haven't set any alert channel, use `>milestones channel [#channel|here]`"
+        await ctx.send (msg)
     @milestones.command(
-        usage = " <name>",
-        description = "Removes the user <name> from the tracker.",
-        aliases=["delete"]
+        usage = "<name>",
+        description = "Remove a user from the tracker.",
+        aliases=["delete","rm"]
         )
     async def remove(self,ctx,name=None):
         if name == None:
@@ -62,9 +65,13 @@ class PxlsMilestones(commands.Cog):
         await ctx.send(text)
 
     @milestones.command(
-        usage = " [#channel|here|none]",
-        description = "Sets the milestone alerts to be sent in a channe, shows the current alert channel if no parameter is given.",
-        aliases=["setchannel"])
+        usage = "[#channel|here|none]",
+        description = "Set or show the milestone alerts channel",
+        aliases=["setchannel"],
+        help = """- `[#<channel>]`: set the alerts in the given channel
+                  - `[here]`: set the alerts in the current channel
+                  - `[none]`: disable the alerts
+                If no parameter is given, will show the current alert channel""")
     @commands.has_permissions(manage_channels=True)
     async def channel(self,ctx,channel=None):
         if channel == None:

@@ -21,8 +21,13 @@ class Outline(commands.Cog):
     ### Commands ###
     @commands.command(
         description = "Add an outline to an image.",
-        usage=" <color> <image or url> [-sparse] [-width <number>]",
-        aliases = ["border"])
+        usage="<color> <url|image> [-sparse] [-width <number>]",
+        aliases = ["border"],
+        help = """- `<color>`: color of the outline, can be the name of a pxlsColor or a hexcolor
+                  - `<url|image>`: an image URL or an attached image
+                  - `[-sparse]`: to have a sparse outline (outline without the corners)
+                  - `[-width <number>]`: the width of the outline in pixels"""
+        )
     async def outline(self,ctx,*args):
         ''' command to add an to an image '''
         try:
@@ -68,8 +73,10 @@ class Outline(commands.Cog):
                     image_binary.seek(0)
                     await ctx.send(file=discord.File(fp=image_binary, filename='outline.png'))
 
-    @commands.command(usage = " <image or url>",
-    description = "Remove the 'white space' from a PNG image.")
+    @commands.command(usage = "<image or url>",
+        description = "Remove the 'white space' from a PNG image.",
+        help = """- `<url|image>`: an image URL or an attached image"""
+        )
     async def crop(self,ctx,url=None):
         # if no url in the command, we check the attachments
         if url == None:

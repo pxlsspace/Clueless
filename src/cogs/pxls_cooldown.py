@@ -10,8 +10,8 @@ class PxlsCooldown(commands.Cog):
         self.client = client
 
     @commands.command(
-        usage =" [nb user]",
-        description = "Shows the current pxls cooldown.",
+        usage ="[nb user]",
+        description = "Show the current pxls cooldown.",
         aliases = ["cd","timer"])
     async def cooldown(self,ctx,number=None):
         if number:

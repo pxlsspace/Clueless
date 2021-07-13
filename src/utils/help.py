@@ -12,25 +12,26 @@ class HelpCommand(commands.HelpCommand):
     async def send_bot_help(self, mapping):
         prefix = self.context.prefix
 
-        description = f'Use `{prefix}help [command]` to gain more information about that command.\n'
-        emb = discord.Embed(title='Command help',
-            color=EMBED_COLOR,
-            description=description)
-        emb.set_thumbnail(url=self.context.me.avatar_url)
+        text = ""
+
         for cog in mapping:
             # ignore cog if it's empty or has no command
             if cog == None or len(cog.get_commands()) == 0:
                 continue
             name = f'**{cog.qualified_name}**'
-            value = ""
+            #value = ""
             for command in cog.get_commands():
                 if command.hidden == True:
                     continue
-                value += f"• `{prefix}{command.name}`: {command.description or 'N/A'}\n"
-            if value != "":
-                emb.add_field(name=name,value=value,inline=False)
+                text += f"• `{prefix}{command.name}`: {command.description or 'N/A'}\n"
 
-        emb.set_footer(text="<> is a required argument. [] is an optional argument. {} is a set of required items, you must choose one.")
+        #description = f'Use `{prefix}help [command]` to gain more information about that command.\n'
+
+        emb = discord.Embed(title='Command help',
+            color=EMBED_COLOR,
+            description=text)
+        emb.set_thumbnail(url=self.context.me.avatar_url)
+        emb.set_footer(text=f'Use {prefix}help [command] to see more information about a command.\n')
         await self.get_destination().send(embed=emb)
 
     # function called on ">help <cog name>"
@@ -46,6 +47,7 @@ class HelpCommand(commands.HelpCommand):
         emb.set_thumbnail(url=self.context.me.avatar_url)
         emb.add_field(name="Description: ",value=group.description or "N/A",inline=False)
         emb.add_field(name="Usage:",value=f"`{prefix}{group.name}{group.usage or ''}`",inline=False)
+        emb.set_footer(text="<> is a required argument. [] is an optional argument. {} is a set of required items, you must choose one.")
 
         if group.aliases != None and len(group.aliases) > 0: 
             aliases = [a for a in group.aliases]
@@ -59,7 +61,7 @@ class HelpCommand(commands.HelpCommand):
             for command in group.commands:
                 if command.hidden == True:
                     continue
-                commands_value += f"• `{command.name}{command.usage or ''}`: {command.description or 'N/A'}\n"
+                commands_value += f"• `{command.name} {command.usage or ''}`: {command.description or 'N/A'}\n"
             emb.add_field(name="Sub-commands: ",value=commands_value,inline=False)
 
         await self.get_destination().send(embed=emb)
@@ -72,8 +74,9 @@ class HelpCommand(commands.HelpCommand):
         prefix = self.context.prefix
         emb = discord.Embed(title = f'**Command {command.name}**',color = EMBED_COLOR)
         emb.set_thumbnail(url=self.context.me.avatar_url)
-        emb.add_field(name="Usage:",value=f"`{prefix}{command.name}{command.usage or ''}`",inline=False)
+        emb.add_field(name="Usage:",value=f"`{prefix}{command.name} {command.usage or ''}`",inline=False)
         emb.add_field(name="Description:",value=command.description or "N/A",inline=False)
+        emb.set_footer(text="<> is a required argument. [] is an optional argument. {} is a set of required items, you must choose one.")
 
         if command.aliases != None and len(command.aliases) > 0: 
             aliases = [a for a in command.aliases]
@@ -82,5 +85,7 @@ class HelpCommand(commands.HelpCommand):
                 value += f'`{a}` '
             emb.add_field(name="Alias(es): ",value=value,inline=False)
 
+        if command.help != None:
+            emb.add_field(name="Parameter(s):",value = command.help)
         await self.get_destination().send(embed=emb)
 

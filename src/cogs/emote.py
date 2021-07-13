@@ -12,18 +12,17 @@ class Emote(commands.Cog):
         self.client = client
 
     @commands.group(
-        usage=" [add|remove|list|number]",
-        description ="Manages the server custom emotes.",
+        usage="[add|remove|list|number]",
+        description ="Manage the server custom emotes.",
         aliases = ["emoji"],
         invoke_without_command = True)
-    async def emote(self, ctx):
-        return
-
+    async def emote(self, ctx,subcommand): 
+        return await ctx.send(f"❌ Sub-command {subcommand} is not found\nUsage: `{ctx.prefix}{ctx.command.name} {ctx.command.usage}`")
     @emote.command(
-        usage = " <name> <url|image>",
-        description = """Adds the image as a custom emoji.
-        If the server space is exceeded, will try to add it as an animated GIF.
-        (Requires manage_emojis permissions)"""
+        usage = "<name> <url|image>",
+        description = """Adds the image as a custom emoji.""",
+        help = """\t- `<name>`: name of the emoji to add\n
+                  \t- `<url|image>`: an image URL or an attached image"""
     )
     @commands.has_permissions(manage_emojis=True)
     async def add(self, ctx, name, url=None):
@@ -81,10 +80,9 @@ class Emote(commands.Cog):
 
 
     @emote.command(
-        usage = " <name>",
-        description="""Removes the custom emoji <name> from the server.
-        (Requires manage_emojis permissions)""",
-        aliases=["delete"])
+        usage = "<name>",
+        description="""Remove a custom emoji from the server.""",
+        aliases=["delete","rm"])
     @commands.has_permissions(manage_emojis=True)
     async def remove(self, ctx, name):
         emotes = [x for x in ctx.guild.emojis if x.name == name]
@@ -96,7 +94,7 @@ class Emote(commands.Cog):
         await ctx.send(f"✅ {nb_emote} emote(s) with the name :`{name}`: have been deleted")
 
     @emote.command(
-        description="Shows all of the server custom emojis and their names.",
+        description="Show all of the server custom emojis and their names.",
         aliases=["show"]
     )
     async def list(self, ctx):
@@ -119,7 +117,7 @@ class Emote(commands.Cog):
             await ctx.send(msg)
 
     @emote.command(
-        description="Gives the number of emojis and animated emojis on the server",
+        description="Give the number of emojis and animated emojis on the server",
         aliases = ["nb"])
     async def number(self,ctx):
         emojis = await ctx.guild.fetch_emojis()

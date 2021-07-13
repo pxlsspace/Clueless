@@ -89,32 +89,32 @@ class Reddit(commands.Cog,name = "Image"):
     @commands.cooldown(1,2)
     @commands.command(
         aliases=["kitty","cat"],
-        description = "Sends a random kitten image.",
+        description = "Send a random kitten image.",
         ratelimit=1)
     async def kitten(self,ctx):
         subreddit = random.choice(["tuckedinkitties","kitten"])
         await self.send_random_image(ctx,subreddit,"Here, have a kitten!")
 
     @commands.cooldown(1,2)
-    @commands.command(description = "Sends a random duck image.")
+    @commands.command(description = "Send a random duck image.")
     async def duck(self,ctx):
         subreddit = "duck"
         await self.send_random_image(ctx,subreddit,"quack quack")            
 
     @commands.cooldown(1,2)
-    @commands.command(description = "Sends a random bird image.")
+    @commands.command(description = "Send a random bird image.")
     async def bird(self,ctx):
         subreddit = random.choice(["birding","birdpics"])
         await self.send_random_image(ctx,subreddit,"Here, have a bird!")    
 
     @commands.cooldown(1,2)
-    @commands.command(description = "Sends a random snek image.")
+    @commands.command(description = "Send a random snek image.")
     async def snek(self,ctx):
         subreddit = "Sneks"
         await self.send_random_image(ctx,subreddit,"s  n  e  k") 
 
     @commands.cooldown(1,2)
-    @commands.command(description = "Sends a random doggo image.")
+    @commands.command(description = "Send a random doggo image.")
     async def doggo(self,ctx):
         subreddit = random.choice(["dogs","dogpictures","puppies","PuppySmiles"])
         await self.send_random_image(ctx,subreddit,"Here, have a doggo!") 

@@ -9,7 +9,7 @@ class PxlsStats(commands.Cog):
         
 
     @commands.command(
-        description = "Shows the current general stats from pxls.space/stats."
+        description = "Show some general pxls stats."
     )
     async def generalstats(self,ctx):
         gen_stats = self.stats.get_general_stats()
@@ -23,11 +23,13 @@ class PxlsStats(commands.Cog):
         await ctx.send(text)
 
     @commands.command(
-    usage = " <pxls user> [-c]",
-    description = "Shows the pixel count for a pxls user, all-time by default, canvas with `-c`.")
+    usage = "<username> [-c]",
+    description = "Show the pixel count for a pxls user.",
+    help = """- `<username>`: a pxls username
+              - `[-c|-canvas]`: to see the canvas count.""")
     async def stats(self,ctx,name,option=None):
 
-        if option == "-c":
+        if option == "-c" or option == "-canvas":
             number = self.stats.get_canvas_stat(name)
             text = "Canvas"
         else:

@@ -15,8 +15,13 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         self.stats = stats
 
     ### Discord commands ###
-    @commands.command(usage=" <name> [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
-    description = "Show the average speed of a user in the last x min, hours or days")
+    @commands.command(usage="<name> [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
+    description = "Show the average speed of a pxls user.",
+    help = """- `<name>`: name of the pxls user
+              - `[-last <?d?h?m?s>]`: get the average speed in the last x hours/days/minutes/seconds (default: 1 day)
+              - `[-before <date time>]`: to show the average speed before a date and time (format YYYY-mm-dd HH:MM)
+              - `[-after <date time>]`: to show the average speed after a date and time (format YYYY-mm-dd HH:MM)"""
+    )
     #async def speed(self,ctx,name,time="5h"):
     async def speed(self,ctx,name,*args):
         ''' Show the average speed of a user in the last x min, hours or days '''
@@ -56,9 +61,13 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
     # TODO: change of the help command to show parameters
     # TODO: align speed values on the right
     @commands.command(
-        usage = " [name] [-canvas] [-lines <number>] [-speed [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]] ",
-        description = "Shows the all-time or canvas leaderboard.",
-        aliases=["ldb"]
+        usage = "[name] [-canvas] [-lines <number>] [-speed [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]] ",
+        description = "Show the all-time or canvas leaderboard.",
+        aliases=["ldb"],
+        help = """- `[name]`: center the leaderboard on this user and show the difference with the others
+                  - `[-canvas|-c]`: to get the canvas leaderboard
+                  - `[[-lines|-l] <number>]`: number of lines to show, must be less than 40 (default 20)
+                  - `[-speed ... ]`: add a speed column, see `>help speed` for more information"""
         )
     async def leaderboard(self,ctx,*args):
         ''' Shows the pxls.space leaderboard '''

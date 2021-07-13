@@ -6,7 +6,7 @@ from discord.ext.commands.core import command, cooldown
 from datetime import datetime, timedelta, timezone
 from cogs.utils.database import *
 from cogs.utils.cooldown import *
-from cogs.utils.pxls_stats import *
+from cogs.utils.pxls_stats_manager import *
 from cogs.utils.time_converter import *
 from cogs.utils.arguments_parser import *
 from handlers.setup import stats

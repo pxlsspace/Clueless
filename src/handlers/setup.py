@@ -1,3 +1,3 @@
-from cogs.utils.pxls_stats import PxlsStats
+from cogs.utils.pxls_stats_manager import PxlsStatsManager
 
-stats =  PxlsStats()
+stats =  PxlsStatsManager()

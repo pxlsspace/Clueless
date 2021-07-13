@@ -2,7 +2,7 @@ import requests
 import json
 from datetime import datetime
 
-class PxlsStats():
+class PxlsStatsManager():
     ''' A helper to get data from pxls.space/stats'''
 
     def __init__(self):
@@ -57,7 +57,7 @@ class PxlsStats():
 
 if __name__ == "__main__":
     ''' test/debug code'''
-    p = PxlsStats()
+    p = PxlsStatsManager()
     for user in p.get_all_canvas_stats():
         name = user["username"]
         alltime_count = user["pixels"]

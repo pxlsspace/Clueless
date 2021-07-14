@@ -32,15 +32,31 @@ def parse_leaderboard_args(args):
     parser.add_argument('-speed', '-s', action='store_true', default=False, 
     help="Flag to show the speed.")
 
+    parser.add_argument('-last',action='store',default="1d")
+    parser.add_argument('-after',
+                        dest='after',
+                        nargs=2,
+                        default=None,
+                        help='start datetime in format "YYYY-MM-DD HH:mm"')
+    parser.add_argument('-before',
+                        dest='before',
+                        nargs=2,
+                        default=None,
+                        help='start datetime in format "YYYY-MM-DD HH:mm"')
 
-    res, rest_args = parser.parse_known_args(args)
-    if res.speed == True:
-        # parse the rest as speed arguments if flag '-speed'
-        res_speed = parse_speed_args(rest_args)
-        return vars(res) | res_speed
-    else:
+    
+    res = parser.parse_args(args)
+    if res.after:
+        after = " ".join(res.after)
+        res.after = valid_datetime_type(after)
+    if res.before:
+        before = " ".join(res.before)
+        res.before = valid_datetime_type(before)
+
+    if res.after and res.before and res.before < res.after:
+        raise ValueError("The 'before' date can't be earlier than the 'after' date.")
         
-        return vars(res)
+    return vars(res)
 
 def parse_speed_args(args):
     ''' Parse the speed command arguments, return a dictionary with the values parsed:

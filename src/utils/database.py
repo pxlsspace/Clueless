@@ -1,10 +1,6 @@
 import sqlite3
 from sqlite3 import Error
-from datetime import timezone
 import os
-
-from utils.time_converter import utc_to_local
-
 
 DB_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "database.db")
 
@@ -381,6 +377,36 @@ def sql_update(query,param=None):
     if (conn.total_changes == 0):
         # no changes have been made
         return -1
+
+def get_pixels_placed_between(datetime1,datetime2,canvas,orderby):
+
+    if orderby == 'speed':
+        orderby = "b.canvas_count - a.canvas_count"
+    elif orderby == 'canvas':
+        orderby = "last.canvas_count"
+    elif orderby == 'alltime':
+        orderby = "last.alltime_count"
+    else:
+        raise ValueError("orderby paramater must be: placed, canvas or alltime (got '"+orderby+"')")
+
+    sql = """SELECT 
+                ROW_NUMBER() OVER(ORDER BY ({0}) DESC) AS rank,
+                a.name,
+                last.{1}_count,
+                b.canvas_count - a.canvas_count as placed,
+                last.date, a.date, b.date
+            FROM pxls_user_stats a, pxls_user_stats b, pxls_user_stats last
+            WHERE a.name = b.name AND b.name = last.name
+            AND last.date = (SELECT max(date) FROM pxls_user_stats)
+            AND a.date = (SELECT k.date FROM
+                            (SELECT c.date, min(abs(JulianDay(c.date) - JulianDay(?)))
+                            FROM pxls_user_stats c) k)
+
+            AND b.date = (SELECT l.date FROM
+                            (SELECT d.date, min(abs(JulianDay(d.date) - JulianDay(?)))
+                            FROM pxls_user_stats d) l)
+            ORDER BY {0} desc""".format(orderby,"canvas" if canvas else "alltime")
+    return sql_select(sql,(datetime1,datetime2))
 
 import time
 def main():

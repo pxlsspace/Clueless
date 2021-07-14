@@ -55,19 +55,18 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         else:
             return await ctx.send(f'**{name}** placed `{diff_pixel}` pixels between {format_datetime(past_time)} and {format_datetime(now_time)}.\nAverage speed: `{speed_px_h}` px/h or `{speed_px_d}` px/day')
 
-    # TODO: option to sort by speed
     # TODO: option to show speed in px/day or amount
     # TODO: allow adding multiple users to compare
-    # TODO: change of the help command to show parameters
     # TODO: align speed values on the right
     @commands.command(
-        usage = "[name] [-canvas] [-lines <number>] [-speed [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]] ",
+        usage = "[name] [-canvas] [-lines <number>] [-speed [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]] [-sort <value>]",
         description = "Show the all-time or canvas leaderboard.",
         aliases=["ldb"],
         help = """- `[name]`: center the leaderboard on this user and show the difference with the others
                   - `[-canvas|-c]`: to get the canvas leaderboard
                   - `[[-lines|-l] <number>]`: number of lines to show, must be less than 40 (default 20)
-                  - `[-speed ... ]`: add a speed column, see `>help speed` for more information"""
+                  - `[-speed ... ]`: add a speed column, see `>help speed` for more information
+                  - `[-sort <value>]`: sort the leaderboard either by: `speed`, `canvas` or `alltime`"""
         )
     async def leaderboard(self,ctx,*args):
         ''' Shows the pxls.space leaderboard '''
@@ -80,8 +79,9 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         nb_line = param["lines"]
         canvas_opt = param["canvas"]
         speed_opt = param["speed"]
+        sort_opt = param["sort"]
 
-        # check on params
+        # check on speed args
         if speed_opt:
             if param["before"] == None and param["after"] == None:
                 date = param["last"]
@@ -91,15 +91,26 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                 date2 = datetime.now(timezone.utc)
                 date1 = datetime.now(timezone.utc) - input_time
             else:
-                date1 = param["after"] or datetime(2021,7,7,14,15,10) # To change to oldest database entry
+                date1 = param["after"] or datetime(2021,7,7,14,15,10)
                 date2 = param["before"] or datetime.now(timezone.utc)
+
+        # check on lines arg
         nb_line = int(nb_line)
         if nb_line > 40:
             return await ctx.send("❌ Can't show more than 40 lines.")
 
-        
-        ldb = get_last_leaderboard(canvas_opt)
-        date = ldb[0][3]
+        # check on sort arg
+        if not sort_opt:
+            sort = 'canvas' if canvas_opt else 'alltime'
+        else:
+            sort = sort_opt
+
+        if speed_opt:
+            ldb = get_pixels_placed_between(date1,date2,canvas_opt,sort)
+            date = ldb[0][4]
+        else:
+            ldb = get_last_leaderboard(canvas_opt)
+            date = ldb[0][3]
 
         # trim the leaderboard to only get the lines asked
         if username:
@@ -135,26 +146,42 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             column_names.append("Speed")
 
         # build the content of the leaderboard
+        res_ldb = []
         for i in range(len(ldb)):
-            ldb[i] = list(ldb[i][0:3]) # convert tuples to list and only keep first 3 col
+            res_ldb.append(list(ldb[i][0:3]))
+            if ldb[i][2] != None:
+                res_ldb[i][2] = f'{int(res_ldb[i][2]):,}'.replace(","," ")
+            else:
+                res_ldb[i][2] = "???"
             if username:
                 # add the diff values
                 diff = user_pixels-ldb[i][2]
                 diff = f'{int(diff):,}'.replace(","," ") # convert to string
-                ldb[i].append(diff)
+                res_ldb[i].append(diff)
+
             if speed_opt:
-                # add speed values
-                try:
-                    speed, diff_pixels, past_time, recent_time = self.get_speed(ldb[i][1],date1,date2)
-                except ValueError as e:
-                     return await ctx.send(f'❌ {e}')
-                speed = f'{int(speed):,}'.replace(","," ") # convert to string
-                ldb[i].append(speed+" px/h")
-            ldb[i][2] = f'{int(ldb[i][2]):,}'.replace(","," ") # format the number of pixels in a string
+                diff_pixels = ldb[i][3]
+                diff_time = ldb[i][6] - ldb[i][5]
+                nb_hours = diff_time/timedelta(hours=1)
+                speed = diff_pixels/nb_hours
+                res_ldb[i].append(f'{round(speed,1)} px/h')
 
         # format the leaderboard to be printed
-        text = "```diff\n"
-        text += self.format_leaderboard(ldb,column_names,username)
+        text = ""
+        if speed_opt:
+            past_time = ldb[0][5]
+            recent_time = ldb[0][6]
+            text += "\nSpeed between `{}` and `{}` ({})\n".format(
+                format_datetime(past_time),
+                format_datetime(recent_time),
+                td_format(recent_time-past_time)
+            )
+
+        if sort_opt != None:
+            text += "Sorted by: `{}`\n".format(sort)
+
+        text += "```diff\n"
+        text += self.format_leaderboard(res_ldb,column_names,username)
         text += "```"
 
         # create a discord embed with the leaderboard and send it
@@ -167,12 +194,14 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             format_datetime(date),
             td_format(datetime.utcnow()-date)
             )
-        if speed_opt:
-            footer_text += "\nSpeed values between {} and {} ({}).".format(
-                format_datetime(past_time),
-                format_datetime(recent_time),
-                td_format(recent_time-past_time)
-            )
+        # if speed_opt:
+        #     past_time = ldb[0][5]
+        #     recent_time = ldb[0][6]
+        #     footer_text += "\nSpeed values between {} and {}\n({}).".format(
+        #         format_datetime(past_time),
+        #         format_datetime(recent_time),
+        #         td_format(recent_time-past_time)
+        #     )
         emb.set_footer(text=footer_text)
         await ctx.send(embed=emb)
 

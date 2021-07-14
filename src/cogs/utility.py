@@ -24,20 +24,21 @@ class Utility(commands.Cog):
         description = "Repeat your text."
     )
     async def echo(self,ctx,text):
-        await ctx.send(text)
-
+        allowed_mentions = discord.AllowedMentions(everyone=False) 
+        await ctx.send(text, allowed_mentions=allowed_mentions)
 
     @commands.command(
         usage = "[prefix]",
         description = "Change or display the bot prefix."
     )
+    @commands.has_permissions(administrator=True)
     async def prefix(self,ctx,prefix=None):
         if prefix == None:
             prefix = ctx.prefix
             await ctx.send("Current prefix: `"+prefix+"`")
         else:
             update_prefix(prefix,ctx.guild.id)
-            await ctx.send("Prefix set to `"+prefix+"`")
+            await ctx.send("✅ Prefix set to `"+prefix+"`")
 
 
     @commands.command(
@@ -68,7 +69,7 @@ class Utility(commands.Cog):
 
     @commands.command(
         usage="<?d?h?m?s>",
-        description = "Converts time formats.",
+        description = "Convert time formats.",
         aliases = ["converttime","tconvert","tc"]
         )
     async def timeconvert(self,ctx,input):

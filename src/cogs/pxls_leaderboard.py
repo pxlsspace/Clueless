@@ -169,8 +169,8 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         # format the leaderboard to be printed
         text = ""
         if speed_opt:
-            past_time = ldb[0][5]
-            recent_time = ldb[0][6]
+            past_time = round_minutes(ldb[0][5])
+            recent_time = round_minutes(ldb[0][6])
             text += "\nSpeed between `{}` and `{}` ({})\n".format(
                 format_datetime(past_time),
                 format_datetime(recent_time),
@@ -194,14 +194,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             format_datetime(date),
             td_format(datetime.utcnow()-date)
             )
-        # if speed_opt:
-        #     past_time = ldb[0][5]
-        #     recent_time = ldb[0][6]
-        #     footer_text += "\nSpeed values between {} and {}\n({}).".format(
-        #         format_datetime(past_time),
-        #         format_datetime(recent_time),
-        #         td_format(recent_time-past_time)
-        #     )
+
         emb.set_footer(text=footer_text)
         await ctx.send(embed=emb)
 

@@ -378,7 +378,7 @@ def sql_update(query,param=None):
         # no changes have been made
         return -1
 
-def get_pixels_placed_between(datetime1,datetime2,canvas,orderby):
+def get_pixels_placed_between(datetime1,datetime2,canvas,orderby,users=None):
 
     if orderby == 'speed':
         orderby = "b.canvas_count - a.canvas_count"
@@ -397,6 +397,7 @@ def get_pixels_placed_between(datetime1,datetime2,canvas,orderby):
                 last.date, a.date, b.date
             FROM pxls_user_stats a, pxls_user_stats b, pxls_user_stats last
             WHERE a.name = b.name AND b.name = last.name
+            {2}
             AND last.date = (SELECT max(date) FROM pxls_user_stats)
             AND a.date = (SELECT k.date FROM
                             (SELECT c.date, min(abs(JulianDay(c.date) - JulianDay(?)))
@@ -405,8 +406,18 @@ def get_pixels_placed_between(datetime1,datetime2,canvas,orderby):
             AND b.date = (SELECT l.date FROM
                             (SELECT d.date, min(abs(JulianDay(d.date) - JulianDay(?)))
                             FROM pxls_user_stats d) l)
-            ORDER BY {0} desc""".format(orderby,"canvas" if canvas else "alltime")
-    return sql_select(sql,(datetime1,datetime2))
+            ORDER BY {0} desc""".format(
+                orderby,
+                "canvas" if canvas else "alltime",
+                (f"AND a.name IN ({', '.join('?'*len(users))})") if len(users) > 1 else ''
+            )
+    if len(users) > 1:
+        users.append(datetime1)
+        users.append(datetime2)
+        return sql_select(sql,users)
+
+    else:
+        return sql_select(sql,(datetime1,datetime2))
 
 import time
 def main():

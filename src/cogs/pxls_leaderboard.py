@@ -56,13 +56,13 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             return await ctx.send(f'**{name}** placed `{diff_pixel}` pixels between {format_datetime(past_time)} and {format_datetime(now_time)}.\nAverage speed: `{speed_px_h}` px/h or `{speed_px_d}` px/day')
 
     # TODO: option to show speed in px/day or amount
-    # TODO: allow adding multiple users to compare
     # TODO: align speed values on the right
+    # TODO: get more accurate date1 value
     @commands.command(
-        usage = "[name] [-canvas] [-lines <number>] [-speed [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]] [-sort <value>]",
+        usage = "[name1] [name2] [...] [-canvas] [-lines <number>] [-speed [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]] [-sort <value>]",
         description = "Show the all-time or canvas leaderboard.",
         aliases=["ldb"],
-        help = """- `[name]`: center the leaderboard on this user and show the difference with the others
+        help = """- `[names]`: center the leaderboard on this user and show the difference with the others. If more than one name: compare them together
                   - `[-canvas|-c]`: to get the canvas leaderboard
                   - `[[-lines|-l] <number>]`: number of lines to show, must be less than 40 (default 20)
                   - `[-speed ... ]`: add a speed column, see `>help speed` for more information
@@ -93,6 +93,9 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             else:
                 date1 = param["after"] or datetime(2021,7,7,14,15,10)
                 date2 = param["before"] or datetime.now(timezone.utc)
+        else:
+            date1 = datetime.now(timezone.utc)
+            date2 = datetime.now(timezone.utc)
 
         # check on lines arg
         nb_line = int(nb_line)
@@ -105,12 +108,9 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         else:
             sort = sort_opt
 
-        if speed_opt:
-            ldb = get_pixels_placed_between(date1,date2,canvas_opt,sort)
-            date = ldb[0][4]
-        else:
-            ldb = get_last_leaderboard(canvas_opt)
-            date = ldb[0][3]
+        # fetch the leaderboard from the database
+        ldb = get_pixels_placed_between(date1,date2,canvas_opt,sort,username)
+        date = ldb[0][4]
 
         # trim the leaderboard to only get the lines asked
         if username:
@@ -119,7 +119,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             for index,line in enumerate(ldb):
                 name = list(line)[1]
                 pixels = list(line)[2]
-                if name == username:
+                if name == username[0]:
                     name_index = index
                     user_pixels = pixels
                     break
@@ -181,7 +181,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             text += "Sorted by: `{}`\n".format(sort)
 
         text += "```diff\n"
-        text += self.format_leaderboard(res_ldb,column_names,username)
+        text += self.format_leaderboard(res_ldb,column_names,username[0] if username else None)
         text += "```"
 
         # create a discord embed with the leaderboard and send it

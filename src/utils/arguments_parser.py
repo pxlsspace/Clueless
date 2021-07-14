@@ -21,8 +21,8 @@ def parse_leaderboard_args(args):
         'after': <datetime> | None
     }'''
     parser  = MyParser(add_help=False)
-    parser.add_argument('name', type=str, nargs='?',
-        help='Center the leaderboard on this user.')
+    parser.add_argument('name', type=str, nargs='*',
+        help='Center the leaderboard on this user.',default=[])
     parser.add_argument('-canvas', '-c', action='store_true', default=False, 
         help="Flag to get the canvas leaderboard.")
     parser.add_argument('-lines','-l',metavar="<number>", action='store', type=int, default=20,

@@ -1,9 +1,11 @@
 from PIL import Image, ImageColor
 from discord.ext import commands
 import discord
-from utils.setup import stats
 import requests
+import plotly.graph_objects as go
 from io import BytesIO
+from utils.setup import stats
+
 
 class ColorBreakdown(commands.Cog):
     def __init__(self,client):
@@ -30,12 +32,25 @@ class ColorBreakdown(commands.Cog):
 
         input_image = Image.open(BytesIO(response.content))
 
+        # get and format the color breakdown table
         tab = color_amount(input_image)
-        tab_formated = "```\n" + format_color_breakdown(tab,["Color","Qty"],["^",">"]) + "```"
-
+        tab_to_format = [tab[i][:2] for i in range(len(tab))]
+        tab_formated = "```\n" + format_color_breakdown(tab_to_format,["Color","Qty"],["^",">"]) + "```"
         emb = discord.Embed(title="Color Breakdown",description=tab_formated)
 
+        # make the pie chart with the color table
+        labels = [tab[i][0] for i in range(len(tab))]
+        values = [tab[i][1] for i in range(len(tab))]
+        colors = [tab[i][2] for i in range(len(tab))]
+        piechart = get_piechart(labels,values,colors)
+        piechart_img = fig2img(piechart)
+
+        # send 2 messages: the table in an embed, the image
         await ctx.send(embed=emb)
+        with BytesIO() as image_binary:
+            piechart_img.save(image_binary, 'PNG')
+            image_binary.seek(0)
+            await ctx.send(file=discord.File(fp=image_binary, filename='piechart.png'))
 
 def setup(client):
     client.add_cog(ColorBreakdown(client))
@@ -56,26 +71,31 @@ def color_amount(img):
                 else:
                     colors[pixel_color] += 1
     colors_pxls = rgb_to_pxlscolor(colors)
-    colors_pxls_sorted = sorted(colors_pxls.items(), key=lambda x: x[1],reverse=True) 
-    return colors_pxls_sorted
+    
+    #colors_pxls_sorted = sorted(colors_pxls.items(), key=lambda x: x[1],reverse=True)
+    colors_pxls.sort(key = lambda x:x[1],reverse=True)
+    #)
+    return colors_pxls
 
 def rgb_to_pxlscolor(rgb_dict):
     ''' Convert a dictionary in the format {*(RGB:amount)} to {*(color_name:amount)}
 
     color_name is a pxls.space color name, if the RGB doesn't match,
     the color_name will be the hex code'''
-    res = {}
+
+    res_list = []
     for rgb in rgb_dict:
-        
+
         for pxls_color in stats.get_palette():
             found = False
             if rgb == ImageColor.getcolor('#' + pxls_color["value"],'RGB'):
-                res[pxls_color["name"]] = rgb_dict[rgb]
+                res_list.append((pxls_color["name"],rgb_dict[rgb],rgb_to_hex(rgb)))
                 found = True
                 break
         if found == False:
-            res[rgb_to_hex(rgb)] = rgb_dict[rgb]
-    return res
+            res_list.append((rgb_to_hex(rgb),rgb_dict[rgb],rgb_to_hex(rgb)))
+
+    return res_list
 
 def rgb_to_hex(rgb):
     ''' convert a RGB tuple to the matching hex code
@@ -112,3 +132,25 @@ def format_color_breakdown(table,column_names,alignments=None):
     for row in table[1:]:
         str_table += row_format.format(*row) + "\n"
     return str_table
+
+def get_piechart(labels,values,colors):
+    layout = go.Layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font_color="white"
+    )
+    fig = go.Figure(data=[go.Pie(labels=labels,
+                                values=values)],layout=layout)
+    fig.update_traces( textinfo='percent', textfont_size=20,
+                    marker=dict(colors=colors, line=dict(color='#000000', width=1)))
+    fig.update_traces(textposition='inside')
+    fig.update_layout(uniformtext_minsize=12, uniformtext_mode='hide')
+    return fig
+
+
+def fig2img(fig):
+    buf = BytesIO()
+    fig.write_image(buf,format="png",width=600,height=600,scale=1.5)
+    # buf = io.BytesIO(img_bytes)
+    img = Image.open(buf)
+    return img

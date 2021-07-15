@@ -28,12 +28,13 @@ async def on_command_error(ctx,error):
         text += f'Usage: `{ctx.prefix}{ctx.command.qualified_name} {ctx.command.usage}`'
         return await ctx.send(text)
     if isinstance(error, commands.CommandNotFound):
-        return await ctx.send("❌ " + str(error))
+        return
+    #     return await ctx.send("❌ " + str(error))
     if isinstance(error, commands.MissingPermissions):
        await ctx.send(f"❌ You don't have permissions to use {ctx.command.qualified_name}.")
 
     await ctx.message.add_reaction(r'a:peepoLeaveNope:822571977390817340')
-    await ctx.send(error)
+    #await ctx.send(error)
     print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
 
@@ -42,11 +43,11 @@ async def on_message(message):
     if message.author == client.user:
         return
 
-    if message.content == 'a':
-        await message.channel.send('<:watermelonDEATH:856212273718886400>')
+    if message.content == ">_>":
+        return await message.channel.send("<_<")
 
-    if message.content == 'what':
-        await message.add_reaction('👽')
+    if message.content == 'aa':
+        await message.channel.send('<:watermelonDEATH:856212273718886400>')
 
     await client.process_commands(message)
     

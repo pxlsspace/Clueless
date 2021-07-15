@@ -80,8 +80,10 @@ class Utility(commands.Cog):
 
 
     @commands.command(hidden=True)
-    @commands.has_permissions(administrator=True)
+    #@commands.has_permissions(administrator=True)
     async def rl(self,ctx,extension):
+        if ctx.message.author.id != 219444769879883776:
+            return await ctx.send("❌ You can't do that >:|")
         try:
             self.client.reload_extension("cogs."+extension)
         except Exception as e:

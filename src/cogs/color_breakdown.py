@@ -36,7 +36,6 @@ class ColorBreakdown(commands.Cog):
         tab = color_amount(input_image)
         tab_to_format = [tab[i][:2] for i in range(len(tab))]
         tab_formated = "```\n" + format_color_breakdown(tab_to_format,["Color","Qty"],["^",">"]) + "```"
-        emb = discord.Embed(title="Color Breakdown",description=tab_formated)
 
         # make the pie chart with the color table
         labels = [tab[i][0] for i in range(len(tab))]
@@ -45,12 +44,15 @@ class ColorBreakdown(commands.Cog):
         piechart = get_piechart(labels,values,colors)
         piechart_img = fig2img(piechart)
 
-        # send 2 messages: the table in an embed, the image
-        await ctx.send(embed=emb)
+        # create and send the embed with the color table, the pie chart and the image sent as thumbnail
+        emb = discord.Embed(title="Color Breakdown",description=tab_formated)
         with BytesIO() as image_binary:
             piechart_img.save(image_binary, 'PNG')
             image_binary.seek(0)
-            await ctx.send(file=discord.File(fp=image_binary, filename='piechart.png'))
+            image = discord.File(image_binary, filename='piechart.png')
+            emb.set_image(url=f'attachment://piechart.png')
+            emb.set_thumbnail(url=url)
+            await ctx.send(file=image,embed=emb)
 
 def setup(client):
     client.add_cog(ColorBreakdown(client))
@@ -151,6 +153,5 @@ def get_piechart(labels,values,colors):
 def fig2img(fig):
     buf = BytesIO()
     fig.write_image(buf,format="png",width=600,height=600,scale=1.5)
-    # buf = io.BytesIO(img_bytes)
     img = Image.open(buf)
     return img

@@ -312,34 +312,33 @@ def get_canvas_pxls_count(user,dt):
     else:
         return res
 
-def update_pxls_stats(user,time,alltime=None,canvas=None):
-    if alltime == None and canvas == None:
-        return None
+def update_all_pxls_stats(alltime_stats,canvas_stats,last_updated):
 
-    if canvas == None:
-        sql = """INSERT INTO pxls_user_stats(name, date, alltime_count) 
-                VALUES (?,?,?)
+    conn = create_connection(DB_FILE)
+    cur = conn.cursor()
+
+    for user in alltime_stats:
+        name = user["username"]
+        alltime_count = user["pixels"]
+        sql = """INSERT INTO pxls_user_stats(name, date, alltime_count, canvas_count) 
+                VALUES (?,?,?,?)
                 ON CONFLICT (name,date) 
                 DO UPDATE SET
                     alltime_count = ?"""
-        param = (user,time,alltime,alltime)
-    elif alltime == None:
+        cur.execute(sql,(name,last_updated,alltime_count,0,alltime_count))
+
+
+    for user in canvas_stats:
+        name = user["username"]
+        canvas_count = user["pixels"]
         sql = """INSERT INTO pxls_user_stats(name, date, canvas_count) 
                 VALUES (?,?,?)
                 ON CONFLICT (name,date) 
                 DO UPDATE SET
                     canvas_count = ?"""
-        param = (user,time,canvas,canvas)
-    else:
-        sql = """INSERT INTO pxls_user_stats(name, date, alltime_count, canvas_count) 
-                VALUES (?,?,?,?)
-                ON CONFLICT (name,date) 
-                DO UPDATE SET
-                    alltime_count = ?,
-                    canvas_count = ? """
-        param = (user,time,alltime,canvas,alltime,canvas)
+        cur.execute(sql,(name,last_updated,canvas_count,canvas_count))
 
-    sql_update(sql,param)
+    conn.commit()
 
 def get_last_leaderboard(canvas=False):
     if canvas == True:

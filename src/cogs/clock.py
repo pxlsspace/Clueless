@@ -24,8 +24,8 @@ class Clock(commands.Cog):
         min = now.strftime("%M")
 
         if min in ['01','16','31','46']:
-            time = now.strftime("[%H:%M:%S]")
-            print(time +": updating stats data",end='',flush=True)
+            now = now.strftime("[%H:%M:%S]")
+            print(now +": updating stats data.",end='',flush=True)
 
             # refreshing stats json
             self.stats.refresh()
@@ -46,6 +46,10 @@ class Clock(commands.Cog):
     @update_stats.before_loop
     async def before_update_stats(self):
         await self.client.wait_until_ready()
+        # update the stats on start
+        self.stats.refresh()
+        self.update_database()
+        await self.check_milestones()
 
     async def check_milestones(self):
         ''' Send alerts in all the servers following a user if they hit a milestone. '''
@@ -73,17 +77,11 @@ class Clock(commands.Cog):
         lastupdated = local_to_utc(lastupdated) 
         lastupdated = lastupdated.replace(tzinfo=None)
 
-        # (to optimize)
-        for user in self.stats.get_all_alltime_stats():
-            name = user["username"]
-            alltime_count = user["pixels"]
-            update_pxls_stats(name,lastupdated,alltime_count,0)
+        alltime_stats = self.stats.get_all_alltime_stats()
+        canvas_stats = self.stats.get_all_canvas_stats()
 
-        for user in self.stats.get_all_canvas_stats():
-            name = user["username"]
-            canvas_count = user["pixels"]
-            update_pxls_stats(name,lastupdated,None,canvas_count)
-
+        update_all_pxls_stats(alltime_stats,canvas_stats,lastupdated)
+    
 
 def setup(client):
     client.add_cog(Clock(client))

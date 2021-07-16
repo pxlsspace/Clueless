@@ -6,7 +6,7 @@ from utils.database import *
 from utils.time_converter import *
 from utils.arguments_parser import parse_leaderboard_args, parse_speed_args
 from utils.setup import stats
-
+from utils.discord_utils import format_table
 
 class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
@@ -58,6 +58,8 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
     # TODO: option to show speed in px/day or amount
     # TODO: align speed values on the right
     # TODO: get more accurate date1 value
+    # TODO: optimize database update
+    # IDEA: show the color breakdown of an image
     @commands.command(
         usage = "[name1] [name2] [...] [-canvas] [-lines <number>] [-speed [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]] [-sort <value>]",
         description = "Show the all-time or canvas leaderboard.",
@@ -140,10 +142,13 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
         # build the header of the leaderboard
         column_names = ["Rank","Username","Pixels"]
+        alignments = ["<","<",">"]
         if username:
             column_names.append("Diff")
+            alignments.append("<")
         if speed_opt:
             column_names.append("Speed")
+            alignments.append(">")
 
         # build the content of the leaderboard
         res_ldb = []
@@ -181,7 +186,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             text += "Sorted by: `{}`\n".format(sort)
 
         text += "```diff\n"
-        text += self.format_leaderboard(res_ldb,column_names,username[0] if username else None)
+        text += format_table(res_ldb,column_names,alignments,username[0] if username else None)
         text += "```"
 
         # create a discord embed with the leaderboard and send it
@@ -230,31 +235,6 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         nb_hours = diff_time/timedelta(hours=1)
         speed = diff_pixels/nb_hours
         return speed, diff_pixels, past_time, recent_time
-
-    @staticmethod
-    def format_leaderboard(table,column_names,name=None):
-        ''' Format the leaderboard in a string to be printed '''
-        if not table:
-            return
-        if len(table[0]) != len(column_names):
-            raise ValueError("The number of column in table and column_names don't match.")
-
-        # find the longest columns
-        table.insert(0,column_names)
-        longest_cols = [
-            (max([len(str(row[i])) for row in table]) + 1)
-            for i in range(len(table[0]))]
-
-        # format the header
-        LINE = "-"*(sum(longest_cols) + len(table[0]*2))
-        row_format = "|".join([" {:<" + str(longest_col) + "}" for longest_col in longest_cols])
-        str_table = f'{LINE}\n {row_format.format(*table[0])}\n{LINE}\n'
-
-        # format the body
-        for row in table[1:]:
-            str_table += ("+" if row[1] == name else " ") + row_format.format(*row) + "\n"
-
-        return str_table
 
 def setup(client):
     client.add_cog(PxlsLeaderboard(client))

@@ -5,7 +5,7 @@ import requests
 import plotly.graph_objects as go
 from io import BytesIO
 from utils.setup import stats
-
+from utils.discord_utils import format_table
 
 class ColorBreakdown(commands.Cog):
     def __init__(self,client):
@@ -35,7 +35,7 @@ class ColorBreakdown(commands.Cog):
         # get and format the color breakdown table
         tab = color_amount(input_image)
         tab_to_format = [tab[i][:2] for i in range(len(tab))]
-        tab_formated = "```\n" + format_color_breakdown(tab_to_format,["Color","Qty"],["^",">"]) + "```"
+        tab_formated = "```\n" + format_table(tab_to_format,["Color","Qty"],["^",">"]) + "```"
 
         # make the pie chart with the color table
         labels = [tab[i][0] for i in range(len(tab))]
@@ -104,36 +104,6 @@ def rgb_to_hex(rgb):
     ((255,255,255) -> #ffffff)'''
     str = '#' + '%02x'*len(rgb)
     return str % rgb
-
-def format_color_breakdown(table,column_names,alignments=None):
-    ''' Format the color table in a string to be printed '''
-    if not table:
-        return
-    if len(table[0]) != len(column_names):
-        raise ValueError("The number of column in table and column_names don't match.")
-    # find the longest columns
-    table.insert(0,column_names)
-    longest_cols = [
-        (max([len(str(row[i])) for row in table]) + 1)
-        for i in range(len(table[0]))]
-
-    # format the header
-    LINE = "-"*(sum(longest_cols) + len(table[0]*2))
-
-    # format the body
-    if not alignments:
-        row_format = " | ".join(["{:>" + str(longest_col) + "}" for longest_col in longest_cols])
-        title_format = " | ".join(["{:^" + str(longest_col) + "}" for longest_col in longest_cols])
-
-    else:
-        row_format = "| ".join([f"{{:{alignments[i]}" + str(longest_col) + "}" for i,longest_col in enumerate(longest_cols)])
-        title_format = row_format
-
-    str_table = f'{title_format.format(*table[0])}\n{LINE}\n'
-
-    for row in table[1:]:
-        str_table += row_format.format(*row) + "\n"
-    return str_table
 
 def get_piechart(labels,values,colors):
     layout = go.Layout(

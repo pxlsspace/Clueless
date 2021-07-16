@@ -17,10 +17,11 @@ class PxlsSpeed(commands.Cog):
     def __init__(self,client):
         self.client = client
 
-    @commands.command(usage="<name> [-canvas|-c] [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
+    @commands.command(usage="<name> [-canvas|-c] [-groupby|-g [day|hour]] [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
     description = "Show the average speed of a pxls user.",
     help = """- `<names>`: list of pxls users names separated by a space
               - `[-canvas|-c]`: to show canvas stats
+              - `[-groupby|-g]`: show a bar chart for each `day` or `hour`
               - `[-last <?d?h?m?s>]`: get the average speed in the last x hours/days/minutes/seconds (default: 1 day)
               - `[-before <date time>]`: to show the average speed before a date and time (format YYYY-mm-dd HH:MM)
               - `[-after <date time>]`: to show the average speed after a date and time (format YYYY-mm-dd HH:MM)"""
@@ -45,6 +46,7 @@ class PxlsSpeed(commands.Cog):
 
         names = param["names"]
         canvas_opt = param["canvas"]
+        groupby_opt = param["groupby"]
 
         small_ldb = get_pixels_placed_between(old_time,recent_time,canvas_opt,'speed',names)
         if not small_ldb:
@@ -68,12 +70,16 @@ class PxlsSpeed(commands.Cog):
 
         res_formated = format_table(res,["Name","Pixels","Placed","px/h","px/d"],["<",">",">",">",">"])
         emb = discord.Embed(
-            
             description = "```\n" + res_formated + "```"
         )
         emb.set_footer(text=f"Between {format_datetime(past_time)} and {format_datetime(now_time)}")
+        
         # create the graph
-        graph = get_stats_graph(names,canvas_opt,past_time,now_time)
+        if groupby_opt:
+            graph = get_grouped_graph(names,past_time,now_time,groupby_opt)
+
+        else:
+            graph = get_stats_graph(names,canvas_opt,past_time,now_time)
         img = fig2img(graph)
         # create and send the embed with the color table, the pie chart and the image sent as thumbnail
         with BytesIO() as image_binary:
@@ -122,7 +128,7 @@ def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc)):
         else:
             pixels = [stat[1] for stat in stats]
 
-        # tracer the user data
+        # trace the user data
         fig.add_trace(go.Scatter(
             x=dates,
             y=pixels,
@@ -142,5 +148,65 @@ def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc)):
             text = user,
             showarrow = False,
             font = dict(color= colors[i],size=30)
+        )
+    return fig
+
+def get_grouped_graph(user_list,date1,date2,groupby_opt):
+
+    # check on the groupby param
+    if groupby_opt == "day":
+        groupby = '%Y-%m-%d'
+    elif groupby_opt == "hour":
+        groupby = '%Y-%m-%d %H'
+    else:
+        raise ValueError("'groupby' parameter can only be 'day' or 'hour'.")
+
+    # create the graph layout and style
+    layout = go.Layout(
+        paper_bgcolor='RGBA(0,0,0,255)',
+        plot_bgcolor='#00172D',
+        font_color="#bfe6ff",
+        font_size=25,
+        font=dict(family="Courier New")
+    )
+    fig = go.Figure(layout=layout)
+    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#bfe6ff')
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#bfe6ff')
+    colors = px.colors.qualitative.Pastel
+
+    for i,user in enumerate(user_list):
+        # get the data
+        stats = sql_select(
+            """SELECT name, alltime_count, canvas_count,
+                    alltime_count-(LAG(alltime_count) OVER (ORDER BY date)) as placed,
+                    MAX(date) as last_datetime
+                FROM pxls_user_stats
+                WHERE name = ?
+                AND DATE > ?
+                AND DATE < ?
+                GROUP BY strftime(?,date)
+                """,
+            (user,date1,date2,groupby))
+        stats = stats[1:]
+        if not stats:
+            continue
+
+        if groupby_opt == "day":
+            dates = [stat[4][:10] for stat in stats]
+        elif groupby_opt == "hour":
+            dates = [stat[4][:13] for stat in stats]
+        pixels = [stat[3] for stat in stats]
+
+        # trace the user data
+        fig.add_trace(
+            go.Bar(
+                name = user,
+                x = dates,
+                y = pixels,
+                text = pixels,
+                textposition = 'outside',
+                marker = dict(color=colors[i],opacity=0.95),
+                textfont = dict(color='#bfe6ff',size=25),
+            )
         )
     return fig

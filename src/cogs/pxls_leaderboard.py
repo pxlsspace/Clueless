@@ -17,7 +17,6 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
     ### Discord commands ###
     # TODO: option to show speed in px/day or amount
     # TODO: get more accurate date1 value
-    # TODO: optimize database update
     @commands.command(
         usage = "[name1] [name2] [...] [-canvas] [-lines <number>] [-speed [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]] [-sort <value>]",
         description = "Show the all-time or canvas leaderboard.",
@@ -49,9 +48,9 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                 if not input_time:
                     return await ctx.send(f"❌ Invalid `last` parameter, format must be `?d?h?m?s`.")
                 date2 = datetime.now(timezone.utc)
-                date1 = datetime.now(timezone.utc) - input_time
+                date1 = round_minutes_down(datetime.now(timezone.utc) - input_time)
             else:
-                date1 = param["after"] or datetime(2021,7,7,14,15,10)
+                date1 = param["after"] or datetime(1900,1,1,0,0,0)
                 date2 = param["before"] or datetime.now(timezone.utc)
         else:
             date1 = datetime.now(timezone.utc)

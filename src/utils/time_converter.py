@@ -73,7 +73,7 @@ def local_to_utc(dt):
     return dt.astimezone(timezone.utc)
 
 def round_minutes(some_datetime: datetime, step=15):
-    """ round up to nearest step-minutes """
+    """ round up to nearest step-minutes (00:29 -> 00:30)"""
     if step > 60:
         raise AttributeError("step must be less than 60")
 
@@ -85,5 +85,18 @@ def round_minutes(some_datetime: datetime, step=15):
 
     if change > timedelta():
         change -= timedelta(minutes=step)
+
+    return some_datetime - change
+
+def round_minutes_down(some_datetime: datetime, step=15):
+    """ round down to nearest step-minutes (00:29 -> 00:15) """
+    if step > 60:
+        raise AttributeError("step must be less than 60")
+
+    change = timedelta(
+        minutes= some_datetime.minute % step,
+        seconds=some_datetime.second,
+        microseconds=some_datetime.microsecond
+    )
 
     return some_datetime - change

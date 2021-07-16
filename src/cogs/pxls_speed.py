@@ -10,7 +10,7 @@ import discord
 from utils.discord_utils import format_number, format_table
 from utils.database import sql_select, get_pixels_placed_between
 from utils.arguments_parser import parse_speed_args
-from utils.time_converter import format_datetime, str_to_td
+from utils.time_converter import format_datetime, round_minutes_down, str_to_td
 
 class PxlsSpeed(commands.Cog):
 
@@ -33,28 +33,29 @@ class PxlsSpeed(commands.Cog):
         except ValueError as e:
             return await ctx.send(f'❌ {e}')
 
+        # check on date arguments
         if param["before"] == None and param["after"] == None:
             date = param["last"]
             input_time = str_to_td(date)
             if not input_time:
                 return await ctx.send(f"❌ Invalid `last` parameter, format must be `{ctx.prefix}{ctx.command.name}{ctx.command.usage}`.")
             recent_time = datetime.now(timezone.utc)
-            old_time = datetime.now(timezone.utc) - input_time
+            old_time = round_minutes_down(datetime.now(timezone.utc) - input_time)
         else:
-            old_time = param["after"] or datetime(2021,7,7,14,15,10) # To change to oldest database entry
+            old_time = param["after"] or datetime(1900,1,1,0,0,0)
             recent_time = param["before"] or datetime.now(timezone.utc)
 
         names = param["names"]
         canvas_opt = param["canvas"]
         groupby_opt = param["groupby"]
 
-        small_ldb = get_pixels_placed_between(old_time,recent_time,canvas_opt,'speed',names)
-        if not small_ldb:
+        ldb = get_pixels_placed_between(old_time,recent_time,canvas_opt,'speed',names)
+        if not ldb:
             return await ctx.send("❌ User(s) not found.")
-        now_time = small_ldb[0][6]
-        past_time = small_ldb[0][5]
+        now_time = ldb[0][6]
+        past_time = ldb[0][5]
         res = []
-        for user in small_ldb:
+        for user in ldb:
             name = user[1]
             pixels = format_number(user[2])
             diff_pixels = user[3]
@@ -98,16 +99,18 @@ def fig2img(fig):
     img = Image.open(buf)
     return img
 
+layout = go.Layout(
+    paper_bgcolor='RGBA(0,0,0,255)',
+    plot_bgcolor='#00172D',
+    font_color="#bfe6ff",
+    font_size=30,
+    font=dict(family="Courier New"),
+    yaxis={'tickformat': ',d'},
+)
+
 def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc)):
 
-    # create the graph layout and style
-    layout = go.Layout(
-        paper_bgcolor='RGBA(0,0,0,255)',
-        plot_bgcolor='#00172D',
-        font_color="#bfe6ff",
-        font_size=25,
-        font=dict(family="Courier New")
-    )
+    # create the graph
     fig = go.Figure(layout=layout)
     fig.update_layout(showlegend=False)
     fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#bfe6ff')
@@ -117,8 +120,8 @@ def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc)):
         # get the data
         stats = sql_select("""SELECT * FROM pxls_user_stats
                             WHERE name = ?
-                            AND date > ?
-                            AND date < ?""",(user,date1,date2))
+                            AND date >= ?
+                            AND date <= ?""",(user,date1,date2))
         if not stats:
             continue
 
@@ -134,8 +137,8 @@ def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc)):
             y=pixels,
             mode='lines',
             name=user,
-            line=dict(width=3),
-            marker=dict(color= colors[i],size=3)
+            line=dict(width=4),
+            marker=dict(color= colors[i],size=6)
             )
         )
         # add the name at the end of the line
@@ -145,9 +148,9 @@ def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc)):
             xshift=10,
             x = dates[-1],
             y = pixels[-1],
-            text = user,
+            text = ("<b>%s</b>" % user),
             showarrow = False,
-            font = dict(color= colors[i],size=30)
+            font = dict(color= colors[i],size=35)
         )
     return fig
 
@@ -161,14 +164,7 @@ def get_grouped_graph(user_list,date1,date2,groupby_opt):
     else:
         raise ValueError("'groupby' parameter can only be 'day' or 'hour'.")
 
-    # create the graph layout and style
-    layout = go.Layout(
-        paper_bgcolor='RGBA(0,0,0,255)',
-        plot_bgcolor='#00172D',
-        font_color="#bfe6ff",
-        font_size=25,
-        font=dict(family="Courier New")
-    )
+    # create the graph and style
     fig = go.Figure(layout=layout)
     fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#bfe6ff')
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#bfe6ff')
@@ -182,8 +178,8 @@ def get_grouped_graph(user_list,date1,date2,groupby_opt):
                     MAX(date) as last_datetime
                 FROM pxls_user_stats
                 WHERE name = ?
-                AND DATE > ?
-                AND DATE < ?
+                AND DATE >= ?
+                AND DATE <= ?
                 GROUP BY strftime(?,date)
                 """,
             (user,date1,date2,groupby))
@@ -206,7 +202,7 @@ def get_grouped_graph(user_list,date1,date2,groupby_opt):
                 text = pixels,
                 textposition = 'outside',
                 marker = dict(color=colors[i],opacity=0.95),
-                textfont = dict(color='#bfe6ff',size=25),
+                textfont = dict(color='#bfe6ff',size=35),
             )
         )
     return fig

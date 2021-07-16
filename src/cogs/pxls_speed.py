@@ -12,7 +12,7 @@ from utils.database import sql_select, get_pixels_placed_between
 from utils.arguments_parser import parse_speed_args
 from utils.time_converter import format_datetime, str_to_td
 
-class StatsGraph(commands.Cog):
+class PxlsSpeed(commands.Cog):
 
     def __init__(self,client):
         self.client = client
@@ -84,7 +84,7 @@ class StatsGraph(commands.Cog):
             await ctx.send(file=image,embed=emb)
 
 def setup(client):
-    client.add_cog(StatsGraph(client))
+    client.add_cog(PxlsSpeed(client))
 
 def fig2img(fig):
     buf = BytesIO()

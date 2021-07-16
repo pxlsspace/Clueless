@@ -6,9 +6,9 @@ def format_table(table,column_names,alignments=None,name=None):
     - :param table: a 2D array to format
     - :param column_names: a list of column names, must be the same lengh as the table rows
     - :alignments: a list of alignments
-        - '^' means centered
-        - '<' align on the left
-        - '>' aligh on the right
+        - '^': centered
+        - '<': aligned on the left
+        - '>': aligned on the right
     - :name: add a '+' in front of of the row containing 'name' in the 2nd column'''
     if not table:
         return
@@ -47,6 +47,6 @@ def format_table(table,column_names,alignments=None,name=None):
 
     return str_table
 
-if __name__ == "__main__":
-    mylist = [(1,"bbbbbbbb","aaaaaaaaaaaaaaaaa",1000,200,3000),(4,5,"aaaa",0,0,0)]
-    print(format_table(mylist,["no1","no2","no3",0,0,0]))
+def format_number(num):
+    ''' format a number in a string: 1234567 -> 1 234 567'''
+    return f'{int(num):,}'.replace(","," ") # convert to string

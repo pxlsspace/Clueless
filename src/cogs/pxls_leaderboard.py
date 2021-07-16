@@ -6,7 +6,7 @@ from utils.database import *
 from utils.time_converter import *
 from utils.arguments_parser import parse_leaderboard_args, parse_speed_args
 from utils.setup import stats
-from utils.discord_utils import format_table
+from utils.discord_utils import format_table, format_number
 
 class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
@@ -15,51 +15,9 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         self.stats = stats
 
     ### Discord commands ###
-    @commands.command(usage="<name> [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
-    description = "Show the average speed of a pxls user.",
-    help = """- `<name>`: name of the pxls user
-              - `[-last <?d?h?m?s>]`: get the average speed in the last x hours/days/minutes/seconds (default: 1 day)
-              - `[-before <date time>]`: to show the average speed before a date and time (format YYYY-mm-dd HH:MM)
-              - `[-after <date time>]`: to show the average speed after a date and time (format YYYY-mm-dd HH:MM)"""
-    )
-    #async def speed(self,ctx,name,time="5h"):
-    async def speed(self,ctx,name,*args):
-        ''' Show the average speed of a user in the last x min, hours or days '''
-        try:
-            param = parse_speed_args(args)
-        except ValueError as e:
-            return await ctx.send(f'❌ {e}')
-
-        if param["before"] == None and param["after"] == None:
-            date = param["last"]
-            input_time = str_to_td(date)
-            if not input_time:
-                return await ctx.send(f"❌ Invalid `last` parameter, format must be `{ctx.prefix}{ctx.command.name}{ctx.command.usage}`.")
-            recent_time = datetime.now(timezone.utc)
-            old_time = datetime.now(timezone.utc) - input_time
-        else:
-            old_time = param["after"] or datetime(2021,7,7,14,15,10) # To change to oldest database entry
-            recent_time = param["before"] or datetime.now(timezone.utc)
-
-        try:
-            speed_px_h, diff_pixel, past_time,now_time = self.get_speed(name,old_time,recent_time)
-        except ValueError as e:
-            return await ctx.send(f'❌ {e}')
-
-        speed_px_d = round(speed_px_h*24,1)
-        speed_px_h = round(speed_px_h,1)
-        nb_days = (now_time - past_time)/timedelta(days=1)
-
-        if round(nb_days,1) < 1:
-            return await ctx.send(f'**{name}** placed `{diff_pixel}` pixels between {format_datetime(past_time)} and {format_datetime(now_time)}.\nAverage speed: `{speed_px_h}` px/h')
-        else:
-            return await ctx.send(f'**{name}** placed `{diff_pixel}` pixels between {format_datetime(past_time)} and {format_datetime(now_time)}.\nAverage speed: `{speed_px_h}` px/h or `{speed_px_d}` px/day')
-
     # TODO: option to show speed in px/day or amount
-    # TODO: align speed values on the right
     # TODO: get more accurate date1 value
     # TODO: optimize database update
-    # IDEA: show the color breakdown of an image
     @commands.command(
         usage = "[name1] [name2] [...] [-canvas] [-lines <number>] [-speed [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]] [-sort <value>]",
         description = "Show the all-time or canvas leaderboard.",
@@ -77,7 +35,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             param = parse_leaderboard_args(args)
         except ValueError as e:
             return await ctx.send(f'❌ {e}')
-        username = param["name"]
+        username = param["names"]
         nb_line = param["lines"]
         canvas_opt = param["canvas"]
         speed_opt = param["speed"]
@@ -111,7 +69,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             sort = sort_opt
 
         # fetch the leaderboard from the database
-        ldb = get_pixels_placed_between(date1,date2,canvas_opt,sort,username)
+        ldb = get_pixels_placed_between(date1,date2,canvas_opt,sort,username if len(username)>1 else None)
         date = ldb[0][4]
 
         # trim the leaderboard to only get the lines asked

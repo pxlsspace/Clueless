@@ -1,29 +1,86 @@
 import plotly.graph_objects as go
 import plotly.express as px
-from utils.database import sql_select
+
 from io import BytesIO
 from PIL import Image
 from datetime import datetime, timedelta,timezone
 from discord.ext import commands
 import discord
 
+from utils.discord_utils import format_number, format_table
+from utils.database import sql_select, get_pixels_placed_between
+from utils.arguments_parser import parse_speed_args
+from utils.time_converter import format_datetime, str_to_td
+
 class StatsGraph(commands.Cog):
 
     def __init__(self,client):
         self.client = client
 
-    @commands.command()
-    async def statsgraph(self,ctx,*users):
+    @commands.command(usage="<name> [-canvas|-c] [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
+    description = "Show the average speed of a pxls user.",
+    help = """- `<names>`: list of pxls users names separated by a space
+              - `[-canvas|-c]`: to show canvas stats
+              - `[-last <?d?h?m?s>]`: get the average speed in the last x hours/days/minutes/seconds (default: 1 day)
+              - `[-before <date time>]`: to show the average speed before a date and time (format YYYY-mm-dd HH:MM)
+              - `[-after <date time>]`: to show the average speed after a date and time (format YYYY-mm-dd HH:MM)"""
+    )
+    async def speed(self,ctx,*args):
+        ''' Show the average speed of a user in the last x min, hours or days '''
+        try:
+            param = parse_speed_args(args)
+        except ValueError as e:
+            return await ctx.send(f'❌ {e}')
 
-        graph = get_stats_graph(users,True,datetime.now(timezone.utc)-timedelta(days=1))
+        if param["before"] == None and param["after"] == None:
+            date = param["last"]
+            input_time = str_to_td(date)
+            if not input_time:
+                return await ctx.send(f"❌ Invalid `last` parameter, format must be `{ctx.prefix}{ctx.command.name}{ctx.command.usage}`.")
+            recent_time = datetime.now(timezone.utc)
+            old_time = datetime.now(timezone.utc) - input_time
+        else:
+            old_time = param["after"] or datetime(2021,7,7,14,15,10) # To change to oldest database entry
+            recent_time = param["before"] or datetime.now(timezone.utc)
+
+        names = param["names"]
+        canvas_opt = param["canvas"]
+
+        small_ldb = get_pixels_placed_between(old_time,recent_time,canvas_opt,'speed',names)
+        if not small_ldb:
+            return await ctx.send("❌ User(s) not found.")
+        now_time = small_ldb[0][6]
+        past_time = small_ldb[0][5]
+        res = []
+        for user in small_ldb:
+            name = user[1]
+            pixels = format_number(user[2])
+            diff_pixels = user[3]
+            diff_time = user[6] - user[5]
+            nb_hours = diff_time/timedelta(hours=1)
+            speed_px_h = diff_pixels/nb_hours
+            speed_px_d = speed_px_h*24
+            res.append([name,pixels,format_number(diff_pixels),round(speed_px_h),round(speed_px_d)])
+
+        speed_px_d = round(speed_px_h*24,1)
+        speed_px_h = round(speed_px_h,1)
+        nb_days = (now_time - past_time)/timedelta(days=1)
+
+        res_formated = format_table(res,["Name","Pixels","Placed","px/h","px/d"],["<",">",">",">",">"])
+        emb = discord.Embed(
+            
+            description = "```\n" + res_formated + "```"
+        )
+        emb.set_footer(text=f"Between {format_datetime(past_time)} and {format_datetime(now_time)}")
+        # create the graph
+        graph = get_stats_graph(names,canvas_opt,past_time,now_time)
         img = fig2img(graph)
         # create and send the embed with the color table, the pie chart and the image sent as thumbnail
-        emb = discord.Embed(title="Stats Graph")
         with BytesIO() as image_binary:
             img.save(image_binary, 'PNG')
             image_binary.seek(0)
-            image = discord.File(image_binary, filename='piechart.png')
-            emb.set_image(url=f'attachment://piechart.png')
+            image = discord.File(image_binary, filename='statsgraph.png')
+            emb.set_image(url=f'attachment://statsgraph.png')
             await ctx.send(file=image,embed=emb)
 
 def setup(client):
@@ -31,7 +88,7 @@ def setup(client):
 
 def fig2img(fig):
     buf = BytesIO()
-    fig.write_image(buf,format="png",width=1600,height=900,scale=1.5)
+    fig.write_image(buf,format="png",width=2000,height=900,scale=1.5)
     img = Image.open(buf)
     return img
 
@@ -50,7 +107,6 @@ def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc)):
     fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#bfe6ff')
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#bfe6ff')
     colors = px.colors.qualitative.Pastel
-
     for i,user in enumerate(user_list):
         # get the data
         stats = sql_select("""SELECT * FROM pxls_user_stats
@@ -70,7 +126,7 @@ def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc)):
         fig.add_trace(go.Scatter(
             x=dates,
             y=pixels,
-            mode='lines+markers' if i != len(user_list)-1 else 'lines+markers',
+            mode='lines',
             name=user,
             line=dict(width=3),
             marker=dict(color= colors[i],size=3)

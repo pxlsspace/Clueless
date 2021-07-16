@@ -12,7 +12,7 @@ def parse_leaderboard_args(args):
     ''' Parse the leaderboard command arguments, return a dictionary with the values parsed:
 
     dict:{
-        'name': <str> | None,
+        'names': [<str>] | None,
         'canvas': <Boolean>,
         'lines': <int>,
         'speed': <Boolean>,
@@ -21,7 +21,7 @@ def parse_leaderboard_args(args):
         'after': <datetime> | None
     }'''
     parser  = MyParser(add_help=False)
-    parser.add_argument('name', type=str, nargs='*',
+    parser.add_argument('names', type=str, nargs='*',
         help='Center the leaderboard on this user.',default=[])
     parser.add_argument('-canvas', '-c', action='store_true', default=False, 
         help="Flag to get the canvas leaderboard.")
@@ -67,7 +67,8 @@ def parse_speed_args(args):
         'after': <datetime> | None
     }'''
     parser  = MyParser(add_help=False)
-
+    parser.add_argument('names', type=str, nargs='+',default=[])
+    parser.add_argument('-canvas', '-c', action='store_true', default=False)
     parser.add_argument('-last',action='store',default="1d")
     parser.add_argument('-after',
                         dest='after',
@@ -118,29 +119,4 @@ def valid_datetime_type(arg_datetime_str):
         return d
     except ValueError:
         msg = "Given time ({}) not valid. Expected format, `YYYY-mm-dd HH:MM` !".format(arg_datetime_str)
-        raise ValueError(msg)    
-
-# type=lambda s: datetime.datetime.strptime(s, '%Y-%m-%d')
-def main():
-    input = "GrayTurtles -c  -speed -last 2d -after 2000-02-26 12:40"
-    args=input.split()
-    try:
-        options = parse_leaderboard_args(args)
-    except ValueError as e:
-        print(e)
-        print("usage: >leaderboard [name] [-canvas] [-lines <number>] [-speed [-last <?d?h?m?s>] [-before <YYYY-mm-dd HH:MM>] [-after <YYYY-mm-dd HH:MM>]] ")
-        print("-")
-        return
-    '''
-    name = options["name"]
-    canvas_opt = options["canvas"]
-    nb_line = options["lines"]
-    speed_args = options["speed"]
-
-    print(name,canvas_opt,nb_line,speed_args)'''
-    print(options)
-    #parser.print_usage()
-
-if __name__ == "__main__":
-    main()
-
+        raise ValueError(msg)

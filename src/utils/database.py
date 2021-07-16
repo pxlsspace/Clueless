@@ -378,8 +378,26 @@ def sql_update(query,param=None):
         # no changes have been made
         return -1
 
-def get_pixels_placed_between(datetime1,datetime2,canvas,orderby,users=None):
-
+def get_pixels_placed_between(datetime1,datetime2,canvas:bool,orderby,users=None):
+    """ Get the amount of pixels placed between 2 dates
+    ## parameters
+    - `datetime1`: the oldest date
+    - `datetime2`: the most recent date
+    - `canvas`: boolean to get the canvas stats instead of alltime
+    - `orderby`: sort the return list by: `canvas` (pixels), `alltime` (pixels), `speed` (amount)
+    - `users` (optional): 
+        - if len is 0 or 1: the return list will have data for all the users
+        - if len is more than 1: the return list will only have data for the given users 
+    ## return 
+    a list in the format:
+    List(
+        - rank,
+        - name,
+        - canvas_pixels | alltime_pixels,
+        - pixel difference,
+        - last date in the db,
+        - closest date to datetime1 in the db,
+        - closest date to datetime2 in the db)"""
     if orderby == 'speed':
         orderby = "b.canvas_count - a.canvas_count"
     elif orderby == 'canvas':
@@ -409,9 +427,9 @@ def get_pixels_placed_between(datetime1,datetime2,canvas,orderby,users=None):
             ORDER BY {0} desc""".format(
                 orderby,
                 "canvas" if canvas else "alltime",
-                (f"AND a.name IN ({', '.join('?'*len(users))})") if len(users) > 1 else ''
+                (f"AND a.name IN ({', '.join('?'*len(users))})") if users else ''
             )
-    if len(users) > 1:
+    if users:
         users.append(datetime1)
         users.append(datetime2)
         return sql_select(sql,users)

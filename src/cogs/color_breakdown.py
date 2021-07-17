@@ -31,20 +31,37 @@ class ColorBreakdown(commands.Cog):
             return await ctx.send( "❌ The URL you have provided leads to a 404.")
 
         input_image = Image.open(BytesIO(response.content))
+        input_image = input_image.convert('RGBA')
+        nb_pixels = input_image.size[0]*input_image.size[1]
 
-        # get and format the color breakdown table
-        tab = color_amount(input_image)
-        tab_to_format = [tab[i][:2] for i in range(len(tab))]
-        tab_formated = "```\n" + format_table(tab_to_format,["Color","Qty"],["^",">"]) + "```"
+        # get the colors table
+        async with ctx.typing():
+            image_colors = input_image.getcolors(nb_pixels)
 
-        # make the pie chart with the color table
-        labels = [tab[i][0] for i in range(len(tab))]
-        values = [tab[i][1] for i in range(len(tab))]
-        colors = [tab[i][2] for i in range(len(tab))]
+        if image_colors:
+            pxls_colors = rgb_to_pxlscolor(image_colors)
+            pxls_colors.sort(key = lambda x:x[1],reverse=True)
+        else:
+            return await ctx.send("❌ Unsupported format or image mode")
+
+        labels = [pxls_color[0] for pxls_color in pxls_colors]
+        values = [pxls_color[1] for pxls_color in pxls_colors]
+        colors = [pxls_color[2] for pxls_color in pxls_colors]
+
+        # create the message with a header and the table
+        header = f"""• Number of colors: `{len(image_colors)}`
+                     • Number of pixels: `{nb_pixels}`
+                     • Number of visible pixels: `{sum(values)}`\n"""
+        tab_to_format = [pxls_colors[i][:2] for i in range(len(pxls_colors))]
+        tab_formated = header + "```\n" + format_table(tab_to_format,["Color","Qty"],["^",">"]) + "```"
+        if len(tab_formated) > 2000:
+            tab_formated = header + f"*Too many colors to display the detailed breakdown.*"
+
+        # make the pie chart
         piechart = get_piechart(labels,values,colors)
         piechart_img = fig2img(piechart)
 
-        # create and send the embed with the color table, the pie chart and the image sent as thumbnail
+        # send an embed with the color table, the pie chart and the input image as thumbnail
         emb = discord.Embed(title="Color Breakdown",description=tab_formated)
         with BytesIO() as image_binary:
             piechart_img.save(image_binary, 'PNG')
@@ -57,53 +74,45 @@ class ColorBreakdown(commands.Cog):
 def setup(client):
     client.add_cog(ColorBreakdown(client))
 
-def color_amount(img):
-    ''' Find the amount of pixels for each color in an image
-
-    return a list of tuple of colors like [*(color_name,amount)] '''
-    width,lenght = img.size
-    colors = {}
-    for x in range(width):
-        for y in range(lenght):
-            pixel_color = img.getpixel((x,y))
-            if pixel_color[-1] == 255:
-                pixel_color = pixel_color[:3]
-                if pixel_color not in colors:
-                    colors[pixel_color] = 1
-                else:
-                    colors[pixel_color] += 1
-    colors_pxls = rgb_to_pxlscolor(colors)
-    
-    #colors_pxls_sorted = sorted(colors_pxls.items(), key=lambda x: x[1],reverse=True)
-    colors_pxls.sort(key = lambda x:x[1],reverse=True)
-    #)
-    return colors_pxls
-
-def rgb_to_pxlscolor(rgb_dict):
-    ''' Convert a dictionary in the format {*(RGB:amount)} to {*(color_name:amount)}
+def rgb_to_pxlscolor(img_colors):
+    '''convert a list (amount,RGB) to a list of (color_name,amount,hex code)
 
     color_name is a pxls.space color name, if the RGB doesn't match,
     the color_name will be the hex code'''
-
     res_list = []
-    for rgb in rgb_dict:
-
-        for pxls_color in stats.get_palette():
-            found = False
-            if rgb == ImageColor.getcolor('#' + pxls_color["value"],'RGB'):
-                res_list.append((pxls_color["name"],rgb_dict[rgb],rgb_to_hex(rgb)))
-                found = True
-                break
-        if found == False:
-            res_list.append((rgb_to_hex(rgb),rgb_dict[rgb],rgb_to_hex(rgb)))
-
+    for color in img_colors:
+        amount = color[0]
+        rgb = color[1]
+        if len(rgb) != 4 or rgb[3] != 0:
+            rgb = rgb[:3]
+            color_name = rgb_to_pxls(rgb)
+            res_list.append(
+                (color_name or (rgb_to_hex(rgb)),
+                amount,
+                rgb_to_hex(rgb)))
     return res_list
 
 def rgb_to_hex(rgb):
-    ''' convert a RGB tuple to the matching hex code
-    ((255,255,255) -> #ffffff)'''
+    ''' convert a RGB tuple to the matching hex code as a string
+    ((255,255,255) -> '#ffffff')'''
     str = '#' + '%02x'*len(rgb)
     return str % rgb
+
+def rgb_to_pxls(rgb):
+    ''' convert a RGB tuple to a pxlsColor.
+    Return None if no color match.'''
+    rgb = rgb [:3]
+    for pxls_color in stats.get_palette():
+        if rgb == hex_to_rgb(pxls_color["value"]):
+            return pxls_color["name"]
+    return None
+def hex_to_rgb(hex:str,mode="RGB"):
+    ''' convert a hex color string to a RGB tuple
+    ('#ffffff' -> (255,255,255) or 'ffffff' -> (255,255,255)'''
+    if "#" in hex:
+        return ImageColor.getcolor(hex,mode)
+    else:
+        return ImageColor.getcolor('#' + hex, mode)
 
 def get_piechart(labels,values,colors):
     layout = go.Layout(
@@ -118,7 +127,6 @@ def get_piechart(labels,values,colors):
     fig.update_traces(textposition='inside')
     fig.update_layout(uniformtext_minsize=12, uniformtext_mode='hide')
     return fig
-
 
 def fig2img(fig):
     buf = BytesIO()

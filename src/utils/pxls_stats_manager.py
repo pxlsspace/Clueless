@@ -1,6 +1,7 @@
 import requests
 import json
 from datetime import datetime
+import pytz
 
 class PxlsStatsManager():
     ''' A helper to get data from pxls.space/stats'''
@@ -28,10 +29,14 @@ class PxlsStatsManager():
 
     @staticmethod
     def last_updated_to_date(lastupdated):
+        tz_string = lastupdated[23:-1]
+        tz = pytz.timezone(tz_string)
+
         lastupdated = lastupdated[:21]
         date_time_obj = datetime.strptime(lastupdated, '%Y/%m/%d - %H:%M:%S')
+        date_time_obj = tz.localize(date_time_obj)
         return date_time_obj
-        
+
     def get_alltime_stat(self,name):
         at_table = self.stats_json["toplist"]["alltime"]
         for user in at_table:

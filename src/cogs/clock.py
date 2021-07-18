@@ -71,11 +71,12 @@ class Clock(commands.Cog):
 
     def update_database(self):
         ''' Update the database with the new /stats data. '''
-        # get the 'last updated' time as a datetime in UTC
+        # get the 'last updated' datetime and its timezone
         lastupdated_string = self.stats.get_last_updated()
         lastupdated = self.stats.last_updated_to_date(lastupdated_string)
-        lastupdated = local_to_utc(lastupdated) 
-        lastupdated = lastupdated.replace(tzinfo=None)
+        # Convert /stats to a naive datetime in UTC
+        lastupdated = local_to_utc(lastupdated)
+        lastupdated = lastupdated.replace(tzinfo=None) #timezone naive as UTC
 
         alltime_stats = self.stats.get_all_alltime_stats()
         canvas_stats = self.stats.get_all_canvas_stats()

@@ -2,12 +2,12 @@ import os
 import sys
 from discord.ext import commands
 from dotenv import load_dotenv
+import traceback
 
 from utils.database import *
 from utils.help import *
-import traceback
+from utils.setup import DEFAULT_PREFIX
 
-DEFAULT_PREFIX = "$"
 load_dotenv()
 
 client = commands.Bot(command_prefix=get_prefix,help_command=HelpCommand())

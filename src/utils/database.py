@@ -1,6 +1,7 @@
 import sqlite3
 from sqlite3 import Error
 import os
+from utils.setup import DEFAULT_PREFIX
 
 DB_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "database.db")
 
@@ -258,6 +259,8 @@ def update_prefix(prefix,server_id):
     conn.commit()
 
 def get_prefix(client,message):
+    if message.guild == None:
+        return ">"
     sql = '''SELECT prefix 
                 FROM servers 
                 WHERE server_id = ?'''
@@ -266,7 +269,7 @@ def get_prefix(client,message):
     cur.execute(sql,(message.guild.id,))
     rows = cur.fetchall()
     if (len(rows))==0:
-        return None
+        return DEFAULT_PREFIX
     return rows[0][0]
 
 def create_pxls_user_stats(name, alltime_count,canvas_count,time):

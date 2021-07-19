@@ -114,6 +114,16 @@ def parse_outline_args(args):
     res = parser.parse_args(args)
     return vars(res)
 
+def parse_pixelfont_args(args):
+    parser  = MyParser(add_help=False)
+    parser.add_argument('text', type=str, nargs="*")
+    
+    parser.add_argument('-font', type=str, action='store',required=True)
+    parser.add_argument('-color', type=str, action='store',required=False,)
+    parser.add_argument('-bgcolor',"-bg", type=str, action='store', required=False)
+
+    return parser.parse_args(args)
+
 def valid_datetime_type(arg_datetime_str):
     """Check if the given string is a valid datetime"""
     try:

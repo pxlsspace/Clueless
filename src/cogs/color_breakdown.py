@@ -1,9 +1,12 @@
-from PIL import Image, ImageColor
-from discord.ext import commands
 import discord
 import requests
+import inspect
 import plotly.graph_objects as go
+
+from PIL import Image, ImageColor
+from discord.ext import commands
 from io import BytesIO
+
 from utils.setup import stats
 from utils.discord_utils import format_table
 
@@ -52,6 +55,7 @@ class ColorBreakdown(commands.Cog):
         header = f"""• Number of colors: `{len(image_colors)}`
                      • Number of pixels: `{nb_pixels}`
                      • Number of visible pixels: `{sum(values)}`\n"""
+        header = inspect.cleandoc(header)
         tab_to_format = [pxls_colors[i][:2] for i in range(len(pxls_colors))]
         tab_formated = header + "```\n" + format_table(tab_to_format,["Color","Qty"],["^",">"]) + "```"
         if len(tab_formated) > 2000:
@@ -62,7 +66,7 @@ class ColorBreakdown(commands.Cog):
         piechart_img = fig2img(piechart)
 
         # send an embed with the color table, the pie chart and the input image as thumbnail
-        emb = discord.Embed(title="Color Breakdown",description=tab_formated)
+        emb = discord.Embed(title="Color Breakdown",description=tab_formated,color=hex_str_to_int(colors[0]))
         with BytesIO() as image_binary:
             piechart_img.save(image_binary, 'PNG')
             image_binary.seek(0)
@@ -113,6 +117,13 @@ def hex_to_rgb(hex:str,mode="RGB"):
         return ImageColor.getcolor(hex,mode)
     else:
         return ImageColor.getcolor('#' + hex, mode)
+
+def hex_str_to_int(hex_str:str):
+    """ '#ffffff' -> 0xffffff """
+    if '#' in hex_str:
+        return int(hex_str[1:],16)
+    else:
+        return int(hex_str,16)
 
 def get_piechart(labels,values,colors):
     layout = go.Layout(

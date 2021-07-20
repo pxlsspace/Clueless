@@ -12,6 +12,8 @@ from utils.database import sql_select, get_pixels_placed_between
 from utils.arguments_parser import parse_speed_args
 from utils.time_converter import format_datetime, round_minutes_down, str_to_td
 
+BACKGROUND_COLOR = "#202225"
+GRID_COLOR = "#b9bbbe"
 class PxlsSpeed(commands.Cog):
 
     def __init__(self,client):
@@ -70,9 +72,7 @@ class PxlsSpeed(commands.Cog):
         nb_days = (now_time - past_time)/timedelta(days=1)
 
         res_formated = format_table(res,["Name","Pixels","Placed","px/h","px/d"],["<",">",">",">",">"])
-        emb = discord.Embed(
-            description = "```\n" + res_formated + "```"
-        )
+        emb = discord.Embed(description = "```\n" + res_formated + "```",color=0x66c5cc)
         emb.set_footer(text=f"Between {format_datetime(past_time)} and {format_datetime(now_time)}")
         
         # create the graph
@@ -95,17 +95,17 @@ def setup(client):
 
 def fig2img(fig):
     buf = BytesIO()
-    fig.write_image(buf,format="png",width=2000,height=900,scale=1.5)
+    fig.write_image(buf,format="png",width=2000,height=900,scale=1)
     img = Image.open(buf)
     return img
 
 layout = go.Layout(
-    paper_bgcolor='RGBA(0,0,0,255)',
-    plot_bgcolor='#00172D',
-    font_color="#bfe6ff",
-    font_size=30,
-    font=dict(family="Courier New"),
-    yaxis={'tickformat': ',d'},
+    paper_bgcolor=BACKGROUND_COLOR,
+    plot_bgcolor=BACKGROUND_COLOR,
+    font_color=GRID_COLOR,
+    font_size=35,
+    yaxis = dict(showgrid=True, gridwidth=1, gridcolor=GRID_COLOR,tickformat=',d'),
+    xaxis = dict(showgrid=True, gridwidth=1, gridcolor=GRID_COLOR)
 )
 
 def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc)):
@@ -113,8 +113,6 @@ def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc)):
     # create the graph
     fig = go.Figure(layout=layout)
     fig.update_layout(showlegend=False)
-    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#bfe6ff')
-    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#bfe6ff')
     colors = px.colors.qualitative.Pastel
     for i,user in enumerate(user_list):
         # get the data
@@ -141,16 +139,21 @@ def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc)):
             marker=dict(color= colors[i],size=6)
             )
         )
-        # add the name at the end of the line
+
+        # add a marge at the right to add the name
+        longest_name = max([len(user) for user in user_list])
+        fig.update_layout(margin=dict(r=(longest_name+1)*26))
+
+        # add the name
         fig.add_annotation(
             xanchor='left',
-            yanchor='middle',
-            xshift=10,
-            x = dates[-1],
+            xref="paper",
+            yref="y",
+            x = 1.01,
             y = pixels[-1],
             text = ("<b>%s</b>" % user),
             showarrow = False,
-            font = dict(color= colors[i],size=35)
+            font = dict(color= colors[i],size=40)
         )
     return fig
 
@@ -166,8 +169,7 @@ def get_grouped_graph(user_list,date1,date2,groupby_opt):
 
     # create the graph and style
     fig = go.Figure(layout=layout)
-    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#bfe6ff')
-    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#bfe6ff')
+    fig.update_yaxes(rangemode='tozero')
     colors = px.colors.qualitative.Pastel
 
     for i,user in enumerate(user_list):
@@ -196,13 +198,23 @@ def get_grouped_graph(user_list,date1,date2,groupby_opt):
         # trace the user data
         fig.add_trace(
             go.Bar(
-                name = user,
+                name='<span style="color:{};font-size:40;"><b>{}</b></span>'.format(colors[i], user),
                 x = dates,
                 y = pixels,
-                text = pixels,
+                # add an outline of the bg color to the text
+                text = ['<span style = "text-shadow:\
+                     -{2}px -{2}px 0 {0},\
+                     {2}px -{2}px 0 {0},\
+                     -{2}px {2}px 0 {0},\
+                     {2}px {2}px 0 {0},\
+                     0px {2}px 0px {0},\
+                     {2}px 0px 0px {0},\
+                     -{2}px 0px 0px {0},\
+                     0px -{2}px 0px {0};">{1}</span>'.format(BACKGROUND_COLOR,pixel,2) for pixel in pixels],
                 textposition = 'outside',
-                marker = dict(color=colors[i],opacity=0.95),
-                textfont = dict(color='#bfe6ff',size=35),
+                marker = dict(color=colors[i], opacity=0.95),
+                textfont = dict(color=colors[i], size=40),
+                cliponaxis = False
             )
         )
     return fig

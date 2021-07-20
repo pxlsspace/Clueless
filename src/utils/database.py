@@ -432,10 +432,10 @@ def get_pixels_placed_between(datetime1,datetime2,canvas:bool,orderby,users=None
                 (f"AND a.name IN ({', '.join('?'*len(users))})") if users else ''
             )
     if users:
-        users.append(datetime1)
-        users.append(datetime2)
-        return sql_select(sql,users)
-
+        params = users.copy()
+        params.append(datetime1)
+        params.append(datetime2)
+        return sql_select(sql,params)
     else:
         return sql_select(sql,(datetime1,datetime2))
 

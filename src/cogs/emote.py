@@ -5,7 +5,7 @@ from utils.img_to_gif import img_to_animated_gif
 from PIL import Image
 from io import BytesIO
 
-from utils.discord_utils import get_image_from_message
+from utils.discord_utils import get_image_from_message, number_emoji, format_emoji
 
 class Emote(commands.Cog):
 
@@ -34,41 +34,32 @@ class Emote(commands.Cog):
         except ValueError as e:
             return await ctx.send(f'❌ {e}')
 
+        # check if there is enough emote space
+        nb_emoji, nb_animated = await number_emoji(ctx)
+        if nb_emoji+nb_animated >= 2*ctx.guild.emoji_limit:
+            return await ctx.send("❌ The server is full")
+
+        # convert the emoji to gif if the server is full
+        if nb_emoji >= ctx.guild.emoji_limit:                    
+            stream = BytesIO(img_bytes)
+            img = Image.open(stream)
+            if not img.is_animated:
+                img_bytes = img_to_animated_gif(img)
+
         # adding the emote to the server
         try:
             emoji = await asyncio.wait_for(ctx.guild.create_custom_emoji(name=name, image=img_bytes),timeout=10.0)
         except discord.InvalidArgument:
             return await ctx.send("❌ Invalid image type. Only PNG, JPEG and GIF are supported.")
         except discord.HTTPException as e:
-            if (e.code == 50035):
-                return await ctx.send(e.text)
             if (e.code == 30008):
-                #return await ctx.send("❌ Error: Maximum number of emojis reached (50)")
-                print("Maximum number of emojis reached (50), trying to add as animated")
-                stream = BytesIO(img_bytes)
-                img = Image.open(stream)
-                animated_img = img_to_animated_gif(img)
-                try:
-                    emoji = await asyncio.wait_for(ctx.guild.create_custom_emoji(name=name, image=animated_img),timeout=10.0)
-                except discord.InvalidArgument:
-                    return await ctx.send("❌ Invalid image type. Only PNG, JPEG and GIF are supported.")
-                except discord.HTTPException as e:
-                    if (e.code == 50035):
-                        return await ctx.send("❌ Error: File cannot be larger than 256.0 kb.")
-                    if (e.code == 30008):
-                        return await ctx.send("❌ Error: Maximum number of emojis reached (50)")
-                    print(e)
-                    return await ctx.send(e.text)
-                except asyncio.TimeoutError:
-                    return await ctx.send("❌ You're getting ratelimited by discord, retry again in 20/30 min")
+                return await ctx.send(f"❌ Maximum number of emojis reached ({ctx.guild.emoji_limit})")
             else:
-                print(e)
-                return await ctx.send(e.text)
+                return await ctx.send(f'❌ {e.text}')
         except asyncio.TimeoutError:
             return await ctx.send("❌ You're getting ratelimited by discord, retry again in 20/30 min")
 
-        await ctx.send("✅ Successfully added the emoji {0.name} <{1}:{0.name}:{0.id}>".format(emoji, "a" if emoji.animated else ""))
-
+        await ctx.send("✅ Successfully added the emoji {}".format(format_emoji(emoji)))
 
     @emote.command(
         usage = "<name>",
@@ -80,9 +71,13 @@ class Emote(commands.Cog):
         if len(emotes) == 0:
             return await ctx.send("❌ There is no emote with that name on this server.")
         nb_emote = len(emotes)
+        deleted_emojis=""
+        for emote in emotes:
+            deleted_emojis += f" {format_emoji(emote)}"
+
+        await ctx.send(f"✅ {nb_emote} emote(s) with the name `:{name}:` have been deleted:"+deleted_emojis)
         for emote in emotes:
             await emote.delete()
-        await ctx.send(f"✅ {nb_emote} emote(s) with the name :`{name}`: have been deleted")
 
     @emote.command(
         description="Show all of the server custom emojis and their names.",
@@ -95,9 +90,7 @@ class Emote(commands.Cog):
         res = [""]
         i = 0
         for emote in emotes:
-            name = emote.name
-            id = emote.id
-            emote_text = f'<{"a" if emote.animated else ""}:{name}:{id}> `:{name}:`\n'
+            emote_text = f'{format_emoji(emote)} `:{emote.name}:`\n'
             if len(res[i]) + len(emote_text) > 2000:
                 i+=1
                 res.append("")
@@ -111,14 +104,7 @@ class Emote(commands.Cog):
         description="Give the number of emojis and animated emojis on the server",
         aliases = ["nb"])
     async def number(self,ctx):
-        emojis = await ctx.guild.fetch_emojis()
-        nb_static = 0
-        nb_anim = 0
-        for e in emojis:
-            if e.animated == True:
-                nb_anim += 1
-            else:
-                nb_static += 1
+        nb_static, nb_anim = await number_emoji(ctx)
         await ctx.send(f"There are {nb_anim+nb_static} emojis in this server:\n\t- {nb_static} emojis\n\t- {nb_anim} animated emojis")
 
 

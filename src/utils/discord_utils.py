@@ -77,5 +77,19 @@ def get_image_from_message(ctx,url=None):
     if not 'image' in response.headers['content-type']:
         raise ValueError("The URL doesn't contain any image.")
     return response.content, url
-    input_image = Image.open(BytesIO(response.content))
-    return input_image
+
+async def number_emoji(ctx):
+    emojis = await ctx.guild.fetch_emojis()
+    nb_static = 0
+    nb_anim = 0
+    for e in emojis:
+        if e.animated == True:
+            nb_anim += 1
+        else:
+            nb_static += 1
+    return nb_static, nb_anim
+
+def format_emoji(emoji):
+    '''formats a discord emoji into a string'''
+    res ="<{1}:{0.name}:{0.id}>".format(emoji, "a" if emoji.animated else "")
+    return res

@@ -7,7 +7,7 @@ from discord.ext import commands
 from io import BytesIO
 
 from utils.setup import stats
-from utils.discord_utils import format_table, get_image_from_message
+from utils.discord_utils import format_table, get_image_from_message, image_to_file
 
 class ColorBreakdown(commands.Cog):
     def __init__(self,client):
@@ -56,13 +56,9 @@ class ColorBreakdown(commands.Cog):
 
         # send an embed with the color table, the pie chart and the input image as thumbnail
         emb = discord.Embed(title="Color Breakdown",description=tab_formated,color=hex_str_to_int(colors[0]))
-        with BytesIO() as image_binary:
-            piechart_img.save(image_binary, 'PNG')
-            image_binary.seek(0)
-            image = discord.File(image_binary, filename='piechart.png')
-            emb.set_image(url=f'attachment://piechart.png')
-            emb.set_thumbnail(url=url)
-            await ctx.send(file=image,embed=emb)
+        file = image_to_file(piechart_img,"piechart.png",emb)
+        emb.set_thumbnail(url=url)
+        await ctx.send(file=file,embed=emb)
 
 def setup(client):
     client.add_cog(ColorBreakdown(client))

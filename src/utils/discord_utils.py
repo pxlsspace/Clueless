@@ -1,7 +1,8 @@
 import requests
 from PIL import Image
 from io import BytesIO
-
+import discord
+import PIL
 
 def format_table(table,column_names,alignments=None,name=None):
     ''' Format the leaderboard in a string to be printed
@@ -77,6 +78,18 @@ def get_image_from_message(ctx,url=None):
     if not 'image' in response.headers['content-type']:
         raise ValueError("The URL doesn't contain any image.")
     return response.content, url
+
+def image_to_file(image:PIL.Image,filename:str,embed:discord.Embed=None) -> discord.File:
+    """ Convert a pillow Image to a discord File
+    attach the file to a discord embed if one is given """
+
+    with BytesIO() as image_binary:
+        image.save(image_binary, 'PNG')
+        image_binary.seek(0)
+        image = discord.File(image_binary, filename=filename)
+        if embed:
+            embed.set_image(url=f'attachment://{filename}')
+        return image
 
 async def number_emoji(ctx):
     emojis = await ctx.guild.fetch_emojis()

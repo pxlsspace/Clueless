@@ -7,7 +7,7 @@ from datetime import datetime, timedelta,timezone
 from discord.ext import commands
 import discord
 
-from utils.discord_utils import format_number, format_table
+from utils.discord_utils import image_to_file, format_number, format_table
 from utils.database import sql_select, get_pixels_placed_between
 from utils.arguments_parser import parse_speed_args
 from utils.time_converter import format_datetime, round_minutes_down, str_to_td
@@ -83,12 +83,8 @@ class PxlsSpeed(commands.Cog):
             graph = get_stats_graph(names,canvas_opt,past_time,now_time)
         img = fig2img(graph)
         # create and send the embed with the color table, the pie chart and the image sent as thumbnail
-        with BytesIO() as image_binary:
-            img.save(image_binary, 'PNG')
-            image_binary.seek(0)
-            image = discord.File(image_binary, filename='statsgraph.png')
-            emb.set_image(url=f'attachment://statsgraph.png')
-            await ctx.send(file=image,embed=emb)
+        file = image_to_file(img,"statsgraph.png",emb)
+        await ctx.send(file=file,embed=emb)
 
 def setup(client):
     client.add_cog(PxlsSpeed(client))

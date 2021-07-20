@@ -7,7 +7,7 @@ from io import BytesIO
 
 from utils.setup import stats
 from utils.arguments_parser import parse_outline_args
-from utils.discord_utils import get_image_from_message
+from utils.discord_utils import get_image_from_message, image_to_file
 
 HEX_COLOR_REGEX = r'^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
 
@@ -58,10 +58,8 @@ class Outline(commands.Cog):
         input_image = Image.open(BytesIO(img_bytes))
         image_with_outline = self.add_outline(input_image,rgba,not(sparse),width)
 
-        with BytesIO() as image_binary:
-                    image_with_outline.save(image_binary, 'PNG')
-                    image_binary.seek(0)
-                    await ctx.send(file=discord.File(fp=image_binary, filename='outline.png'))
+        file = image_to_file(image_with_outline,"outline.png")
+        await ctx.send(file=file)
 
     @commands.command(usage = "<image or url>",
         description = "Remove the 'white space' from a PNG image.",
@@ -77,10 +75,8 @@ class Outline(commands.Cog):
         input_image = Image.open(BytesIO(img_bytes))
         image_cropped = self.remove_white_space(input_image)
 
-        with BytesIO() as image_binary:
-                    image_cropped.save(image_binary, 'PNG')
-                    image_binary.seek(0)
-                    await ctx.send(file=discord.File(fp=image_binary, filename='outline.png'))
+        file = image_to_file(image_cropped,"cropped.png")
+        await ctx.send(file=file)
 
     ### Helper functions ###
     @staticmethod

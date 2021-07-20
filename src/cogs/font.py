@@ -6,7 +6,7 @@ from io import BytesIO
 from cogs.outline import Outline
 from utils.arguments_parser import parse_pixelfont_args
 from utils.font.font_manager import *
-
+from utils.discord_utils import image_to_file
 
 class Font(commands.Cog):
 
@@ -85,23 +85,17 @@ class Font(commands.Cog):
         else:
             images.append([font,PixelText(text,font,font_rgba,bg_rgba).get_image()])
 
-        # send the image(s)
+        # create a list of discord File to send
+        files = []
         for image in images:
             font_name = image[0]
             im = image[1]
-            if im == None:
-                #await ctx.send(f"❌ The font `{font_name}` doesn't have any of the characters in `{text}`")
-                continue
-            with BytesIO() as image_binary:
-                im.save(image_binary, 'PNG')
-                image_binary.seek(0)
-                try:
-                    await ctx.send(file=discord.File(fp=image_binary, filename=f'{font_name}.png'))
-                except ValueError as e:
-                    return await ctx.send(f'❌ {e}')
+            if im != None:
+                files.append(image_to_file(im,font_name+".png"))
+
+        # send the image(s)
+        await ctx.send(files=files)
                     
-
-
     @commands.command(description = "Show the list of the fonts available")
     async def fonts(self,ctx):
         fonts = get_all_fonts()

@@ -43,8 +43,8 @@ class ColorBreakdown(commands.Cog):
         # create the message with a header and the table
         header = f"""• Number of colors: `{len(image_colors)}`
                      • Number of pixels: `{nb_pixels}`
-                     • Number of visible pixels: `{sum(values)}`\n"""
-        header = inspect.cleandoc(header)
+                     • Number of visible pixels: `{sum(values)}`"""
+        header = inspect.cleandoc(header) + "\n"
         tab_to_format = [pxls_colors[i][:2] for i in range(len(pxls_colors))]
         tab_formated = header + "```\n" + format_table(tab_to_format,["Color","Qty"],["^",">"]) + "```"
         if len(tab_formated) > 2000:

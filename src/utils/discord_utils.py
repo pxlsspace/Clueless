@@ -1,4 +1,6 @@
-
+import requests
+from PIL import Image
+from io import BytesIO
 
 
 def format_table(table,column_names,alignments=None,name=None):
@@ -50,3 +52,30 @@ def format_table(table,column_names,alignments=None,name=None):
 def format_number(num):
     ''' format a number in a string: 1234567 -> 1 234 567'''
     return f'{int(num):,}'.replace(","," ") # convert to string
+
+
+def get_image_from_message(ctx,url=None):
+    """ get an image from a discord context/message,
+    raise ValueError if the URL isn't valid 
+    return a byte image and the image url """
+    # if no url in the command, we check the attachments
+    if url == None:
+        if len(ctx.message.attachments) == 0:
+            raise ValueError("No image or url found.")    
+        if not "image" in ctx.message.attachments[0].content_type:
+            raise ValueError("Invalid file type. Only images are supported.")
+
+        url = ctx.message.attachments[0].url
+
+    # getting the image from url
+    try:
+        response = requests.get(url)
+    except (requests.exceptions.MissingSchema, requests.exceptions.InvalidURL, requests.exceptions.InvalidSchema, requests.exceptions.ConnectionError):
+        raise ValueError ("The URL provided is invalid.")
+    if response.status_code == 404:
+        raise ("The URL provided leads to a 404.")
+    if not 'image' in response.headers['content-type']:
+        raise ValueError("The URL doesn't contain any image.")
+    return response.content, url
+    input_image = Image.open(BytesIO(response.content))
+    return input_image

@@ -1,5 +1,4 @@
 import discord
-import requests
 import inspect
 import plotly.graph_objects as go
 
@@ -8,7 +7,7 @@ from discord.ext import commands
 from io import BytesIO
 
 from utils.setup import stats
-from utils.discord_utils import format_table
+from utils.discord_utils import format_table, get_image_from_message
 
 class ColorBreakdown(commands.Cog):
     def __init__(self,client):
@@ -17,23 +16,13 @@ class ColorBreakdown(commands.Cog):
     @commands.command(description="Amount of pixels for each color in an image.",
         usage="<image|url>")
     async def colors(self,ctx,url=None):
-        # if no url in the command, we check the attachments
-        if url == None:
-            if len(ctx.message.attachments) == 0:
-                return await ctx.send("❌ You must give an image or url to add.")
-            if "image" not in ctx.message.attachments[0].content_type:
-                return await ctx.send("❌ Invalid file type. Only images are supported.")
-            url = ctx.message.attachments[0].url
-
-        # getting the image from url
+        # get the input image
         try:
-            response = requests.get(url)
-        except (requests.exceptions.MissingSchema, requests.exceptions.InvalidURL, requests.exceptions.InvalidSchema, requests.exceptions.ConnectionError):
-            return await ctx.send("❌ The URL you have provided is invalid.")
-        if response.status_code == 404:
-            return await ctx.send( "❌ The URL you have provided leads to a 404.")
+            img_bytes, url = get_image_from_message(ctx,url)
+        except ValueError as e:
+            return await ctx.send(f'❌ {e}')
 
-        input_image = Image.open(BytesIO(response.content))
+        input_image = Image.open(BytesIO(img_bytes))
         input_image = input_image.convert('RGBA')
         nb_pixels = input_image.size[0]*input_image.size[1]
 

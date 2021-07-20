@@ -1,10 +1,11 @@
 import discord
 from discord.ext import commands
-import requests
 import asyncio
 from utils.img_to_gif import img_to_animated_gif
 from PIL import Image
 from io import BytesIO
+
+from utils.discord_utils import get_image_from_message
 
 class Emote(commands.Cog):
 
@@ -27,25 +28,15 @@ class Emote(commands.Cog):
     @commands.has_permissions(manage_emojis=True)
     async def add(self, ctx, name, url=None):
 
-        # if no url in the command, we check the attachments
-        if url == None:
-            if len(ctx.message.attachments) == 0:
-                return await ctx.send("❌ You must give an image or url to add")
-            if "image" not in ctx.message.attachments[0].content_type:
-                return await ctx.send("❌ Invalid file type. Only images are supported.")
-            url = ctx.message.attachments[0].url
-
-        # getting the emote image from url
+        # get the input image
         try:
-            response = requests.get(url)
-        except (requests.exceptions.MissingSchema, requests.exceptions.InvalidURL, requests.exceptions.InvalidSchema, requests.exceptions.ConnectionError):
-            return await ctx.send("❌ The URL you have provided is invalid.")
-        if response.status_code == 404:
-            return await ctx.send( "❌ The URL you have provided leads to a 404.")
+            img_bytes, url = get_image_from_message(ctx,url)
+        except ValueError as e:
+            return await ctx.send(f'❌ {e}')
 
         # adding the emote to the server
         try:
-            emoji = await asyncio.wait_for(ctx.guild.create_custom_emoji(name=name, image=response.content),timeout=10.0)
+            emoji = await asyncio.wait_for(ctx.guild.create_custom_emoji(name=name, image=img_bytes),timeout=10.0)
         except discord.InvalidArgument:
             return await ctx.send("❌ Invalid image type. Only PNG, JPEG and GIF are supported.")
         except discord.HTTPException as e:
@@ -54,7 +45,7 @@ class Emote(commands.Cog):
             if (e.code == 30008):
                 #return await ctx.send("❌ Error: Maximum number of emojis reached (50)")
                 print("Maximum number of emojis reached (50), trying to add as animated")
-                stream = BytesIO(response.content)
+                stream = BytesIO(img_bytes)
                 img = Image.open(stream)
                 animated_img = img_to_animated_gif(img)
                 try:

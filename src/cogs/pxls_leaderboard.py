@@ -15,8 +15,6 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         self.stats = stats
 
     ### Discord commands ###
-    # TODO: option to show speed in px/day or amount
-    # TODO: get more accurate date1 value
     @commands.command(
         usage = "[name1] [name2] [...] [-canvas] [-lines <number>] [-speed [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]] [-sort <value>]",
         description = "Show the all-time or canvas leaderboard.",

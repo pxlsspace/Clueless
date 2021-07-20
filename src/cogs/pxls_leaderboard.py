@@ -131,7 +131,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         if speed_opt:
             past_time = round_minutes(ldb[0][5])
             recent_time = round_minutes(ldb[0][6])
-            text += "\nSpeed between `{}` and `{}` ({})\n".format(
+            text += "\nSpeed between {} and {} ({})\n".format(
                 format_datetime(past_time),
                 format_datetime(recent_time),
                 td_format(recent_time-past_time)
@@ -144,18 +144,13 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         text += format_table(res_ldb,column_names,alignments,username[0] if username else None)
         text += "```"
 
+        text +=  f"\n*Last updated: {format_datetime(date,'R')}*"
         # create a discord embed with the leaderboard and send it
         if canvas_opt:
             emb = discord.Embed(title="Canvas Leaderboard",description=text)
         else:
             emb = discord.Embed(title="All-time Leaderboard",description=text)
 
-        footer_text = "Last updated: {} ({} ago).".format(
-            format_datetime(date),
-            td_format(datetime.utcnow()-date)
-            )
-
-        emb.set_footer(text=footer_text)
         await ctx.send(embed=emb)
 
     ### Helper functions ###

@@ -22,24 +22,19 @@ def str_to_td(input:str):
     return timedelta(**time_params)
 
 
-def format_datetime(date:datetime):
-    ''' Convert a datetime in a string in this format:
-    
-    - `today HH:MM (UTC)`
-    - `yesterday HH:MM (UTC)`
-    - `dd/mm/yyy HH:MM (UTC)` '''
+def format_datetime(dt:datetime,style=None):
+    ''' Convert a datetime to a string for presenation in discord
+    with this format: `<t:timestamp[:style]>`'''
 
     # if no timzeone in the date, we assume it's in UTC
-    if date.tzinfo == None:
-        date = date.replace(tzinfo = timezone.utc)
+    if dt.tzinfo == None:
+        dt = dt.replace(tzinfo = timezone.utc)
 
-    if date.date() == datetime.utcnow().date():
-        date.utcoffset()
-        return "today " + date.strftime("%H:%M (%Z)")
-    elif date.date() == (datetime.utcnow() - timedelta(days=1)).date():
-        return "yesterday " + date.strftime("%H:%M (%Z)")
+    ts = int(dt.timestamp())
+    if style:
+        return f'<t:{ts}:{style}>'
     else:
-        return date.strftime("%d/%m/%Y at %H:%M (%Z)")
+        return f'<t:{ts}>'
  
 
 def td_format(td_object:timedelta):

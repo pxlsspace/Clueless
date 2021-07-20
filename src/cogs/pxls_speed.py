@@ -69,12 +69,14 @@ class PxlsSpeed(commands.Cog):
 
         speed_px_d = round(speed_px_h*24,1)
         speed_px_h = round(speed_px_h,1)
-        nb_days = (now_time - past_time)/timedelta(days=1)
 
         res_formated = format_table(res,["Name","Pixels","Placed","px/h","px/d"],["<",">",">",">",">"])
-        emb = discord.Embed(description = "```\n" + res_formated + "```",color=0x66c5cc)
-        emb.set_footer(text=f"Between {format_datetime(past_time)} and {format_datetime(now_time)}")
-        
+
+        # create the embed
+        title = f"Speed between {format_datetime(past_time)} and {format_datetime(now_time)}"
+        emb = discord.Embed(color=0x66c5cc)
+        emb.add_field(name=title,value= "```\n" + res_formated + "```")
+
         # create the graph
         if groupby_opt:
             graph = get_grouped_graph(names,past_time,now_time,groupby_opt)
@@ -82,7 +84,8 @@ class PxlsSpeed(commands.Cog):
         else:
             graph = get_stats_graph(names,canvas_opt,past_time,now_time)
         img = fig2img(graph)
-        # create and send the embed with the color table, the pie chart and the image sent as thumbnail
+
+        # send the embed with the graph image
         file = image_to_file(img,"statsgraph.png",emb)
         await ctx.send(file=file,embed=emb)
 

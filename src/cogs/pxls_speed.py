@@ -136,7 +136,7 @@ def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc)):
             mode='lines',
             name=user,
             line=dict(width=4),
-            marker=dict(color= colors[i],size=6)
+            marker=dict(color= colors[i%len(colors)],size=6)
             )
         )
 
@@ -153,7 +153,7 @@ def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc)):
             y = pixels[-1],
             text = ("<b>%s</b>" % user),
             showarrow = False,
-            font = dict(color= colors[i],size=40)
+            font = dict(color= colors[i%len(colors)],size=40)
         )
     return fig
 
@@ -198,7 +198,7 @@ def get_grouped_graph(user_list,date1,date2,groupby_opt):
         # trace the user data
         fig.add_trace(
             go.Bar(
-                name='<span style="color:{};font-size:40;"><b>{}</b></span>'.format(colors[i], user),
+                name='<span style="color:{};font-size:40;"><b>{}</b></span>'.format(colors[i%len(colors)], user),
                 x = dates,
                 y = pixels,
                 # add an outline of the bg color to the text
@@ -212,8 +212,8 @@ def get_grouped_graph(user_list,date1,date2,groupby_opt):
                      -{2}px 0px 0px {0},\
                      0px -{2}px 0px {0};">{1}</span>'.format(BACKGROUND_COLOR,pixel,2) for pixel in pixels],
                 textposition = 'outside',
-                marker = dict(color=colors[i], opacity=0.95),
-                textfont = dict(color=colors[i], size=40),
+                marker = dict(color=colors[i%len(colors)], opacity=0.95),
+                textfont = dict(color=colors[i%len(colors)], size=40),
                 cliponaxis = False
             )
         )

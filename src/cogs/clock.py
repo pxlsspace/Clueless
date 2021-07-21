@@ -55,7 +55,6 @@ class Clock(commands.Cog):
     @tasks.loop(minutes=5)
     async def update_online_count(self):
         self.save_online_count()
-        print(datetime.now().strftime("[%H:%M:%S]:"),"online count saved")
 
     @update_online_count.before_loop
     async def before_update_online_count(self):

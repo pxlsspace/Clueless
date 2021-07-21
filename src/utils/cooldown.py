@@ -23,6 +23,9 @@ def time_convert(seconds):
     else:
         return "%02d:%02d:%05.2f" % (hour, min, sec)
 
+def get_cd(online):
+    return 2.5*(math.sqrt(online+12))+6.5
+
 def get_cds(online):
 
     cd = 2.5*(math.sqrt(online+12))+6.5

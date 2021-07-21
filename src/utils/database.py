@@ -365,11 +365,15 @@ def get_last_leaderboard(canvas=False):
 
     return sql_select(sql)
 
-def get_general_stat(name):
+def get_general_stat(name,dt):
+    ''' get all the values of a general stat after a datetime 
+    (this is used to plot the stat) '''
     sql = """SELECT value,datetime from pxls_general_stats
              WHERE name = ?
+             AND datetime > ?
              ORDER BY datetime DESC"""
-    return sql_select(sql,(name,))
+
+    return sql_select(sql,(name,dt))
 
 def add_general_stat(name,value,canvas,date):
     sql = ''' INSERT INTO pxls_general_stats(name, value ,canvas_code, datetime)
@@ -457,7 +461,7 @@ def get_pixels_placed_between(datetime1,datetime2,canvas:bool,orderby,users=None
     else:
         return sql_select(sql,(datetime1,datetime2))
 
-import time
+
 def main():
     ''' Test/debug code '''
     #DB_FILE = "test.db"
@@ -467,9 +471,6 @@ def main():
     if (conn == None):
         print("Error! cannot create the database connection.")
         return
-    
-    for s in get_general_stat("online_count"):
-        print(s[0],s[1])
     
 if __name__ == "__main__":
     main()

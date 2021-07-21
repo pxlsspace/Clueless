@@ -1,5 +1,4 @@
 import plotly.graph_objects as go
-import plotly.express as px
 
 from io import BytesIO
 from PIL import Image
@@ -8,12 +7,11 @@ from discord.ext import commands
 import discord
 
 from utils.discord_utils import image_to_file, format_number, format_table
-from utils.database import sql_select, get_pixels_placed_between
+from utils.database import get_grouped_stats_history, get_stats_history, sql_select, get_pixels_placed_between
 from utils.arguments_parser import parse_speed_args
 from utils.time_converter import format_datetime, round_minutes_down, str_to_td
+from utils.plot_utils import layout, BACKGROUND_COLOR, colors
 
-BACKGROUND_COLOR = "#202225"
-GRID_COLOR = "#b9bbbe"
 class PxlsSpeed(commands.Cog):
 
     def __init__(self,client):
@@ -98,27 +96,16 @@ def fig2img(fig):
     img = Image.open(buf)
     return img
 
-layout = go.Layout(
-    paper_bgcolor=BACKGROUND_COLOR,
-    plot_bgcolor=BACKGROUND_COLOR,
-    font_color=GRID_COLOR,
-    font_size=35,
-    yaxis = dict(showgrid=True, gridwidth=1, gridcolor=GRID_COLOR,tickformat=',d'),
-    xaxis = dict(showgrid=True, gridwidth=1, gridcolor=GRID_COLOR)
-)
-
 def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc)):
 
     # create the graph
     fig = go.Figure(layout=layout)
     fig.update_layout(showlegend=False)
-    colors = px.colors.qualitative.Pastel
+    fig.update_layout(title=f"<span style='color:{colors[0]};'>Speed</span>")
+
     for i,user in enumerate(user_list):
         # get the data
-        stats = sql_select("""SELECT * FROM pxls_user_stats
-                            WHERE name = ?
-                            AND date >= ?
-                            AND date <= ?""",(user,date1,date2))
+        stats = get_stats_history(user,date1,date2)
         if not stats:
             continue
 
@@ -159,31 +146,24 @@ def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc)):
 def get_grouped_graph(user_list,date1,date2,groupby_opt):
 
     # check on the groupby param
-    if groupby_opt == "day":
-        groupby = '%Y-%m-%d'
-    elif groupby_opt == "hour":
-        groupby = '%Y-%m-%d %H'
-    else:
+    if not groupby_opt in ["day","hour"]:
         raise ValueError("'groupby' parameter can only be 'day' or 'hour'.")
 
     # create the graph and style
     fig = go.Figure(layout=layout)
     fig.update_yaxes(rangemode='tozero')
-    colors = px.colors.qualitative.Pastel
+
+    # the title displays the user if there is only 1 in the user_list
+    fig.update_layout(title="<span style='color:{};'>Speed per {}{}</span>".format(
+        colors[0],
+        groupby_opt,
+        f" for <b>{user_list[0]}</b>" if len(user_list) == 1 else ""
+    ))
+
 
     for i,user in enumerate(user_list):
         # get the data
-        stats = sql_select(
-            """SELECT name, alltime_count, canvas_count,
-                    alltime_count-(LAG(alltime_count) OVER (ORDER BY date)) as placed,
-                    MAX(date) as last_datetime
-                FROM pxls_user_stats
-                WHERE name = ?
-                AND DATE >= ?
-                AND DATE <= ?
-                GROUP BY strftime(?,date)
-                """,
-            (user,date1,date2,groupby))
+        stats = get_grouped_stats_history(user,date1,date2,groupby_opt)
         stats = stats[1:]
         if not stats:
             continue

@@ -380,6 +380,37 @@ def add_general_stat(name,value,canvas,date):
               VALUES(?,?,?,?) '''
     sql_update(sql,(name,value,canvas,date))
 
+def get_stats_history(user,date1,date2):
+    """ get the stats between 2 dates """
+    sql = """SELECT * FROM pxls_user_stats
+                            WHERE name = ?
+                            AND date >= ?
+                            AND date <= ?"""
+    return sql_select(sql,(user,date1,date2))
+
+def get_grouped_stats_history(user,date1,date2,groupby_opt):
+    """ get the stats between 2 dates grouped by day or hour """
+
+    # check on the groupby param
+    if groupby_opt == "day":
+        groupby = '%Y-%m-%d'
+    elif groupby_opt == "hour":
+        groupby = '%Y-%m-%d %H'
+    else:
+        return None
+
+    sql = """SELECT name, alltime_count, canvas_count,
+                alltime_count-(LAG(alltime_count) OVER (ORDER BY date)) as placed,
+                MAX(date) as last_datetime
+             FROM pxls_user_stats
+             WHERE name = ?
+             AND DATE >= ?
+             AND DATE <= ?
+             GROUP BY strftime(?,date)"""
+
+    return sql_select(sql,(user,date1,date2,groupby))
+
+
 def sql_select(query,param=None):
     conn = create_connection(DB_FILE)
     cur = conn.cursor()

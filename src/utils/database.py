@@ -35,7 +35,13 @@ create_pxls_user_stats_table = """ CREATE TABLE IF NOT EXISTS pxls_user_stats(
                             canvas_count INTEGER,
                             date TIMESTAMP,
                             PRIMARY KEY (name, date)
-                            );"""
+                        );"""
+create_pxls_general_stats_table = """ CREATE TABLE IF NOT EXISTS pxls_general_stats(
+                            name TEXT,
+                            value TEXT,
+                            canvas_code TEXT,
+                            datetime TIMESTAMP
+                        );"""
 
 # create a database connection to the SQLite database specified by db_file
 def create_connection(db_file):
@@ -127,6 +133,7 @@ def create_tables():
     create_table(conn,create_pxls_user_table)
     create_table(conn,create_server_user_table)
     create_table(conn,create_pxls_user_stats_table)
+    create_table(conn,create_pxls_general_stats_table)
     return
 
 # adds a user to the server_pxls_user table and pxls_user table if not added
@@ -358,6 +365,17 @@ def get_last_leaderboard(canvas=False):
 
     return sql_select(sql)
 
+def get_general_stat(name):
+    sql = """SELECT value,datetime from pxls_general_stats
+             WHERE name = ?
+             ORDER BY datetime DESC"""
+    return sql_select(sql,(name,))
+
+def add_general_stat(name,value,canvas,date):
+    sql = ''' INSERT INTO pxls_general_stats(name, value ,canvas_code, datetime)
+              VALUES(?,?,?,?) '''
+    sql_update(sql,(name,value,canvas,date))
+
 def sql_select(query,param=None):
     conn = create_connection(DB_FILE)
     cur = conn.cursor()
@@ -450,29 +468,8 @@ def main():
         print("Error! cannot create the database connection.")
         return
     
-    #create_pxls_user_stats("someone",2070,2046,datetime.utcnow())
-
-    start = time.time()
-    ldb = get_last_leaderboard(True)
-    getldbtime = (time.time() - start)*1000
-    print("time: ",getldbtime,"ms")
-    nb_line = 10
-
-    i = 0
-    DASH = 40*"-"
-    text = DASH + "\n"
-    text += "{:<5}| {:<15s}| {:<10s}\n".format("rank","username","canvas px")
-    text += DASH + "\n"
-    for line in ldb:
-        i+=1
-        #print(line)
-        rank,name, pixels, date = line
-        pixels = f'{int(pixels):,}'
-        pixels = pixels.replace(","," ")
-        text += " {:<4d}| {:<15s}| {:<10s}\n".format(rank,name,pixels)
-        if i == nb_line:
-            break
-    print(text)
+    for s in get_general_stat("online_count"):
+        print(s[0],s[1])
     
 if __name__ == "__main__":
     main()

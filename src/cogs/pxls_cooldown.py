@@ -1,8 +1,6 @@
 from discord.ext import commands
 import discord
-import requests
-import json
-from utils.cooldown import get_cds, time_convert
+from utils.cooldown import get_cds, time_convert, get_online_count
 from utils.discord_utils import format_table
 
 class PxlsCooldown(commands.Cog):
@@ -18,8 +16,7 @@ class PxlsCooldown(commands.Cog):
         if number:
             online = int(number)
         else:
-            r = requests.get('https://pxls.space/users')
-            online = json.loads(r.text)["count"]
+            online = get_online_count()
 
         i = 0
         total = 0
@@ -35,7 +32,6 @@ class PxlsCooldown(commands.Cog):
         desc += format_table(cd_table,["stack","cd","total"])
         desc += "```"
         embed = discord.Embed(title=f"Pxls cooldown for `{online}` users",description=desc)
-        #embed.add_field(name=dash,value=text)
         await ctx.send(embed=embed)
 
 def setup(client):

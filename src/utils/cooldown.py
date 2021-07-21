@@ -37,5 +37,15 @@ def get_cds(online):
         text+= f'(total: {time_convert(total)})\n'
     return cds
 
+def get_online_count():
+    ''' return the current online count '''
+    try:
+        r = requests.get('https://pxls.space/users')
+        online = json.loads(r.text)["count"]
+        return online
+    except Exception as e:
+        print(e)
+        return None
+    
 if __name__ == "__main__":
     print(get_cds([]))

@@ -3,7 +3,7 @@ from utils.database import *
 from datetime import datetime
 from utils.setup import stats
 from utils.time_converter import local_to_utc
-
+from utils.cooldown import get_online_count
 class Clock(commands.Cog):
     """ A class used to manage background periodic tasks.
 
@@ -14,9 +14,11 @@ class Clock(commands.Cog):
         self.client = client
         self.update_stats.start()
         self.stats = stats
+        self.update_online_count.start()
 
     def cog_unload(self):
         self.update_stats.cancel()
+        self.update_online_count.cancel()
 
     @tasks.loop(seconds=60)
     async def update_stats(self):
@@ -35,12 +37,11 @@ class Clock(commands.Cog):
             print(".",end='',flush=True)
 
             # updating database with the new data
-            self.update_database()
+            self.save_stats()
             print(".",end='',flush=True)
 
             await self.check_milestones()
             print(" done!")
-
 
     # wait for the bot to be ready before starting the task
     @update_stats.before_loop
@@ -48,8 +49,17 @@ class Clock(commands.Cog):
         await self.client.wait_until_ready()
         # update the stats on start
         self.stats.refresh()
-        self.update_database()
+        self.save_stats()
         await self.check_milestones()
+
+    @tasks.loop(minutes=5)
+    async def update_online_count(self):
+        self.save_online_count()
+        print(datetime.now().strftime("[%H:%M:%S]:"),"online count saved")
+
+    @update_online_count.before_loop
+    async def before_update_online_count(self):
+        await self.client.wait_until_ready()
 
     async def check_milestones(self):
         ''' Send alerts in all the servers following a user if they hit a milestone. '''
@@ -69,7 +79,7 @@ class Clock(commands.Cog):
                 # update the new count in the db
                 update_pixel_count(name,new_count)
 
-    def update_database(self):
+    def save_stats(self):
         ''' Update the database with the new /stats data. '''
         # get the 'last updated' datetime and its timezone
         lastupdated_string = self.stats.get_last_updated()
@@ -83,6 +93,11 @@ class Clock(commands.Cog):
 
         update_all_pxls_stats(alltime_stats,canvas_stats,lastupdated)
     
+    @staticmethod
+    def save_online_count():
+        ''' save the current 'online count' in the database '''
+        online = get_online_count()
+        add_general_stat("online_count",online,None,datetime.utcnow())
 
 def setup(client):
     client.add_cog(Clock(client))

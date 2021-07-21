@@ -49,6 +49,8 @@ async def on_message(message):
     if message.content == 'aa':
         await message.channel.send('<:watermelonDEATH:856212273718886400>')
 
+    if client.user in  message.mentions:
+        await message.add_reaction("<:peepopinged:867331826442960926>") 
     await client.process_commands(message)
     
 @client.event

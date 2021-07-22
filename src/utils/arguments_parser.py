@@ -27,12 +27,8 @@ def parse_leaderboard_args(args):
         help="Flag to get the canvas leaderboard.")
     parser.add_argument('-lines','-l',metavar="<number>", action='store', type=int, default=20,
         help="Number of lines to show.")
-    parser.add_argument("-sort",choices=['speed','canvas','alltime'],required=False)
 
-
-    parser.add_argument('-speed', '-s', action='store_true', default=False, 
-    help="Flag to show the speed.")
-    parser.add_argument('-last',action='store',default="1d")
+    parser.add_argument('-last',action='store',default=None)
     parser.add_argument('-after',
                         dest='after',
                         nargs=2,

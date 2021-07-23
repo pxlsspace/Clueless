@@ -64,8 +64,9 @@ def parse_speed_args(args):
     }'''
     parser  = MyParser(add_help=False)
     parser.add_argument('names', type=str, nargs='+',default=[])
-    parser.add_argument('-canvas', '-c', action='store_true', default=False)
-    parser.add_argument("-groupby","-g",choices=['day','hour'],required=False)
+    parser.add_argument('-canvas', action='store_true', default=False)
+    parser.add_argument("-groupby",choices=['day','hour'],required=False)
+    parser.add_argument('-progress', action='store_true', default=False)
 
 
     parser.add_argument('-last',action='store',default="1d")

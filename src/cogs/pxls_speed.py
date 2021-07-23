@@ -17,14 +17,15 @@ class PxlsSpeed(commands.Cog):
     def __init__(self,client):
         self.client = client
 
-    @commands.command(usage="<name> [-canvas|-c] [-groupby|-g [day|hour]] [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
+    @commands.command(usage="<name> [-canvas] [-groupby [day|hour]] [-progress] [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
     description = "Show the average speed of a pxls user.",
     help = """- `<names>`: list of pxls users names separated by a space
-              - `[-canvas|-c]`: to show canvas stats
+              - `[-canvas|-c]`: show the canvas stats
               - `[-groupby|-g]`: show a bar chart for each `day` or `hour`
-              - `[-last <?d?h?m?s>]`: get the average speed in the last x hours/days/minutes/seconds (default: 1 day)
-              - `[-before <date time>]`: to show the average speed before a date and time (format YYYY-mm-dd HH:MM)
-              - `[-after <date time>]`: to show the average speed after a date and time (format YYYY-mm-dd HH:MM)"""
+              - `[-progress|-p]`: compare the progress between users
+              - `[-last <?d?h?m?s>]`: get the speed in the last x hours/days/minutes/seconds (default: 1 day)
+              - `[-before <date time>]`: show the speed before a date and time (format YYYY-mm-dd HH:MM)
+              - `[-after <date time>]`: show the speed after a date and time (format YYYY-mm-dd HH:MM)"""
     )
     async def speed(self,ctx,*args):
         ''' Show the average speed of a user in the last x min, hours or days '''
@@ -80,7 +81,7 @@ class PxlsSpeed(commands.Cog):
             graph = get_grouped_graph(names,past_time,now_time,groupby_opt)
 
         else:
-            graph = get_stats_graph(names,canvas_opt,past_time,now_time)
+            graph = get_stats_graph(names,canvas_opt,past_time,now_time,param["progress"])
         img = fig2img(graph)
 
         # send the embed with the graph image
@@ -96,7 +97,7 @@ def fig2img(fig):
     img = Image.open(buf)
     return img
 
-def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc)):
+def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc),progress_opt=False):
 
     # create the graph
     fig = go.Figure(layout=layout)
@@ -114,6 +115,9 @@ def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc)):
             pixels = [stat[2] for stat in stats]
         else:
             pixels = [stat[1] for stat in stats]
+        
+        if progress_opt:
+            pixels = [pixel - pixels[0] for pixel in pixels]
 
         # trace the user data
         fig.add_trace(go.Scatter(

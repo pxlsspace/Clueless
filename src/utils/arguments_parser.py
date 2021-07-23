@@ -25,7 +25,7 @@ def parse_leaderboard_args(args):
         help='Center the leaderboard on this user.',default=[])
     parser.add_argument('-canvas', '-c', action='store_true', default=False, 
         help="Flag to get the canvas leaderboard.")
-    parser.add_argument('-lines','-l',metavar="<number>", action='store', type=int, default=20,
+    parser.add_argument('-lines','-l',metavar="<number>", action='store', type=check_lines, default=20,
         help="Number of lines to show.")
 
     parser.add_argument('-last',action='store',default=None)
@@ -128,5 +128,15 @@ def valid_datetime_type(arg_datetime_str):
         d = d.replace(tzinfo=timezone.utc)
         return d
     except ValueError:
-        msg = "Given time ({}) not valid. Expected format, `YYYY-mm-dd HH:MM` !".format(arg_datetime_str)
+        msg = "Given time ({}) not valid. Expected format: `YYYY-mm-dd HH:MM`.".format(arg_datetime_str)
         raise ValueError(msg)
+
+def check_lines(value):
+    try:
+        ivalue = int(value)
+    except:
+        raise argparse.ArgumentTypeError("Must be an integer between 1 and 40.")
+
+    if ivalue <= 0 or ivalue > 40:
+        raise argparse.ArgumentTypeError("Must be an integer between 1 and 40.")
+    return ivalue

@@ -35,7 +35,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         except ValueError as e:
             return await ctx.send(f'❌ {e}')
         username = param["names"]
-        nb_line = param["lines"]
+        nb_line = int(param["lines"])
         canvas_opt = param["canvas"]
         speed_opt = False
         sort_opt = None
@@ -57,11 +57,6 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         else:
             date1 = datetime.now(timezone.utc)
             date2 = datetime.now(timezone.utc)
-
-        # check on lines arg
-        nb_line = int(nb_line)
-        if nb_line > 40:
-            return await ctx.send("❌ Can't show more than 40 lines.")
 
         # check on sort arg
         if not sort_opt:

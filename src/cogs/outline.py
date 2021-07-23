@@ -80,7 +80,7 @@ class Outline(commands.Cog):
 
     ### Helper functions ###
     @staticmethod
-    def add_outline(original_image,color,full=True,outline_width=1):
+    def add_outline(original_image,color,full=True,outline_width=1,crop=True):
         ''' add a border/outline around a transparent png '''
         # Convert to RGBA to manipulate the image easier
         original_image = original_image.convert('RGBA')
@@ -122,7 +122,8 @@ class Outline(commands.Cog):
         # merge the outline with the image
         background.paste(original_image, (outline_width,outline_width), original_image) 
         # remove the white-space
-        background = background.crop((min_x,min_y,max_x,max_y))
+        if crop:
+            background = background.crop((min_x,min_y,max_x,max_y))
         return background
 
     @staticmethod

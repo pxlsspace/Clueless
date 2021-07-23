@@ -10,6 +10,8 @@ basepath = os.path.dirname(__file__)
 fonts_folder = os.path.abspath(os.path.join(basepath, "..", "..","..",
     "ressources","fonts"))
 
+SPACE_WIDTH = 4
+
 all_accents="ÀÁÂÃÄÅÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜàáâãäåèéêëìíîïñòóôõöùúûüÿŸ"
 all_special_chars="./-+*&~#’()|_^@[]{}%!?$€:,\`><;\"="
 letter_bases={
@@ -137,13 +139,13 @@ class PixelText():
         self.font_color = self.font.font_color
 
         self.image_array = []
-        self.image_array = np.zeros((self.font.max_height,1,4),dtype=np.uint8)
-        self.image_array[:,:] = self.background_color or [255,255,255,255]    
 
-    def get_image(self):
-        """ Create an image of the class text,
-        the image is made by concatenating numpy arrays of each 
-        characters and converting it to PIL Image"""
+    def make_array(self):
+        """ Change the self.array object to have the numpy array of the text 
+         by concatenating numpy arrays of each characters """
+        self.image_array = np.zeros((self.font.max_height,1,4),dtype=np.uint8)
+        self.image_array[:,:] = self.background_color or [255,255,255,255]
+
         empty = True
         for char in self.text:
             font_char = self.get_char(char)
@@ -155,7 +157,7 @@ class PixelText():
 
             elif char == " ":
                 empty=False
-                self.add_space(2)
+                self.add_space(SPACE_WIDTH)
             
             elif char == "\t":
                 empty=False
@@ -168,6 +170,14 @@ class PixelText():
 
         if empty == True:
             return None
+        else:
+            return self.image_array
+    
+    def get_image(self):
+        """ Create an image of the class text,
+        the image is made by converting the generated numpy array to PIL Image"""
+        if self.make_array() is None:
+            return None
         # remove excessive space around chars
         while (self.image_array[0,:] == self.background_color).all():
             self.image_array = np.delete(self.image_array,0,0)
@@ -179,11 +189,11 @@ class PixelText():
             self.add_top_line()
 
         if not (self.image_array[-1,:] == self.background_color).all():
-            self.add_bottom_line() 
-
+            self.add_bottom_line()
+        
         im = Image.fromarray(self.image_array)
         return im
-    
+
     def get_char(self,char,from_case=False):
 
         if char == None:

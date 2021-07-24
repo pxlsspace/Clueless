@@ -1,16 +1,18 @@
 import plotly.graph_objects as go
-
+import discord
 from io import BytesIO
 from PIL import Image
 from datetime import datetime, timedelta,timezone
 from discord.ext import commands
-import discord
+from itertools import cycle
 
 from utils.discord_utils import image_to_file, format_number, format_table
-from utils.database import get_grouped_stats_history, get_stats_history, sql_select, get_pixels_placed_between
+from utils.database import get_grouped_stats_history, get_stats_history, get_pixels_placed_between
 from utils.arguments_parser import parse_speed_args
+from utils.table_to_image import table_to_image
 from utils.time_converter import format_datetime, round_minutes_down, str_to_td
 from utils.plot_utils import layout, BACKGROUND_COLOR, colors
+from utils.image_utils import v_concatenate
 
 class PxlsSpeed(commands.Cog):
 
@@ -50,11 +52,15 @@ class PxlsSpeed(commands.Cog):
         canvas_opt = param["canvas"]
         groupby_opt = param["groupby"]
 
+        # get the data we need
         ldb = get_pixels_placed_between(old_time,recent_time,canvas_opt,'speed',names)
         if not ldb:
             return await ctx.send("❌ User(s) not found.")
         now_time = ldb[0][6]
         past_time = ldb[0][5]
+        
+        # Select the data we need to display:
+        #  name, current pixels, placed in the time frame, speed in px/h, px/d
         res = []
         for user in ldb:
             name = user[1]
@@ -66,26 +72,31 @@ class PxlsSpeed(commands.Cog):
             speed_px_d = speed_px_h*24
             res.append([name,pixels,format_number(diff_pixels),round(speed_px_h),round(speed_px_d)])
 
-        speed_px_d = round(speed_px_h*24,1)
-        speed_px_h = round(speed_px_h,1)
-
-        res_formated = format_table(res,["Name","Pixels","Placed","px/h","px/d"],["<",">",">",">",">"])
-
-        # create the embed
-        title = f"Speed between {format_datetime(past_time)} and {format_datetime(now_time)}"
-        emb = discord.Embed(color=0x66c5cc)
-        emb.add_field(name=title,value= "```\n" + res_formated + "```")
+        # create the headers needed for the table
+        alignments = ["left","right","right","right","right"]
+        titles = ["Name","Pixels","Placed","px/h","px/d"]
+        table_colors = cycle_through_list(colors,len(res))
+        # get the image of the table
+        table_image = table_to_image(res,titles,alignments,table_colors)
 
         # create the graph
+        user_list = [user[1] for user in ldb]
         if groupby_opt:
-            graph = get_grouped_graph(names,past_time,now_time,groupby_opt)
-
+            graph = get_grouped_graph(user_list,past_time,now_time,groupby_opt)
         else:
-            graph = get_stats_graph(names,canvas_opt,past_time,now_time,param["progress"])
-        img = fig2img(graph)
+            graph = get_stats_graph(user_list,canvas_opt,past_time,now_time,param["progress"])
+        graph_image = fig2img(graph)
+
+        # merge the table image and graph image
+        res_image = v_concatenate(table_image,graph_image,gap_height=20)
+
+        # create the embed
+        description = f"Between {format_datetime(past_time)} and {format_datetime(now_time)}"
+        emb = discord.Embed(color=0x66c5cc)
+        emb.add_field(name='Speed',value = description)
 
         # send the embed with the graph image
-        file = image_to_file(img,"statsgraph.png",emb)
+        file = image_to_file(res_image,"speed.png",emb)
         await ctx.send(file=file,embed=emb)
 
 def setup(client):
@@ -201,3 +212,16 @@ def get_grouped_graph(user_list,date1,date2,groupby_opt):
             )
         )
     return fig
+
+def cycle_through_list(list,number_of_element:int):
+    ''' loop through a list the desired amount of time
+    example: cycle_through_list([1,2,3],6) -> [1,2,3,1,2,3] '''
+    list = cycle(list)
+    res = []
+    count = 0
+    for i in list:
+        res.append(i)
+        count += 1
+        if count == number_of_element:
+            break
+    return res

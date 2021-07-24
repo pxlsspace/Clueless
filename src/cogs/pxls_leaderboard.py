@@ -6,7 +6,8 @@ from utils.database import *
 from utils.time_converter import *
 from utils.arguments_parser import parse_leaderboard_args
 from utils.setup import stats
-from utils.discord_utils import format_table, format_number
+from utils.discord_utils import format_table, format_number, image_to_file
+from utils.table_to_image import table_to_image
 
 class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
@@ -103,13 +104,13 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
         # build the header of the leaderboard
         column_names = ["Rank","Username","Pixels"]
-        alignments = ["<","<",">"]
+        alignments2 = ['center','center','right']
         if username:
             column_names.append("Diff")
-            alignments.append("<")
+            alignments2.append('left')
         if speed_opt:
             column_names.append("Speed")
-            alignments.append(">")
+            alignments2.append('right')
 
         # build the content of the leaderboard
         res_ldb = []
@@ -152,28 +153,35 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         # format the leaderboard to be printed
         text = ""
         if speed_opt:
-            past_time = round_minutes(ldb[0][5])
-            recent_time = round_minutes(ldb[0][6])
+            past_time = ldb[0][5]
+            recent_time = ldb[0][6]
             text += "\nBetween {} and {} ({})\n".format(
                 format_datetime(past_time),
                 format_datetime(recent_time),
-                td_format(recent_time-past_time)
+                td_format(round_minutes_down(recent_time)-round_minutes_down(past_time))
             )
+        text +=  f"(last updated: {format_datetime(date,'R')})"
 
-        text += "```diff\n"
-        text += format_table(res_ldb,column_names,alignments,username[0] if username else None)
-        text += "```"
+        colors = None
+        if username:
+            colors = []
+            for e in res_ldb:
+                if e[1] == username[0]:
+                    colors.append("#66c5cc")
+                else:
+                    colors.append(None)
+        img = table_to_image(res_ldb,column_names,alignments2,colors=colors)
 
-        text +=  f"*Last updated: {format_datetime(date,'R')}*"
         # create a discord embed with the leaderboard and send it
+        emb = discord.Embed()
         if speed_opt:
-            emb = discord.Embed(title="Speed Leaderboard",description=text)
+            emb.add_field(name="Speed Leaderboard",value=text)
         elif canvas_opt:
-            emb = discord.Embed(title="Canvas Leaderboard",description=text)
+            emb.add_field(name="Canvas Leaderboard",value=text)
         else:
-            emb = discord.Embed(title="All-time Leaderboard",description=text)
-
-        await ctx.send(embed=emb)
+            emb.add_field(name="All-time Leaderboard",value=text)
+        file = image_to_file(img,"leaderboard.png",emb)
+        await ctx.send(embed=emb,file=file)
 
     ### Helper functions ###
     @staticmethod

@@ -7,8 +7,9 @@ from discord.ext import commands
 from io import BytesIO
 
 from utils.setup import stats
-from utils.discord_utils import format_table, get_image_from_message, image_to_file
-
+from utils.discord_utils import format_number, get_image_from_message, image_to_file
+from utils.table_to_image import table_to_image
+from utils.image_utils import h_concatenate
 class ColorBreakdown(commands.Cog):
     def __init__(self,client):
         self.client = client
@@ -34,29 +35,50 @@ class ColorBreakdown(commands.Cog):
             pxls_colors = rgb_to_pxlscolor(image_colors)
             pxls_colors.sort(key = lambda x:x[1],reverse=True)
         else:
-            return await ctx.send("❌ Unsupported format or image mode")
+            return await ctx.send("❌ Unsupported format or image mode.")
 
         labels = [pxls_color[0] for pxls_color in pxls_colors]
         values = [pxls_color[1] for pxls_color in pxls_colors]
         colors = [pxls_color[2] for pxls_color in pxls_colors]
 
-        # create the message with a header and the table
-        header = f"""• Number of colors: `{len(image_colors)}`
-                     • Number of pixels: `{nb_pixels}`
-                     • Number of visible pixels: `{sum(values)}`"""
-        header = inspect.cleandoc(header) + "\n"
-        tab_to_format = [pxls_colors[i][:2] for i in range(len(pxls_colors))]
-        tab_formated = header + "```\n" + format_table(tab_to_format,["Color","Qty"],["^",">"]) + "```"
-        if len(tab_formated) > 2000:
-            tab_formated = header + f"*Too many colors to display the detailed breakdown.*"
+        data = []
+        for i in range(len(labels)):
+            color_name = labels[i]
+            amount = values[i]
+            percentage = round(amount/sum(values)*100,2)
 
-        # make the pie chart
+            amount = format_number(amount)
+            percentage = str(percentage) + " %"
+            data.append([color_name,amount,percentage])
+
+        # make the table image
+        if len(data) > 40:
+            # crop the table if it has too many values
+            data_cropped = data[:40]
+            colors_cropped = colors[:40]
+            data_cropped.append(["...","...","..."])
+            colors_cropped.append(None)
+        else:
+            data_cropped = data
+            colors_cropped = colors
+        table_img = table_to_image(data_cropped,['Color','Qty','%'],['center','right','right'],colors_cropped)
+
+        # make the pie chart image
         piechart = get_piechart(labels,values,colors)
         piechart_img = fig2img(piechart)
 
+        # create the message with a header
+        header = f"""• Number of colors: `{len(colors)}`
+                     • Number of pixels: `{format_number(nb_pixels)}`
+                     • Number of visible pixels: `{format_number(sum(values))}`"""
+        header = inspect.cleandoc(header) + "\n"
+
+        # concatenate the pie chart and table image
+        res_img = h_concatenate(table_img,piechart_img)
+
         # send an embed with the color table, the pie chart and the input image as thumbnail
-        emb = discord.Embed(title="Color Breakdown",description=tab_formated,color=hex_str_to_int(colors[0]))
-        file = image_to_file(piechart_img,"piechart.png",emb)
+        emb = discord.Embed(title="Color Breakdown",description=header,color=hex_str_to_int(colors[0]))
+        file = image_to_file(res_img,"color_breakdown.png",emb)
         emb.set_thumbnail(url=url)
         await ctx.send(file=file,embed=emb)
 
@@ -122,6 +144,7 @@ def get_piechart(labels,values,colors):
                     marker=dict(colors=colors, line=dict(color='#000000', width=1)))
     fig.update_traces(textposition='inside')
     fig.update_layout(uniformtext_minsize=12, uniformtext_mode='hide')
+    fig.update_layout(showlegend=False)
     return fig
 
 def fig2img(fig):

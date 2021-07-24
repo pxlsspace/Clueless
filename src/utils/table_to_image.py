@@ -1,5 +1,7 @@
 from PIL import Image, ImageColor
 import numpy as np
+import matplotlib.colors as mc
+import colorsys
 
 from utils.font.font_manager import FontManager, PixelText
 from cogs.outline import Outline
@@ -9,7 +11,6 @@ font_name = "minecraft"
 BACKGROUND_COLOR = "#202225"
 TEXT_COLOR = "#b9bbbe"
 LINE_COLOR = "#2f3136"
-LIGHT_TEXT_OUTLINE = "#4b4e56" # color of the outline around a text when it's too dark
 OUTER_OUTLINE_COLOR = "#000000"
 OUTER_OUTLINE_WIDTH = 3
 
@@ -17,7 +18,6 @@ BACKGROUND_COLOR = ImageColor.getcolor(BACKGROUND_COLOR,"RGBA")
 TEXT_COLOR = ImageColor.getcolor(TEXT_COLOR,"RGBA")
 LINE_COLOR = ImageColor.getcolor(LINE_COLOR,"RGBA")
 OUTER_OUTLINE_COLOR = ImageColor.getcolor(OUTER_OUTLINE_COLOR,"RGBA")
-TEXT_OUTLINE_COLOR = ImageColor.getcolor(LIGHT_TEXT_OUTLINE,"RGBA")
 
 
 def make_table_array(data,titles,alignments,colors=None):
@@ -39,7 +39,6 @@ def make_table_array(data,titles,alignments,colors=None):
                 colors[i] = TEXT_COLOR
             else:
                 colors[i] = hex_to_rgba(color)
-
     # get the numpy arrays for all the text
     col_array =  [[] for i in range(len(data[0]))]
     for i,lines in enumerate(data):
@@ -49,7 +48,7 @@ def make_table_array(data,titles,alignments,colors=None):
             is_dark(colors[i])
             text_array = pt.make_array()
             if is_dark(colors[i]):
-                text_array = add_outline(text_array,LIGHT_TEXT_OUTLINE)
+                text_array = add_outline(text_array,lighten_color(colors[i],0.3))
             else:
                 text_array = add_border(text_array,1,BACKGROUND_COLOR)
             col_array[j].append(text_array)
@@ -178,7 +177,7 @@ def make_styled_corner(array,color):
 
 def is_dark(color:tuple):
     """ check if a color luminance is above a threshold """
-    THRESHOLD  =60
+    THRESHOLD = 80
 
     if len(color) == 4:
         r,g,b,a = color
@@ -209,6 +208,12 @@ def table_to_image(data,titles,alignments=None,colors=None):
     if alignments == None:
         alignments = ["center"]*len(data[0])
 
+    # copy the data to avoid changing the originals
+    data = data.copy()
+    titles = titles.copy()
+    alignments = alignments.copy()
+    colors = colors.copy()
+
     # get the table numpy array
     table_array = make_table_array(data,titles,alignments,colors)
 
@@ -224,3 +229,25 @@ def table_to_image(data,titles,alignments=None,colors=None):
     new_height = image.size[1]*scale
     image = image.resize((new_width,new_height),Image.NEAREST)
     return image
+
+# https://stackoverflow.com/a/49601444
+def lighten_color(color, amount=0.5):
+    """
+    Lightens the given color by multiplying (1-luminosity) by the given amount.
+    Input must be a RGB tuple.
+
+    Examples:
+    >> lighten_color((255,255,255), 0.3)
+    >> lighten_color('#F034A3', 0.6)
+    >> lighten_color('blue', 0.5)
+    """
+
+    try:
+        c = mc.cnames[color]
+    except:
+        color = [v/255 for v in color]
+        c = color
+    c = colorsys.rgb_to_hls(*mc.to_rgb(c))
+    res_color = colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
+    res_color = tuple([int(v*255) for v in res_color])
+    return res_color

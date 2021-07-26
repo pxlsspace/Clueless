@@ -75,8 +75,17 @@ async def on_command_error(ctx,error):
 
 @client.event
 async def on_message(message):
+    # check that the user isn't the bot itself
     if message.author == client.user:
         return
+
+    # check if user is blacklisted
+    blacklist_role_id = get_blacklist_role(message.guild.id)
+    if blacklist_role_id != None:
+        blacklist_role = message.guild.get_role(int(blacklist_role_id))
+        if blacklist_role != None:
+            if blacklist_role in message.author.roles:
+                return
 
     if message.content == ">_>":
         return await message.channel.send("<_<")

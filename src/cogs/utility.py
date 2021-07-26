@@ -1,10 +1,12 @@
 import discord
 from discord.ext import commands
+from discord.ext.commands.converter import RoleConverter
+from discord.ext.commands.errors import RoleNotFound
 import requests
 import json
 import os
 from dotenv import load_dotenv
-from utils.database import update_prefix
+from utils.database import update_blacklist_role, get_blacklist_role, update_prefix
 from utils.time_converter import str_to_td, td_format
 
 class Utility(commands.Cog):
@@ -23,7 +25,7 @@ class Utility(commands.Cog):
         usage = "<text>",
         description = "Repeat your text."
     )
-    async def echo(self,ctx,text):
+    async def echo(self,ctx,*,text):
         allowed_mentions = discord.AllowedMentions(everyone=False) 
         await ctx.send(text, allowed_mentions=allowed_mentions)
 
@@ -80,10 +82,10 @@ class Utility(commands.Cog):
 
 
     @commands.command(hidden=True)
-    #@commands.has_permissions(administrator=True)
+    @commands.is_owner()
     async def rl(self,ctx,extension):
-        if ctx.message.author.id != 219444769879883776:
-            return await ctx.send("❌ You can't do that >:|")
+        # if ctx.message.author.id != 219444769879883776:
+        #     return await ctx.send("❌ You can't do that >:|")
         try:
             self.client.reload_extension("cogs."+extension)
         except Exception as e:
@@ -92,6 +94,39 @@ class Utility(commands.Cog):
         await ctx.send(f"✅ Extension `{extension}` has been reloaded")
 
 
+    @commands.group(hidden=True,invoke_without_command=True,description = "Show the current blacklist role.")
+    @commands.check_any(commands.is_owner(),commands.has_permissions(manage_roles=True))
+    async def blacklist(self,ctx):
+        # show the current role
+        current_role_id = get_blacklist_role(ctx.guild.id)
+        if current_role_id == None:
+            return await ctx.send(f"No blacklist role assigned, use `{ctx.prefix}{ctx.command} addrole <role>`")
+        current_role = ctx.guild.get_role(int(current_role_id))
+        if current_role == None:
+            return await ctx.send(f"The current blacklist role is invalid, use `{ctx.prefix}{ctx.command} <role>`")
+        else:
+            no_role_mention = discord.AllowedMentions(roles=False) # to avoid pinging when showing the role
+            return await ctx.send(f"Current blacklist role: <@&{current_role.id}>.",allowed_mentions=no_role_mention)
+
+    @blacklist.command(
+        description = "Add a blacklist role, any user with this role won't be able to use the bot.",
+        usage = "<role name|role id|@role>"
+        )
+    async def addrole(self,ctx,role):
+
+        # check that the role exists and save it
+        try:
+            role = await RoleConverter().convert(ctx,role)
+        except RoleNotFound as e:
+            return await ctx.send(f"❌ {e}")
+        update_blacklist_role(ctx.guild.id,role.id)
+        no_role_mention = discord.AllowedMentions(roles=False) # to avoid pinging when showing the role
+        await ctx.send(f"✅ Blacklist role set to <@&{role.id}>.",allowed_mentions=no_role_mention)
+
+    @blacklist.command(description = "Remove the current blacklist role.")
+    async def removerole(self,ctx):
+        update_blacklist_role(ctx.guild.id,None)
+        await ctx.send("✅ Blacklist role removed.")
 
 def setup(client):
     client.add_cog(Utility(client))

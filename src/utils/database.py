@@ -10,11 +10,13 @@ create_server_table = """CREATE TABLE IF NOT EXISTS servers(
                             prefix TEXT,
                             alert_channel_id INTEGER,
                             twitch_channel_id TEXT,
-                            informations_channel_id,
+                            informations_channel_id TEXT,
                             emote_log_channel_id INTEGER,
                             emote_list_channel_id INTEGER
                             
                         );"""
+add_blacklist_role_column ="""ALTER TABLE servers
+                              ADD COLUMN blacklist_role_id TEXT"""
 
 create_pxls_user_table = """ CREATE TABLE IF NOT EXISTS pxls_users(
                             name TEXT PRIMARY KEY,
@@ -133,6 +135,10 @@ def create_tables():
     create_table(conn,create_server_user_table)
     create_table(conn,create_pxls_user_stats_table)
     create_table(conn,create_pxls_general_stats_table)
+    try:
+        sql_update(add_blacklist_role_column)
+    except:
+        pass
     return
 
 # adds a user to the server_pxls_user table and pxls_user table if not added
@@ -491,6 +497,18 @@ def get_pixels_placed_between(datetime1,datetime2,canvas:bool,orderby,users=None
     else:
         return sql_select(sql,(datetime1,datetime2))
 
+def update_blacklist_role(server_id,role_id):
+    sql = ''' UPDATE servers
+            SET blacklist_role_id = ?
+            WHERE server_id = ?'''
+    sql_update(sql,(role_id,server_id))
+
+def get_blacklist_role(server_id):
+    sql = """ SELECT blacklist_role_id
+              FROM servers
+              WHERE server_id = ?"""
+    res = sql_select(sql,(server_id,))
+    return res[0][0]
 
 def main():
     ''' Test/debug code '''

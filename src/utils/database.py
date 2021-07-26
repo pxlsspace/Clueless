@@ -69,7 +69,6 @@ def create_server(server_id,prefix):
     cur = conn.cursor()
     cur.execute(sql, (server_id,prefix))
     conn.commit()
-    print(f'Server {server_id} added to the db')
     return cur.lastrowid
 
 def create_emoji(name, channel_id, twitch_id, discord_id, server_id, url, is_animated):

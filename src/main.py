@@ -91,7 +91,7 @@ async def on_message(message):
 @client.event
 async def on_guild_join(guild):
     create_server(guild.id,DEFAULT_PREFIX)
-    print("joined a new server id: "+str(guild.id))
+    print("joined a new server: {0.name} (id: {0.id})".format(guild))
 
 if __name__ == "__main__":
 

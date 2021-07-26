@@ -31,8 +31,8 @@ async def on_command_error(ctx,error):
     if isinstance(error, commands.CommandNotFound):
         return
     #     return await ctx.send("❌ " + str(error))
-    if isinstance(error, commands.MissingPermissions):
-       return await ctx.send(f"❌ You don't have permissions to use {ctx.command.qualified_name}.")
+    if isinstance(error, commands.MissingPermissions) or isinstance(error,commands.NotOwner):
+       return await ctx.send(f"❌ You don't have permissions to use the `{ctx.command.qualified_name}` command.")
 
     await ctx.message.add_reaction(r'a:peepoLeaveNope:822571977390817340')
     print('Ignoring exception in command {}:'.format(ctx.command.qualified_name), file=sys.stderr)

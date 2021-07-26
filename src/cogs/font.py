@@ -14,7 +14,7 @@ class Font(commands.Cog):
         self.client = client
 
     @commands.command(
-        description = "Convert a text to pixel art",
+        description = "Convert a text to pixel art.",
         aliases = ["pf","font","pixeltext"],
         usage = "<text> <-font <name|*>> [-color <color|none>] [-bgcolor <color|none>]",
         help = """- `<text>` a text to convert to pixel art
@@ -96,7 +96,7 @@ class Font(commands.Cog):
         # send the image(s)
         await ctx.send(files=files)
                     
-    @commands.command(description = "Show the list of the fonts available")
+    @commands.command(description = "Show the list of the fonts available.")
     async def fonts(self,ctx):
         fonts = get_all_fonts()
         if len(fonts) == 0:

@@ -32,7 +32,7 @@ class Clock(commands.Cog):
             # refreshing stats json
             self.stats.refresh()
             if self.stats.stats_json == None:
-                print(time + ": stats page unreachable")
+                print(now + ": stats page unreachable")
                 return
             print(".",end='',flush=True)
 

@@ -20,7 +20,7 @@ class PxlsSpeed(commands.Cog):
         self.client = client
 
     @commands.command(usage="<name> [-canvas] [-groupby [day|hour]] [-progress] [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
-    description = "Show the average speed of a pxls user.",
+    description = "Show the speed of a pxls user with a graph.",
     help = """- `<names>`: list of pxls users names separated by a space
               - `[-canvas|-c]`: show the canvas stats
               - `[-groupby|-g]`: show a bar chart for each `day` or `hour`

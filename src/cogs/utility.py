@@ -84,8 +84,6 @@ class Utility(commands.Cog):
     @commands.command(hidden=True)
     @commands.is_owner()
     async def rl(self,ctx,extension):
-        # if ctx.message.author.id != 219444769879883776:
-        #     return await ctx.send("❌ You can't do that >:|")
         try:
             self.client.reload_extension("cogs."+extension)
         except Exception as e:
@@ -113,7 +111,6 @@ class Utility(commands.Cog):
         usage = "<role name|role id|@role>"
         )
     async def addrole(self,ctx,role):
-
         # check that the role exists and save it
         try:
             role = await RoleConverter().convert(ctx,role)

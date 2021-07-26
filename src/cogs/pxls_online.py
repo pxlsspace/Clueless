@@ -17,7 +17,7 @@ class Online(commands.Cog):
         self.client = client
 
     @commands.command(
-        description = "Show the online count history",
+        description = "Show the online count history.",
         usage = "[-cd] [-last ?d?h?m?s]")
     async def online(self,ctx,*args):
         last = "1d"

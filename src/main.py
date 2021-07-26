@@ -3,6 +3,7 @@ import sys
 from discord.ext import commands
 from dotenv import load_dotenv
 import traceback
+from datetime import timezone
 
 from utils.database import *
 from utils.help import *
@@ -31,12 +32,46 @@ async def on_command_error(ctx,error):
         return
     #     return await ctx.send("❌ " + str(error))
     if isinstance(error, commands.MissingPermissions):
-       await ctx.send(f"❌ You don't have permissions to use {ctx.command.qualified_name}.")
+       return await ctx.send(f"❌ You don't have permissions to use {ctx.command.qualified_name}.")
 
     await ctx.message.add_reaction(r'a:peepoLeaveNope:822571977390817340')
-    #await ctx.send(error)
-    print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
+    print('Ignoring exception in command {}:'.format(ctx.command.qualified_name), file=sys.stderr)
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
+
+    # send message in log error channel
+    log_channel_id = os.environ.get("ERROR_LOG_CHANNEL")
+    try:
+        log_channel = await client.fetch_channel(log_channel_id)
+    except:
+        return
+    if log_channel != None:
+        tb = traceback.format_exception(type(error), error, error.__traceback__)
+        tb = tb[2:4]
+        tb = "".join(tb)
+
+        if isinstance(ctx.channel, discord.channel.DMChannel):
+            context = "DM"
+        else:
+            context = f"• **Server**: {ctx.guild.name} ({ctx.guild.id})\n"
+            context += f"• **Channel**: <#{ctx.channel.id}>\n"
+
+        message_time = ctx.message.created_at
+        message_time = message_time.replace(tzinfo=timezone.utc)
+        message = f"By <@{ctx.author.id}> "
+        message += f"on <t:{int(message_time.timestamp())}>\n"
+        message += f"```{ctx.message.content}```"
+        message += f"[link to the message]({ctx.message.jump_url})\n"
+
+        emb = discord.Embed(
+            color=0xff0000,
+            title = "Unexpected exception in command '{}'".format(ctx.command.qualified_name))
+        emb.add_field(name="Context:",value=context,inline=False)
+        emb.add_field(name="Message:",value=message,inline=False)
+        emb.add_field(name="Error:",value=f'```{error}```' ,inline=False)
+        emb.add_field(name="Traceback:",value=f"```\n{tb}```",inline=False)
+
+        await log_channel.send(embed=emb)
+        
 
 @client.event
 async def on_message(message):

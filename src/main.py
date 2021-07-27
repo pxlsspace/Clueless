@@ -33,7 +33,8 @@ async def on_command_error(ctx,error):
     #     return await ctx.send("❌ " + str(error))
     if isinstance(error, commands.MissingPermissions) or isinstance(error,commands.NotOwner):
        return await ctx.send(f"❌ You don't have permissions to use the `{ctx.command.qualified_name}` command.")
-
+    if isinstance(error,commands.CommandOnCooldown):
+        return await ctx.send(f"❌ {error}")
     await ctx.message.add_reaction(r'a:peepoLeaveNope:822571977390817340')
     print('Ignoring exception in command {}:'.format(ctx.command.qualified_name), file=sys.stderr)
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
@@ -67,7 +68,7 @@ async def on_command_error(ctx,error):
             title = "Unexpected exception in command '{}'".format(ctx.command.qualified_name))
         emb.add_field(name="Context:",value=context,inline=False)
         emb.add_field(name="Message:",value=message,inline=False)
-        emb.add_field(name="Error:",value=f'```{error}```' ,inline=False)
+        emb.add_field(name="Error:",value=f'```{error.__class__.__name__}: {error}```' ,inline=False)
         emb.add_field(name="Traceback:",value=f"```\n{tb}```",inline=False)
 
         await log_channel.send(embed=emb)

@@ -6,8 +6,7 @@ EMBED_COLOR = 0x66c5cc
 class HelpCommand(commands.HelpCommand):
 
     def __init__(self, **options):
-        super().__init__(**options)
-
+        super().__init__(command_attrs=dict(description="Show this message."),**options)
     # function called on ">help"
     async def send_bot_help(self, mapping):
         prefix = self.context.prefix

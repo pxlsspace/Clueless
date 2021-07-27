@@ -44,6 +44,7 @@ class Utility(commands.Cog):
 
 
     @commands.command(
+        hidden = True,
         usage = "<amount> <currency>",
         description = "Convert currency between Euro and SA Rand.",
         help = """- `<amount>`: a number to convert

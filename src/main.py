@@ -106,12 +106,17 @@ if __name__ == "__main__":
 
     # loading cogs
     commands_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cogs")
-    for extension in os.listdir(commands_dir):
-        if extension.endswith('.py'):
-            try:
-                client.load_extension("cogs." + extension[:-3])
-            except Exception as e:
-                print('Failed to load extension {}\n{}: {}'.format(extension, type(e).__name__, e))
+    for path, subdirs, files in os.walk(commands_dir):
+        parent_dir = path
+        for extension in files:
+            if extension.endswith(".py"):
+                try:
+                    if parent_dir != commands_dir:
+                        relpath = os.path.relpath(os.path.join(parent_dir,extension),commands_dir)
+                        extension = ".".join(os.path.split(relpath))
+                    client.load_extension("cogs." + extension[:-3])
+                except Exception as e:
+                    print('Failed to load extension {}\n{}: {}'.format(extension, type(e).__name__, e))
 
     # test bot
     client.run(os.environ.get("DISCORD_TOKEN"))

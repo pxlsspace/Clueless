@@ -4,7 +4,7 @@ import matplotlib.colors as mc
 import colorsys
 
 from utils.font.font_manager import FontManager, PixelText
-from cogs.outline import Outline
+from cogs.pixelart.outline import Outline
 
 font_name = "minecraft"
 

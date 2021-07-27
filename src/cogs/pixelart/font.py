@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 from io import BytesIO
 
-from cogs.outline import Outline
+from cogs.pixelart.outline import Outline
 from utils.arguments_parser import parse_pixelfont_args
 from utils.font.font_manager import *
 from utils.discord_utils import image_to_file

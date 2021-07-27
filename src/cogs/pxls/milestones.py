@@ -8,10 +8,12 @@ class PxlsMilestones(commands.Cog):
         self.stats = stats
 
     @commands.group(
+        hidden = True,
         usage = "[add|remove|list|channel|setchannel]",
         description = "Track pxls users milestones.",
         aliases = ["ms"],
         invoke_without_command = True)
+    @commands.has_permissions(manage_channels=True)
     async def milestones(self,ctx,args):
         return
     

@@ -54,17 +54,23 @@ class PxlsSpeed(commands.Cog):
 
         # get the data we need
         ldb = get_pixels_placed_between(old_time,recent_time,canvas_opt,'speed',names)
+
+        #check if any user was found
         if not ldb:
             return await ctx.send("❌ User(s) not found.")
+
         now_time = ldb[0][6]
         past_time = ldb[0][5]
-        
+
         # Select the data we need to display:
         #  name, current pixels, placed in the time frame, speed in px/h, px/d
         res = []
         for user in ldb:
             name = user[1]
-            pixels = format_number(user[2])
+            pixels = user[2]
+            if pixels == None:
+                continue
+            pixels = format_number(pixels)
             diff_pixels = user[3]
             diff_time = user[6] - user[5]
             nb_hours = diff_time/timedelta(hours=1)
@@ -72,6 +78,8 @@ class PxlsSpeed(commands.Cog):
             speed_px_d = speed_px_h*24
             res.append([name,pixels,format_number(diff_pixels),round(speed_px_h),round(speed_px_d)])
 
+        if len(res) == 0:
+            return await ctx.send("❌ User(s) not found (try adding `-c` in the command).")
         # create the headers needed for the table
         alignments = ["left","right","right","right","right"]
         titles = ["Name","Pixels","Placed","px/h","px/d"]
@@ -216,6 +224,8 @@ def get_grouped_graph(user_list,date1,date2,groupby_opt):
 def cycle_through_list(list,number_of_element:int):
     ''' loop through a list the desired amount of time
     example: cycle_through_list([1,2,3],6) -> [1,2,3,1,2,3] '''
+    if len(list) == 0 or number_of_element == 0:
+        return None
     list = cycle(list)
     res = []
     count = 0

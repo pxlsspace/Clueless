@@ -130,12 +130,15 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
             # add the diff values
             if username:
-                if speed_opt:
-                    diff = user_pixels-ldb[i][3]
-                else:
-                    diff = user_pixels-ldb[i][2]
-                diff = f'{int(diff):,}'.replace(","," ") # convert to string
-                res_ldb[i].append(diff)
+                try:
+                    if speed_opt:
+                        diff = user_pixels-ldb[i][3]
+                    else:
+                        diff = user_pixels-ldb[i][2]
+                    diff = f'{int(diff):,}'.replace(","," ") # convert to string
+                    res_ldb[i].append(diff)
+                except:
+                    res_ldb[i].append("???")
 
             # add the speed
             if speed_opt:
@@ -173,7 +176,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         img = table_to_image(res_ldb,column_names,alignments2,colors=colors)
 
         # create a discord embed with the leaderboard and send it
-        emb = discord.Embed()
+        emb = discord.Embed(color=0x66c5cc)
         if speed_opt:
             emb.add_field(name="Speed Leaderboard",value=text)
         elif canvas_opt:

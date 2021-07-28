@@ -151,7 +151,7 @@ def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc),prog
 
         # add a marge at the right to add the name
         longest_name = max([len(user) for user in user_list])
-        fig.update_layout(margin=dict(r=(longest_name+1)*26))
+        fig.update_layout(margin=dict(r=(longest_name+2)*26))
 
         # add the name
         fig.add_annotation(

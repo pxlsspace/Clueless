@@ -1,68 +1,70 @@
 import discord
-from discord.ext import commands
-from discord.ext.commands.core import command
-from praw.reddit import Submission
-import requests
-import praw
 import time
-import os
-from dotenv import load_dotenv
 import random
+from discord.ext import commands
+from utils.utils import get_content
 
 class Reddit(commands.Cog,name = "Image"):
     ''' Class to get images from reddit'''
 
     def __init__(self, client):
-        load_dotenv()
         self.client = client
-        self.reddit = praw.Reddit(
-            client_id = os.environ.get("REDDIT_CLIENT_ID"),
-            client_secret = os.environ.get("REDDIT_CLIENT_SECRET"),
-            user_agent = os.environ.get("REDDIT_USER_AGENT"),
-            check_for_async=False
-        )
-        self.reddit.read_only = True
 
-    def get_image_url(self,submission):
-        '''Get the image link from a reddit subimission
-        return the url of the image or `None` if no image found'''
-        url = submission.url # this line takes too much time for some reason
-
-        if url[-4:] in [".jpg",".png",".gif"]:
-            return url
-        else:
+    def get_image_url(self,subm):
+        """ Get the image URL from the json of a reddit submission,
+        return None if no URL was found (for video posts, image posts, ...) """
+        try:
+            url = subm["url"]
+            if url[-4:] in [".jpg",".png",".gif"]:
+                return url
+            elif "gallery" in url:
+                medias = subm["media_metadata"]
+                for media_id in medias:
+                    media = subm["media_metadata"][media_id]
+                    url = media["p"][-1]["u"]
+                    url = url.split("?")[0].replace("preview", "i")
+                    if url[-4:] in [".jpg",".png",".gif"]:
+                        return url
+            return None
+        except Exception:
             return None
 
-    def get_random_image_post(self,subreddit):
-        ''' get a random submission containing an image from the parameter subreddit  
-        return `None` if the subreddit doesnt support `.random()`'''
+    async def get_random_submission(self,subreddit_name):
+        ''' get a random submission containing an image from 'subreddit_name'.
+  
+        return a tuple with 2 items: (image_url,reddit_post_url)'''
 
-        #random_submission = subreddit.random()
-        submissions = list(subreddit.hot(limit=100)) # this line can take long sometimes
-        random_submission = random.choice(submissions)
+        request_url = f'https://www.reddit.com/r/{subreddit_name}/hot.json?limit=100'
+        submissions_json = await get_content(request_url,"json")
+        submissions = submissions_json["data"]["children"]
 
-        #random_submission = self.reddit.submission(id="o4h0m8")
-        if random_submission == None:
-            return None
-
-        while self.get_image_url(random_submission) == None:
-            random_submission = random.choice(submissions)
+        submissions_with_image = []
+        for subm in submissions:
+            subm_data = subm["data"]
+            # filter out spoiler, pinned and nsfw posts
+            if subm_data["spoiler"] == False and subm_data["pinned"] == False and subm_data["over_18"] == False:
+                subm_image_url = self.get_image_url(subm_data)
+                if subm_image_url != None:
+                    subm_url = "https://www.reddit.com" + subm_data["permalink"]
+                    submissions_with_image.append((subm_image_url,subm_url))
+        if len(submissions_with_image) == 0:
+            return (None,None)
+        random_submission = random.choice(submissions_with_image)
         return random_submission
-        
-    def format_embed(self,submission,title,subreddit,time):
+
+    def format_embed(self,submission_link,image_link,title,subreddit,time):
         '''
         Format a reddit submission into a discord embed.
 
         :param submission: the submission to format
         :return embed: The embed containing the submission'''
-    
-        reddit_link = "https://www.reddit.com"+submission.permalink
 
-        e = discord.Embed(title=title,url=reddit_link,color=0xffd1ec)
-        e.set_image(url=self.get_image_url(submission))
-        
-        #e.add_field(name='\u200b',value=f"[reddit post link]({reddit_link})")
-        e.set_footer(text="Image from r/"+subreddit+"\t (found in "+str(time)+" seconds)")
+        e = discord.Embed(title=title,url=submission_link,color=0x66c5cc)
+        e.set_image(url=image_link)
+        e.set_footer(text="Image from r/{} - Found in {} second{}".format(
+            subreddit,
+            round(time,2),
+            's' if time > 2 else ''))
 
         return e
 
@@ -73,17 +75,14 @@ class Reddit(commands.Cog,name = "Image"):
         :param ctx: the discord context to send the message
         :param subreddit_name: the subreddit to get the image from
         :param title: the text to show with the image"""
-        sub = self.reddit.subreddit(subreddit_name)
 
-        start_time = time.time()
-        submission = self.get_random_image_post(sub)
-        end_time = time.time()
-        time_diff = round(end_time - start_time,2)
+        start = time.time()
+        image_url, submission_url = await self.get_random_submission(subreddit_name)
+        if submission_url == None:
+            return await ctx.send("❌ No image found :(")
+        ex_time = time.time()-start
+        embed = self.format_embed(submission_url,image_url,title,subreddit_name,ex_time)
 
-        if not submission:
-            return await ctx.send(f"❌ The subreddit {subreddit_name} doesn't support random.")
-
-        embed = self.format_embed(submission,title,subreddit_name,time_diff)
         await ctx.send(embed=embed)
 
     @commands.cooldown(1,2)
@@ -116,7 +115,7 @@ class Reddit(commands.Cog,name = "Image"):
     @commands.cooldown(1,2)
     @commands.command(description = "Send a random doggo image.")
     async def doggo(self,ctx):
-        subreddit = random.choice(["dogs","dogpictures","puppies","PuppySmiles"])
+        subreddit = random.choice(["dog","dogpictures","puppies","PuppySmiles"])
         await self.send_random_image(ctx,subreddit,"Here, have a doggo!") 
 
 def setup(client):

@@ -30,7 +30,7 @@ class Emote(commands.Cog):
 
         # get the input image
         try:
-            img_bytes, url = get_image_from_message(ctx,url)
+            img_bytes, url = await get_image_from_message(ctx,url)
         except ValueError as e:
             return await ctx.send(f'❌ {e}')
 

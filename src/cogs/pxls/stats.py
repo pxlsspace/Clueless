@@ -5,21 +5,22 @@ class PxlsStats(commands.Cog):
 
     def __init__(self,client):
         self.client = client
-        self.stats = stats
         
 
     @commands.command(
-        description = "Show some general pxls stats."
+        description = "Show some general pxls stats.",
+        aliases = ["gstats","gs"]
     )
     async def generalstats(self,ctx):
-        gen_stats = self.stats.get_general_stats()
+        gen_stats = stats.get_general_stats()
         text = ""
+        text += f"**Canvas Code**: {await stats.get_canvas_code()}\n"
         for element in gen_stats:
              # formating the number (123456 -> 123 456)
             num = f'{int(gen_stats[element]):,}'
             num = num.replace(","," ")
             text += f"**{element.replace('_',' ').title()}**: {num}\n"
-        text += f'*Last updated: {self.stats.get_last_updated()}*'
+        text += f'*Last updated: {stats.get_last_updated()}*'
         await ctx.send(text)
 
     @commands.command(
@@ -30,10 +31,10 @@ class PxlsStats(commands.Cog):
     async def stats(self,ctx,name,option=None):
 
         if option == "-c" or option == "-canvas":
-            number = self.stats.get_canvas_stat(name)
+            number = stats.get_canvas_stat(name)
             text = "Canvas"
         else:
-            number = self.stats.get_alltime_stat(name)
+            number = stats.get_alltime_stat(name)
             text = "All-time"
 
         if not number:

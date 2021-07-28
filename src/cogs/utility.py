@@ -2,12 +2,12 @@ import discord
 from discord.ext import commands
 from discord.ext.commands.converter import RoleConverter
 from discord.ext.commands.errors import RoleNotFound
-import requests
-import json
 import os
 from dotenv import load_dotenv
+from requests.api import get
 from utils.database import update_blacklist_role, get_blacklist_role, update_prefix
 from utils.time_converter import str_to_td, td_format
+from utils.utils import get_content
 
 class Utility(commands.Cog):
     ''' Various utility commands'''
@@ -56,9 +56,10 @@ class Utility(commands.Cog):
         except ValueError:
             return await ctx.send("❌ `amount` parameter must be a number.")
         apikey = os.environ.get("CURRCONV_API_KEY")
-        r = requests.get(f'https://free.currconv.com/api/v7/convert?q=EUR_ZAR,ZAR_EUR&compact=ultra&apiKey={apikey}')
-        EUR_ZAR = json.loads(r.text)["EUR_ZAR"]
-        ZAR_EUR = json.loads(r.text)["ZAR_EUR"]
+        url = f'https://free.currconv.com/api/v7/convert?q=EUR_ZAR,ZAR_EUR&compact=ultra&apiKey={apikey}'
+        json_response = await get_content(url,'json')
+        EUR_ZAR = json_response["EUR_ZAR"]
+        ZAR_EUR = json_response["ZAR_EUR"]
 
         test_list_eur = ["euros","euro","eu","eur","€","e"]
         test_list_zar = ["rand","zar","r"]

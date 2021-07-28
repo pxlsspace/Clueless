@@ -5,7 +5,6 @@ class PxlsMilestones(commands.Cog):
 
     def __init__(self,client):
         self.client = client
-        self.stats = stats
 
     @commands.group(
         hidden = True,
@@ -27,7 +26,7 @@ class PxlsMilestones(commands.Cog):
             return await ctx.send("❌ You need to specify a username.")
 
         # checking if the user exists
-        count = self.stats.get_alltime_stat(name)
+        count = stats.get_alltime_stat(name)
         if count == None:
             await ctx.send("❌ User not found.")
             return

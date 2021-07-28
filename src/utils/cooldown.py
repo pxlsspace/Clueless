@@ -1,7 +1,5 @@
-from utils.scrapping import get_page_source
-import requests
-import json
 import math
+from utils.utils import get_content
 
 def sum_up_to_n(n):
     r = 0
@@ -40,15 +38,5 @@ def get_cds(online):
         text+= f'(total: {time_convert(total)})\n'
     return cds
 
-def get_online_count():
-    ''' return the current online count '''
-    try:
-        r = requests.get('https://pxls.space/users')
-        online = json.loads(r.text)["count"]
-        return online
-    except Exception as e:
-        print(e)
-        return None
-    
 if __name__ == "__main__":
     print(get_cds([]))

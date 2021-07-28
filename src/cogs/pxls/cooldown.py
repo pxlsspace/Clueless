@@ -1,7 +1,8 @@
 from discord.ext import commands
 import discord
-from utils.cooldown import get_cds, time_convert, get_online_count
+from utils.cooldown import get_cds, time_convert
 from utils.discord_utils import format_table
+from utils.setup import stats
 
 class PxlsCooldown(commands.Cog):
 
@@ -16,7 +17,7 @@ class PxlsCooldown(commands.Cog):
         if number:
             online = int(number)
         else:
-            online = get_online_count()
+            online = await stats.get_online_count()
 
         i = 0
         total = 0

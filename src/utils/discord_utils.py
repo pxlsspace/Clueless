@@ -1,8 +1,7 @@
-import requests
-from PIL import Image
 from io import BytesIO
 import discord
 import PIL
+from utils.utils import get_content
 
 def format_table(table,column_names,alignments=None,name=None):
     ''' Format the leaderboard in a string to be printed
@@ -55,7 +54,7 @@ def format_number(num):
     return f'{int(num):,}'.replace(","," ") # convert to string
 
 
-def get_image_from_message(ctx,url=None):
+async def get_image_from_message(ctx,url=None):
     """ get an image from a discord context/message,
     raise ValueError if the URL isn't valid 
     return a byte image and the image url """
@@ -70,14 +69,11 @@ def get_image_from_message(ctx,url=None):
 
     # getting the image from url
     try:
-        response = requests.get(url)
-    except (requests.exceptions.MissingSchema, requests.exceptions.InvalidURL, requests.exceptions.InvalidSchema, requests.exceptions.ConnectionError):
-        raise ValueError ("The URL provided is invalid.")
-    if response.status_code == 404:
-        raise ("The URL provided leads to a 404.")
-    if not 'image' in response.headers['content-type']:
-        raise ValueError("The URL doesn't contain any image.")
-    return response.content, url
+        image_bytes = await get_content(url,'image')
+    except Exception as e:
+        raise ValueError (e)
+
+    return image_bytes, url
 
 def image_to_file(image:PIL.Image,filename:str,embed:discord.Embed=None) -> discord.File:
     """ Convert a pillow Image to a discord File

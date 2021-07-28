@@ -8,8 +8,9 @@ import plotly.graph_objects as go
 from utils.database import get_general_stat
 from utils.time_converter import format_datetime, str_to_td
 from utils.discord_utils import image_to_file
-from utils.cooldown import get_cd, get_online_count
+from utils.cooldown import get_cd
 from utils.plot_utils import layout, colors
+from utils.setup import stats
 
 class Online(commands.Cog):
 
@@ -37,10 +38,10 @@ class Online(commands.Cog):
             return await ctx.send(f"❌ Invalid `last` parameter, format must be `{ctx.prefix}{ctx.command.name}{ctx.command.usage}`.")
         data = get_general_stat("online_count",datetime.utcnow()-input_time)
 
-        online_counts = [int(e[0]) for e in data]
-        dates = [e[1] for e in data]
+        online_counts = [int(e[0]) for e in data if e[0] != None]
+        dates = [e[1] for e in data if e[0] != None]
 
-        current_count = get_online_count()
+        current_count = await stats.get_online_count()
         online_counts.insert(0,int(current_count))
         dates.insert(0,datetime.utcnow())
 

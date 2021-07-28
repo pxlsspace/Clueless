@@ -15,7 +15,6 @@ HEX_COLOR_REGEX = r'^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$'
 class Outline(commands.Cog):
 
     def __init__(self, client):
-        self.stats = stats
         self.client = client
 
     ### Commands ###
@@ -51,7 +50,7 @@ class Outline(commands.Cog):
 
         # get the input image
         try:
-            img_bytes, url = get_image_from_message(ctx,url)
+            img_bytes, url = await get_image_from_message(ctx,url)
         except ValueError as e:
             return await ctx.send(f'❌ {e}')
 
@@ -68,7 +67,7 @@ class Outline(commands.Cog):
     async def crop(self,ctx,url=None):
         # get the input image
         try:
-            img_bytes, url = get_image_from_message(ctx,url)
+            img_bytes, url = await get_image_from_message(ctx,url)
         except ValueError as e:
             return await ctx.send(f'❌ {e}')
 
@@ -148,7 +147,7 @@ class Outline(commands.Cog):
     def get_pxls_color(self,input):
         """ Get the RGBA value of a pxls color by its name. """
         color_name = input.lower().replace("gray","grey")
-        for color in self.stats.get_palette():
+        for color in stats.get_palette():
             if color["name"].lower() == color_name.lower():
                 rgb = ImageColor.getcolor(f'#{color["value"]}',"RGBA")
                 return rgb

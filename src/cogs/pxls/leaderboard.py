@@ -5,15 +5,13 @@ from utils.database import *
 
 from utils.time_converter import *
 from utils.arguments_parser import parse_leaderboard_args
-from utils.setup import stats
-from utils.discord_utils import format_table, format_number, image_to_file
+from utils.discord_utils import format_number, image_to_file
 from utils.table_to_image import table_to_image
 
 class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
     def __init__(self, client):
         self.client = client
-        self.stats = stats
 
     ### Discord commands ###
 

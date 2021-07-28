@@ -1,23 +1,17 @@
-import requests
-import json
 from datetime import datetime
 import pytz
+from utils.utils import get_content
 
 class PxlsStatsManager():
     ''' A helper to get data from pxls.space/stats'''
 
     def __init__(self):
-        self.stats_url = "http://pxls.space/stats/stats.json"
+        self.base_url = "http://pxls.space/"
         self.stats_json = {}
-        self.refresh()
 
-    def refresh(self):
-        r = requests.get(self.stats_url)
-        if 200 > r.status_code or r.status_code > 299:
-            print(str(r.status_code))
-            self.stats_json = None
-
-        self.stats_json = json.loads(r.text)
+    async def refresh(self):
+        response_json = await self.query("stats/stats.json","json")
+        self.stats_json = response_json
     
     def get_general_stats(self):
         general = self.stats_json["general"]
@@ -59,6 +53,18 @@ class PxlsStatsManager():
 
     def get_palette(self):
         return self.stats_json["board_info"]["palette"]
+
+    async def get_canvas_code(self):
+        response_json = await self.query('info','json')
+        return response_json["canvasCode"]
+
+    async def get_online_count(self):
+        response_json = await self.query('users','json')
+        return response_json["count"]
+
+    async def query(self,endpoint,content_type):
+        url = self.base_url + endpoint
+        return await get_content(url,content_type) 
 
 if __name__ == "__main__":
     ''' test/debug code'''

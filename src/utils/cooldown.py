@@ -1,5 +1,4 @@
 import math
-from utils.utils import get_content
 
 def sum_up_to_n(n):
     r = 0
@@ -22,21 +21,18 @@ def time_convert(seconds):
         return "%02d:%02d:%05.2f" % (hour, min, sec)
 
 def get_cd(online):
-    return 2.5*(math.sqrt(online+12))+6.5
+    return 2.5*(math.sqrt(online+11.96))+6.5
 
 def get_cds(online):
 
-    cd = 2.5*(math.sqrt(online+12))+6.5
+    cd = 2.5*(math.sqrt(online+11.96))+6.5
     cds = []
-    text= f"Pxls Cooldown for {online} users:\n"
     total = 0
     for i in range(0, 6):
         t = cd_2(i,cd)
         cds.append(t)
         total+=t
-        text+=f'\t**{i}/6** => {time_convert(t)} '
-        text+= f'(total: {time_convert(total)})\n'
     return cds
 
 if __name__ == "__main__":
-    print(get_cds([]))
+    print(get_cds(1))

@@ -43,7 +43,8 @@ async def search_song(song_query):
         artist = song_json["primary_artist"]["name"]
         song_url = song_json["url"]
         image_url = song_json["song_art_image_thumbnail_url"]
-        lyrics = await get_lyrics(song_url)
+        #lyrics = await get_lyrics(song_url)
+        lyrics = None
         song = Song(title,full_title,artist,song_url,image_url,lyrics)
         return song
 

@@ -36,8 +36,7 @@ class Lyrics(commands.Cog):
 
         # check that we found a song and that it's the correct song
         if song == None or\
-        (spotify_title and not is_similar(spotify_title,song.title))\
-        or song.lyrics == None:
+        (spotify_title and not is_similar(spotify_title,song.title)):
             return await ctx.send(f"❌ Can't find any lyrics for **{title_to_search}**" 
                 + ((f" by **{artists_to_search}**") if artists_to_search else ""))
 
@@ -45,7 +44,10 @@ class Lyrics(commands.Cog):
         song_cover_url = song.image_url
         lyrics = song.lyrics
         song_url = song.genius_url
-        lyrics = format_lyrics(lyrics)
+        if lyrics == None:
+            lyrics = "[Link to the lyrics]({})".format(song_url)
+        else:
+            lyrics = format_lyrics(lyrics)
         if len(lyrics) > 4096:
             lyrics = "[The lyrics are too long to be displayed\nClick on the title to see them on the site]"
 
@@ -53,8 +55,7 @@ class Lyrics(commands.Cog):
         embed = discord.Embed(
             color = 0xffff64,
             title=f"Lyrics for {song.full_title}",
-            description = lyrics,
-            url=song_url
+            description = lyrics
             )
         embed.set_thumbnail(url=song_cover_url)
         embed.set_footer(text="source: genius.com",icon_url="https://images.genius.com/8ed669cadd956443e29c70361ec4f372.1000x1000x1.png")

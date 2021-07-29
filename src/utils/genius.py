@@ -24,8 +24,8 @@ class Song():
         self.lyrics = lyrics
 
 async def get_response(query):
-    url = BASE_URL + query
-    json = await get_content(url,"json",headers=HEADERS)
+    url = BASE_URL + query + "&access_token="+TOKEN
+    json = await get_content(url,"json")
     return json
 
 async def search_song(song_query):

@@ -10,8 +10,8 @@ from utils.help import *
 from utils.setup import DEFAULT_PREFIX
 
 load_dotenv()
-
-client = commands.Bot(command_prefix=get_prefix,help_command=HelpCommand())
+intents = discord.Intents.all()
+client = commands.Bot(command_prefix=get_prefix,help_command=HelpCommand(),intents=intents)
 
 ### on event functions ###
 @client.event

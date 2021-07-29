@@ -5,10 +5,10 @@ from aiohttp.client_exceptions import InvalidURL, ClientConnectionError
 class BadResponseError(Exception):
     """ Raised when response code isn't 200."""
 
-async def get_content(url:str,content_type):
+async def get_content(url:str,content_type,headers=None):
     """ Send a GET request to the url and return the response as json or bytes.
     Raise BadResponseError or ValueError."""
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession(headers=headers) as session:
         try:
             async with session.get(url) as r:
                 if r.status == 200:

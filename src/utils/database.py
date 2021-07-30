@@ -2,6 +2,7 @@ import sqlite3
 from sqlite3 import Error
 import os
 from utils.setup import DEFAULT_PREFIX
+from datetime import datetime
 
 DB_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "database.db")
 
@@ -438,36 +439,21 @@ def sql_update(query,param=None):
         # no changes have been made
         return -1
 
-def get_pixels_placed_between(datetime1,datetime2,canvas:bool,orderby,users=None):
-    """ Get the amount of pixels placed between 2 dates
-    ## parameters
-    - `datetime1`: the oldest date
-    - `datetime2`: the most recent date
-    - `canvas`: boolean to get the canvas stats instead of alltime
-    - `orderby`: sort the return list by: `canvas` (pixels), `alltime` (pixels), `speed` (amount)
-    - `users` (optional): 
-        - if len is 0 or 1: the return list will have data for all the users
-        - if len is more than 1: the return list will only have data for the given users 
-    ## return 
-    a list in the format:
-    List(
-        - rank,
-        - name,
-        - canvas_pixels | alltime_pixels,
-        - pixel difference,
-        - last date in the db,
-        - closest date to datetime1 in the db,
-        - closest date to datetime2 in the db)"""
-    if orderby == 'speed':
-        orderby = "b.canvas_count - a.canvas_count"
-    elif orderby == 'canvas':
-        orderby = "last.canvas_count"
-    elif orderby == 'alltime':
-        orderby = "last.alltime_count"
-    else:
-        raise ValueError("orderby paramater must be: placed, canvas or alltime (got '"+orderby+"')")
+def get_pixels_placed_between(dt1,dt2,canvas,orderby_opt):
 
-    sql = """SELECT 
+        order_dict ={
+            "speed": "b.canvas_count - a.canvas_count",
+            "canvas": "last.canvas_count",
+            "alltime": "last.alltime_count"
+        }
+        assert orderby_opt in order_dict.keys(),"orderby paramater must be: 'placed', 'canvas' or 'alltime'"
+        orderby = order_dict[orderby_opt]
+
+        last_date = find_closet_date(datetime.utcnow())
+        datetime1 = find_closet_date(dt1)
+        datetime2 = find_closet_date(dt2)
+
+        sql = """SELECT 
                 ROW_NUMBER() OVER(ORDER BY ({0}) DESC) AS rank,
                 a.name,
                 last.{1}_count,
@@ -475,27 +461,14 @@ def get_pixels_placed_between(datetime1,datetime2,canvas:bool,orderby,users=None
                 last.date, a.date, b.date
             FROM pxls_user_stats a, pxls_user_stats b, pxls_user_stats last
             WHERE a.name = b.name AND b.name = last.name
-            {2}
-            AND last.date = (SELECT max(date) FROM pxls_user_stats)
-            AND a.date = (SELECT k.date FROM
-                            (SELECT c.date, min(abs(JulianDay(c.date) - JulianDay(?)))
-                            FROM pxls_user_stats c) k)
-
-            AND b.date = (SELECT l.date FROM
-                            (SELECT d.date, min(abs(JulianDay(d.date) - JulianDay(?)))
-                            FROM pxls_user_stats d) l)
+            AND last.date = ?
+            AND a.date =  ?
+            AND b.date = ?
             ORDER BY {0} desc""".format(
                 orderby,
                 "canvas" if canvas else "alltime",
-                (f"AND a.name IN ({', '.join('?'*len(users))})") if users else ''
             )
-    if users:
-        params = users.copy()
-        params.append(datetime1)
-        params.append(datetime2)
-        return sql_select(sql,params)
-    else:
-        return sql_select(sql,(datetime1,datetime2))
+        return sql_select(sql,(last_date,datetime1,datetime2))
 
 def update_blacklist_role(server_id,role_id):
     sql = ''' UPDATE servers
@@ -508,6 +481,14 @@ def get_blacklist_role(server_id):
               FROM servers
               WHERE server_id = ?"""
     res = sql_select(sql,(server_id,))
+    return res[0][0]
+
+def find_closet_date(dt):
+    """ find the closest date to the given date in the database """
+    sql = """SELECT date, min(abs(JulianDay(date) - JulianDay(?)))*24*3600 as diff_with_time
+        FROM pxls_user_stats
+        WHERE name = ?"""
+    res = sql_select(sql,(dt,"GrayTurtles"))
     return res[0][0]
 
 def main():

@@ -38,19 +38,20 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         canvas_opt = param["canvas"]
         speed_opt = False
         sort_opt = None
-
+        last_opt = param["last"]
         # if a time value is given, we will show the speed during this time
-        if param["before"] or param["after"] or param["last"]:
+        if param["before"] or param["after"] or last_opt:
             speed_opt = True
             sort_opt = "speed"
             if param["before"] == None and param["after"] == None:
-                date = param["last"]
+                date = last_opt
                 input_time = str_to_td(date)
                 if not input_time:
                     return await ctx.send(f"❌ Invalid `last` parameter, format must be `?d?h?m?s`.")
                 date2 = datetime.now(timezone.utc)
                 date1 = round_minutes_down(datetime.now(timezone.utc) - input_time)
             else:
+                last_opt = None
                 date1 = param["after"] or datetime(1900,1,1,0,0,0)
                 date2 = param["before"] or datetime.now(timezone.utc)
         else:
@@ -64,7 +65,8 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             sort = sort_opt
 
         # fetch the leaderboard from the database
-        ldb = get_pixels_placed_between(date1,date2,canvas_opt,sort,username if len(username)>1 else None)
+        async with ctx.typing():
+            ldb = get_pixels_placed_between(date1,date2,canvas_opt,sort)
         date = ldb[0][4]
 
         # check that we can actually calculate the speed
@@ -113,14 +115,22 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         # build the content of the leaderboard
         res_ldb = []
         for i in range(len(ldb)):
-            
-            # add the rank, name and pixels
+            res_ldb.append([])
+            # add the rank
+            rank = ldb[i][0]
+            if rank > 1000:
+                rank = ">1000"
+            res_ldb[i].append(rank)
+
+            # add the name
+            res_ldb[i].append(ldb[i][1])
+
+            # add the pixel count
             if speed_opt:
-                res_ldb.append(list(ldb[i][0:2]))
                 res_ldb[i].append(ldb[i][3])
             else:
-                res_ldb.append(list(ldb[i][0:3]))
-
+                res_ldb[i].append(ldb[i][2])
+            # format the number
             if res_ldb[i][2] != None:
                 res_ldb[i][2] = format_number(res_ldb[i][2])
             else:
@@ -151,18 +161,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                 else:
                     res_ldb[i].append(f'{round(speed,1)} px/h')
 
-        # format the leaderboard to be printed
-        text = ""
-        if speed_opt:
-            past_time = ldb[0][5]
-            recent_time = ldb[0][6]
-            text += "\nBetween {} and {} ({})\n".format(
-                format_datetime(past_time),
-                format_datetime(recent_time),
-                td_format(round_minutes_down(recent_time)-round_minutes_down(past_time))
-            )
-        text +=  f"(last updated: {format_datetime(date,'R')})"
-
+        # create the image with the leaderboard data
         colors = None
         if username:
             colors = []
@@ -173,14 +172,34 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                     colors.append(None)
         img = table_to_image(res_ldb,column_names,alignments2,colors=colors)
 
-        # create a discord embed with the leaderboard and send it
-        emb = discord.Embed(color=0x66c5cc)
+        # make title and embed header
+        text = ""
         if speed_opt:
-            emb.add_field(name="Speed Leaderboard",value=text)
+            past_time = ldb[0][5]
+            recent_time = ldb[0][6]
+            diff_time = round_minutes_down(recent_time)-round_minutes_down(past_time)
+            diff_time_str = td_format(diff_time)
+            if last_opt:
+                title = "Leaderboard of the last {}".format(
+                    diff_time_str[2:] if (diff_time_str.startswith("1 ") and not ',' in diff_time_str)
+                    else diff_time_str)
+            else:
+                title = "Leaderboard"
+                text += "\nBetween {} and {}\n({})".format(
+                    format_datetime(past_time),
+                    format_datetime(recent_time),
+                    td_format(diff_time)
+                )
         elif canvas_opt:
-            emb.add_field(name="Canvas Leaderboard",value=text)
+            title = "Canvas Leaderboard"
         else:
-            emb.add_field(name="All-time Leaderboard",value=text)
+            title = "All-time Leaderboard"
+        if not(param["before"] or param["after"]):
+            text +=  f"(last updated: {format_datetime(date,'R')})"
+
+        # create a discord embed
+        emb = discord.Embed(color=0x66c5cc)
+        emb.add_field(name=title,value=text)
         file = image_to_file(img,"leaderboard.png",emb)
         await ctx.send(embed=emb,file=file)
 

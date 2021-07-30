@@ -53,8 +53,11 @@ class PxlsSpeed(commands.Cog):
         groupby_opt = param["groupby"]
 
         # get the data we need
-        ldb = get_pixels_placed_between(old_time,recent_time,canvas_opt,'speed',names)
-
+        full_ldb = get_pixels_placed_between(old_time,recent_time,canvas_opt,'speed')
+        ldb = []
+        for user in full_ldb:
+            if user[1] in names:
+                ldb.append(user)
         #check if any user was found
         if not ldb:
             return await ctx.send("❌ User(s) not found.")

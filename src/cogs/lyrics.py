@@ -4,6 +4,7 @@ from discord import Spotify
 from difflib import SequenceMatcher
 
 from utils.genius import search_song
+from utils import azlyrics
 
 class Lyrics(commands.Cog):
     def __init__(self,client):
@@ -19,7 +20,7 @@ class Lyrics(commands.Cog):
             for activity in user.activities:
                 if isinstance(activity, Spotify):
                     spotify_title = activity.title
-                    spotify_artists = " ".join(activity.artists)
+                    spotify_artists = activity.artists
             if spotify_title == None and spotify_artists == None:
                 return await ctx.send("❌ You're not playing any song on Spotify.")
             else:
@@ -30,10 +31,25 @@ class Lyrics(commands.Cog):
             title_to_search = query
             artists_to_search = None
 
+        # search the song in azlyrics
+        async with ctx.typing():
+            if artists_to_search:
+                azlyrics_url = await azlyrics.search_song(title=title_to_search,artist=artists_to_search[0])
+            else:
+                azlyrics_url = await azlyrics.search_song(query=title_to_search)
+        if azlyrics_url != None:
+            title, lyrics = await azlyrics.get_lyrics(azlyrics_url)
+            lyrics = format_lyrics(lyrics)
+            if len(lyrics) > 4096:
+                lyrics = "**The lyrics are too long to be displayed\nClick on the title to see them on the site**"
+            embed = discord.Embed(title=title,url=azlyrics_url,description=lyrics,color=0x9999cc)
+            embed.set_footer(text="source: azlyrics.com",icon_url="http://images.azlyrics.com/az_logo_tr.png")
+            return await ctx.send(embed=embed)
+
         # search the song in genius
         async with ctx.typing():
-            song = await search_song(f'{artists_to_search or ""} {title_to_search}')
-
+            song = await search_song(f'{azlyrics.remove_feat(title_to_search)} {artists_to_search[0] or ""}')
+        artists_to_search = " ".join(artists_to_search)
         # check that we found a song and that it's the correct song
         if song == None or\
         (spotify_title and not is_similar(spotify_title,song.title)):
@@ -45,11 +61,11 @@ class Lyrics(commands.Cog):
         lyrics = song.lyrics
         song_url = song.genius_url
         if lyrics == None:
-            lyrics = "[Link to the lyrics]({})".format(song_url)
+            lyrics = "[**Link to the lyrics**]({})".format(song_url)
         else:
             lyrics = format_lyrics(lyrics)
         if len(lyrics) > 4096:
-            lyrics = "[The lyrics are too long to be displayed\nClick on the title to see them on the site]"
+            lyrics = "**The lyrics are too long to be displayed\nClick on the title to see them on the site**"
 
         # send the embed with the informations
         embed = discord.Embed(
@@ -78,14 +94,8 @@ def is_similar(string1,string2):
     string2 = string2.lower()
 
     # remove the 'feat' part from the titles that might make the comparison inaccurate
-    if "feat." in string1:
-        string1 = string1.split("feat.")[0]
-    if "ft." in string1:
-        string1 = string1.split("ft.")[0]
-    if "feat." in string2:
-        string2 = string2.split("feat.")[0]
-    if "ft." in string2:
-        string2 = string2.split("ft.")[0]
+    string1 = azlyrics.remove_feat(string1)
+    string2 = azlyrics.remove_feat(string2)
 
     return SequenceMatcher(None,string1,string2).ratio() > 0.8
 

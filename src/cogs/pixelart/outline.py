@@ -1,5 +1,5 @@
 import re
-import discord
+import functools
 
 from PIL import Image, ImageColor
 from discord.ext import commands
@@ -55,9 +55,11 @@ class Outline(commands.Cog):
             return await ctx.send(f'❌ {e}')
 
         input_image = Image.open(BytesIO(img_bytes))
-        image_with_outline = self.add_outline(input_image,rgba,not(sparse),width)
+        func = functools.partial(self.add_outline,input_image,rgba,not(sparse),width)
+        async with ctx.typing():
+            image_with_outline = await self.client.loop.run_in_executor(None,func)
+            file = await self.client.loop.run_in_executor(None,image_to_file,image_with_outline,"outline.png")
 
-        file = image_to_file(image_with_outline,"outline.png")
         await ctx.send(file=file)
 
     @commands.command(usage = "<image or url>",
@@ -72,9 +74,10 @@ class Outline(commands.Cog):
             return await ctx.send(f'❌ {e}')
 
         input_image = Image.open(BytesIO(img_bytes))
-        image_cropped = self.remove_white_space(input_image)
+        async with ctx.typing():
+            image_cropped = await self.client.loop.run_in_executor(None,self.remove_white_space,input_image)
+            file = await self.client.loop.run_in_executor(None,image_to_file,image_cropped,"cropped.png")
 
-        file = image_to_file(image_cropped,"cropped.png")
         await ctx.send(file=file)
 
     ### Helper functions ###

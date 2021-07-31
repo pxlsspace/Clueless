@@ -3,10 +3,10 @@ import discord
 from discord.ext import commands
 from io import BytesIO
 
-from cogs.pixelart.outline import Outline
 from utils.arguments_parser import parse_pixelfont_args
 from utils.font.font_manager import *
 from utils.discord_utils import image_to_file
+from utils.image_utils import get_pxls_color, is_hex_color
 
 class Font(commands.Cog):
 
@@ -49,9 +49,9 @@ class Font(commands.Cog):
         elif font_color != None:
             # get the rgba from the color input
             try:
-                font_rgba = Outline(self.client).get_pxls_color(font_color)
+                font_rgba = get_pxls_color(font_color)
             except ValueError:
-                if Outline(self.client).is_hex_color(font_color):
+                if is_hex_color(font_color):
                     font_rgba = ImageColor.getcolor(font_color,"RGBA")
                 else:
                     return await ctx.send(f'❌ The font color {font_color} is invalid.')
@@ -65,9 +65,9 @@ class Font(commands.Cog):
         elif background_color != None:
             # get the rgba from the color input
             try:
-                bg_rgba = Outline(self.client).get_pxls_color(background_color)
+                bg_rgba = get_pxls_color(background_color)
             except ValueError:
-                if Outline(self.client).is_hex_color(background_color):
+                if is_hex_color(background_color):
                     bg_rgba = ImageColor.getcolor(background_color,"RGBA")
                 else:
                     return await ctx.send(f'❌ The background color {background_color} is invalid.')

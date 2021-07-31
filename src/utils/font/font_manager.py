@@ -56,7 +56,7 @@ class FontManager():
 
         if self.font_color:
             if self.font_color == self.background_color:
-                raise ValueError(f"The font color and background color can't the same.")
+                raise ValueError(f"The font color and background color can't be the same.")
 
     def set_font_color(self,font_color):
         if not font_color:

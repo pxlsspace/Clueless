@@ -4,7 +4,7 @@ import matplotlib.colors as mc
 import colorsys
 
 from utils.font.font_manager import FontManager, PixelText
-from cogs.pixelart.outline import Outline
+from utils import image_utils
 
 font_name = "minecraft"
 
@@ -146,7 +146,7 @@ def add_outline(array,color):
     """ add an outline around a text """
     array = replace(array,BACKGROUND_COLOR,(0,0,0,0))
     img = Image.fromarray(array)
-    img = Outline(0).add_outline(img,color,crop=False)
+    img = image_utils.add_outline(img,color,crop=False)
     outline_array = np.array(img)
     outline_array = replace(outline_array,(0,0,0,0),BACKGROUND_COLOR)
     return outline_array

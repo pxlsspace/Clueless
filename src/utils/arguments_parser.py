@@ -27,7 +27,7 @@ def parse_leaderboard_args(args):
         help="Flag to get the canvas leaderboard.")
     parser.add_argument('-lines','-l',metavar="<number>", action='store', type=check_lines, default=15,
         help="Number of lines to show.")
-
+    parser.add_argument('-graph', action='store_true', default=False)
     parser.add_argument('-last',action='store',default=None)
     parser.add_argument('-after',
                         dest='after',

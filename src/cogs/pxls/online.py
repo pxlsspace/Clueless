@@ -1,15 +1,13 @@
 import discord
 from datetime import datetime
 from discord.ext import commands
-from PIL import Image
-from io import BytesIO
 import plotly.graph_objects as go
 
 from utils.database import get_general_stat
 from utils.time_converter import format_datetime, str_to_td
 from utils.discord_utils import image_to_file
 from utils.cooldown import get_cd
-from utils.plot_utils import layout, colors
+from utils.plot_utils import layout, COLORS, fig2img
 from utils.setup import stats
 
 class Online(commands.Cog):
@@ -50,7 +48,7 @@ class Online(commands.Cog):
             current_count = round(get_cd(current_count),2)
 
         fig = make_graph(dates,online_counts)
-        fig.update_layout(title=f"<span style='color:{colors[0]};'>{title}</span>")
+        fig.update_layout(title=f"<span style='color:{COLORS[0]};'>{title}</span>")
 
         img = fig2img(fig)
 
@@ -85,17 +83,10 @@ def make_graph(dates,values):
         mode='lines',
         name="Online Count",
         line=dict(width=4),
-        marker=dict(color= colors[0],size=6)
+        marker=dict(color= COLORS[0],size=6)
         )
     )
     return fig
-
-
-def fig2img(fig):
-    buf = BytesIO()
-    fig.write_image(buf,format="png",width=2000,height=900,scale=1)
-    img = Image.open(buf)
-    return img
 
 def setup(client):
     client.add_cog(Online(client))

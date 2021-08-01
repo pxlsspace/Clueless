@@ -11,6 +11,8 @@ from utils.setup import stats
 from utils.discord_utils import format_number, get_image_from_message, image_to_file
 from utils.table_to_image import table_to_image
 from utils.image_utils import h_concatenate
+from utils.plot_utils import fig2img
+
 class ColorBreakdown(commands.Cog):
     def __init__(self,client):
         self.client = client
@@ -67,7 +69,7 @@ class ColorBreakdown(commands.Cog):
 
             # make the pie chart image
             piechart = get_piechart(labels,values,colors)
-            piechart_img = await self.client.loop.run_in_executor(None,fig2img,piechart)
+            piechart_img = await self.client.loop.run_in_executor(None,fig2img,piechart,600,600,1.5)
 
             # create the message with a header
             header = f"""• Number of colors: `{len(colors)}`
@@ -148,9 +150,3 @@ def get_piechart(labels,values,colors):
     fig.update_layout(uniformtext_minsize=12, uniformtext_mode='hide')
     fig.update_layout(showlegend=False)
     return fig
-
-def fig2img(fig):
-    buf = BytesIO()
-    fig.write_image(buf,format="png",width=600,height=600,scale=1.5)
-    img = Image.open(buf)
-    return img

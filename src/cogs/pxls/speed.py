@@ -1,17 +1,15 @@
 import plotly.graph_objects as go
 import discord
-from io import BytesIO
-from PIL import Image
 from datetime import datetime, timedelta,timezone
 from discord.ext import commands
 from itertools import cycle
 
-from utils.discord_utils import image_to_file, format_number, format_table
+from utils.discord_utils import image_to_file, format_number
 from utils.database import get_grouped_stats_history, get_stats_history, get_pixels_placed_between
 from utils.arguments_parser import parse_speed_args
 from utils.table_to_image import table_to_image
 from utils.time_converter import format_datetime, round_minutes_down, str_to_td
-from utils.plot_utils import layout, BACKGROUND_COLOR, colors
+from utils.plot_utils import layout, BACKGROUND_COLOR, COLORS, fig2img
 from utils.image_utils import v_concatenate
 
 class PxlsSpeed(commands.Cog):
@@ -86,7 +84,7 @@ class PxlsSpeed(commands.Cog):
         # create the headers needed for the table
         alignments = ["left","right","right","right","right"]
         titles = ["Name","Pixels","Placed","px/h","px/d"]
-        table_colors = cycle_through_list(colors,len(res))
+        table_colors = cycle_through_list(COLORS,len(res))
         # get the image of the table
         table_image = table_to_image(res,titles,alignments,table_colors)
 
@@ -113,18 +111,12 @@ class PxlsSpeed(commands.Cog):
 def setup(client):
     client.add_cog(PxlsSpeed(client))
 
-def fig2img(fig):
-    buf = BytesIO()
-    fig.write_image(buf,format="png",width=2000,height=900,scale=1)
-    img = Image.open(buf)
-    return img
-
 def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc),progress_opt=False):
 
     # create the graph
     fig = go.Figure(layout=layout)
     fig.update_layout(showlegend=False)
-    fig.update_layout(title=f"<span style='color:{colors[0]};'>Speed</span>")
+    fig.update_layout(title=f"<span style='color:{COLORS[0]};'>Speed</span>")
 
     for i,user in enumerate(user_list):
         # get the data
@@ -148,7 +140,7 @@ def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc),prog
             mode='lines',
             name=user,
             line=dict(width=4),
-            marker=dict(color= colors[i%len(colors)],size=6)
+            marker=dict(color= COLORS[i%len(COLORS)],size=6)
             )
         )
 
@@ -165,7 +157,7 @@ def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc),prog
             y = pixels[-1],
             text = ("<b>%s</b>" % user),
             showarrow = False,
-            font = dict(color= colors[i%len(colors)],size=40)
+            font = dict(color= COLORS[i%len(COLORS)],size=40)
         )
     return fig
 
@@ -181,7 +173,7 @@ def get_grouped_graph(user_list,date1,date2,groupby_opt):
 
     # the title displays the user if there is only 1 in the user_list
     fig.update_layout(title="<span style='color:{};'>Speed per {}{}</span>".format(
-        colors[0],
+        COLORS[0],
         groupby_opt,
         f" for <b>{user_list[0]}</b>" if len(user_list) == 1 else ""
     ))
@@ -203,7 +195,7 @@ def get_grouped_graph(user_list,date1,date2,groupby_opt):
         # trace the user data
         fig.add_trace(
             go.Bar(
-                name='<span style="color:{};font-size:40;"><b>{}</b></span>'.format(colors[i%len(colors)], user),
+                name='<span style="color:{};font-size:40;"><b>{}</b></span>'.format(COLORS[i%len(COLORS)], user),
                 x = dates,
                 y = pixels,
                 # add an outline of the bg color to the text
@@ -217,8 +209,8 @@ def get_grouped_graph(user_list,date1,date2,groupby_opt):
                      -{2}px 0px 0px {0},\
                      0px -{2}px 0px {0};">{1}</span>'.format(BACKGROUND_COLOR,pixel,2) for pixel in pixels],
                 textposition = 'outside',
-                marker = dict(color=colors[i%len(colors)], opacity=0.95),
-                textfont = dict(color=colors[i%len(colors)], size=40),
+                marker = dict(color=COLORS[i%len(COLORS)], opacity=0.95),
+                textfont = dict(color=COLORS[i%len(COLORS)], size=40),
                 cliponaxis = False
             )
         )

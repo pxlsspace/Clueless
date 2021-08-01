@@ -1,12 +1,14 @@
 import discord
 from discord.ext import commands
 from datetime import datetime, timedelta, timezone
-from utils.database import *
+import plotly.graph_objects as go
 
+from utils.database import get_canvas_pxls_count, get_alltime_pxls_count,get_pixels_placed_between
 from utils.time_converter import *
 from utils.arguments_parser import parse_leaderboard_args
 from utils.discord_utils import format_number, image_to_file
 from utils.table_to_image import table_to_image
+from utils.plot_utils import fig2img, layout_without_annotation, BACKGROUND_COLOR, COLORS
 
 class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
@@ -18,13 +20,14 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
     # TODO: error when the time frame is before the canvas start
     # or automatically get alltime values
     @commands.command(
-        usage = "[name1] [name2] [...] [-canvas] [-lines <number>] [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
+        usage = "[username] [-canvas] [-lines <number>] [-graph] [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
         description = "Show the all-time or canvas leaderboard.",
         aliases=["ldb"],
-        help = """- `[names]`: center the leaderboard on this user and show the difference with the others. If more than one name: compare them together
+        help = """- `[username]`: center the leaderboard on this user
                   - `[-canvas|-c]`: to get the canvas leaderboard
                   - `[[-lines|-l] <number>]`: number of lines to show, must be less than 40 (default 20)
-                  - `[-last ?d?h?m?s]`: Show the leaderboard of the last ? day, ? hour, ? min, ? second"""
+                  - `[-graph|-g]`: show a bar graph of the leaderboard
+                  - `[-last ?d?h?m?s]`: show the leaderboard of the last ? day, ? hour, ? min, ? second"""
         )
     async def leaderboard(self,ctx,*args):
         ''' Shows the pxls.space leaderboard '''
@@ -39,6 +42,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         speed_opt = False
         sort_opt = None
         last_opt = param["last"]
+        graph_opt = param["graph"]
         # if a time value is given, we will show the speed during this time
         if param["before"] or param["after"] or last_opt:
             speed_opt = True
@@ -66,7 +70,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
         # fetch the leaderboard from the database
         async with ctx.typing():
-            ldb = get_pixels_placed_between(date1,date2,canvas_opt,sort)
+            ldb = await self.client.loop.run_in_executor(None,get_pixels_placed_between,date1,date2,canvas_opt,sort)
         date = ldb[0][4]
 
         # check that we can actually calculate the speed
@@ -170,7 +174,8 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                     colors.append("#66c5cc")
                 else:
                     colors.append(None)
-        img = table_to_image(res_ldb,column_names,alignments2,colors=colors)
+        img = await self.client.loop.run_in_executor(
+            None,table_to_image,res_ldb,column_names,alignments2,colors)
 
         # make title and embed header
         text = ""
@@ -197,11 +202,29 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         if not(param["before"] or param["after"]):
             text +=  f"(last updated: {format_datetime(date,'R')})"
 
+        # make the bars graph
+        if graph_opt:
+            data = [int(user[2].replace(" ","")) if user[2] != "???" else None for user in res_ldb]
+            if username:
+                names = [(f"<span style='color:{COLORS[0]};'>{user[1]}</span>" if user[1] == username[0] else user[1]) for user in res_ldb]
+                colors = [(COLORS[0] if user[1] == username[0] else "#696969") for user in res_ldb]
+            else:
+                names = [user[1] for user in res_ldb]
+                colors = [COLORS[0]]*len(res_ldb)
+            fig = self.make_bars(names,data,title,colors)
+
+            bars_img = fig2img(fig)
+            bars_file = image_to_file(bars_img,"bar_chart.png")
+
         # create a discord embed
         emb = discord.Embed(color=0x66c5cc)
         emb.add_field(name=title,value=text)
         file = image_to_file(img,"leaderboard.png",emb)
+
+        # send graph and embed
         await ctx.send(embed=emb,file=file)
+        if graph_opt:
+            await ctx.send(file=bars_file)
 
     ### Helper functions ###
     @staticmethod
@@ -235,6 +258,44 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         nb_hours = diff_time/timedelta(hours=1)
         speed = diff_pixels/nb_hours
         return speed, diff_pixels, past_time, recent_time
+
+    @staticmethod
+    def make_bars(users,pixels,title,colors=None):
+        if colors == None:
+            colors = COLORS
+        # create the graph and style
+        fig = go.Figure(layout=layout_without_annotation)
+        fig.update_yaxes(rangemode='tozero')
+        fig.update_xaxes(tickmode='linear')
+        fig.update_layout(annotations=[])
+        fig.update()
+        # the title displays the user if there is only 1 in the user_list
+        fig.update_layout(title="<span style='color:{};'>{}</span>".format(
+            COLORS[0],
+            title))
+
+        # trace the user data
+        fig.add_trace(
+            go.Bar(
+                x = users,
+                y = pixels,
+                # add an outline of the bg color to the text
+                text = ['<span style = "text-shadow:\
+                    -{2}px -{2}px 0 {0},\
+                    {2}px -{2}px 0 {0},\
+                    -{2}px {2}px 0 {0},\
+                    {2}px {2}px 0 {0},\
+                    0px {2}px 0px {0},\
+                    {2}px 0px 0px {0},\
+                    -{2}px 0px 0px {0},\
+                    0px -{2}px 0px {0};">{1}</span>'.format(BACKGROUND_COLOR,pixel,2) for pixel in pixels],
+                textposition = 'outside',
+                marker = dict(color=colors, opacity=0.95),
+                textfont = dict(color=colors, size=40),
+                cliponaxis = False
+            )
+        )
+        return fig
 
 def setup(client):
     client.add_cog(PxlsLeaderboard(client))

@@ -90,9 +90,9 @@ def img_to_animated_gif(image_orignal):
 	frame1 = BytesIO()
 
 	if image.mode not in ['RGBA','RGB']:
-		raise ValueError("Unsupported PNG file " + "(" + image.mode + ")")
+		image = image.convert("RGBA")
 
-	if image.mode == 'RGBA':
+	if has_transparency(image):
 		threshold = 128
 		colour = unique_color(image)
 
@@ -113,8 +113,10 @@ def img_to_animated_gif(image_orignal):
 
 		return animated_gif.getvalue()
 	
-	elif image.mode == 'RGB':
+	else:
 		bytes = BytesIO()
+		if image.mode != 'RGB':
+			image = image.convert('RGB')
 		image.save(bytes,format='GIF')
 
 		frame1 = Image.open(bytes)
@@ -129,6 +131,22 @@ def img_to_animated_gif(image_orignal):
 			delay=0.8,
 			loop=0)
 		return animated_gif.getvalue()
+
+# https://stackoverflow.com/a/58567453
+def has_transparency(img):
+	""" Check if an image has fully transparent pixels (alpha=0)"""
+	if img.mode == "P":
+		transparent = img.info.get("transparency", -1)
+		for _, index in img.getcolors():
+				if index == transparent:
+					return True
+
+	elif img.mode == "RGBA":
+		extrema = img.getextrema()
+		if extrema[3][0] == 0:
+			return True
+
+	return False
 
 if __name__ == "__main__":
 	'''Test function'''

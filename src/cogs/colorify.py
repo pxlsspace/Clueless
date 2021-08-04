@@ -46,15 +46,17 @@ class Colorify(commands.Cog):
             async with ctx.typing():
                 # convert each frame to the color
                 res_frames = []
+                durations = []
                 for i in range(0,img.n_frames):
 
                     img.seek(i)
                     res_frame = img.copy()
                     frame = colorify(res_frame,rgb)
                     res_frames.append(frame)
+                    durations.append(img.info["duration"])
                 # combine the frames back to a gif
                 animated_img = BytesIO()
-                await self.client.loop.run_in_executor(None,save_transparent_gif,res_frames,img.info["duration"],animated_img)
+                await self.client.loop.run_in_executor(None,save_transparent_gif,res_frames,durations,animated_img)
                 animated_img.seek(0)
                 file=discord.File(fp=animated_img,filename="colorify.gif")
 

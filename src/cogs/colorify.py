@@ -38,7 +38,11 @@ class Colorify(commands.Cog):
         img = Image.open(BytesIO(img))
 
         # animated image (gif)
-        if img.is_animated:
+        try:
+            is_animated = img.is_animated
+        except:
+            is_animated = False
+        if is_animated:
             async with ctx.typing():
                 # convert each frame to the color
                 res_frames = []

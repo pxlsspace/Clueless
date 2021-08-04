@@ -1,7 +1,9 @@
 from io import BytesIO
 import discord
 import PIL
+from discord.ext.commands.converter import EmojiConverter
 from utils.utils import get_content
+import re
 
 def format_table(table,column_names,alignments=None,name=None):
     ''' Format the leaderboard in a string to be printed
@@ -53,6 +55,7 @@ def format_number(num):
     ''' format a number in a string: 1234567 -> 1 234 567'''
     return f'{int(num):,}'.replace(","," ") # convert to string
 
+EMOJI_REGEX = r"<(?P<animated>a?):(?P<name>[a-zA-Z0-9_]{2,32}):(?P<id>[0-9]{18,22})>"
 
 async def get_image_from_message(ctx,url=None):
     """ get an image from a discord context/message,
@@ -66,6 +69,13 @@ async def get_image_from_message(ctx,url=None):
             raise ValueError("Invalid file type. Only images are supported.")
 
         url = ctx.message.attachments[0].url
+    else:
+        # check if it's an emoji
+        results = re.findall(EMOJI_REGEX,url)
+        if len(results) != 0:
+            emoji_id = results[0][2]
+            is_animated = results[0][0] == 'a'
+            url = "https://cdn.discordapp.com/emojis/{}.{}".format(emoji_id,'gif' if is_animated else 'png')
 
     # getting the image from url
     try:

@@ -5,7 +5,7 @@ from discord.ext import commands
 from itertools import cycle
 
 from utils.discord_utils import image_to_file, format_number
-from utils.database import get_grouped_stats_history, get_stats_history, get_pixels_placed_between
+from utils.setup import db_stats_manager as db_stats
 from utils.arguments_parser import parse_speed_args
 from utils.table_to_image import table_to_image
 from utils.time_converter import format_datetime, round_minutes_down, str_to_td
@@ -51,7 +51,7 @@ class PxlsSpeed(commands.Cog):
         groupby_opt = param["groupby"]
 
         # get the data we need
-        full_ldb = get_pixels_placed_between(old_time,recent_time,canvas_opt,'speed')
+        full_ldb = await db_stats.get_pixels_placed_between(old_time,recent_time,canvas_opt,'speed')
         ldb = []
         for user in full_ldb:
             if user[1] in names:
@@ -91,9 +91,9 @@ class PxlsSpeed(commands.Cog):
         # create the graph
         user_list = [user[1] for user in ldb]
         if groupby_opt:
-            graph = get_grouped_graph(user_list,past_time,now_time,groupby_opt)
+            graph = await get_grouped_graph(user_list,past_time,now_time,groupby_opt)
         else:
-            graph = get_stats_graph(user_list,canvas_opt,past_time,now_time,param["progress"])
+            graph = await get_stats_graph(user_list,canvas_opt,past_time,now_time,param["progress"])
         graph_image = fig2img(graph)
 
         # merge the table image and graph image
@@ -111,7 +111,7 @@ class PxlsSpeed(commands.Cog):
 def setup(client):
     client.add_cog(PxlsSpeed(client))
 
-def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc),progress_opt=False):
+async def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc),progress_opt=False):
 
     # create the graph
     fig = go.Figure(layout=layout)
@@ -120,7 +120,7 @@ def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc),prog
 
     for i,user in enumerate(user_list):
         # get the data
-        stats = get_stats_history(user,date1,date2)
+        stats = await db_stats.get_stats_history(user,date1,date2)
         if not stats:
             continue
 
@@ -161,7 +161,7 @@ def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc),prog
         )
     return fig
 
-def get_grouped_graph(user_list,date1,date2,groupby_opt):
+async def get_grouped_graph(user_list,date1,date2,groupby_opt):
 
     # check on the groupby param
     if not groupby_opt in ["day","hour"]:
@@ -181,7 +181,7 @@ def get_grouped_graph(user_list,date1,date2,groupby_opt):
 
     for i,user in enumerate(user_list):
         # get the data
-        stats = get_grouped_stats_history(user,date1,date2,groupby_opt)
+        stats = await db_stats.get_grouped_stats_history(user,date1,date2,groupby_opt)
         stats = stats[1:]
         if not stats:
             continue

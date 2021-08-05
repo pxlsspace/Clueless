@@ -2,7 +2,10 @@ __pycache__/
 *.pyc
 .vscode/
 .env
-database.db
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
 venv/
 src/test2.py
 test.db

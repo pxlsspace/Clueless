@@ -1,8 +1,8 @@
 from discord.ext import commands, tasks
-from utils.database import *
 from datetime import datetime
-from utils.setup import stats
+from utils.setup import stats, db_stats_manager as db_stats, db_servers_manager as db_servers
 from utils.time_converter import local_to_utc
+
 class Clock(commands.Cog):
     """ A class used to manage background periodic tasks.
 
@@ -35,7 +35,7 @@ class Clock(commands.Cog):
             print(".",end='',flush=True)
 
             # updating database with the new data
-            self.save_stats()
+            await self.save_stats()
             print(".",end='',flush=True)
 
             await self.check_milestones()
@@ -47,7 +47,7 @@ class Clock(commands.Cog):
         await self.client.wait_until_ready()
         # update the stats on start
         await stats.refresh()
-        self.save_stats()
+        await self.save_stats()
         await self.check_milestones()
 
     @tasks.loop(minutes=5)
@@ -60,23 +60,23 @@ class Clock(commands.Cog):
 
     async def check_milestones(self):
         ''' Send alerts in all the servers following a user if they hit a milestone. '''
-        users = get_all_users()
+        users = await db_servers.get_all_users()
         for user in users:
             name = user[0]
             old_count = user[1]
             new_count = stats.get_alltime_stat(name)
             if new_count%1000 < old_count%1000:
                 # send alert in all the servers tracking user
-                channels = get_all_channels(name)
+                channels = await db_servers.get_all_channels(name)
                 for c in channels:
                     if c != None:
                         channel = self.client.get_channel(c)
                         await channel.send("New milestone for **"+name+"**! New count: "+str(new_count))
             if new_count != old_count:
                 # update the new count in the db
-                update_pixel_count(name,new_count)
+                await db_servers.update_pixel_count(name,new_count)
 
-    def save_stats(self):
+    async def save_stats(self):
         ''' Update the database with the new /stats data. '''
         # get the 'last updated' datetime and its timezone
         lastupdated_string = stats.get_last_updated()
@@ -88,12 +88,12 @@ class Clock(commands.Cog):
         alltime_stats = stats.get_all_alltime_stats()
         canvas_stats = stats.get_all_canvas_stats()
 
-        update_all_pxls_stats(alltime_stats,canvas_stats,lastupdated)
+        await db_stats.update_all_pxls_stats(alltime_stats,canvas_stats,lastupdated)
     
     async def save_online_count(self):
         ''' save the current 'online count' in the database '''
         online = await stats.get_online_count()
-        add_general_stat("online_count",online,None,datetime.utcnow())
+        await db_stats.add_general_stat("online_count",online,None,datetime.utcnow())
 
 def setup(client):
     client.add_cog(Clock(client))

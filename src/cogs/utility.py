@@ -4,8 +4,7 @@ from discord.ext.commands.converter import RoleConverter
 from discord.ext.commands.errors import RoleNotFound
 import os
 from dotenv import load_dotenv
-from requests.api import get
-from utils.database import update_blacklist_role, get_blacklist_role, update_prefix
+from utils.setup import db_servers_manager as db_servers
 from utils.time_converter import str_to_td, td_format
 from utils.utils import get_content
 
@@ -39,7 +38,7 @@ class Utility(commands.Cog):
             prefix = ctx.prefix
             await ctx.send("Current prefix: `"+prefix+"`")
         else:
-            update_prefix(prefix,ctx.guild.id)
+            await db_servers.update_prefix(prefix,ctx.guild.id)
             await ctx.send("✅ Prefix set to `"+prefix+"`")
 
 
@@ -98,7 +97,7 @@ class Utility(commands.Cog):
     @commands.check_any(commands.is_owner(),commands.has_permissions(manage_roles=True))
     async def blacklist(self,ctx):
         # show the current role
-        current_role_id = get_blacklist_role(ctx.guild.id)
+        current_role_id = await db_servers.get_blacklist_role(ctx.guild.id)
         if current_role_id == None:
             return await ctx.send(f"No blacklist role assigned, use `{ctx.prefix}{ctx.command} addrole <role>`")
         current_role = ctx.guild.get_role(int(current_role_id))
@@ -118,13 +117,13 @@ class Utility(commands.Cog):
             role = await RoleConverter().convert(ctx,role)
         except RoleNotFound as e:
             return await ctx.send(f"❌ {e}")
-        update_blacklist_role(ctx.guild.id,role.id)
+        await db_servers.update_blacklist_role(ctx.guild.id,role.id)
         no_role_mention = discord.AllowedMentions(roles=False) # to avoid pinging when showing the role
         await ctx.send(f"✅ Blacklist role set to <@&{role.id}>.",allowed_mentions=no_role_mention)
 
     @blacklist.command(description = "Remove the current blacklist role.")
     async def removerole(self,ctx):
-        update_blacklist_role(ctx.guild.id,None)
+        await db_servers.update_blacklist_role(ctx.guild.id,None)
         await ctx.send("✅ Blacklist role removed.")
 
 def setup(client):

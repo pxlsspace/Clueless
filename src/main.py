@@ -5,13 +5,12 @@ from dotenv import load_dotenv
 import traceback
 from datetime import timezone
 
-from utils.database import *
 from utils.help import *
-from utils.setup import DEFAULT_PREFIX
+from utils.setup import DEFAULT_PREFIX, db_connection, db_stats_manager as db_stats,db_servers_manager as db_servers
 
 load_dotenv()
 intents = discord.Intents.all()
-client = commands.Bot(command_prefix=get_prefix,help_command=HelpCommand(),intents=intents)
+client = commands.Bot(command_prefix=db_servers.get_prefix,help_command=HelpCommand(),intents=intents)
 
 ### on event functions ###
 @client.event
@@ -19,8 +18,12 @@ async def on_ready():
 
     print('We have logged in as {0.user}'.format(client))
 
+    # create db connection
+    await db_connection.create_connection()
+
     # create db tables if they dont exist
-    create_tables()
+    await db_stats.create_tables()
+    await db_servers.create_tables()
 
 @client.event
 async def on_command_error(ctx,error):
@@ -81,7 +84,7 @@ async def on_message(message):
         return
 
     # check if user is blacklisted
-    blacklist_role_id = get_blacklist_role(message.guild.id)
+    blacklist_role_id = await db_servers.get_blacklist_role(message.guild.id)
     if blacklist_role_id != None:
         blacklist_role = message.guild.get_role(int(blacklist_role_id))
         if blacklist_role != None:
@@ -100,7 +103,7 @@ async def on_message(message):
     
 @client.event
 async def on_guild_join(guild):
-    create_server(guild.id,DEFAULT_PREFIX)
+    await db_servers.create_server(guild.id,DEFAULT_PREFIX)
     print("joined a new server: {0.name} (id: {0.id})".format(guild))
 
 if __name__ == "__main__":

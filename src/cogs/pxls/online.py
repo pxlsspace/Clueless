@@ -3,12 +3,11 @@ from datetime import datetime
 from discord.ext import commands
 import plotly.graph_objects as go
 
-from utils.database import get_general_stat
 from utils.time_converter import format_datetime, str_to_td
 from utils.discord_utils import image_to_file
 from utils.cooldown import get_cd
 from utils.plot_utils import layout, COLORS, fig2img
-from utils.setup import stats
+from utils.setup import stats, db_stats_manager as db_stats
 
 class Online(commands.Cog):
 
@@ -34,7 +33,7 @@ class Online(commands.Cog):
         input_time = str_to_td(last)
         if not input_time:
             return await ctx.send(f"❌ Invalid `last` parameter, format must be `{ctx.prefix}{ctx.command.name}{ctx.command.usage}`.")
-        data = get_general_stat("online_count",datetime.utcnow()-input_time)
+        data = await db_stats.get_general_stat("online_count",datetime.utcnow()-input_time)
 
         online_counts = [int(e[0]) for e in data if e[0] != None]
         dates = [e[1] for e in data if e[0] != None]

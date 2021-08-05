@@ -1,6 +1,6 @@
+from sqlite3 import IntegrityError
 from discord.ext import commands
-from utils.database import *
-from utils.setup import stats
+from utils.setup import stats,db_servers_manager as db_servers
 class PxlsMilestones(commands.Cog):
 
     def __init__(self,client):
@@ -31,12 +31,15 @@ class PxlsMilestones(commands.Cog):
             await ctx.send("❌ User not found.")
             return
 
-        if (add_user(ctx.guild.id,name,count)) == -1:
-            await ctx.send("❌ This user is already being tracked.")
-            return
+        # check if the user is already tracked
+        try: 
+            await db_servers.add_user(ctx.guild.id,name,count)
+        except IntegrityError:
+            return await ctx.send("❌ This user is already being tracked.")
+
         msg = "✅ Tracking "+name+"'s all-time counter."
         
-        if get_alert_channel(ctx.guild.id) == None:
+        if await db_servers.get_alert_channel(ctx.guild.id) == None:
             msg += f"\nYou haven't set any alert channel, use `>milestones channel [#channel|here]`"
         await ctx.send (msg)
     @milestones.command(
@@ -47,7 +50,7 @@ class PxlsMilestones(commands.Cog):
     async def remove(self,ctx,name=None):
         if name == None:
             return await ctx.send("❌ You need to specify a username.")
-        if(remove_user(ctx.guild.id,name) != -1):
+        if(await db_servers.remove_user(ctx.guild.id,name) != -1):
             return await ctx.send ("✅ "+name+" isn't being tracked anymore.")
         else:
             return await ctx.send("❌ User not found.")
@@ -56,7 +59,7 @@ class PxlsMilestones(commands.Cog):
         description="Shows the list of users being tracked.",
         aliases=["ls"])
     async def list(self,ctx):
-        users = get_all_server_users(ctx.guild.id)
+        users = await db_servers.get_all_server_users(ctx.guild.id)
         if len(users) == 0:
             await ctx.send("❌ No user added yet.\n*(use `"+ctx.prefix+"milestones add <username>` to add a new user.*)")
             return
@@ -77,7 +80,7 @@ class PxlsMilestones(commands.Cog):
     async def channel(self,ctx,channel=None):
         if channel == None:
             # displays the current channel if no argument specified
-            channel_id = get_alert_channel(ctx.guild.id)
+            channel_id = await db_servers.get_alert_channel(ctx.guild.id)
             if channel_id == None:
                 return await ctx.send(f"❌ No alert channel set\n (use `{ctx.prefix}milestones setchannel <#channel|here|none>`)")
             else:
@@ -88,7 +91,7 @@ class PxlsMilestones(commands.Cog):
             if channel == "here":
                 channel_id = ctx.message.channel.id
             elif channel == "none":
-                update_alert_channel(None,ctx.guild.id)
+                await db_servers.update_alert_channel(None,ctx.guild.id)
                 await ctx.send("✅ Milestone alerts won't be sent anymore.")
                 return
             else:
@@ -99,10 +102,10 @@ class PxlsMilestones(commands.Cog):
         # checks if the bot has write perms in the alert channel
         channel = self.client.get_channel(channel_id)
         if not ctx.message.guild.me.permissions_in(channel).send_messages:
-            await ctx.send(f"❌ I don't not have permissions to send mesages in <#{channel_id}>")
+            await ctx.send(f"❌ I do not have permissions to send mesages in <#{channel_id}>")
         else:
             # saves the new channel id in the db
-            update_alert_channel(channel_id,ctx.guild.id)
+            await db_servers.update_alert_channel(ctx.guild.id,channel_id)
             await ctx.send("✅ Milestones alerts successfully set to <#"+str(channel_id)+">")
 
 def setup(client):

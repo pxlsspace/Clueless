@@ -3,8 +3,7 @@ module.exports = {
     name: 'clueless',
     cmd: 'src/main.py',
     autorestart: true,
-    watch: true,
-    ignore_watch: ["src/utils/database.db","src/utils/database.db-journal"],
+    watch: false,
     interpreter: 'python3'
   }],
 

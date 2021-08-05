@@ -3,7 +3,7 @@ from discord.ext import commands
 from datetime import datetime, timedelta, timezone
 import plotly.graph_objects as go
 
-from utils.database import get_canvas_pxls_count, get_alltime_pxls_count,get_pixels_placed_between
+from utils.setup import db_stats_manager as db_stats
 from utils.time_converter import *
 from utils.arguments_parser import parse_leaderboard_args
 from utils.discord_utils import format_number, image_to_file
@@ -70,7 +70,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
         # fetch the leaderboard from the database
         async with ctx.typing():
-            ldb = await self.client.loop.run_in_executor(None,get_pixels_placed_between,date1,date2,canvas_opt,sort)
+            ldb = await db_stats.get_pixels_placed_between(date1,date2,canvas_opt,sort)
         date = ldb[0][4]
 
         # check that we can actually calculate the speed
@@ -225,39 +225,6 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         await ctx.send(embed=emb,file=file)
         if graph_opt:
             await ctx.send(file=bars_file)
-
-    ### Helper functions ###
-    @staticmethod
-    def get_speed(name:str,date1:datetime,date2:datetime):
-        ''' Get the speed of a user between 2 dates (in pixels/hour)
-
-        return:
-         - speed: the average speed in pixels/hour between the 2 dates,
-         - diff_pixels the number of pixels placed between the 2 dates,
-         - past_time: the closest datetime to date1 in the database',
-         - recent_time the closest datetime to date2 in the database'''
-
-        if date1 > date2:
-            raise ValueError("date1 must be smaller than date2")
-        (past_count, past_time,diff) = get_alltime_pxls_count(name,date1)
-        (recent_count, recent_time,diff) = get_alltime_pxls_count(name,date2)
-
-        if recent_count == None:
-            # try to compare canvas pixels if cant find alltime pixels
-            (past_count, past_time,diff) = get_canvas_pxls_count(name,date1)
-            (recent_count, recent_time,diff) = get_canvas_pxls_count(name,date2)
-            if recent_count == None:
-                raise ValueError(f'User **{name}** was not found.')
-        if past_time == None:
-            raise ValueError(f'No database entry for this time.')
-        if past_time == recent_time:
-            raise ValueError("The time given is too short.")
-
-        diff_pixels = recent_count - past_count
-        diff_time = recent_time - past_time
-        nb_hours = diff_time/timedelta(hours=1)
-        speed = diff_pixels/nb_hours
-        return speed, diff_pixels, past_time, recent_time
 
     @staticmethod
     def make_bars(users,pixels,title,colors=None):

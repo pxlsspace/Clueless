@@ -10,21 +10,26 @@ class DbConnection():
 
     async def create_connection(self):
         self.conn = await asqlite.connect(DB_FILE,detect_types=asqlite.PARSE_DECLTYPES)
+    
+    async def close_connection(self):
+        await self.conn.close()
 
     async def sql_select(self,query,param:tuple=None):
-        async with self.conn.cursor() as cursor:
-            if param:
-                await cursor.execute(query,param)
-            else:
-                await cursor.execute(query)
-            res = await cursor.fetchall()
-        return res
+        async with asqlite.connect(DB_FILE,detect_types=asqlite.PARSE_DECLTYPES) as conn:
+            async with conn.cursor() as cursor:
+                if param:
+                    await cursor.execute(query,param)
+                else:
+                    await cursor.execute(query)
+                res = await cursor.fetchall()
+            return res
 
     async def sql_update(self,query,param:tuple=None):
-        async with self.conn.cursor() as cursor:
-            if param:
-                await cursor.execute(query,param)
-            else:
-                await cursor.execute(query)
-            await self.conn.commit()
-            return cursor.get_cursor().rowcount
+        async with asqlite.connect(DB_FILE,detect_types=asqlite.PARSE_DECLTYPES) as conn:
+            async with conn.cursor() as cursor:
+                if param:
+                    await cursor.execute(query,param)
+                else:
+                    await cursor.execute(query)
+                await conn.commit()
+                return cursor.get_cursor().rowcount

@@ -18,9 +18,6 @@ async def on_ready():
 
     print('We have logged in as {0.user}'.format(client))
 
-    # create db connection
-    await db_connection.create_connection()
-
     # create db tables if they dont exist
     await db_stats.create_tables()
     await db_servers.create_tables()
@@ -79,8 +76,14 @@ async def on_command_error(ctx,error):
 
 @client.event
 async def on_message(message):
+    await client.wait_until_ready()
+
     # check that the user isn't the bot itself
     if message.author == client.user:
+        return
+    
+    # check that the user isn't an other bot
+    if message.author.bot:
         return
 
     # check if user is blacklisted

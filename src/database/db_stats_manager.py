@@ -26,9 +26,8 @@ class DbStatsManager():
 
     ### pxls user stats functions ###
     async def update_all_pxls_stats(self,alltime_stats,canvas_stats,last_updated):
-
+        await self.db.create_connection()
         conn = self.db.conn
-
         async with conn.cursor() as cur:
             for user in alltime_stats:
                 name = user["username"]
@@ -51,7 +50,8 @@ class DbStatsManager():
                             canvas_count = ?"""
                 await cur.execute(sql,(name,last_updated,canvas_count,canvas_count))
 
-            await self.db.conn.commit()
+        await conn.commit()
+        await self.db.close_connection()
 
     async def get_grouped_stats_history(self,user,date1,date2,groupby_opt):
         """ get the stats between 2 dates grouped by day or hour """

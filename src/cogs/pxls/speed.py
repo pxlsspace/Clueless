@@ -51,7 +51,7 @@ class PxlsSpeed(commands.Cog):
         groupby_opt = param["groupby"]
 
         # get the data we need
-        full_ldb = await db_stats.get_pixels_placed_between(old_time,recent_time,canvas_opt,'speed')
+        last_time, past_time, now_time, full_ldb = await db_stats.get_pixels_placed_between(old_time,recent_time,canvas_opt,'speed')
         ldb = []
         for user in full_ldb:
             if user[1] in names:
@@ -59,9 +59,6 @@ class PxlsSpeed(commands.Cog):
         #check if any user was found
         if not ldb:
             return await ctx.send("❌ User(s) not found.")
-
-        now_time = ldb[0][6]
-        past_time = ldb[0][5]
 
         # Select the data we need to display:
         #  name, current pixels, placed in the time frame, speed in px/h, px/d
@@ -73,7 +70,7 @@ class PxlsSpeed(commands.Cog):
                 continue
             pixels = format_number(pixels)
             diff_pixels = user[3]
-            diff_time = user[6] - user[5]
+            diff_time = now_time - past_time
             nb_hours = diff_time/timedelta(hours=1)
             speed_px_h = diff_pixels/nb_hours
             speed_px_d = speed_px_h*24
@@ -124,11 +121,11 @@ async def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc
         if not stats:
             continue
 
-        dates = [stat[3] for stat in stats]
+        dates = [stat[2] for stat in stats]
         if canvas:
-            pixels = [stat[2] for stat in stats]
-        else:
             pixels = [stat[1] for stat in stats]
+        else:
+            pixels = [stat[0] for stat in stats]
         
         if progress_opt:
             pixels = [pixel - pixels[0] for pixel in pixels]

@@ -1,6 +1,6 @@
 from sqlite3 import IntegrityError
 from discord.ext import commands
-from utils.setup import stats,db_servers_manager as db_servers
+from utils.setup import stats,db_servers_manager as db_servers, db_users_manager as db_users
 class PxlsMilestones(commands.Cog):
 
     def __init__(self,client):
@@ -25,23 +25,19 @@ class PxlsMilestones(commands.Cog):
         if name == None:
             return await ctx.send("❌ You need to specify a username.")
 
-        # checking if the user exists
-        count = stats.get_alltime_stat(name)
-        if count == None:
-            await ctx.send("❌ User not found.")
-            return
-
-        # check if the user is already tracked
         try: 
-            await db_servers.add_user(ctx.guild.id,name,count)
+            await db_users.create_server_pxls_user(ctx.guild.id,name)
         except IntegrityError:
             return await ctx.send("❌ This user is already being tracked.")
+        except ValueError:
+            return await ctx.send("❌ User not found.")
 
         msg = "✅ Tracking "+name+"'s all-time counter."
-        
+
         if await db_servers.get_alert_channel(ctx.guild.id) == None:
             msg += f"\nYou haven't set any alert channel, use `>milestones channel [#channel|here]`"
         await ctx.send (msg)
+
     @milestones.command(
         usage = "<name>",
         description = "Remove a user from the tracker.",
@@ -50,16 +46,17 @@ class PxlsMilestones(commands.Cog):
     async def remove(self,ctx,name=None):
         if name == None:
             return await ctx.send("❌ You need to specify a username.")
-        if(await db_servers.remove_user(ctx.guild.id,name) != -1):
-            return await ctx.send ("✅ "+name+" isn't being tracked anymore.")
-        else:
-            return await ctx.send("❌ User not found.")
+        try:
+            await db_users.delete_server_pxls_user(ctx.guild.id,name) != -1
+        except ValueError as e:
+            return await ctx.send(f'❌ {e}')
+        return await ctx.send ("✅ "+name+" isn't being tracked anymore.")
 
     @milestones.command(
         description="Shows the list of users being tracked.",
         aliases=["ls"])
     async def list(self,ctx):
-        users = await db_servers.get_all_server_users(ctx.guild.id)
+        users = await db_users.get_all_server_tracked_users(ctx.guild.id)
         if len(users) == 0:
             await ctx.send("❌ No user added yet.\n*(use `"+ctx.prefix+"milestones add <username>` to add a new user.*)")
             return

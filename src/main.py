@@ -6,7 +6,7 @@ import traceback
 from datetime import timezone
 
 from utils.help import *
-from utils.setup import DEFAULT_PREFIX, db_connection, db_stats_manager as db_stats,db_servers_manager as db_servers
+from utils.setup import DEFAULT_PREFIX, db_stats_manager as db_stats,db_servers_manager as db_servers, db_users_manager as db_users
 
 load_dotenv()
 intents = discord.Intents.all()
@@ -14,13 +14,15 @@ client = commands.Bot(command_prefix=db_servers.get_prefix,help_command=HelpComm
 
 ### on event functions ###
 @client.event
-async def on_ready():
-
-    print('We have logged in as {0.user}'.format(client))
-
+async def on_connect():
     # create db tables if they dont exist
-    await db_stats.create_tables()
     await db_servers.create_tables()
+    await db_users.create_tables()
+    await db_stats.create_tables()
+
+@client.event
+async def on_ready():
+    print('We have logged in as {0.user}'.format(client))
 
 @client.event
 async def on_command_error(ctx,error):
@@ -72,7 +74,6 @@ async def on_command_error(ctx,error):
         emb.add_field(name="Traceback:",value=f"```\n{tb}```",inline=False)
 
         await log_channel.send(embed=emb)
-        
 
 @client.event
 async def on_message(message):
@@ -86,13 +87,20 @@ async def on_message(message):
     if message.author.bot:
         return
 
-    # check if user is blacklisted
-    blacklist_role_id = await db_servers.get_blacklist_role(message.guild.id)
-    if blacklist_role_id != None:
-        blacklist_role = message.guild.get_role(int(blacklist_role_id))
-        if blacklist_role != None:
-            if blacklist_role in message.author.roles:
-                return
+    if message.guild:
+        # check that server is in the db
+        server = await db_servers.get_server(message.guild.id)
+        if server == None:
+            await db_servers.create_server(message.guild.id,DEFAULT_PREFIX)
+            print("joined a new server: {0.name} (id: {0.id})".format(message.guild))
+
+        # check if user is blacklisted
+        blacklist_role_id = await db_servers.get_blacklist_role(message.guild.id)
+        if blacklist_role_id != None:
+            blacklist_role = message.guild.get_role(int(blacklist_role_id))
+            if blacklist_role != None:
+                if blacklist_role in message.author.roles:
+                    return
 
     if message.content == ">_>":
         return await message.channel.send("<_<")

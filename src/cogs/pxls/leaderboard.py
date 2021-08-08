@@ -70,11 +70,10 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
         # fetch the leaderboard from the database
         async with ctx.typing():
-            ldb = await db_stats.get_pixels_placed_between(date1,date2,canvas_opt,sort)
-        date = ldb[0][4]
+            last_date, datetime1, datetime2, ldb = await db_stats.get_pixels_placed_between(date1,date2,canvas_opt,sort)
 
         # check that we can actually calculate the speed
-        if speed_opt and ldb[0][5] == ldb[0][6]:
+        if speed_opt and datetime1 == datetime2:
             return await ctx.send("❌ The time frame given is too short.")
 
         # trim the leaderboard to only get the lines asked
@@ -155,7 +154,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             # add the speed
             if speed_opt:
                 diff_pixels = ldb[i][3] or 0
-                diff_time = (ldb[i][6] - ldb[i][5])
+                diff_time = (datetime2 - datetime1)
                 nb_hours = diff_time/timedelta(hours=1)
                 speed = diff_pixels/nb_hours
                 # show the speed in pixel/day if the time frame is more than a day
@@ -180,8 +179,8 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         # make title and embed header
         text = ""
         if speed_opt:
-            past_time = ldb[0][5]
-            recent_time = ldb[0][6]
+            past_time = datetime1
+            recent_time = datetime2
             diff_time = round_minutes_down(recent_time)-round_minutes_down(past_time)
             diff_time_str = td_format(diff_time)
             if last_opt:
@@ -200,7 +199,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         else:
             title = "All-time Leaderboard"
         if not(param["before"] or param["after"]):
-            text +=  f"(last updated: {format_datetime(date,'R')})"
+            text +=  f"(last updated: {format_datetime(last_date,'R')})"
 
         # make the bars graph
         if graph_opt:

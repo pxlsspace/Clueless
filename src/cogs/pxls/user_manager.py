@@ -7,12 +7,12 @@ class UserManager(commands.Cog):
         self.client = client
 
     @commands.command(description = "Link your discord account to a pxls username.",usage="<pxls username>")
-    async def setname(self,ctx,pxls_name):
-        pxls_user_id = await db_users.get_pxls_user_id(pxls_name)
+    async def setname(self,ctx,username):
+        pxls_user_id = await db_users.get_pxls_user_id(username)
         if pxls_user_id == None:
             return await ctx.send("❌ Can't find this pxls user name.")
         await db_users.set_pxls_user(ctx.author.id,pxls_user_id)
-        await ctx.send(f"✅ Pxls username succefully set to **{pxls_name}**.")
+        await ctx.send(f"✅ Pxls username successfully set to **{username}**.")
 
     @commands.command(description = "Unlink your discord account from a pxls username.")
     async def unset(self,ctx):
@@ -20,7 +20,7 @@ class UserManager(commands.Cog):
         if discord_user["pxls_user_id"] == None:
             return await ctx.send("❌ You haven't set any pxls username.")
         await db_users.set_pxls_user(ctx.author.id,None)
-        await ctx.send("✅ Pxls username succefully unset.")
+        await ctx.send("✅ Pxls username successfully unset.")
 
     @commands.command(description="Show the pxls username linked to your account.")
     async def whoami(self,ctx):

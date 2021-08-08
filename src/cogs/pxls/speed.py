@@ -5,7 +5,7 @@ from discord.ext import commands
 from itertools import cycle
 
 from utils.discord_utils import image_to_file, format_number
-from utils.setup import db_stats_manager as db_stats
+from utils.setup import db_stats_manager as db_stats, db_users_manager as db_users
 from utils.arguments_parser import parse_speed_args
 from utils.table_to_image import table_to_image
 from utils.time_converter import format_datetime, round_minutes_down, str_to_td
@@ -34,6 +34,17 @@ class PxlsSpeed(commands.Cog):
         except ValueError as e:
             return await ctx.send(f'❌ {e}')
 
+        # check on name arguements
+        names = param["names"]
+        if len(names) == 0:
+            discord_user = await db_users.get_discord_user(ctx.author.id)
+            pxls_user_id = discord_user["pxls_user_id"]
+            if pxls_user_id == None:
+                return await ctx.send(f"❌ You need to specify at least one username.\n\(You can also set a default username with `{ctx.prefix}setname <username>`)")
+            else:
+                name = await db_users.get_pxls_user_name(pxls_user_id)
+                names.append(name)
+
         # check on date arguments
         if param["before"] == None and param["after"] == None:
             date = param["last"]
@@ -46,7 +57,6 @@ class PxlsSpeed(commands.Cog):
             old_time = param["after"] or datetime(1900,1,1,0,0,0)
             recent_time = param["before"] or datetime.now(timezone.utc)
 
-        names = param["names"]
         canvas_opt = param["canvas"]
         groupby_opt = param["groupby"]
 

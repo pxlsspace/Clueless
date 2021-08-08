@@ -69,6 +69,14 @@ class DbUserManager():
         else:
             return res[0][0]
     
+    async def get_pxls_user_name(self,pxls_id):
+        sql = """ SELECT name FROM pxls_name WHERE pxls_user_id = ?"""
+        res = await self.db.sql_select(sql,pxls_id)
+        if len(res) == 0:
+            return None
+        else:
+            return res[0][0]
+
     async def get_discord_user(self,discord_id):
         ''' get the informations of a discord user and create it if it doesn't exist in the db'''
         await self.db.sql_insert('INSERT OR IGNORE INTO discord_user(discord_id) VALUES(?)',discord_id)
@@ -76,8 +84,14 @@ class DbUserManager():
         return discord_user[0]
 
     async def set_user_blacklist(self,discord_id,blacklist_status:bool):
+        ''' Update the 'is_blacklisted' attribute of a discord_user'''
         sql = "UPDATE discord_user SET is_blacklisted = ? WHERE discord_id = ? "
         await self.db.sql_update(sql,(int(blacklist_status),discord_id))
+
+    async def set_pxls_user(self,discord_id,pxls_user_id):
+        ''' update the pxls_user_id of a discord_user'''
+        sql = "UPDATE discord_user SET pxls_user_id = ? WHERE discord_id = ? "
+        await self.db.sql_update(sql,(pxls_user_id,discord_id))
 
     async def get_all_blacklisted_users(self):
         ''' Get all the discord users blacklisted. Returns a list of discord ID'''

@@ -63,7 +63,7 @@ def parse_speed_args(args):
         'after': <datetime> | None
     }'''
     parser  = MyParser(add_help=False)
-    parser.add_argument('names', type=str, nargs='+',default=[])
+    parser.add_argument('names', type=str, nargs='*',default=[])
     parser.add_argument('-canvas', action='store_true', default=False)
     parser.add_argument("-groupby",choices=['day','hour'],required=False)
     parser.add_argument('-progress', action='store_true', default=False)

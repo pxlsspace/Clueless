@@ -68,6 +68,26 @@ class DbUserManager():
             return None
         else:
             return res[0][0]
+    
+    async def get_discord_user(self,discord_id):
+        ''' get the informations of a discord user and create it if it doesn't exist in the db'''
+        await self.db.sql_insert('INSERT OR IGNORE INTO discord_user(discord_id) VALUES(?)',discord_id)
+        discord_user = await self.db.sql_select("SELECT * FROM discord_user WHERE discord_id = ?",discord_id)
+        return discord_user[0]
+
+    async def set_user_blacklist(self,discord_id,blacklist_status:bool):
+        sql = "UPDATE discord_user SET is_blacklisted = ? WHERE discord_id = ? "
+        await self.db.sql_update(sql,(int(blacklist_status),discord_id))
+
+    async def get_all_blacklisted_users(self):
+        ''' Get all the discord users blacklisted. Returns a list of discord ID'''
+        sql = "SELECT discord_id FROM discord_user WHERE is_blacklisted = 1"
+        rows = await self.db.sql_select(sql)
+        if len(rows) == 0:
+            return None
+        else:
+            res = [row[0] for row in rows]
+            return res
 
     ### functions useful for the milestones command ###
     async def create_server_pxls_user(self, server_id,name):

@@ -1,7 +1,8 @@
 from io import BytesIO
 import discord
-import PIL
-from discord.ext.commands.converter import EmojiConverter
+from PIL import Image
+from discord.ext import commands
+from discord.ext.commands.core import command
 from utils.utils import get_content
 import re
 
@@ -85,7 +86,7 @@ async def get_image_from_message(ctx,url=None):
 
     return image_bytes, url
 
-def image_to_file(image:PIL.Image,filename:str,embed:discord.Embed=None) -> discord.File:
+def image_to_file(image:Image.Image,filename:str,embed:discord.Embed=None) -> discord.File:
     """ Convert a pillow Image to a discord File
     attach the file to a discord embed if one is given """
 
@@ -112,3 +113,51 @@ def format_emoji(emoji):
     '''formats a discord emoji into a string'''
     res ="<{1}:{0.name}:{0.id}>".format(emoji, "a" if emoji.animated else "")
     return res
+
+class MemberConverter(commands.Converter):
+    "Case insensitive commands.MemberConverter"
+    async def convert(self, ctx, argument):
+        """
+        This will raise MemberNotFound if the member is not found.
+        """
+        try:
+            return await commands.MemberConverter().convert(ctx, argument)
+        except commands.MemberNotFound:
+            # Let's try a utils.find:
+            def check(member):
+                return (
+                    member.name.lower() == argument.lower() or
+                    member.display_name.lower() == argument.lower() or
+                    str(member).lower() == argument.lower() or
+                    str(member.id) == argument
+                )
+            if found := discord.utils.find(check, ctx.guild.members):
+                return found
+            raise commands.MemberNotFound(argument)
+        
+        
+class UserConverter(commands.Converter):
+    "Case insensitive commands.UserConverter"
+    async def convert(self, ctx, argument):
+        """
+        This will take into account members if a guild exists.
+        Raises UserNotFound if the user is not found.
+        """
+        if ctx.guild:
+            try:
+                return await MemberConverter().convert(ctx, argument)
+            except commands.MemberNotFound:
+                pass
+
+        try:
+            return await commands.UserConverter().convert(ctx, argument)
+        except commands.UserNotFound:
+            def check(user):
+                return (
+                    user.name.lower() == argument.lower() or
+                    str(user).lower() == argument.lower() or
+                    str(user.id) == argument
+                )
+            if found := discord.utils.find(check, ctx.bot.users):
+                return found
+            raise commands.UserNotFound(argument)

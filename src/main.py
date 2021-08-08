@@ -87,6 +87,11 @@ async def on_message(message):
     if message.author.bot:
         return
 
+    # add the user to the db and check if the user is blacklisted
+    discord_user = await db_users.get_discord_user(message.author.id)
+    if discord_user["is_blacklisted"] == True:
+        return
+
     if message.guild:
         # check that server is in the db
         server = await db_servers.get_server(message.guild.id)
@@ -94,7 +99,7 @@ async def on_message(message):
             await db_servers.create_server(message.guild.id,DEFAULT_PREFIX)
             print("joined a new server: {0.name} (id: {0.id})".format(message.guild))
 
-        # check if user is blacklisted
+        # check if user has a blacklisted role
         blacklist_role_id = await db_servers.get_blacklist_role(message.guild.id)
         if blacklist_role_id != None:
             blacklist_role = message.guild.get_role(int(blacklist_role_id))
@@ -111,7 +116,7 @@ async def on_message(message):
     if client.user in  message.mentions:
         await message.add_reaction("<:peepopinged:867331826442960926>") 
     await client.process_commands(message)
-    
+
 @client.event
 async def on_guild_join(guild):
     await db_servers.create_server(guild.id,DEFAULT_PREFIX)

@@ -197,15 +197,15 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                     format_datetime(recent_time),
                     td_format(diff_time)
                 )
+            # calculate the best possbile amount in the time frame
+            best_possible,average_cooldown = await get_best_possible(datetime1,datetime2)
+            text += f"• Average cooldown: `{round(average_cooldown,2)}` seconds\n"
+            text += f"• Best possible (without stack): ~`{best_possible}` pixels.\n"
+
         elif canvas_opt:
             title = "Canvas Leaderboard"
         else:
             title = "All-time Leaderboard"
-        
-        # calculate the best possbile amount in the time frame
-        best_possible,average_cooldown = await get_best_possible(datetime1,datetime2)
-        text += f"• Average cooldown: `{round(average_cooldown,2)}` seconds\n"
-        text += f"• Best possible (without stack): ~`{best_possible}` pixels.\n"
 
         if not(param["before"] or param["after"]):
             text +=  f"• Last updated: {format_datetime(last_date,'R')}"

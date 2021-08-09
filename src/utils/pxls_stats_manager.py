@@ -8,13 +8,15 @@ class PxlsStatsManager():
     def __init__(self):
         self.base_url = "http://pxls.space/"
         self.stats_json = {}
+        self.current_canvas_code = None
 
     async def refresh(self):
         response_json = await self.query("stats/stats.json","json")
         self.stats_json = response_json
+        self.current_canvas_code = await self.refresh_canvas_code()
     
     def get_general_stats(self):
-        general = self.stats_json["general"]
+        general = self.stats_json["general"].copy()
         general.pop("nth_list")
         return general
 
@@ -54,9 +56,12 @@ class PxlsStatsManager():
     def get_palette(self):
         return self.stats_json["board_info"]["palette"]
 
-    async def get_canvas_code(self):
+    async def refresh_canvas_code(self):
         response_json = await self.query('info','json')
         return response_json["canvasCode"]
+    
+    def get_canvas_code(self):
+        return self.current_canvas_code
 
     async def get_online_count(self):
         response_json = await self.query('users','json')

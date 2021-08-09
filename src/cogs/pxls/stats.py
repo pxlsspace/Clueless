@@ -14,7 +14,7 @@ class PxlsStats(commands.Cog):
     async def generalstats(self,ctx):
         gen_stats = stats.get_general_stats()
         text = ""
-        text += f"**Canvas Code**: {await stats.get_canvas_code()}\n"
+        text += f"**Canvas Code**: {stats.get_canvas_code()}\n"
         for element in gen_stats:
              # formating the number (123456 -> 123 456)
             num = f'{int(gen_stats[element]):,}'

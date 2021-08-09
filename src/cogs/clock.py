@@ -120,13 +120,13 @@ class Clock(commands.Cog):
         canvas_stats = stats.get_all_canvas_stats()
 
         # get the current canvas code
-        canvas_code = await stats.get_canvas_code()
+        canvas_code = stats.get_canvas_code()
         await db_stats.update_all_pxls_stats(alltime_stats,canvas_stats,lastupdated,canvas_code)
 
     async def save_online_count(self):
         ''' save the current 'online count' in the database '''
         online = await stats.get_online_count()
-        canvas_code = await stats.get_canvas_code()
+        canvas_code = stats.get_canvas_code()
         dt = datetime.utcnow().replace(microsecond=0)
         await db_stats.add_general_stat("online_count",online,canvas_code,dt)
 

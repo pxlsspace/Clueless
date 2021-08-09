@@ -62,6 +62,11 @@ class PxlsSpeed(commands.Cog):
 
         # get the data we need
         last_time, past_time, now_time, full_ldb = await db_stats.get_pixels_placed_between(old_time,recent_time,canvas_opt,'speed')
+        
+        # check that we can calculate a speed
+        if past_time == now_time:
+            return await ctx.send("❌ The time frame given is too short.")
+
         ldb = []
         for user in full_ldb:
             if user[1] in names:
@@ -98,7 +103,7 @@ class PxlsSpeed(commands.Cog):
         # create the graph
         user_list = [user[1] for user in ldb]
         if groupby_opt:
-            graph = await get_grouped_graph(user_list,past_time,now_time,groupby_opt)
+            graph = await get_grouped_graph(user_list,past_time,now_time,groupby_opt,canvas_opt)
         else:
             graph = await get_stats_graph(user_list,canvas_opt,past_time,now_time,param["progress"])
         graph_image = fig2img(graph)
@@ -118,7 +123,7 @@ class PxlsSpeed(commands.Cog):
 def setup(client):
     client.add_cog(PxlsSpeed(client))
 
-async def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc),progress_opt=False):
+async def get_stats_graph(user_list,canvas,date1,date2,progress_opt=False):
 
     # create the graph
     fig = go.Figure(layout=layout)
@@ -127,17 +132,21 @@ async def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc
 
     for i,user in enumerate(user_list):
         # get the data
-        stats = await db_stats.get_stats_history(user,date1,date2)
+        stats = await db_stats.get_stats_history(user,date1,date2,canvas)
         if not stats:
             continue
-
-        dates = [stat[2] for stat in stats]
+        dates = [stat["datetime"] for stat in stats]
         if canvas:
-            pixels = [stat[1] for stat in stats]
+            pixels = [stat["canvas_count"] for stat in stats]
         else:
-            pixels = [stat[0] for stat in stats]
-        
+            pixels = [stat["alltime_count"] for stat in stats]
+
         if progress_opt:
+            if not pixels[0]:
+                # ignore the user if it has None pixels
+                # (happens when canvas_opt is False and the user doesn't have enough pixels 
+                # to be on the alltime leaderboard)
+                continue
             pixels = [pixel - pixels[0] for pixel in pixels]
 
         # trace the user data
@@ -168,7 +177,7 @@ async def get_stats_graph(user_list,canvas,date1,date2=datetime.now(timezone.utc
         )
     return fig
 
-async def get_grouped_graph(user_list,date1,date2,groupby_opt):
+async def get_grouped_graph(user_list,date1,date2,groupby_opt,canvas_opt):
 
     # check on the groupby param
     if not groupby_opt in ["day","hour"]:
@@ -188,16 +197,16 @@ async def get_grouped_graph(user_list,date1,date2,groupby_opt):
 
     for i,user in enumerate(user_list):
         # get the data
-        stats = await db_stats.get_grouped_stats_history(user,date1,date2,groupby_opt)
+        stats = await db_stats.get_grouped_stats_history(user,date1,date2,groupby_opt,canvas_opt)
         stats = stats[1:]
         if not stats:
             continue
 
         if groupby_opt == "day":
-            dates = [stat[4][:10] for stat in stats]
+            dates = [stat["last_datetime"][:10] for stat in stats]
         elif groupby_opt == "hour":
-            dates = [stat[4][:13] for stat in stats]
-        pixels = [stat[3] for stat in stats]
+            dates = [stat["last_datetime"][:13] for stat in stats]
+        pixels = [stat["placed"] for stat in stats]
 
         # trace the user data
         fig.add_trace(

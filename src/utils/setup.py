@@ -8,6 +8,6 @@ stats =  PxlsStatsManager()
 DEFAULT_PREFIX = ">"
 
 db_connection = DbConnection()
-db_stats_manager = DbStatsManager(db_connection)
+db_stats_manager = DbStatsManager(db_connection,stats)
 db_servers_manager = DbServersManager(db_connection,DEFAULT_PREFIX)
 db_users_manager = DbUserManager(db_connection)

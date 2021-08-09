@@ -1,12 +1,15 @@
 from sqlite3 import IntegrityError
 from datetime import datetime
+
 from database.db_connection import DbConnection
+from utils.pxls_stats_manager import PxlsStatsManager
 
 class DbStatsManager():
     ''' A class to manage the pxls stats in the database '''
 
-    def __init__(self,db_conn:DbConnection) -> None:
+    def __init__(self,db_conn:DbConnection,stats:PxlsStatsManager) -> None:
         self.db = db_conn
+        self.stats_manager = stats
 
     async def create_tables(self):
         create_pxls_general_stats_table = """ 
@@ -133,10 +136,14 @@ class DbStatsManager():
         else:
             return (res[0][0],res[0][1],res[1][1])
 
-    async def get_stats_history(self,user,date1,date2):
+    async def get_stats_history(self,user,date1,date2,canvas_opt):
         """ get the stats between 2 dates """
-        record1 = await self.find_record(date1)
-        record2 = await self.find_record(date2)
+        if canvas_opt:
+            canvas_to_select = self.stats_manager.get_canvas_code()
+        else:
+            canvas_to_select = None
+        record1 = await self.find_record(date1,canvas_to_select)
+        record2 = await self.find_record(date2,canvas_to_select)
 
         sql = """
             SELECT alltime_count, canvas_count, datetime
@@ -148,7 +155,7 @@ class DbStatsManager():
             AND datetime <= ?"""
         return await self.db.sql_select(sql,(user,record1["datetime"],record2["datetime"]))
 
-    async def get_grouped_stats_history(self,user,date1,date2,groupby_opt):
+    async def get_grouped_stats_history(self,user,dt1,dt2,groupby_opt,canvas_opt):
         """ get the stats between 2 dates grouped by day or hour """
 
         # check on the groupby param
@@ -159,39 +166,52 @@ class DbStatsManager():
         else:
             return None
 
+        # find the records closest to the dates
+        if canvas_opt:
+            canvas_to_select = self.stats_manager.get_canvas_code()
+        else:
+            canvas_to_select = None
+        record1 = await self.find_record(dt1,canvas_to_select)
+        record2 = await self.find_record(dt2,canvas_to_select)
+
         sql = """
-            SELECT name, alltime_count, canvas_count,
-            alltime_count-(LAG(alltime_count) OVER (ORDER BY datetime)) as placed,
+            SELECT name, {0}-(LAG({0}) OVER (ORDER BY datetime)) as placed,
             MAX(record.datetime) as last_datetime
             FROM pxls_user_stat
             JOIN record ON record.record_id = pxls_user_stat.record_id
             JOIN pxls_name ON pxls_name.pxls_name_id = pxls_user_stat.pxls_name_id
             WHERE name = ?
-                AND datetime >= ?
-                AND datetime <= ?
-            GROUP BY strftime(?,datetime)"""
+                AND pxls_user_stat.record_id >= ?
+                AND pxls_user_stat.record_id <= ?
+            GROUP BY strftime(?,datetime)""".format("canvas_count" if canvas_opt else "alltime_count")
 
-        return await self.db.sql_select(sql,(user,date1,date2,groupby))
+        return await self.db.sql_select(sql,(user,record1["record_id"],record2["record_id"],groupby))
 
     async def get_pixels_placed_between(self,dt1,dt2,canvas,orderby_opt):
 
             order_dict ={
-                "speed": "b.canvas_count - a.canvas_count",
+                "speed": "b.{0}_count - a.{0}_count".format("canvas" if canvas else "alltime"),
                 "canvas": "last.canvas_count",
                 "alltime": "last.alltime_count"
             }
             assert orderby_opt in order_dict.keys(),"orderby paramater must be: 'placed', 'canvas' or 'alltime'"
             orderby = order_dict[orderby_opt]
 
-            last_record = await self.find_record(datetime.utcnow())
-            record1 = await self.find_record(dt1)
-            record2 = await self.find_record(dt2)
+            
+            if canvas:
+                canvas_to_select = self.stats_manager.get_canvas_code()
+            else:
+                canvas_to_select = None
 
-            sql = """SELECT 
+            last_record = await self.find_record(datetime.utcnow(),canvas_to_select)
+            record1 = await self.find_record(dt1,canvas_to_select)
+            record2 = await self.find_record(dt2,canvas_to_select)
+
+            sql = """SELECT
                     ROW_NUMBER() OVER(ORDER BY ({0}) DESC) AS rank,
                     pxls_name.name,
                     last.{1}_count,
-                    b.canvas_count - a.canvas_count as placed
+                    b.{1}_count - a.{1}_count as placed
                 FROM pxls_user_stat a, pxls_user_stat b, pxls_user_stat last
                 INNER JOIN(pxls_name) ON pxls_name.pxls_name_id = a.pxls_name_id
                 WHERE a.pxls_name_id = b.pxls_name_id AND a.pxls_name_id = last.pxls_name_id
@@ -201,19 +221,28 @@ class DbStatsManager():
                 ORDER BY {0} DESC""".format(
                     orderby,
                     "canvas" if canvas else "alltime")
+
             return (
                 last_record["datetime"],
                 record1["datetime"],
                 record2["datetime"],
                 await self.db.sql_select(sql,(last_record["record_id"],record1["record_id"],record2["record_id"])))
 
-    async def find_record(self,dt):
-        """ find the record with  the closest date to the given date in the database """
+    async def find_record(self,dt,canvas_code=None):
+        """ find the record with  the closest date to the given date in the database
+        :param dt: the datetime to find
+        :param canvas_code: the canvas to find the record in, if None, will search among all the canvases """
+        if canvas_code == None:
+            canvas_code = "NOT NULL" # to get all the canvas codes
+        else:
+            canvas_code = f"'{str(canvas_code)}'"
+
         sql = """
             SELECT record_id, datetime, min(abs(JulianDay(datetime) - JulianDay(?)))*24*3600 as diff_with_time
             FROM record
-            """
-        res = await self.db.sql_select(sql,dt)
+            WHERE canvas_code IS {}
+            """.format(canvas_code)
+        res = await self.db.sql_select(sql,(dt))
         return res[0]
 
         ### general stats functions ###

@@ -43,7 +43,8 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         sort_opt = None
         last_opt = param["last"]
         graph_opt = param["graph"]
-        # if a time value is given, we will show the speed during this time
+
+        # if a time value is given, we will show the leaderboard during this time
         if param["before"] or param["after"] or last_opt:
             speed_opt = True
             sort_opt = "speed"
@@ -67,6 +68,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             sort = 'canvas' if canvas_opt else 'alltime'
         else:
             sort = sort_opt
+            canvas_opt = "canvas" # only get the canvas stats when sorting by speed
 
         # fetch the leaderboard from the database
         async with ctx.typing():

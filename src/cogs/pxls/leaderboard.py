@@ -9,6 +9,7 @@ from utils.arguments_parser import parse_leaderboard_args
 from utils.discord_utils import format_number, image_to_file
 from utils.table_to_image import table_to_image
 from utils.plot_utils import fig2img, layout_without_annotation, BACKGROUND_COLOR, COLORS
+from utils.cooldown import get_best_possible
 
 class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
@@ -191,7 +192,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                     else diff_time_str)
             else:
                 title = "Leaderboard"
-                text += "\nBetween {} and {}\n({})".format(
+                text += "• Between {} and {}\n({})\n".format(
                     format_datetime(past_time),
                     format_datetime(recent_time),
                     td_format(diff_time)
@@ -200,9 +201,15 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             title = "Canvas Leaderboard"
         else:
             title = "All-time Leaderboard"
-        if not(param["before"] or param["after"]):
-            text +=  f"(last updated: {format_datetime(last_date,'R')})"
+        
+        # calculate the best possbile amount in the time frame
+        best_possible,average_cooldown = await get_best_possible(datetime1,datetime2)
+        text += f"• Average cooldown: `{round(average_cooldown,2)}` seconds\n"
+        text += f"• Best possible (without stack): ~`{best_possible}` pixels.\n"
 
+        if not(param["before"] or param["after"]):
+            text +=  f"• Last updated: {format_datetime(last_date,'R')}"
+    
         # make the bars graph
         if graph_opt:
             data = [int(user[2].replace(" ","")) if user[2] != "???" else None for user in res_ldb]
@@ -218,8 +225,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             bars_file = image_to_file(bars_img,"bar_chart.png")
 
         # create a discord embed
-        emb = discord.Embed(color=0x66c5cc)
-        emb.add_field(name=title,value=text)
+        emb = discord.Embed(color=0x66c5cc,title=title,description=text)
         file = image_to_file(img,"leaderboard.png",emb)
 
         # send graph and embed

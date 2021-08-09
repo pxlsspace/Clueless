@@ -11,6 +11,7 @@ from utils.table_to_image import table_to_image
 from utils.time_converter import format_datetime, round_minutes_down, str_to_td
 from utils.plot_utils import layout, BACKGROUND_COLOR, COLORS, fig2img
 from utils.image_utils import v_concatenate
+from utils.cooldown import get_best_possible
 
 class PxlsSpeed(commands.Cog):
 
@@ -111,8 +112,13 @@ class PxlsSpeed(commands.Cog):
         # merge the table image and graph image
         res_image = v_concatenate(table_image,graph_image,gap_height=20)
 
+        # calculate the best possbile amount in the time frame
+        best_possible,average_cooldown = await get_best_possible(past_time,now_time)
+
         # create the embed
-        description = f"Between {format_datetime(past_time)} and {format_datetime(now_time)}"
+        description = f"• Between {format_datetime(past_time)} and {format_datetime(now_time)}\n"
+        description += f"• Average cooldown: `{round(average_cooldown,2)}` seconds\n"
+        description += f"• Best possible (without stack): ~`{best_possible}` pixels."
         emb = discord.Embed(color=0x66c5cc)
         emb.add_field(name='Speed',value = description)
 

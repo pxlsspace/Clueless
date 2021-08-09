@@ -207,18 +207,19 @@ class DbStatsManager():
             record1 = await self.find_record(dt1,canvas_to_select)
             record2 = await self.find_record(dt2,canvas_to_select)
 
-            sql = """SELECT
-                    ROW_NUMBER() OVER(ORDER BY ({0}) DESC) AS rank,
-                    pxls_name.name,
-                    last.{1}_count,
-                    b.{1}_count - a.{1}_count as placed
-                FROM pxls_user_stat a, pxls_user_stat b, pxls_user_stat last
-                INNER JOIN(pxls_name) ON pxls_name.pxls_name_id = a.pxls_name_id
-                WHERE a.pxls_name_id = b.pxls_name_id AND a.pxls_name_id = last.pxls_name_id
+            sql = """
+            SELECT
+                ROW_NUMBER() OVER(ORDER BY ({0}) DESC) AS rank,
+                pxls_name.name,
+                last.{1}_count,
+                b.{1}_count - a.{1}_count as placed
+            FROM pxls_user_stat a, pxls_user_stat b, pxls_user_stat last
+            INNER JOIN(pxls_name) ON pxls_name.pxls_name_id = a.pxls_name_id
+            WHERE a.pxls_name_id = b.pxls_name_id AND a.pxls_name_id = last.pxls_name_id
                 AND last.record_id = ?
                 AND a.record_id =  ?
                 AND b.record_id = ?
-                ORDER BY {0} DESC""".format(
+            ORDER BY {0} DESC""".format(
                     orderby,
                     "canvas" if canvas else "alltime")
 
@@ -246,15 +247,27 @@ class DbStatsManager():
         return res[0]
 
         ### general stats functions ###
-    async def get_general_stat(self,name,dt):
+    async def get_general_stat(self,name,dt1,dt2):
         ''' get all the values of a general stat after a datetime 
         (this is used to plot the stat) '''
-        sql = """SELECT value,datetime from pxls_general_stat
-                WHERE stat_name = ?
-                AND datetime > ?
-                ORDER BY datetime DESC"""
 
-        return await self.db.sql_select(sql,(name,dt))
+        sql = """
+            SELECT datetime, min(abs(JulianDay(datetime) - JulianDay(?)))*24*3600 as diff_with_time
+            FROM pxls_general_stat
+            """
+        closest_data1 = await self.db.sql_select(sql,dt1)
+        closest_dt1 = closest_data1[0][0]
+        closest_data2 = await self.db.sql_select(sql,dt2)
+        closest_dt2 = closest_data2[0][0]
+
+        sql = """
+            SELECT value,datetime from pxls_general_stat
+            WHERE stat_name = ?
+            AND datetime >= ?
+            AND datetime <= ?
+            ORDER BY datetime DESC"""
+
+        return await self.db.sql_select(sql,(name,closest_dt1,closest_dt2))
 
     async def add_general_stat(self,name,value,canvas,date):
         sql = ''' INSERT INTO pxls_general_stat(stat_name, value ,canvas_code, datetime)

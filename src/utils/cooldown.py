@@ -1,5 +1,6 @@
 import math
-
+from datetime import timedelta
+from utils.setup import db_stats_manager as db_stats
 def sum_up_to_n(n):
     r = 0
     for i in range(n):
@@ -33,6 +34,16 @@ def get_cds(online):
         cds.append(t)
         total+=t
     return cds
+
+async def get_best_possible(datetime1,datetime2):
+    """Find the best amount of pixels possible to place between 2 datetimes and the average cooldown """
+    data = await db_stats.get_general_stat("online_count",datetime1,datetime2)
+    online_counts = [int(e[0]) for e in data if e[0] != None]
+    cooldowns = [round(get_cd(count),2) for count in online_counts]
+    average_cooldown = sum(cooldowns)/len(cooldowns)
+    nb_seconds = (datetime2 - datetime1)/timedelta(seconds=1)
+    best_possible = round(nb_seconds/average_cooldown)
+    return (best_possible,average_cooldown)
 
 if __name__ == "__main__":
     print(get_cds(1))

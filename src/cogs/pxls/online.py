@@ -33,7 +33,7 @@ class Online(commands.Cog):
         input_time = str_to_td(last)
         if not input_time:
             return await ctx.send(f"❌ Invalid `last` parameter, format must be `{ctx.prefix}{ctx.command.name}{ctx.command.usage}`.")
-        data = await db_stats.get_general_stat("online_count",datetime.utcnow()-input_time)
+        data = await db_stats.get_general_stat("online_count",datetime.utcnow()-input_time,datetime.utcnow())
 
         online_counts = [int(e[0]) for e in data if e[0] != None]
         dates = [e[1] for e in data if e[0] != None]

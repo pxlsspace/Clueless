@@ -42,11 +42,16 @@ class Clock(commands.Cog):
         await self.client.wait_until_ready()
         try:
             await self._update_stats_data()
+            # wait for the time to be a round value
+            round_minute = datetime.now(timezone.utc) + timedelta(minutes=1)
+            round_minute = round_minute.replace(second=0,microsecond=0)
+            await discord.utils.sleep_until(round_minute)
+
         except Exception as error:
             formatted = "".join(
                 traceback.format_exception(type(error), error, error.__traceback__)
             )
-            print("Unexpected before starting task 'update_stats':")
+            print("Unexpected error before starting task 'update_stats':")
             print(formatted,file=stderr)
 
     async def _update_stats_data(self):
@@ -64,10 +69,15 @@ class Clock(commands.Cog):
             await self.check_milestones()
             now = datetime.now().strftime("[%H:%M:%S]")
             print(now +": stats updated")
-            # wait for the time to be a round value
-            round_minute = datetime.now(timezone.utc) + timedelta(minutes=1)
-            round_minute = round_minute.replace(second=0,microsecond=0)
-            await discord.utils.sleep_until(round_minute)
+
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def forceupdate(self,ctx):
+        try:
+            await self._update_stats_data()
+        except Exception as e:
+            return await ctx.send(f"❌ **An error occured during the update:**\n ```{type(e).__name__}: {e}```")
+        await ctx.send("✅ Successfully updated stats")
 
     @tasks.loop(minutes=5)
     async def update_online_count(self):

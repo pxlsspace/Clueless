@@ -1,5 +1,8 @@
 from datetime import datetime
+from PIL import ImageColor
 import pytz
+import numpy as np
+
 from utils.utils import get_content
 
 class PxlsStatsManager():
@@ -8,13 +11,15 @@ class PxlsStatsManager():
     def __init__(self):
         self.base_url = "http://pxls.space/"
         self.stats_json = {}
+        self.board_info = {}
         self.current_canvas_code = None
+        self.board_array = None
 
     async def refresh(self):
-        response_json = await self.query("stats/stats.json","json")
-        self.stats_json = response_json
-        self.current_canvas_code = await self.refresh_canvas_code()
-    
+        self.stats_json = await self.query("stats/stats.json","json")
+        self.board_info = await self.query("info","json")
+        self.board_array = await self.fetch_board()
+
     def get_general_stats(self):
         general = self.stats_json["general"].copy()
         general.pop("nth_list")
@@ -55,30 +60,49 @@ class PxlsStatsManager():
 
     def get_palette(self):
         return self.stats_json["board_info"]["palette"]
-
-    async def refresh_canvas_code(self):
-        response_json = await self.query('info','json')
-        return response_json["canvasCode"]
     
     def get_canvas_code(self):
-        return self.current_canvas_code
+        return self.board_info["canvasCode"]
 
     async def get_online_count(self):
         response_json = await self.query('users','json')
         return response_json["count"]
 
+    def palettize_array(self,array):
+        """ Convert a numpy array of palette indexes to a color numpy array
+        (RGBA) """
+        colors_list = []
+        for color in self.get_palette():
+            rgb = ImageColor.getcolor("#" + color["value"],'RGBA')
+            colors_list.append(rgb)
+        colors_dict = dict(enumerate(colors_list))
+        colors_dict[255] = (0, 0, 0, 0)
+
+        img = np.stack(np.vectorize(colors_dict.get)(array),
+             axis=-1)
+        return img.astype(np.uint8)
+
+    async def fetch_board(self):
+        "fetch the board with a get request"
+        board_bytes = await self.query('boarddata','bytes')
+        board_array = np.asarray(list(board_bytes), dtype=np.uint8).reshape(
+            self.board_info["height"],self.board_info["width"])
+        return board_array
+
+    async def fetch_virgin_map(self):
+        "fetch the virgin map with a get request"
+        board_bytes = await self.query('virginmap','bytes')
+        board_array = np.asarray(list(board_bytes), dtype=np.uint8).reshape(
+            self.board_info["height"],self.board_info["width"])
+        return board_array
+
+    async def fetch_initial_canvas(self):
+        "fetch the initial canvas with a get request"
+        board_bytes = await self.query('initialboarddata','bytes')
+        board_array = np.asarray(list(board_bytes), dtype=np.uint8).reshape(
+            self.board_info["height"],self.board_info["width"])
+        return board_array
+
     async def query(self,endpoint,content_type):
         url = self.base_url + endpoint
         return await get_content(url,content_type) 
-
-if __name__ == "__main__":
-    ''' test/debug code'''
-    p = PxlsStatsManager()
-    for user in p.get_all_canvas_stats():
-        name = user["username"]
-        alltime_count = user["pixels"]
-        print(f'{name}: {alltime_count} pixels')
-
-        
-
-    

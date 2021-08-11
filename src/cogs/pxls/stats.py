@@ -1,5 +1,7 @@
 from discord.ext import commands
+from PIL import Image
 from utils.setup import stats
+from utils.discord_utils import image_to_file
 
 class PxlsStats(commands.Cog):
 
@@ -42,6 +44,22 @@ class PxlsStats(commands.Cog):
         else:
             msg = f'**{text} stats for {name}**: {number} pixels.'
             return await ctx.send(msg)
+
+    @commands.command(description="Get the current pxls board.",usage = "[-virgin|-initial]")
+    async def board(self,ctx,*options):
+        async with ctx.typing():
+            if "-virginmap" in options or "-virgin" in options:
+                array = await stats.fetch_virgin_map()
+            elif "-initial" in options:
+                array = await stats.fetch_initial_canvas()
+                array = stats.palettize_array(array)
+            else:
+                array = stats.board_array
+                array = stats.palettize_array(array)
+
+            board_img = Image.fromarray(array)
+            file = image_to_file(board_img,"board.png")
+            await ctx.send(file=file)
 
 def setup(client):
     client.add_cog(PxlsStats(client))

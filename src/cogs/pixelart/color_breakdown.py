@@ -29,62 +29,94 @@ class ColorBreakdown(commands.Cog):
 
             input_image = Image.open(BytesIO(img_bytes))
             input_image = input_image.convert('RGBA')
-            nb_pixels = input_image.size[0]*input_image.size[1]
+            await self._colors(ctx,input_image)
 
-            # get the colors table
-            image_colors = await self.client.loop.run_in_executor(None,input_image.getcolors,nb_pixels)
+    async def _colors(self,ctx,input_image,title="Color Breakdown"):
 
-            if image_colors:
-                pxls_colors = rgb_to_pxlscolor(image_colors)
-                pxls_colors.sort(key = lambda x:x[1],reverse=True)
+           
+        nb_pixels = input_image.size[0]*input_image.size[1]
+
+        # get the colors table
+        image_colors = await self.client.loop.run_in_executor(None,input_image.getcolors,nb_pixels)
+
+        if image_colors:
+            pxls_colors = rgb_to_pxlscolor(image_colors)
+            pxls_colors.sort(key = lambda x:x[1],reverse=True)
+        else:
+            return await ctx.send("❌ Unsupported format or image mode.")
+
+        labels = [pxls_color[0] for pxls_color in pxls_colors]
+        values = [pxls_color[1] for pxls_color in pxls_colors]
+        colors = [pxls_color[2] for pxls_color in pxls_colors]
+
+        data = []
+        for i in range(len(labels)):
+            color_name = labels[i]
+            amount = values[i]
+            percentage = round(amount/sum(values)*100,2)
+
+            amount = format_number(amount)
+            percentage = str(percentage) + " %"
+            data.append([color_name,amount,percentage])
+
+        # make the table image
+        if len(data) > 40:
+            # crop the table if it has too many values
+            data_cropped = data[:40]
+            colors_cropped = colors[:40]
+            data_cropped.append(["...","...","..."])
+            colors_cropped.append(None)
+        else:
+            data_cropped = data
+            colors_cropped = colors
+        func = functools.partial(table_to_image,data_cropped,['Color','Qty','%'],['center','right','right'],colors_cropped)
+        table_img = await self.client.loop.run_in_executor(None,func)
+
+        # make the pie chart image
+        piechart = get_piechart(labels,values,colors)
+        piechart_img = await self.client.loop.run_in_executor(None,fig2img,piechart,600,600,1.5)
+
+        # create the message with a header
+        header = f"""• Number of colors: `{len(colors)}`
+                    • Number of pixels: `{format_number(nb_pixels)}`
+                    • Number of visible pixels: `{format_number(sum(values))}`"""
+        header = inspect.cleandoc(header) + "\n"
+
+        # concatenate the pie chart and table image
+        res_img = await self.client.loop.run_in_executor(None,h_concatenate,table_img,piechart_img)
+
+        # send an embed with the color table, the pie chart
+        emb = discord.Embed(title=title,description=header,color=hex_str_to_int(colors[0]))
+        file = await self.client.loop.run_in_executor(None,image_to_file,res_img,"color_breakdown.png",emb)
+        # set the input image as thumbnail
+        f = image_to_file(input_image,"input.png")
+        emb.set_thumbnail(url="attachment://input.png")
+        await ctx.send(files=[file,f],embed=emb)
+
+    @commands.command(description="Show the canvas colors.",aliases=["cc"],usage = "[-placed|-p]")
+    async def canvascolors(self,ctx,*options):
+
+        async with ctx.typing():
+        # get the board with the placeable pixels only
+            board_array = await stats.fetch_board()
+            placemap_array = await stats.fetch_placemap()
+            placeable_board = board_array.copy()
+            placeable_board[placemap_array != 0] = 255
+            placeable_board[placemap_array == 0] = board_array[placemap_array == 0]
+
+            if "-placed" in options or "-p" in options:
+            # use the virgin map as a mask to get the board with placed pixels
+                virgin_array = await stats.fetch_virginmap()
+                placed_board = placeable_board.copy()
+                placed_board[virgin_array != 0] = 255
+                placed_board[virgin_array == 0] = placeable_board[virgin_array == 0]
+                img = Image.fromarray(stats.palettize_array(placed_board))
+                title = "Canvas colors breakdown (non-virgin pixels only)"
             else:
-                return await ctx.send("❌ Unsupported format or image mode.")
+                img = Image.fromarray(stats.palettize_array(placeable_board))
+                title = "Canvas color breakdown"
 
-            labels = [pxls_color[0] for pxls_color in pxls_colors]
-            values = [pxls_color[1] for pxls_color in pxls_colors]
-            colors = [pxls_color[2] for pxls_color in pxls_colors]
-
-            data = []
-            for i in range(len(labels)):
-                color_name = labels[i]
-                amount = values[i]
-                percentage = round(amount/sum(values)*100,2)
-
-                amount = format_number(amount)
-                percentage = str(percentage) + " %"
-                data.append([color_name,amount,percentage])
-
-            # make the table image
-            if len(data) > 40:
-                # crop the table if it has too many values
-                data_cropped = data[:40]
-                colors_cropped = colors[:40]
-                data_cropped.append(["...","...","..."])
-                colors_cropped.append(None)
-            else:
-                data_cropped = data
-                colors_cropped = colors
-            func = functools.partial(table_to_image,data_cropped,['Color','Qty','%'],['center','right','right'],colors_cropped)
-            table_img = await self.client.loop.run_in_executor(None,func)
-
-            # make the pie chart image
-            piechart = get_piechart(labels,values,colors)
-            piechart_img = await self.client.loop.run_in_executor(None,fig2img,piechart,600,600,1.5)
-
-            # create the message with a header
-            header = f"""• Number of colors: `{len(colors)}`
-                        • Number of pixels: `{format_number(nb_pixels)}`
-                        • Number of visible pixels: `{format_number(sum(values))}`"""
-            header = inspect.cleandoc(header) + "\n"
-
-            # concatenate the pie chart and table image
-            res_img = await self.client.loop.run_in_executor(None,h_concatenate,table_img,piechart_img)
-
-            # send an embed with the color table, the pie chart and the input image as thumbnail
-            emb = discord.Embed(title="Color Breakdown",description=header,color=hex_str_to_int(colors[0]))
-            file = await self.client.loop.run_in_executor(None,image_to_file,res_img,"color_breakdown.png",emb)
-            emb.set_thumbnail(url=url)
-            await ctx.send(file=file,embed=emb)
+            await self._colors(ctx,img,title)
 
 def setup(client):
     client.add_cog(ColorBreakdown(client))

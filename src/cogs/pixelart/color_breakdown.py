@@ -38,7 +38,8 @@ class ColorBreakdown(commands.Cog):
 
         # get the colors table
         image_colors = await self.client.loop.run_in_executor(None,input_image.getcolors,nb_pixels)
-
+        if len(image_colors) > 5000:
+            return await ctx.send("❌ This image has too many colors ({})".format(len(image_colors)))
         if image_colors:
             pxls_colors = rgb_to_pxlscolor(image_colors)
             pxls_colors.sort(key = lambda x:x[1],reverse=True)

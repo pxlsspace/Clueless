@@ -166,7 +166,7 @@ class DbStatsManager():
     async def get_stats_history(self,user,date1,date2,canvas_opt):
         """ get the stats between 2 dates """
         if canvas_opt:
-            canvas_to_select = self.stats_manager.get_canvas_code()
+            canvas_to_select = await self.stats_manager.get_canvas_code()
         else:
             canvas_to_select = None
         record1 = await self.find_record(date1,canvas_to_select)
@@ -195,7 +195,7 @@ class DbStatsManager():
 
         # find the records closest to the dates
         if canvas_opt:
-            canvas_to_select = self.stats_manager.get_canvas_code()
+            canvas_to_select = await self.stats_manager.get_canvas_code()
         else:
             canvas_to_select = None
         record1 = await self.find_record(dt1,canvas_to_select)
@@ -226,7 +226,7 @@ class DbStatsManager():
 
             
             if canvas:
-                canvas_to_select = self.stats_manager.get_canvas_code()
+                canvas_to_select = await self.stats_manager.get_canvas_code()
             else:
                 canvas_to_select = None
 

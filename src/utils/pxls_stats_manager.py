@@ -8,12 +8,13 @@ from utils.utils import get_content
 class PxlsStatsManager():
     ''' A helper to get data from pxls.space/stats'''
 
-    def __init__(self):
+    def __init__(self,db_conn):
         self.base_url = "http://pxls.space/"
         self.stats_json = {}
         self.board_info = {}
         self.current_canvas_code = None
         self.board_array = None
+        self.db_conn = db_conn
 
     async def refresh(self):
         try:
@@ -69,12 +70,13 @@ class PxlsStatsManager():
         except:
             return self.stats_json["board_info"]["palette"]
     
-    def get_canvas_code(self):
+    async def get_canvas_code(self):
         try:
             return self.board_info["canvasCode"]
         except:
-            return "48" # TO CHANGE (quick workaround)
-
+            rows= await self.db_conn.sql_select("SELECT canvas_code,MAX(datetime) FROM record")
+            canvas_code = rows[0][0]
+            return canvas_code
     async def get_online_count(self):
         response_json = await self.query('users','json')
         return response_json["count"]

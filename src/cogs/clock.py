@@ -74,7 +74,7 @@ class Clock(commands.Cog):
 
             # check on update for the palette
             palette = stats.get_palette()
-            canvas_code = stats.get_canvas_code()
+            canvas_code = await stats.get_canvas_code()
             await db_stats.save_palette(palette,canvas_code)
 
             # save the color stats
@@ -140,7 +140,7 @@ class Clock(commands.Cog):
         lastupdated = lastupdated.replace(tzinfo=None) #timezone naive as UTC
 
         # get the current canvas code
-        canvas_code = stats.get_canvas_code()
+        canvas_code = await stats.get_canvas_code()
 
         return await db_stats.create_record(lastupdated,canvas_code)
 
@@ -200,7 +200,7 @@ class Clock(commands.Cog):
     async def save_online_count(self):
         ''' save the current 'online count' in the database '''
         online = await stats.get_online_count()
-        canvas_code = stats.get_canvas_code()
+        canvas_code = await stats.get_canvas_code()
         dt = datetime.utcnow().replace(microsecond=0)
         await db_stats.add_general_stat("online_count",online,canvas_code,dt)
 

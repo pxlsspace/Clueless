@@ -4,10 +4,11 @@ from database.db_connection import DbConnection
 from database.db_servers_manager import DbServersManager
 from database.db_stats_manager import DbStatsManager
 
-stats =  PxlsStatsManager()
+db_connection = DbConnection()
+
+stats =  PxlsStatsManager(db_connection)
 DEFAULT_PREFIX = ">"
 
-db_connection = DbConnection()
 db_stats_manager = DbStatsManager(db_connection,stats)
 db_servers_manager = DbServersManager(db_connection,DEFAULT_PREFIX)
 db_users_manager = DbUserManager(db_connection)

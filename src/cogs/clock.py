@@ -1,8 +1,10 @@
 import discord
 import traceback
+from PIL import Image
 from sys import stderr
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta, timezone
+
 from utils.setup import stats, db_stats_manager as db_stats, db_servers_manager as db_servers, db_users_manager as db_users
 from utils.time_converter import local_to_utc
 
@@ -55,7 +57,6 @@ class Clock(commands.Cog):
             print(formatted,file=stderr)
 
     async def _update_stats_data(self):
-
             # refreshing stats json
             await stats.refresh()
             if stats.stats_json == None:
@@ -63,10 +64,25 @@ class Clock(commands.Cog):
                 print(now + ": stats page unreachable")
                 return
 
+            # create a record for the current time and canvas
+            record_id = await self.create_record()
+            if record_id == None:
+                # there is already a record saved for the current time
+                return
             # updating database with the new data
-            await self.save_stats()
+            await self.save_stats(record_id)
 
+            # check on update for the palette
+            palette = stats.get_palette()
+            canvas_code = stats.get_canvas_code()
+            await db_stats.save_palette(palette,canvas_code)
+
+            # save the color stats
+            await self.save_color_stats(record_id)
+
+            # check milestones
             await self.check_milestones()
+
             now = datetime.now().strftime("[%H:%M:%S]")
             print(now +": stats updated")
 
@@ -115,9 +131,7 @@ class Clock(commands.Cog):
                     except Exception:
                         pass
 
-    async def save_stats(self):
-        ''' Update the database with the new /stats data. '''
-        
+    async def create_record(self):
         # get the 'last updated' datetime and its timezone
         lastupdated_string = stats.get_last_updated()
         lastupdated = stats.last_updated_to_date(lastupdated_string)
@@ -125,13 +139,63 @@ class Clock(commands.Cog):
         lastupdated = local_to_utc(lastupdated)
         lastupdated = lastupdated.replace(tzinfo=None) #timezone naive as UTC
 
+        # get the current canvas code
+        canvas_code = stats.get_canvas_code()
+
+        return await db_stats.create_record(lastupdated,canvas_code)
+
+    async def save_stats(self,record_id):
+        ''' Update the database with the new /stats data. '''
+        
         # get all the stats
         alltime_stats = stats.get_all_alltime_stats()
         canvas_stats = stats.get_all_canvas_stats()
 
-        # get the current canvas code
-        canvas_code = stats.get_canvas_code()
-        await db_stats.update_all_pxls_stats(alltime_stats,canvas_stats,lastupdated,canvas_code)
+        await db_stats.update_all_pxls_stats(alltime_stats,
+            canvas_stats,record_id)
+
+    async def save_color_stats(self,record_id):
+        # get the board with the placeable pixels only
+        board_array = stats.board_array
+        placemap_array = await stats.fetch_placemap()
+        placeable_board = board_array.copy()
+        placeable_board[placemap_array != 0] = 255
+        placeable_board[placemap_array == 0] = board_array[placemap_array == 0]
+        placeable_board_img = Image.fromarray(placeable_board)
+        board_colors = placeable_board_img.getcolors()
+
+        # use the virgin map as a mask to get the board with placed pixels
+        virgin_array = await stats.fetch_virginmap()
+        placed_board = placeable_board.copy()
+        placed_board[virgin_array != 0] = 255
+        placed_board[virgin_array == 0] = placeable_board[virgin_array == 0]
+        placed_board_img = Image.fromarray(placed_board)
+        placed_colors = placed_board_img.getcolors()
+
+        # Make a dictionary with the color index as key and a dictionnary of
+        # amount and amount_placed as value
+        # initialise the dictionary
+        colors_dict = {}
+        for color_index,color in enumerate(stats.get_palette()):
+            colors_dict[color_index] = {}
+            colors_dict[color_index]["amount"] = 0
+            colors_dict[color_index]["amount_placed"] = 0
+        
+        # add board values
+        for color in board_colors:
+            amount = color[0]
+            color_id = color[1]
+            if color_id in colors_dict:
+                colors_dict[color_id]["amount"] = amount
+
+        # add placed board values
+        for color in placed_colors:
+            amount = color[0]
+            color_id = color[1]
+            if color_id in colors_dict:
+                colors_dict[color_id]["amount_placed"] = amount
+
+        await db_stats.save_color_stats(colors_dict,record_id)
 
     async def save_online_count(self):
         ''' save the current 'online count' in the database '''

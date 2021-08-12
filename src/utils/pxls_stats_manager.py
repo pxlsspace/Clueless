@@ -59,7 +59,7 @@ class PxlsStatsManager():
         return self.stats_json["toplist"]["canvas"]
 
     def get_palette(self):
-        return self.stats_json["board_info"]["palette"]
+        return self.board_info["palette"]
     
     def get_canvas_code(self):
         return self.board_info["canvasCode"]
@@ -89,7 +89,7 @@ class PxlsStatsManager():
             self.board_info["height"],self.board_info["width"])
         return board_array
 
-    async def fetch_virgin_map(self):
+    async def fetch_virginmap(self):
         "fetch the virgin map with a get request"
         board_bytes = await self.query('virginmap','bytes')
         board_array = np.asarray(list(board_bytes), dtype=np.uint8).reshape(
@@ -99,6 +99,13 @@ class PxlsStatsManager():
     async def fetch_initial_canvas(self):
         "fetch the initial canvas with a get request"
         board_bytes = await self.query('initialboarddata','bytes')
+        board_array = np.asarray(list(board_bytes), dtype=np.uint8).reshape(
+            self.board_info["height"],self.board_info["width"])
+        return board_array
+
+    async def fetch_placemap(self):
+        "fetch the placemap with a get request"
+        board_bytes = await self.query('placemap','bytes')
         board_array = np.asarray(list(board_bytes), dtype=np.uint8).reshape(
             self.board_info["height"],self.board_info["width"])
         return board_array

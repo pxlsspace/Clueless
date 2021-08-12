@@ -36,20 +36,47 @@ class DbStatsManager():
                 FOREIGN KEY(record_id) REFERENCES record(record_id),
                 FOREIGN KEY(pxls_name_id) REFERENCES pxls_name(pxls_name_id)
             );"""
+
+        create_palette_color_table = """
+            CREATE TABLE IF NOT EXISTS palette_color(
+                canvas_code TEXT,
+                color_id INTEGER,
+                color_name TEXT,
+                color_hex TEXT,
+                PRIMARY KEY(canvas_code,color_id)
+            );"""
+
+        create_color_stat_table = """
+            CREATE TABLE IF NOT EXISTS color_stat(
+                record_id INTEGER,
+                color_id INTEGER,
+                amount INTEGER,
+                amount_placed INTEGER,
+                FOREIGN KEY (record_id) REFERENCES record(record_id),
+                PRIMARY KEY (record_id,color_id)
+            );"""
+
         await self.db.sql_update(create_pxls_general_stats_table)
         await self.db.sql_update(create_record_table)
         await self.db.sql_update(create_pxls_user_stat_table)
+        await self.db.sql_update(create_palette_color_table)
+        await self.db.sql_update(create_color_stat_table)
 
     ### pxls user stats functions ###
-    async def update_all_pxls_stats(self,alltime_stats,canvas_stats,last_updated,canvas_code):
-        ''' Create a new time record and insert all the pxls stats data in the database'''
-        # create a time record
+    async def create_record(self,last_updated,canvas_code):
+        ''' Create a record at the time and canvas given, return None if the
+        record already exists'''
         sql = ''' INSERT INTO record (datetime, canvas_code) VALUES (?,?)'''
         try:
+            # create a time record
             record_id = await self.db.sql_insert(sql,(last_updated,canvas_code))
+            return record_id
         except IntegrityError:
             # there is already a record for this time
-            return
+            return None
+
+    async def update_all_pxls_stats(self,alltime_stats,canvas_stats,record_id):
+        ''' Insert all the pxls stats data in the database'''
 
         await self.db.create_connection()
         async with self.db.conn.cursor() as cur:
@@ -273,3 +300,46 @@ class DbStatsManager():
         sql = ''' INSERT INTO pxls_general_stat(stat_name, value ,canvas_code, datetime)
                 VALUES(?,?,?,?) '''
         await self.db.sql_update(sql,(name,value,canvas,date))
+
+    async def save_palette(self,palette_list,canvas_code):
+        """ Save the palette with the given canvas code,
+        do nothing if there is already a palette for the canvas code."""
+
+        sql = """ 
+            INSERT INTO palette_color (canvas_code,color_id,color_name,
+                color_hex) VALUES (?,?,?,?) """
+
+        for i,color in enumerate(palette_list):
+            color_id = i
+            color_name = color["name"]
+            color_hex = color["value"]
+            values = (canvas_code,color_id,color_name,color_hex)
+            try:
+                await self.db.sql_insert(sql,values)
+            except IntegrityError:
+                # a color with this id is already saved for this canvas
+                pass
+
+    async def save_color_stats(self,colors_dict:dict,record_id:int):
+        """ Save the color stats """
+
+        # get the values to insert
+        values_list = []
+        for color_id in colors_dict.keys():
+            amount = colors_dict[color_id]["amount"]
+            amount_placed = colors_dict[color_id]["amount_placed"]
+
+            values = (record_id,color_id,amount,amount_placed)
+            values_list.append(values)
+
+        sql = """ 
+        INSERT INTO color_stat (record_id, color_id, amount, amount_placed)
+        VALUES (?,?,?,?)"""
+        # create a db connection and insert all the values in the db
+        await self.db.create_connection()
+        async with self.db.conn.cursor() as cur:
+            await cur.execute('BEGIN TRANSACTION;')
+            await cur.executemany(sql,values_list)
+            await cur.execute('COMMIT;')
+        await self.db.conn.commit()
+        await self.db.close_connection()

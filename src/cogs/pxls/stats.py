@@ -49,7 +49,7 @@ class PxlsStats(commands.Cog):
     async def board(self,ctx,*options):
         async with ctx.typing():
             if "-virginmap" in options or "-virgin" in options:
-                array = await stats.fetch_virgin_map()
+                array = await stats.fetch_virginmap()
             elif "-initial" in options:
                 array = await stats.fetch_initial_canvas()
                 array = stats.palettize_array(array)

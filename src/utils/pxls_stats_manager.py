@@ -16,9 +16,14 @@ class PxlsStatsManager():
         self.board_array = None
 
     async def refresh(self):
+        try:
+            self.board_info = await self.query("info","json")
+            self.board_array = await self.fetch_board()
+        except:
+            pass
+
         self.stats_json = await self.query("stats/stats.json","json")
-        self.board_info = await self.query("info","json")
-        self.board_array = await self.fetch_board()
+
 
     def get_general_stats(self):
         general = self.stats_json["general"].copy()
@@ -59,10 +64,16 @@ class PxlsStatsManager():
         return self.stats_json["toplist"]["canvas"]
 
     def get_palette(self):
-        return self.board_info["palette"]
+        try:
+            return self.board_info["palette"]
+        except:
+            return self.stats_json["board_info"]["palette"]
     
     def get_canvas_code(self):
-        return self.board_info["canvasCode"]
+        try:
+            return self.board_info["canvasCode"]
+        except:
+            return "48" # TO CHANGE (quick workaround)
 
     async def get_online_count(self):
         response_json = await self.query('users','json')

@@ -116,3 +116,31 @@ def is_hex_color(input_string):
     else:
         return False
 
+def rgb_to_hex(rgb):
+    ''' convert a RGB/RGBA tuple to the matching hex code as a string
+    ((255,255,255) -> '#ffffff')'''
+    str = '#' + '%02x'*len(rgb)
+    return str % rgb
+
+def rgb_to_pxls(rgb):
+    ''' convert a RGB tuple to a pxlsColor.
+    Return None if no color match.'''
+    rgb = rgb [:3]
+    for pxls_color in stats.get_palette():
+        if rgb == hex_to_rgb(pxls_color["value"]):
+            return pxls_color["name"]
+    return None
+def hex_to_rgb(hex:str,mode="RGB"):
+    ''' convert a hex color string to a RGB tuple
+    ('#ffffff' -> (255,255,255) or 'ffffff' -> (255,255,255)'''
+    if "#" in hex:
+        return ImageColor.getcolor(hex,mode)
+    else:
+        return ImageColor.getcolor('#' + hex, mode)
+
+def hex_str_to_int(hex_str:str):
+    """ '#ffffff' -> 0xffffff """
+    if '#' in hex_str:
+        return int(hex_str[1:],16)
+    else:
+        return int(hex_str,16)

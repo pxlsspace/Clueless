@@ -3,14 +3,14 @@ import inspect
 import plotly.graph_objects as go
 import functools
 
-from PIL import Image, ImageColor
+from PIL import Image
 from discord.ext import commands
 from io import BytesIO
 
 from utils.setup import stats
 from utils.discord_utils import format_number, get_image_from_message, image_to_file
 from utils.table_to_image import table_to_image
-from utils.image_utils import h_concatenate
+from utils.image_utils import h_concatenate, rgb_to_hex, rgb_to_pxls, hex_str_to_int
 from utils.plot_utils import fig2img
 
 class ColorBreakdown(commands.Cog):
@@ -33,7 +33,6 @@ class ColorBreakdown(commands.Cog):
 
     async def _colors(self,ctx,input_image,title="Color Breakdown"):
 
-           
         nb_pixels = input_image.size[0]*input_image.size[1]
 
         # get the colors table
@@ -99,11 +98,7 @@ class ColorBreakdown(commands.Cog):
 
         async with ctx.typing():
         # get the board with the placeable pixels only
-            board_array = await stats.fetch_board()
-            placemap_array = await stats.fetch_placemap()
-            placeable_board = board_array.copy()
-            placeable_board[placemap_array != 0] = 255
-            placeable_board[placemap_array == 0] = board_array[placemap_array == 0]
+            placeable_board = await stats.get_placable_board()
 
             if "-placed" in options or "-p" in options:
             # use the virgin map as a mask to get the board with placed pixels
@@ -118,9 +113,6 @@ class ColorBreakdown(commands.Cog):
                 title = "Canvas color breakdown"
 
             await self._colors(ctx,img,title)
-
-def setup(client):
-    client.add_cog(ColorBreakdown(client))
 
 def rgb_to_pxlscolor(img_colors):
     '''convert a list (amount,RGB) to a list of (color_name,amount,hex code)
@@ -140,35 +132,6 @@ def rgb_to_pxlscolor(img_colors):
                 rgb_to_hex(rgb)))
     return res_list
 
-def rgb_to_hex(rgb):
-    ''' convert a RGB tuple to the matching hex code as a string
-    ((255,255,255) -> '#ffffff')'''
-    str = '#' + '%02x'*len(rgb)
-    return str % rgb
-
-def rgb_to_pxls(rgb):
-    ''' convert a RGB tuple to a pxlsColor.
-    Return None if no color match.'''
-    rgb = rgb [:3]
-    for pxls_color in stats.get_palette():
-        if rgb == hex_to_rgb(pxls_color["value"]):
-            return pxls_color["name"]
-    return None
-def hex_to_rgb(hex:str,mode="RGB"):
-    ''' convert a hex color string to a RGB tuple
-    ('#ffffff' -> (255,255,255) or 'ffffff' -> (255,255,255)'''
-    if "#" in hex:
-        return ImageColor.getcolor(hex,mode)
-    else:
-        return ImageColor.getcolor('#' + hex, mode)
-
-def hex_str_to_int(hex_str:str):
-    """ '#ffffff' -> 0xffffff """
-    if '#' in hex_str:
-        return int(hex_str[1:],16)
-    else:
-        return int(hex_str,16)
-
 def get_piechart(labels,values,colors):
     layout = go.Layout(
         paper_bgcolor='rgba(0,0,0,0)',
@@ -183,3 +146,7 @@ def get_piechart(labels,values,colors):
     fig.update_layout(uniformtext_minsize=12, uniformtext_mode='hide')
     fig.update_layout(showlegend=False)
     return fig
+
+
+def setup(client):
+    client.add_cog(ColorBreakdown(client))

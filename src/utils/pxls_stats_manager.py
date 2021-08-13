@@ -123,6 +123,16 @@ class PxlsStatsManager():
             self.board_info["height"],self.board_info["width"])
         return board_array
 
+    async def get_placable_board(self):
+        """fetch the board as an index array and use the placemap as a mask"""
+        canvas_array = await self.fetch_board()
+        placemap_array = await self.fetch_placemap()
+        placeable_board = canvas_array.copy()
+        placeable_board[placemap_array != 0] = 255
+        placeable_board[placemap_array == 0] = canvas_array[placemap_array == 0]
+
+        return placeable_board
+
     async def query(self,endpoint,content_type):
         url = self.base_url + endpoint
         return await get_content(url,content_type) 

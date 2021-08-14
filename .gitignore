@@ -10,3 +10,4 @@ venv/
 src/test2.py
 test.db
 ecosystem.config.js
+*.mp4

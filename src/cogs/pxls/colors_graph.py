@@ -124,7 +124,7 @@ class ColorsGraph(commands.Cog):
 
             table_img = table_to_image(
                 table_rows,
-                ["Color","Progress","px/h","pxs/d"],
+                ["Color","Progress","px/h","px/d"],
                 ["center","right","right","right"],
                 table_colors)
 

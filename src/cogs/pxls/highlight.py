@@ -11,7 +11,7 @@ from utils.arguments_parser import MyParser
 from utils.table_to_image import table_to_image
 
 
-class CanvasColors(commands.Cog, name="Pxls Leaderboard"):
+class Highlight(commands.Cog):
 
     def __init__(self, client):
         self.client = client
@@ -146,4 +146,4 @@ def highlight_image(top_array,background_array,opacity=0.2):
     return black_background_img
 
 def setup(client):
-    client.add_cog(CanvasColors(client))
+    client.add_cog(Highlight(client))

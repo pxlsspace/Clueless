@@ -343,3 +343,38 @@ class DbStatsManager():
             await cur.execute('COMMIT;')
         await self.db.conn.commit()
         await self.db.close_connection()
+
+    async def get_canvas_color_stats(self,canvas_code,dt1=None,dt2=None):
+        """ Get all the color stats as a list of sqlite3 rows 
+        
+        Get the data between dt1 and dt2 if they're not null or for the whole 
+        canvas"""
+
+        if dt1 and dt2:
+            record1 = await self.find_record(dt1,canvas_code)
+            datetime1 = record1["datetime"]
+            record2 = await self.find_record(dt2,canvas_code)
+            datetime2 = record2["datetime"]
+        else:
+            datetime1 = datetime(1900,1,1)
+            datetime2 = datetime.utcnow()
+
+        sql = """
+            SELECT color_id, amount, amount_placed, datetime
+            FROM color_stat
+            JOIN record ON record.record_id = color_stat.record_id
+            WHERE canvas_code = ?
+            AND datetime BETWEEN ? AND ?
+            ORDER BY record.datetime
+        """
+
+        rows = await self.db.sql_select(sql,(canvas_code,datetime1,datetime2))
+        return rows
+
+    async def get_palette(self,canvas_code):
+        sql = """ SELECT color_id,color_name,color_hex 
+            FROM palette_color WHERE canvas_code = ? """
+
+        palette_colors = await self.db.sql_select(sql,canvas_code)
+
+        return palette_colors

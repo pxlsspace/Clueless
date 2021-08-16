@@ -2,13 +2,14 @@ import discord
 from discord.ext import commands
 from datetime import datetime, timedelta, timezone
 import plotly.graph_objects as go
+from utils.image_utils import hex_str_to_int
 
-from utils.setup import db_stats_manager as db_stats
+from utils.setup import db_stats_manager as db_stats, db_users_manager as db_users
 from utils.time_converter import *
 from utils.arguments_parser import parse_leaderboard_args
 from utils.discord_utils import format_number, image_to_file
 from utils.table_to_image import table_to_image
-from utils.plot_utils import fig2img, layout_without_annotation, BACKGROUND_COLOR, COLORS
+from utils.plot_utils import fig2img, get_theme, hex_to_rgba_string
 from utils.cooldown import get_best_possible
 
 class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
@@ -44,6 +45,11 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         sort_opt = None
         last_opt = param["last"]
         graph_opt = param["graph"]
+
+        # get the user theme
+        discord_user = await db_users.get_discord_user(ctx.author.id)
+        current_user_theme = discord_user["color"] or "default"
+        theme = get_theme(current_user_theme)
 
         # if a time value is given, we will show the leaderboard during this time
         if param["before"] or param["after"] or last_opt:
@@ -173,11 +179,11 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             colors = []
             for e in res_ldb:
                 if e[1] == username[0]:
-                    colors.append("#66c5cc")
+                    colors.append(theme.get_palette(1)[0])
                 else:
                     colors.append(None)
         img = await self.client.loop.run_in_executor(
-            None,table_to_image,res_ldb,column_names,alignments2,colors)
+            None,table_to_image,res_ldb,column_names,alignments2,colors,theme)
 
         # make title and embed header
         text = ""
@@ -213,19 +219,21 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         # make the bars graph
         if graph_opt:
             data = [int(user[2].replace(" ","")) if user[2] != "???" else None for user in res_ldb]
+            theme_colors = theme.get_palette(1)
             if username:
-                names = [(f"<span style='color:{COLORS[0]};'>{user[1]}</span>" if user[1] == username[0] else user[1]) for user in res_ldb]
-                colors = [(COLORS[0] if user[1] == username[0] else "#696969") for user in res_ldb]
+                names = [(f"<span style='color:{theme_colors[0]};'>{user[1]}</span>" if user[1] == username[0] else user[1]) for user in res_ldb]
+                colors = [(theme_colors[0] if user[1] == username[0] else theme.off_color) for user in res_ldb]
             else:
                 names = [user[1] for user in res_ldb]
-                colors = [COLORS[0]]*len(res_ldb)
-            fig = self.make_bars(names,data,title,colors)
+                colors = [theme_colors[0]]*len(res_ldb)
+            fig = self.make_bars(names,data,title,theme,colors)
 
             bars_img = fig2img(fig)
             bars_file = image_to_file(bars_img,"bar_chart.png")
 
         # create a discord embed
-        emb = discord.Embed(color=0x66c5cc,title=title,description=text)
+        emb = discord.Embed(color=hex_str_to_int(theme.get_palette(1)[0]),
+            title=title,description=text)
         file = image_to_file(img,"leaderboard.png",emb)
 
         # send graph and embed
@@ -234,41 +242,59 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             await ctx.send(file=bars_file)
 
     @staticmethod
-    def make_bars(users,pixels,title,colors=None):
+    def make_bars(users,pixels,title,theme,colors=None):
         if colors == None:
-            colors = COLORS
+            colors = theme.get_palette(len(users))
         # create the graph and style
-        fig = go.Figure(layout=layout_without_annotation)
+        fig = go.Figure(layout=theme.get_layout(with_annotation=False))
         fig.update_yaxes(rangemode='tozero')
         fig.update_xaxes(tickmode='linear')
         fig.update_layout(annotations=[])
         fig.update()
         # the title displays the user if there is only 1 in the user_list
         fig.update_layout(title="<span style='color:{};'>{}</span>".format(
-            COLORS[0],
+            theme.get_palette(1)[0],
             title))
 
+        text = ['<span style = "text-shadow:\
+                        -{2}px -{2}px 0 {0},\
+                        {2}px -{2}px 0 {0},\
+                        -{2}px {2}px 0 {0},\
+                        {2}px {2}px 0 {0},\
+                        0px {2}px 0px {0},\
+                        {2}px 0px 0px {0},\
+                        -{2}px 0px 0px {0},\
+                        0px -{2}px 0px {0};">{1}</span>'.format(theme.background_color,pixel,2) for pixel in pixels]
+
         # trace the user data
-        fig.add_trace(
-            go.Bar(
-                x = users,
-                y = pixels,
-                # add an outline of the bg color to the text
-                text = ['<span style = "text-shadow:\
-                    -{2}px -{2}px 0 {0},\
-                    {2}px -{2}px 0 {0},\
-                    -{2}px {2}px 0 {0},\
-                    {2}px {2}px 0 {0},\
-                    0px {2}px 0px {0},\
-                    {2}px 0px 0px {0},\
-                    -{2}px 0px 0px {0},\
-                    0px -{2}px 0px {0};">{1}</span>'.format(BACKGROUND_COLOR,pixel,2) for pixel in pixels],
-                textposition = 'outside',
-                marker = dict(color=colors, opacity=0.95),
-                textfont = dict(color=colors, size=40),
-                cliponaxis = False
+        if theme.has_underglow == True:
+            # different style if the theme has underglow
+            fig.add_trace(
+                go.Bar(
+                    x = users,
+                    y = pixels,
+                    text = text,
+                    textposition = 'outside',
+                    marker_color = [hex_to_rgba_string(color,0.3) for color in colors],
+                    marker_line_color = colors,
+                    marker_line_width=2.5,
+                    textfont = dict(color=colors, size=40),
+                    cliponaxis = False
+                )
             )
-        )
+        else:
+            fig.add_trace(
+                go.Bar(
+                    x = users,
+                    y = pixels,
+                    # add an outline of the bg color to the text
+                    text = text,
+                    textposition = 'outside',
+                    marker = dict(color=colors, opacity=0.95),
+                    textfont = dict(color=colors, size=40),
+                    cliponaxis = False
+                )
+            )
         return fig
 
 def setup(client):

@@ -10,7 +10,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from database.db_connection import DbConnection
 from database.db_stats_manager import DbStatsManager
 from utils.setup import stats
-from utils.plot_utils import COLORS
 
 """ Script to generate a bar chart race video for a given canvas """
 

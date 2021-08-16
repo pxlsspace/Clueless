@@ -93,6 +93,11 @@ class DbUserManager():
         sql = "UPDATE discord_user SET pxls_user_id = ? WHERE discord_id = ? "
         await self.db.sql_update(sql,(pxls_user_id,discord_id))
 
+    async def set_user_theme(self,discord_id,theme):
+        ''' update the theme of a discord_user'''
+        sql = "UPDATE discord_user SET color = ? WHERE discord_id = ? "
+        await self.db.sql_update(sql,(theme,discord_id))
+
     async def get_all_blacklisted_users(self):
         ''' Get all the discord users blacklisted. Returns a list of discord ID'''
         sql = "SELECT discord_id FROM discord_user WHERE is_blacklisted = 1"

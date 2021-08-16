@@ -4,10 +4,10 @@ from datetime import datetime, timedelta,timezone
 
 from utils.arguments_parser import MyParser
 from utils.discord_utils import format_number, image_to_file
-from utils.image_utils import hex_to_rgb, rgb_to_hex, v_concatenate
-from utils.table_to_image import is_dark, lighten_color, table_to_image
+from utils.image_utils import hex_to_rgb, rgb_to_hex, v_concatenate, is_dark, lighten_color
+from utils.table_to_image import table_to_image
 from utils.setup import stats, db_stats_manager as db_stats
-from utils.plot_utils import fig2img, layout
+from utils.plot_utils import fig2img, add_glow, get_theme
 from utils.time_converter import str_to_td, round_minutes_down
 
 class ColorsGraph(commands.Cog):
@@ -132,6 +132,7 @@ class ColorsGraph(commands.Cog):
             await ctx.send(files=files)
 
 def make_color_graph(data_list,colors):
+    layout = get_theme("default").get_layout()
     fig = go.Figure(layout=layout)
     fig.update_layout(showlegend=False)
 
@@ -195,57 +196,6 @@ def make_color_graph(data_list,colors):
         add_glow(fig,glow_color='lighten_color',dark_only=True)
     return fig
 
-def add_glow(fig:go.Figure,nb_glow_lines=10,diff_linewidth=1.5,alpha_lines=0.5,
-    glow_color="line_color",dark_only=False):
-    """Add a glow effect to all the lines in a Figure object.
-    
-    Each existing line is redrawn several times with increasing width and low
-    alpha to create the glow effect.
-    """
-    alpha_value = alpha_lines/nb_glow_lines
-
-    for trace in fig.select_traces():
-        x = trace.x
-        y = trace.y
-        mode = trace.mode
-        line_width = trace.line.width
-        line_color = trace.marker.color
-
-        # skip the color if dark_only is true and the color is not dark
-        if dark_only and not is_dark(hex_to_rgb(line_color)):
-            continue
-
-        if glow_color == "line_color":
-            color = line_color
-
-        elif glow_color == "lighten_color":
-            # lighten only the dark colors
-            if is_dark(hex_to_rgb(line_color)):
-                color = rgb_to_hex(lighten_color(hex_to_rgb(line_color),0.2))
-            else:
-                color = line_color
-        else:
-            color = glow_color
-
-        # add the glow
-        for n in range(nb_glow_lines):
-            fig.add_trace(go.Scatter(
-                x = x,
-                y = y,
-                mode = mode,
-                line=dict(width=line_width + (diff_linewidth*n)),
-                marker=dict(color = hex_to_rgba_string(color,alpha_value))
-            ))
-
-        # add the original trace over the glow
-        fig.add_trace(go.Scatter(
-            x = x,
-            y = y,
-            mode = mode,
-            line=dict(width=line_width),
-            marker=dict(color = line_color)
-        ))
-
 def fig2file(fig,title,table_img):
 
     graph_img = fig2img(fig)
@@ -257,15 +207,6 @@ def fig2file(fig,title,table_img):
         table_file = image_to_file(table_img,"table.png")
         graph_file = image_to_file(graph_img,title)
         return [table_file,graph_file]
-
-def hex_to_rgba_string(hex:str,alpha_value=1) ->str:
-    """ '#ffffff' -> 'rgba(255,255,255,alpha_value)' """
-    hex = hex.strip("#")
-
-    rgb = tuple([int(hex[i:i+2],16) for i in range(0, len(hex), 2)])
-    rgba = rgb + (alpha_value,)
-
-    return "rgba" + str(rgba)
 
 def setup(client):
     client.add_cog(ColorsGraph(client))

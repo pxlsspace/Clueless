@@ -1,10 +1,9 @@
 from PIL import Image, ImageColor
 import numpy as np
-import matplotlib.colors as mc
-import colorsys
 
 from utils.font.font_manager import FontManager, PixelText
 from utils import image_utils
+from utils.plot_utils import Theme
 
 font_name = "minecraft"
 
@@ -45,10 +44,10 @@ def make_table_array(data,titles,alignments,colors=None):
         for j,col in enumerate(lines):
             text = str(col)
             pt = PixelText(text,font_name,colors[i],BACKGROUND_COLOR)
-            is_dark(colors[i])
+
             text_array = pt.make_array()
-            if is_dark(colors[i]):
-                text_array = add_outline(text_array,lighten_color(colors[i],0.3))
+            if image_utils.is_dark(colors[i]):
+                text_array = add_outline(text_array,image_utils.lighten_color(colors[i],0.3))
             else:
                 text_array = add_border(text_array,1,BACKGROUND_COLOR)
             col_array[j].append(text_array)
@@ -175,33 +174,35 @@ def make_styled_corner(array,color):
     array[-(width*2)-1,-width:] = color
     array[-width:,-(width*2)-1] = color
 
-def is_dark(color:tuple):
-    """ check if a color luminance is above a threshold """
-    THRESHOLD = 80
-
-    if len(color) == 4:
-        r,g,b,a = color
-    if len(color) == 3:
-        r, g, b = color
-
-    luminance_b = (0.299*r + 0.587*g + 0.114*b)
-    if luminance_b > THRESHOLD:
-        return False
-    else:
-        return True
-
-def table_to_image(data,titles,alignments=None,colors=None):
+def table_to_image(data,titles,alignments=None,colors=None,theme:Theme=None):
     ''' Create an image of the table to display it 
     - :param: data: a 2d list with the content of the table
     - :param: titles: a list of titles for each column of the table
     - :param: alignments: a list of alignments for each column, either `center`, `left`, `right`
-    - :param: colors: a list of color for each line, the colors must be a string of hex code (e.g. #ffffff) '''
-    
+    - :param: colors: a list of color for each line, the colors must be a string of hex code (e.g. #ffffff)
+    - :param theme: a Theme object to set the table colors'''
     # check on params
     if len(data[0]) != len(titles):
         raise ValueError("The number of column in data and titles don't match.")
     if alignments and len(data[0]) != len(alignments):
         raise ValueError("The number of column in data and alignments don't match.")
+
+    # use the theme colors if a theme is given
+    if theme != None:
+        global BACKGROUND_COLOR,TEXT_COLOR,LINE_COLOR, OUTER_OUTLINE_COLOR
+        BACKGROUND_COLOR = theme.background_color
+        TEXT_COLOR = theme.font_color
+        LINE_COLOR = theme.grid_color
+        OUTER_OUTLINE_COLOR = theme.table_outline_color
+    else:
+        BACKGROUND_COLOR = "#202225"
+        TEXT_COLOR = "#b9bbbe"
+        LINE_COLOR = "#2f3136"
+        OUTER_OUTLINE_COLOR = "#000000"
+    BACKGROUND_COLOR = ImageColor.getcolor(BACKGROUND_COLOR,"RGBA")
+    TEXT_COLOR = ImageColor.getcolor(TEXT_COLOR,"RGBA")
+    LINE_COLOR = ImageColor.getcolor(LINE_COLOR,"RGBA")
+    OUTER_OUTLINE_COLOR = ImageColor.getcolor(OUTER_OUTLINE_COLOR,"RGBA")
 
     if colors == None:
         colors = [None]*len(data)
@@ -221,7 +222,7 @@ def table_to_image(data,titles,alignments=None,colors=None):
     table_array = add_border(table_array,OUTER_OUTLINE_WIDTH,OUTER_OUTLINE_COLOR)
     make_styled_corner(table_array,LINE_COLOR)
     table_array = add_border(table_array,1,LINE_COLOR)
-    
+
     # convert to image
     image = Image.fromarray(table_array)
     scale = 4
@@ -229,25 +230,3 @@ def table_to_image(data,titles,alignments=None,colors=None):
     new_height = image.size[1]*scale
     image = image.resize((new_width,new_height),Image.NEAREST)
     return image
-
-# https://stackoverflow.com/a/49601444
-def lighten_color(color, amount=0.5):
-    """
-    Lightens the given color by multiplying (1-luminosity) by the given amount.
-    Input must be a RGB tuple.
-
-    Examples:
-    >> lighten_color((255,255,255), 0.3)
-    >> lighten_color('#F034A3', 0.6)
-    >> lighten_color('blue', 0.5)
-    """
-
-    try:
-        c = mc.cnames[color]
-    except:
-        color = [v/255 for v in color]
-        c = color
-    c = colorsys.rgb_to_hls(*mc.to_rgb(c))
-    res_color = colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
-    res_color = tuple([int(v*255) for v in res_color])
-    return res_color

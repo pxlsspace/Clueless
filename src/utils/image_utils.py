@@ -1,6 +1,9 @@
 from PIL import Image, ImageColor
 import numpy as np
 import re
+import matplotlib.colors as mc
+import colorsys
+
 from utils.setup import stats
 
 # from https://note.nkmk.me/en/python-pillow-concat-images/
@@ -144,3 +147,39 @@ def hex_str_to_int(hex_str:str):
         return int(hex_str[1:],16)
     else:
         return int(hex_str,16)
+
+def is_dark(color:tuple,theshhold=80):
+    """ check if a color luminance is above a threshold """
+
+    if len(color) == 4:
+        r,g,b,a = color
+    if len(color) == 3:
+        r, g, b = color
+
+    luminance_b = (0.299*r + 0.587*g + 0.114*b)
+    if luminance_b > theshhold:
+        return False
+    else:
+        return True
+
+# https://stackoverflow.com/a/49601444
+def lighten_color(color, amount=0.5):
+    """
+    Lightens the given color by multiplying (1-luminosity) by the given amount.
+    Input must be a RGB tuple.
+
+    Examples:
+    >> lighten_color((255,255,255), 0.3)
+    >> lighten_color('#F034A3', 0.6)
+    >> lighten_color('blue', 0.5)
+    """
+
+    try:
+        c = mc.cnames[color]
+    except:
+        color = [v/255 for v in color]
+        c = color
+    c = colorsys.rgb_to_hls(*mc.to_rgb(c))
+    res_color = colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
+    res_color = tuple([int(v*255) for v in res_color])
+    return res_color

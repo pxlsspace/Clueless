@@ -9,8 +9,8 @@ from utils.setup import db_stats_manager as db_stats, db_users_manager as db_use
 from utils.arguments_parser import parse_speed_args
 from utils.table_to_image import table_to_image
 from utils.time_converter import format_datetime, round_minutes_down, str_to_td
-from utils.plot_utils import layout, BACKGROUND_COLOR, COLORS, fig2img
-from utils.image_utils import v_concatenate
+from utils.plot_utils import add_glow, get_theme,fig2img, hex_to_rgba_string
+from utils.image_utils import hex_str_to_int, v_concatenate
 from utils.cooldown import get_best_possible
 
 class PxlsSpeed(commands.Cog):
@@ -35,10 +35,14 @@ class PxlsSpeed(commands.Cog):
         except ValueError as e:
             return await ctx.send(f'❌ {e}')
 
-        # check on name arguements
+        # get the user theme
+        discord_user = await db_users.get_discord_user(ctx.author.id)
+        current_user_theme = discord_user["color"] or "default"
+        theme = get_theme(current_user_theme)
+
+        # check on name arguments
         names = param["names"]
         if len(names) == 0:
-            discord_user = await db_users.get_discord_user(ctx.author.id)
             pxls_user_id = discord_user["pxls_user_id"]
             if pxls_user_id == None:
                 return await ctx.send(f"❌ You need to specify at least one username.\n\(You can also set a default username with `{ctx.prefix}setname <username>`)")
@@ -97,16 +101,16 @@ class PxlsSpeed(commands.Cog):
         # create the headers needed for the table
         alignments = ["left","right","right","right","right"]
         titles = ["Name","Pixels","Placed","px/h","px/d"]
-        table_colors = cycle_through_list(COLORS,len(res))
+        table_colors = theme.get_palette(len(res))
         # get the image of the table
-        table_image = table_to_image(res,titles,alignments,table_colors)
+        table_image = table_to_image(res,titles,alignments,table_colors,theme=theme)
 
         # create the graph
         user_list = [user[1] for user in ldb]
         if groupby_opt:
-            graph = await get_grouped_graph(user_list,past_time,now_time,groupby_opt,canvas_opt)
+            graph = await get_grouped_graph(user_list,past_time,now_time,groupby_opt,canvas_opt,theme)
         else:
-            graph = await get_stats_graph(user_list,canvas_opt,past_time,now_time,param["progress"])
+            graph = await get_stats_graph(user_list,canvas_opt,past_time,now_time,param["progress"],theme)
         graph_image = fig2img(graph)
 
         # merge the table image and graph image
@@ -119,7 +123,7 @@ class PxlsSpeed(commands.Cog):
         description = f"• Between {format_datetime(past_time)} and {format_datetime(now_time)}\n"
         description += f"• Average cooldown: `{round(average_cooldown,2)}` seconds\n"
         description += f"• Best possible (without stack): ~`{best_possible}` pixels."
-        emb = discord.Embed(color=0x66c5cc)
+        emb = discord.Embed(color=hex_str_to_int(theme.get_palette(1)[0]))
         emb.add_field(name='Speed',value = description)
 
         # send the embed with the graph image
@@ -129,12 +133,13 @@ class PxlsSpeed(commands.Cog):
 def setup(client):
     client.add_cog(PxlsSpeed(client))
 
-async def get_stats_graph(user_list,canvas,date1,date2,progress_opt=False):
+async def get_stats_graph(user_list,canvas,date1,date2,progress_opt,theme):
 
     # create the graph
-    fig = go.Figure(layout=layout)
+    colors = theme.get_palette(len(user_list))
+    fig = go.Figure(layout=theme.get_layout())
     fig.update_layout(showlegend=False)
-    fig.update_layout(title=f"<span style='color:{COLORS[0]};'>Speed</span>")
+    fig.update_layout(title=f"<span style='color:{colors[0]};'>Speed</span>")
 
     for i,user in enumerate(user_list):
         # get the data
@@ -156,15 +161,29 @@ async def get_stats_graph(user_list,canvas,date1,date2,progress_opt=False):
             pixels = [pixel - pixels[0] for pixel in pixels]
 
         # trace the user data
-        fig.add_trace(go.Scatter(
-            x=dates,
-            y=pixels,
-            mode='lines',
-            name=user,
-            line=dict(width=4),
-            marker=dict(color= COLORS[i%len(COLORS)],size=6)
+        if theme.has_underglow == True and min(pixels) ==0:
+            fig.add_trace(go.Scatter(
+                x=dates,
+                y=pixels,
+                mode='lines',
+                name=user,
+                line=dict(width=4),
+                marker=dict(color= colors[i],size=6),
+                fill = 'tozeroy',
+                fillcolor=hex_to_rgba_string(colors[i],0.04)
+                )
             )
-        )
+
+        else:
+            fig.add_trace(go.Scatter(
+                x=dates,
+                y=pixels,
+                mode='lines',
+                name=user,
+                line=dict(width=4),
+                marker=dict(color= colors[i],size=6)
+                )
+            )
 
         # add a marge at the right to add the name
         longest_name = max([len(user) for user in user_list])
@@ -179,23 +198,27 @@ async def get_stats_graph(user_list,canvas,date1,date2,progress_opt=False):
             y = pixels[-1],
             text = ("<b>%s</b>" % user),
             showarrow = False,
-            font = dict(color= COLORS[i%len(COLORS)],size=40)
+            font = dict(color= colors[i],size=40)
         )
+
+    if theme.has_glow == True:
+        add_glow(fig,nb_glow_lines=5, alpha_lines=0.5, diff_linewidth=4)
     return fig
 
-async def get_grouped_graph(user_list,date1,date2,groupby_opt,canvas_opt):
+async def get_grouped_graph(user_list,date1,date2,groupby_opt,canvas_opt,theme):
 
     # check on the groupby param
     if not groupby_opt in ["day","hour"]:
         raise ValueError("'groupby' parameter can only be 'day' or 'hour'.")
 
     # create the graph and style
-    fig = go.Figure(layout=layout)
+    colors = theme.get_palette(len(user_list))
+    fig = go.Figure(layout=theme.get_layout())
     fig.update_yaxes(rangemode='tozero')
 
     # the title displays the user if there is only 1 in the user_list
     fig.update_layout(title="<span style='color:{};'>Speed per {}{}</span>".format(
-        COLORS[0],
+        colors[0],
         groupby_opt,
         f" for <b>{user_list[0]}</b>" if len(user_list) == 1 else ""
     ))
@@ -214,28 +237,49 @@ async def get_grouped_graph(user_list,date1,date2,groupby_opt,canvas_opt):
             dates = [stat["last_datetime"][:13] for stat in stats]
         pixels = [stat["placed"] for stat in stats]
 
+        # add an outline of the bg color to the text above the bars
+        text = ['<span style = "text-shadow:\
+        -{2}px -{2}px 0 {0},\
+        {2}px -{2}px 0 {0},\
+        -{2}px {2}px 0 {0},\
+        {2}px {2}px 0 {0},\
+        0px {2}px 0px {0},\
+        {2}px 0px 0px {0},\
+        -{2}px 0px 0px {0},\
+        0px -{2}px 0px {0};">{1}</span>'.format(theme.background_color,pixel,2) for pixel in pixels]
+
+        name='<span style="color:{};font-size:40;"><b>{}</b></span>'.format(colors[i], user)
         # trace the user data
-        fig.add_trace(
-            go.Bar(
-                name='<span style="color:{};font-size:40;"><b>{}</b></span>'.format(COLORS[i%len(COLORS)], user),
-                x = dates,
-                y = pixels,
-                # add an outline of the bg color to the text
-                text = ['<span style = "text-shadow:\
-                     -{2}px -{2}px 0 {0},\
-                     {2}px -{2}px 0 {0},\
-                     -{2}px {2}px 0 {0},\
-                     {2}px {2}px 0 {0},\
-                     0px {2}px 0px {0},\
-                     {2}px 0px 0px {0},\
-                     -{2}px 0px 0px {0},\
-                     0px -{2}px 0px {0};">{1}</span>'.format(BACKGROUND_COLOR,pixel,2) for pixel in pixels],
-                textposition = 'outside',
-                marker = dict(color=COLORS[i%len(COLORS)], opacity=0.95),
-                textfont = dict(color=COLORS[i%len(COLORS)], size=40),
-                cliponaxis = False
+        if theme.has_underglow == True:
+            # different style if the theme has underglow
+            fig.add_trace(
+                go.Bar(
+                    name=name,
+                    x = dates,
+                    y = pixels,
+                    text = text,
+                    textposition = 'outside',
+                    marker_color = hex_to_rgba_string(colors[i],0.15),
+                    marker_line_color =colors[i],
+                    marker_line_width=2.5,
+                    textfont = dict(color=colors[i], size=40),
+                    cliponaxis = False
+                )
             )
-        )
+        else:
+            fig.add_trace(
+                go.Bar(
+                    name=name,
+                    x = dates,
+                    y = pixels,
+                    text = text,
+                    textposition = 'outside',
+                    marker = dict(color=colors[i], opacity=0.9),
+                    textfont = dict(color=colors[i], size=40),
+                    cliponaxis = False
+                )
+            )
+
     return fig
 
 def cycle_through_list(list,number_of_element:int):

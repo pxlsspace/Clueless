@@ -53,8 +53,19 @@ def format_table(table,column_names,alignments=None,name=None):
     return str_table
 
 def format_number(num):
-    ''' format a number in a string: 1234567 -> 1 234 567'''
-    return f'{int(num):,}'.replace(","," ") # convert to string
+    ''' Format a number in a string.
+    >>> format_number(1234567) -> '1 234 567'
+    >>> format_number(1234.56789) -> '1 234.56' # round with 2 decimals
+    >>> format_number(None) -> '???' 
+    >>> format_number('not a number') -> 'not a number' '''
+    if isinstance(num,int):
+        return f'{int(num):,}'.replace(","," ") # convert to string
+    elif isinstance(num,float):
+        return f'{round(float(num),2):,}'.replace(","," ") # convert to string
+    elif num == None:
+        return '???'
+    else:
+        return str(num)
 
 EMOJI_REGEX = r"<(?P<animated>a?):(?P<name>[a-zA-Z0-9_]{2,32}):(?P<id>[0-9]{18,22})>"
 

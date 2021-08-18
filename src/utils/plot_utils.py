@@ -160,10 +160,10 @@ class Theme():
                 '#88FFF3', '#277E6C', '#FDE817', '#FFD5BC', '#F02523',
                  '#BEFF40', '#FFA9D9', '#FFFFFF', '#70DD13', '#FFF491',
                   '#D24CE9', '#32B69F', '#31A117', '#77431F', '#B11206',
-                   '#24B5FE', '#888888', '#555555', '#FCA80E', '#0B5F35',
+                   '#24B5FE', '#888888', '#FCA80E', '#0B5F35',
                     '#FC7510', '#740C00', '#FFB783', '#FF59EF', '#CDCDCD',
                      '#FF6474', '#B66D3D', '#8B2FA8', '#125CC7']
-            return colors
+            return cycle_through_list(colors,nb_colors)
 
         # default palette
         else:
@@ -240,14 +240,27 @@ synthwave_theme = Theme(
     palette = "synthwave"
 )
 
+synthwave_noglow_theme = Theme(
+    name = "synthwave-noglow",
+    description = "Same as `synthwave` but without glow which makes it faster.", 
+    background_color = "#1d192c",
+    grid_color= "#514384",
+    font_color = "#c1ebff",
+    table_outline_color = "#000000",
+    off_color= "#6954b7",
+    has_glow = False,
+    has_underglow = True,
+    palette = "synthwave"
+)
+
 pxls_theme = Theme(
     name = "pxls",
     description = "Uses only colors from the pxls.space palette.", 
     background_color = "#222222",
     grid_color= "#555555",
-    font_color = "#888888",
+    font_color = "#cdcdcd",
     table_outline_color = "#000000",
-    off_color= "#555555",
+    off_color= "#888888",
     has_glow = False,
     has_underglow = False,
     palette = "pxls"
@@ -266,7 +279,8 @@ pastel_theme = Theme(
     palette = "pastel"
 )
 
-theme_list = [default_theme,synthwave_theme,pastel_theme,pxls_theme]
+theme_list = [default_theme,synthwave_theme,synthwave_noglow_theme
+    ,pastel_theme,pxls_theme]
 
 def get_theme(theme_name) -> Theme:
     for theme in theme_list:

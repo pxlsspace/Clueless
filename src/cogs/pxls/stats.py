@@ -55,7 +55,7 @@ class PxlsStats(commands.Cog):
                 format_number(total_non_virgin/total_placeable*100),
             )
 
-            info_text = "• Canvas Code: `{}`\n• Start date: {}\n• Time elapsed: {}\n• Canvas Users: `{}`".format(
+            info_text = "• Canvas Code: `{}`\n• Start Date: {}\n• Time Elapsed: {}\n• Canvas Users: `{}`".format(
                 canvas_code,
                 format_datetime(start_date),
                 td_format(datetime.utcnow()-start_date,hide_seconds=True),
@@ -64,7 +64,7 @@ class PxlsStats(commands.Cog):
 
             # create an embed with all the infos
             emb = discord.Embed(title="Pxls.space Stats",color=0x66c5cc)
-            emb.add_field(name="**Genral Stats**",value=general_stats_text,inline=False)
+            emb.add_field(name="**General Stats**",value=general_stats_text,inline=False)
             emb.add_field(name="**Canvas Info**",value=info_text,inline=False)
             emb.add_field(name="**Canvas Stats**",value=canvas_stats_text,inline=False)
             emb.add_field(name="\u200b",value="Last updated: "+format_datetime(last_updated),inline=False)

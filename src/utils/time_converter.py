@@ -9,16 +9,16 @@ def str_to_td(input:str):
     
     Return `None` if the string does not match.'''
 
-    regex = re.compile(r'((?P<days>\d+?)d)?((?P<hours>\d+?)h)?((?P<minutes>\d+?)(m|min))?((?P<seconds>\d+?)(s|sec))?')
+    regex = re.compile(r'((?P<days>(\d*\.)?\d+?)d)?((?P<hours>(\d*\.)?\d+?)h)?((?P<minutes>(\d*\.)?\d+?)(m|min))?((?P<seconds>(\d*\.)?\d+?)(s|sec))?')
     parts = regex.fullmatch(input)
     if not parts:
-        return
+        return None
 
     parts = parts.groupdict()
     time_params = {}
     for name, param in parts.items():
         if param:
-            time_params[name] = int(param)
+            time_params[name] = float(param)
     return timedelta(**time_params)
 
 
@@ -37,7 +37,7 @@ def format_datetime(dt:datetime,style=None):
         return f'<t:{ts}>'
  
 
-def td_format(td_object:timedelta):
+def td_format(td_object:timedelta,hide_seconds=False):
     ''' Convert a `timedelta` object to a string in the format:
 
     `x years, x months, x days, x min, x sec`.'''
@@ -49,6 +49,9 @@ def td_format(td_object:timedelta):
         ('hour', 60*60),
         ('minute', 60),
         ('second', 1)]
+
+    if hide_seconds:
+        periods = periods[:-1]
     strings=[]
     for period_name, period_seconds in periods:
         if seconds >= period_seconds:

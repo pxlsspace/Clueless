@@ -69,7 +69,7 @@ def parse_speed_args(args):
     parser.add_argument('-progress', action='store_true', default=False)
 
 
-    parser.add_argument('-last',action='store',default="1d")
+    parser.add_argument('-last',action='store',default=None)
     parser.add_argument('-after',
                         dest='after',
                         nargs=2,

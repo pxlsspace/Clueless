@@ -8,7 +8,7 @@ from utils.discord_utils import image_to_file, format_number
 from utils.setup import db_stats_manager as db_stats, db_users_manager as db_users
 from utils.arguments_parser import parse_speed_args
 from utils.table_to_image import table_to_image
-from utils.time_converter import format_datetime, round_minutes_down, str_to_td
+from utils.time_converter import format_datetime, round_minutes_down, str_to_td, td_format
 from utils.plot_utils import add_glow, get_theme,fig2img, hex_to_rgba_string
 from utils.image_utils import hex_str_to_int, v_concatenate
 from utils.cooldown import get_best_possible
@@ -40,7 +40,7 @@ class PxlsSpeed(commands.Cog):
         current_user_theme = discord_user["color"] or "default"
         theme = get_theme(current_user_theme)
 
-        # check on name arguments
+        # select the discord user's pxls username if it has one linked
         names = param["names"]
         if len(names) == 0:
             pxls_user_id = discord_user["pxls_user_id"]
@@ -51,77 +51,145 @@ class PxlsSpeed(commands.Cog):
                 names.append(name)
 
         # check on date arguments
+        canvas_opt = param["canvas"]
+        groupby_opt = param["groupby"]
         if param["before"] == None and param["after"] == None:
-            date = param["last"]
-            input_time = str_to_td(date)
-            if not input_time:
-                return await ctx.send(f"❌ Invalid `last` parameter, format must be `?d?h?m?s`.")
-            recent_time = datetime.now(timezone.utc)
-            old_time = round_minutes_down(datetime.now(timezone.utc) - input_time)
+            # if no date argument and -canvas : show the whole canvas
+            if param["last"] == None and canvas_opt == True:
+                old_time = datetime(1900,1,1,0,0,0)
+                recent_time = datetime.now(timezone.utc)
+            else:
+                date = param["last"] or "1d"
+                input_time = str_to_td(date)
+                if not input_time:
+                    return await ctx.send(f"❌ Invalid `last` parameter, format must be `?d?h?m?s`.")
+                recent_time = datetime.now(timezone.utc)
+                old_time = round_minutes_down(datetime.now(timezone.utc) - input_time)
         else:
             old_time = param["after"] or datetime(1900,1,1,0,0,0)
             recent_time = param["before"] or datetime.now(timezone.utc)
 
-        canvas_opt = param["canvas"]
-        groupby_opt = param["groupby"]
-
         async with ctx.typing():
             # get the data we need
-            last_time, past_time, now_time, full_ldb = await db_stats.get_pixels_placed_between(old_time,recent_time,canvas_opt,'speed')
+            if groupby_opt:
+                (past_time, now_time, stats) = await db_stats.get_grouped_stats_history(
+                    names, old_time, recent_time,groupby_opt,canvas_opt)
+            else:
+                (past_time, now_time, stats) = await db_stats.get_stats_history(
+                    names, old_time,recent_time,canvas_opt)
 
-            # check that we can calculate a speed
+            # check that we can calculate the speed
             if past_time == now_time:
                 return await ctx.send("❌ The time frame given is too short.")
+            diff_time = now_time - past_time
+            nb_hour = diff_time/timedelta(hours=1)
 
-            ldb = []
-            for user in full_ldb:
-                if user[1] in names:
-                    ldb.append(user)
-            #check if any user was found
-            if not ldb:
-                return await ctx.send("❌ User(s) not found.")
+            # format the data to be displayed
+            formatted_data = []
+            found_but_no_data = False
+            for user in stats:
+                data = user[1]
+                if groupby_opt:
+                    # truncate the first data if we're groupping by day/hour
+                    data = data[1:]
 
-            # Select the data we need to display:
-            #  name, current pixels, placed in the time frame, speed in px/h, px/d
-            res = []
-            for user in ldb:
-                name = user[1]
-                pixels = user[2]
-                if pixels == None:
+                if len(data) == 0:
                     continue
-                pixels = format_number(pixels)
-                diff_pixels = user[3]
-                if diff_pixels == None:
-                    continue
-                diff_time = now_time - past_time
-                nb_hours = diff_time/timedelta(hours=1)
-                speed_px_h = diff_pixels/nb_hours
+
+                # last username
+                name = data[-1]["name"]
+                # current pixels
+                current_pixels = data[-1]["pixels"]
+
+                if groupby_opt:
+                    if all([d["placed"]==None for d in data]):
+                        # skip the user if all the values are None
+                        continue
+                    diff_pixels = sum([(d["placed"] or 0) for d in data])
+                else:
+                    # find first non-null value
+                    lowest_pixels = None
+                    for d in data:
+                        if d["pixels"] != None:
+                            lowest_pixels = d["pixels"]
+                            break
+                    if lowest_pixels == None or current_pixels == None:
+                        # the user exists in the database but doesnt have data
+                        # in the given time frame
+                        found_but_no_data = True
+                        continue
+                    diff_pixels = current_pixels - lowest_pixels
+
+                # calculate the speed
+                speed_px_h = diff_pixels/nb_hour
                 speed_px_d = speed_px_h*24
-                res.append([name,pixels,format_number(diff_pixels),
-                    format_number(speed_px_h),format_number(speed_px_d)])
 
-            if len(res) == 0:
-                return await ctx.send("❌ User(s) not found (try adding `-c` in the command).")
+                # format data for the graph
+                if groupby_opt:
+                    if groupby_opt == "day":
+                        dates = [stat["first_datetime"][:10] for stat in data]
+                    elif groupby_opt == "hour":
+                        dates = [stat["first_datetime"][:13] for stat in data]
+                    pixels = [stat["placed"] for stat in data]
+                
+                else:
+                    dates = [stat["datetime"] for stat in data]
+                    if param["progress"]:
+                        # substract the first value to each value so they start at 0
+                        pixels = [stat["pixels"] - data[0]["pixels"] for stat in data]
+                    else:
+                        pixels = [stat["pixels"] for stat in data]
+
+                formatted_data.append([
+                    name,
+                    current_pixels,
+                    diff_pixels,
+                    speed_px_h,
+                    speed_px_d,
+                    dates,
+                    pixels
+                ])
+
+            if len(formatted_data) == 0:
+                msg = "❌ User{} not found{}.".format(
+                    's' if len(names) >1 else '',
+                    " (try adding `-c` in the command)" if found_but_no_data else ''
+                    )
+                return await ctx.send(msg)
+
+            # sort the data by the 3rd column (progress in the time frame)
+            formatted_data.sort(key = lambda x:x[2],reverse=True)
 
             # create the headers needed for the table
-            alignments = ["left","right","right","right","right"]
-            titles = ["Name","Pixels","Placed","px/h","px/d"]
-            table_colors = theme.get_palette(len(res))
+            alignments = ["center","right","right","right","right"]
+            titles = ["Name","Pixels","Progress","px/h","px/d"]
+            table_colors = theme.get_palette(len(formatted_data))
+
+            # make the title
+            if groupby_opt:
+                title="Speed {}".format(
+                    "per " + groupby_opt if groupby_opt else "")
+                title += f" for {formatted_data[0][0]}" if len(formatted_data) == 1 else ""
+            elif canvas_opt and param["last"] == None:
+                title = "Canvas Speed"
+            else:
+                title = "Speed"
+
+            
             # get the image of the table
-            table_image = table_to_image(res,titles,alignments,table_colors,theme=theme)
+            table_data = [d[:-2] for d in formatted_data]
+            table_data = [[format_number(c) for c in row] for row in table_data]
+            table_image = table_to_image(table_data,titles,
+            alignments,table_colors,theme=theme)
 
             # create the graph
-            user_list = [user[1] for user in ldb]
+            graph_data = [[d[0],d[5],d[6]] for d in formatted_data]
             if groupby_opt:
-                stats = await db_stats.get_grouped_stats_history(user_list,
-                    past_time,now_time,groupby_opt,canvas_opt)
                 graph_image = await self.client.loop.run_in_executor(None,
-                    get_grouped_graph,stats,groupby_opt,theme)
+                    get_grouped_graph,graph_data,groupby_opt,title,theme)
             else:
-                stats = await db_stats.get_stats_history(user_list,
-                    past_time,now_time,canvas_opt)
                 graph_image = await self.client.loop.run_in_executor(None,
-                    get_stats_graph,stats,canvas_opt,param["progress"],theme)
+                    get_stats_graph,graph_data,title,theme)
 
             # merge the table image and graph image
             res_image = v_concatenate(table_image,graph_image,gap_height=20)
@@ -134,7 +202,7 @@ class PxlsSpeed(commands.Cog):
             description += f"• Average cooldown: `{round(average_cooldown,2)}` seconds\n"
             description += f"• Best possible (without stack): ~`{best_possible}` pixels."
             emb = discord.Embed(color=hex_str_to_int(theme.get_palette(1)[0]))
-            emb.add_field(name='Speed',value = description)
+            emb.add_field(name="Speed",value = description)
 
             # send the embed with the graph image
             file = image_to_file(res_image,"speed.png",emb)
@@ -143,40 +211,27 @@ class PxlsSpeed(commands.Cog):
 def setup(client):
     client.add_cog(PxlsSpeed(client))
 
-def get_stats_graph(stats_dict:dict,canvas,progress_opt,theme):
+def get_stats_graph(stats_list:list,title,theme):
 
     # create the graph
-    colors = theme.get_palette(len(stats_dict.keys()))
+    colors = theme.get_palette(len(stats_list))
     fig = go.Figure(layout=theme.get_layout())
     fig.update_layout(showlegend=False)
-    fig.update_layout(title=f"<span style='color:{colors[0]};'>Speed</span>")
+    fig.update_layout(title=f"<span style='color:{colors[0]};'>{title}</span>")
 
-    for i,user in enumerate(stats_dict.keys()):
+    for i,user in enumerate(stats_list):
         # get the data
-        stats = stats_dict[user]["data"]
-        if not stats:
-            continue
-        dates = [stat["datetime"] for stat in stats]
-        if canvas:
-            pixels = [stat["canvas_count"] for stat in stats]
-        else:
-            pixels = [stat["alltime_count"] for stat in stats]
-
-        if progress_opt:
-            if pixels[-1] == None:
-                # ignore the user if it has None pixels
-                # (happens when canvas_opt is False and the user doesn't have enough pixels 
-                # to be on the alltime leaderboard)
-                continue
-            pixels = [pixel - pixels[0] for pixel in pixels]
+        name = user[0]
+        dates = user[1]
+        pixels = user[2]
 
         # trace the user data
-        if theme.has_underglow == True and min(pixels) ==0:
+        if theme.has_underglow == True and any( [p == 0 for p in pixels]):
             fig.add_trace(go.Scatter(
                 x=dates,
                 y=pixels,
                 mode='lines',
-                name=user,
+                name=name,
                 line=dict(width=4),
                 marker=dict(color= colors[i],size=6),
                 fill = 'tozeroy',
@@ -189,14 +244,14 @@ def get_stats_graph(stats_dict:dict,canvas,progress_opt,theme):
                 x=dates,
                 y=pixels,
                 mode='lines',
-                name=user,
+                name=name,
                 line=dict(width=4),
                 marker=dict(color= colors[i],size=6)
                 )
             )
 
         # add a marge at the right to add the name
-        longest_name = max([len(user) for user in stats_dict.keys()])
+        longest_name = max([len(user[0]) for user in stats_list])
         fig.update_layout(margin=dict(r=(longest_name+2)*26))
 
         # add the name
@@ -206,7 +261,7 @@ def get_stats_graph(stats_dict:dict,canvas,progress_opt,theme):
             yref="y",
             x = 1.01,
             y = pixels[-1],
-            text = ("<b>%s</b>" % user),
+            text = ("<b>%s</b>" % name),
             showarrow = False,
             font = dict(color= colors[i],size=40)
         )
@@ -216,36 +271,22 @@ def get_stats_graph(stats_dict:dict,canvas,progress_opt,theme):
 
     return fig2img(fig)
 
-def get_grouped_graph(stats_dict:dict,groupby_opt,theme):
-
-    # check on the groupby param
-    if not groupby_opt in ["day","hour"]:
-        raise ValueError("'groupby' parameter can only be 'day' or 'hour'.")
+def get_grouped_graph(stats_list:list,groupby_opt,title,theme):
 
     # create the graph and style
-    colors = theme.get_palette(len(stats_dict.keys()))
+    colors = theme.get_palette(len(stats_list))
     fig = go.Figure(layout=theme.get_layout())
     fig.update_yaxes(rangemode='tozero')
 
     # the title displays the user if there is only 1 in the user_list
-    fig.update_layout(title="<span style='color:{};'>Speed per {}{}</span>".format(
-        colors[0],
-        groupby_opt,
-        f" for <b>{list(stats_dict.keys())[0]}</b>" if len(stats_dict.keys()) == 1 else ""
+    fig.update_layout(title="<span style='color:{};'>{}</span>".format(
+        colors[0],title
     ))
 
-    for i,user in enumerate(stats_dict.keys()):
+    for i,user in enumerate(stats_list):
         # get the data
-        stats = stats_dict[user]["data"]
-        stats = stats[1:]
-        if len(stats) == 0:
-            continue
-
-        if groupby_opt == "day":
-            dates = [stat["last_datetime"][:10] for stat in stats]
-        elif groupby_opt == "hour":
-            dates = [stat["last_datetime"][:13] for stat in stats]
-        pixels = [stat["placed"] for stat in stats]
+        dates = user[1]
+        pixels = user[2]
 
         # add an outline of the bg color to the text above the bars
         text = ['<span style = "text-shadow:\
@@ -258,7 +299,7 @@ def get_grouped_graph(stats_dict:dict,groupby_opt,theme):
         -{2}px 0px 0px {0},\
         0px -{2}px 0px {0};">{1}</span>'.format(theme.background_color,pixel,2) for pixel in pixels]
 
-        name='<span style="color:{};font-size:40;"><b>{}</b></span>'.format(colors[i], user)
+        name='<span style="color:{};font-size:40;"><b>{}</b></span>'.format(colors[i], user[0])
         # trace the user data
         if theme.has_underglow == True:
             # different style if the theme has underglow
@@ -291,18 +332,3 @@ def get_grouped_graph(stats_dict:dict,groupby_opt,theme):
             )
 
     return fig2img(fig)
-
-def cycle_through_list(list,number_of_element:int):
-    ''' loop through a list the desired amount of time
-    example: cycle_through_list([1,2,3],6) -> [1,2,3,1,2,3] '''
-    if len(list) == 0 or number_of_element == 0:
-        return None
-    list = cycle(list)
-    res = []
-    count = 0
-    for i in list:
-        res.append(i)
-        count += 1
-        if count == number_of_element:
-            break
-    return res

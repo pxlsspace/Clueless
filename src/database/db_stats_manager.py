@@ -172,12 +172,14 @@ class DbStatsManager():
         record1 = await self.find_record(date1,canvas_to_select)
         record2 = await self.find_record(date2,canvas_to_select)
         sql = """
-            SELECT name, alltime_count, canvas_count, datetime
+            SELECT name, {0} as pixels, datetime
             FROM pxls_user_stat
             JOIN record ON record.record_id = pxls_user_stat.record_id
             JOIN pxls_name ON pxls_name.pxls_name_id = pxls_user_stat.pxls_name_id
-            WHERE name IN ({})
-            AND datetime BETWEEN ? AND ? """.format(
+            WHERE name IN ({1})
+            AND datetime BETWEEN ? AND ? 
+            ORDER BY {0} """.format(
+                "canvas_count" if canvas_opt else "alltime_count",
                 ', '.join('?' for u in user_list))
 
         rows = await self.db.sql_select(sql,tuple(user_list) +\
@@ -187,11 +189,12 @@ class DbStatsManager():
         users_dict = {}
         for row in rows:
             try:
-                users_dict[row["name"]]["data"].append(row)
+                users_dict[row["name"]].append(row)
             except KeyError:
-                users_dict[row["name"]] = dict(data=[row])
+                users_dict[row["name"]] = [row]
 
-        return users_dict
+        users_list = list(users_dict.items())
+        return (record1["datetime"], record2["datetime"], users_list)
 
     async def get_grouped_stats_history(self,user_list,dt1,dt2,groupby_opt,canvas_opt):
         """ get the stats between 2 dates grouped by day or hour """
@@ -213,8 +216,12 @@ class DbStatsManager():
         record2 = await self.find_record(dt2,canvas_to_select)
 
         sql = """
-            SELECT name, {0}-(LAG({0}) OVER (ORDER BY name, datetime)) as placed,
-            MAX(record.datetime) as last_datetime
+            SELECT 
+                name,
+                {0} as pixels,
+                {0}-(LAG({0}) OVER (ORDER BY name, datetime)) as placed,
+                MIN(record.datetime) as first_datetime,
+                MAX(record.datetime) as last_datetime
             FROM pxls_user_stat
             JOIN record ON record.record_id = pxls_user_stat.record_id
             JOIN pxls_name ON pxls_name.pxls_name_id = pxls_user_stat.pxls_name_id
@@ -231,10 +238,18 @@ class DbStatsManager():
         users_dict = {}
         for row in rows:
             try:
-                users_dict[row["name"]]["data"].append(row)
+                users_dict[row["name"]].append(row)
             except KeyError:
-                users_dict[row["name"]] = dict(data=[row])
-        return users_dict
+                users_dict[row["name"]] = [row]
+        res_list = list(users_dict.items())
+
+        # find the min and max in all the dates of each user
+        all_datas = [user[1][1:] for user in res_list]
+        all_datas = [row for data in all_datas for row in data ]
+        past_time = min([datetime.strptime(d["first_datetime"],"%Y-%m-%d %H:%M:%S") for d in all_datas])
+        now_time = max([datetime.strptime(d["last_datetime"],"%Y-%m-%d %H:%M:%S") for d in all_datas])
+
+        return past_time, now_time, res_list
 
     async def get_pixels_placed_between(self,dt1,dt2,canvas,orderby_opt):
 

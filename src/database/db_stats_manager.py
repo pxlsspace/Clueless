@@ -164,6 +164,23 @@ class DbStatsManager():
         else:
             return (res[0][0],res[0][1],res[1][1])
 
+    async def get_last_leaderboard(self):
+        sql = """
+        SELECT
+            name,
+            ROW_NUMBER() OVER(ORDER BY (alltime_count) DESC) AS alltime_rank,
+            alltime_count,
+            ROW_NUMBER() OVER(ORDER BY (canvas_count) DESC) AS canvas_rank,
+            canvas_count,
+            datetime
+        FROM pxls_user_stat p
+        JOIN record r ON r.record_id = p.record_id
+        JOIN pxls_name n ON n.pxls_name_id = p.pxls_name_id
+        WHERE r.datetime = (SELECT MAX(datetime) FROM record)"""
+
+        rows = await self.db.sql_select(sql)
+        return rows
+
     async def get_stats_history(self,user_list,date1,date2,canvas_opt):
         """ get the stats between 2 dates """
         if canvas_opt:

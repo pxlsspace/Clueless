@@ -75,7 +75,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             sort = 'canvas' if canvas_opt else 'alltime'
         else:
             sort = sort_opt
-            canvas_opt = "canvas" # only get the canvas stats when sorting by speed
+            #canvas_opt = "canvas" # only get the canvas stats when sorting by speed
 
         # fetch the leaderboard from the database
         async with ctx.typing():
@@ -206,7 +206,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             # calculate the best possbile amount in the time frame
             best_possible,average_cooldown = await get_best_possible(datetime1,datetime2)
             text += f"• Average cooldown: `{round(average_cooldown,2)}` seconds\n"
-            text += f"• Best possible (without stack): ~`{best_possible}` pixels.\n"
+            text += f"• Best possible (without stack): ~`{format_number(best_possible)}` pixels.\n"
 
         elif canvas_opt:
             title = "Canvas Leaderboard"

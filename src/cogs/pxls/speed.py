@@ -200,7 +200,7 @@ class PxlsSpeed(commands.Cog):
             # create the embed
             description = f"• Between {format_datetime(past_time)} and {format_datetime(now_time)}\n"
             description += f"• Average cooldown: `{round(average_cooldown,2)}` seconds\n"
-            description += f"• Best possible (without stack): ~`{best_possible}` pixels."
+            description += f"• Best possible (without stack): ~`{format_number(best_possible)}` pixels."
             emb = discord.Embed(color=hex_str_to_int(theme.get_palette(1)[0]))
             emb.add_field(name="Speed",value = description)
 

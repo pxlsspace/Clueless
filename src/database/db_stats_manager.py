@@ -148,13 +148,14 @@ class DbStatsManager():
         else:
             return res[0][0]
 
-    async def get_last_alltime_counts(self,pxls_user_id:int) -> tuple:
-        ''' get a tuple of the last 2 alltime pixel counts in the database for a given user 
-            (useful for the milestones command) '''
+    async def get_last_two_alltime_counts(self,pxls_user_id:int) -> tuple:
+        ''' Get a tuple of the last 2 alltime pixel counts in the database for
+        a given user (used to check if the user hit a milestone)'''
         sql = """
         SELECT name, alltime_count FROM pxls_name
         INNER JOIN(pxls_user_stat) ON pxls_user_stat.pxls_name_id = pxls_name.pxls_name_id
         WHERE pxls_user_id = ?
+        ORDER BY record_id DESC
         LIMIT 2"""
 
         res = await self.db.sql_select(sql,pxls_user_id)

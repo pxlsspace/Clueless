@@ -114,12 +114,12 @@ class Clock(commands.Cog):
         users_servers = await db_users.get_all_tracked_users()
 
         for user_id in users_servers.keys():
-            values = await db_stats.get_last_alltime_counts(user_id)
+            values = await db_stats.get_last_two_alltime_counts(user_id)
             if values == None:
                 continue
             username = values[0]
-            old_count = values[1]
-            new_count = values[2]
+            new_count = values[1]
+            old_count = values[2]
 
             if new_count%1000 < old_count%1000:
                 servers = users_servers[user_id]

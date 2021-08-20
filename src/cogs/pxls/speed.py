@@ -226,7 +226,7 @@ def get_stats_graph(stats_list:list,title,theme):
         pixels = user[2]
 
         # trace the user data
-        if theme.has_underglow == True and any( [p == 0 for p in pixels]):
+        if theme.has_underglow == True and any( [p <= 100 for p in pixels]):
             fig.add_trace(go.Scatter(
                 x=dates,
                 y=pixels,

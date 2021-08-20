@@ -130,7 +130,7 @@ def cycle_through_list(list,number_of_element:int):
 
 class Theme():
     def __init__(self,name,description,background_color,grid_color,font_color,
-    table_outline_color, off_color, has_glow, has_underglow,palette):
+    table_outline_color, off_color, has_glow, has_underglow,palette,outline_dark):
 
         self.name = name
         self.description = description
@@ -142,11 +142,16 @@ class Theme():
         self.has_glow = has_glow
         self.has_underglow = has_underglow
         self.palette = palette
+        self.outline_dark = outline_dark
 
     
     def get_palette(self,nb_colors):
         if self.palette == "synthwave":
             colors = matplotlib_to_plotly('cool',nb_colors)
+            return colors
+
+        elif self.palette == "autumn":
+            colors = matplotlib_to_plotly("autumn",nb_colors)
             return colors
 
         elif self.palette == "pastel":
@@ -224,7 +229,8 @@ default_theme = Theme(
     off_color= "#696969",
     has_glow = False,
     has_underglow = False,
-    palette = "default"
+    palette = "default",
+    outline_dark=True
 )
 
 synthwave_theme = Theme(
@@ -237,7 +243,8 @@ synthwave_theme = Theme(
     off_color= "#6954b7",
     has_glow = True,
     has_underglow = True,
-    palette = "synthwave"
+    palette = "synthwave",
+    outline_dark=True
 )
 
 synthwave_noglow_theme = Theme(
@@ -250,25 +257,27 @@ synthwave_noglow_theme = Theme(
     off_color= "#6954b7",
     has_glow = False,
     has_underglow = True,
-    palette = "synthwave"
+    palette = "synthwave",
+    outline_dark=True
 )
 
 pxls_theme = Theme(
     name = "pxls",
-    description = "Uses only colors from the pxls.space palette.", 
-    background_color = "#222222",
-    grid_color= "#555555",
-    font_color = "#cdcdcd",
-    table_outline_color = "#000000",
-    off_color= "#888888",
+    description = "Similar to the pxls purple theme, uses the pxls palette for the lines/bars.", 
+    background_color = "#3d204d",
+    grid_color= "#693684",
+    font_color = "#dddddd",
+    table_outline_color = "#2a1436",
+    off_color= "#733a92",
     has_glow = False,
     has_underglow = False,
-    palette = "pxls"
+    palette = "pxls",
+    outline_dark=False
 )
 
 pastel_theme = Theme(
     name = "pastel",
-    description = "Pastel colors, light/purple background.", 
+    description = "Pastel colors, light-purple background.", 
     background_color = "#937ac3",
     grid_color= "#fac4ff",
     font_color = "#fac4ff",
@@ -276,11 +285,26 @@ pastel_theme = Theme(
     off_color= "#bcaad0",
     has_glow = False,
     has_underglow = False,
-    palette = "pastel"
+    palette = "pastel",
+    outline_dark=True
+)
+
+red_theme = Theme(
+    name = "red",
+    description = "It's red.", 
+    background_color = "#1e0300",
+    grid_color= "#7b0001",
+    font_color = "#ffbbb9",
+    table_outline_color = "#000000",
+    off_color= "#7b0001",
+    has_glow = False,
+    has_underglow = True,
+    palette = "autumn",
+    outline_dark=False
 )
 
 theme_list = [default_theme,synthwave_theme,synthwave_noglow_theme
-    ,pastel_theme,pxls_theme]
+    ,pastel_theme,pxls_theme,red_theme]
 
 def get_theme(theme_name) -> Theme:
     for theme in theme_list:

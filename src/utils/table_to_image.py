@@ -19,7 +19,7 @@ LINE_COLOR = ImageColor.getcolor(LINE_COLOR,"RGBA")
 OUTER_OUTLINE_COLOR = ImageColor.getcolor(OUTER_OUTLINE_COLOR,"RGBA")
 
 
-def make_table_array(data,titles,alignments,colors=None):
+def make_table_array(data,titles,alignments,colors=None,outline_dark=True):
     """ Make a numpy array using the data provided """
     line_width = 1
     vertical_margin = 2
@@ -46,7 +46,7 @@ def make_table_array(data,titles,alignments,colors=None):
             pt = PixelText(text,font_name,colors[i],BACKGROUND_COLOR)
 
             text_array = pt.make_array()
-            if image_utils.is_dark(colors[i]):
+            if outline_dark == True and image_utils.is_dark(colors[i]):
                 text_array = add_outline(text_array,image_utils.lighten_color(colors[i],0.3))
             else:
                 text_array = add_border(text_array,1,BACKGROUND_COLOR)
@@ -194,11 +194,14 @@ def table_to_image(data,titles,alignments=None,colors=None,theme:Theme=None):
         TEXT_COLOR = theme.font_color
         LINE_COLOR = theme.grid_color
         OUTER_OUTLINE_COLOR = theme.table_outline_color
+        outline_dark = theme.outline_dark
+
     else:
         BACKGROUND_COLOR = "#202225"
         TEXT_COLOR = "#b9bbbe"
         LINE_COLOR = "#2f3136"
         OUTER_OUTLINE_COLOR = "#000000"
+        outline_dark = True
     BACKGROUND_COLOR = ImageColor.getcolor(BACKGROUND_COLOR,"RGBA")
     TEXT_COLOR = ImageColor.getcolor(TEXT_COLOR,"RGBA")
     LINE_COLOR = ImageColor.getcolor(LINE_COLOR,"RGBA")
@@ -216,7 +219,8 @@ def table_to_image(data,titles,alignments=None,colors=None,theme:Theme=None):
     colors = colors.copy()
 
     # get the table numpy array
-    table_array = make_table_array(data,titles,alignments,colors)
+    table_array = make_table_array(data,titles,alignments,colors,
+        outline_dark=outline_dark)
 
     # add style
     table_array = add_border(table_array,OUTER_OUTLINE_WIDTH,OUTER_OUTLINE_COLOR)

@@ -68,33 +68,81 @@ def format_number(num):
         return str(num)
 
 EMOJI_REGEX = r"<(?P<animated>a?):(?P<name>[a-zA-Z0-9_]{2,32}):(?P<id>[0-9]{18,22})>"
+IMAGE_URL_REGEX = r'(?:http\:|https\:)?\/\/.*\.(?:png|jpg|gif)'
 
-async def get_image_from_message(ctx,url=None):
-    """ get an image from a discord context/message,
+class ImageNotFoundError(Exception):
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
+
+async def get_image_from_message(ctx,url=None,search_last_messages=True,accept_emojis=True):
+    """ Get an image from a discord Context or check on images among the 100
+    last messages sent in the channel. Return a byte image and the image url """
+    message_limit=100
+    try:
+        # try to get the image from the initial message
+        return await get_image(ctx.message,url,accept_emojis)
+    except ImageNotFoundError as e:
+        # if no image was found in the message we check for images in the last 
+        # 100 messages sent in the channel
+        if search_last_messages == True:
+            async for message in ctx.channel.history(limit=message_limit):
+                try:
+                    return await get_image(message,accept_emojis=False)
+                except:
+                    pass
+        # no image was found in the last 100 images
+        raise ValueError(e)
+
+    except ValueError as e:
+        # if an image was found but an error occured, we raise it
+        raise ValueError(e)
+
+async def get_image(message:discord.Message,url=None,accept_emojis=True):
+    """ Get an image from a discord message,
     raise ValueError if the URL isn't valid 
     return a byte image and the image url """
-    # if no url in the command, we check the attachments
-    if url == None:
-        if len(ctx.message.attachments) == 0:
-            raise ValueError("No image or url found.")    
-        if not "image" in ctx.message.attachments[0].content_type:
+
+    # check the attachements
+    if len(message.attachments) > 0:
+        for a in message.attachments:
+            content_type = a.content_type
+            if content_type != None and "image" in content_type:
+                url = a.url
+                break
+        if url == None:
             raise ValueError("Invalid file type. Only images are supported.")
 
-        url = ctx.message.attachments[0].url
-    else:
-        # check if it's an emoji
-        results = re.findall(EMOJI_REGEX,url)
-        if len(results) != 0:
-            emoji_id = results[0][2]
-            is_animated = results[0][0] == 'a'
-            url = "https://cdn.discordapp.com/emojis/{}.{}".format(emoji_id,'gif' if is_animated else 'png')
+    # check the embeds
+    elif len(message.embeds) > 0:
+        for e in message.embeds:
+            if e.image:
+                url = message.embeds[0].image.url
+                break
+            elif e.type == "image" and e.url:
+                url = e.url
+
+    # check the message content
+    elif message.content != None:
+        # try to find a image URL in the message content
+        urls = re.findall(IMAGE_URL_REGEX,message.content)
+        if len(urls) > 0:
+            url = urls[0]
+        # try to find an emoji if no image URL found
+        elif accept_emojis == True:
+            results = re.findall(EMOJI_REGEX,message.content)
+            if len(results) != 0:
+                emoji_id = results[0][2]
+                is_animated = results[0][0] == 'a'
+                url = "https://cdn.discordapp.com/emojis/{}.{}".format(emoji_id,'gif' if is_animated else 'png')
+
+    if url == None:
+        raise ImageNotFoundError("No image or url found.")
 
     # getting the image from url
     try:
         image_bytes = await get_content(url,'image')
     except Exception as e:
         raise ValueError (e)
-
     return image_bytes, url
 
 def image_to_file(image:Image.Image,filename:str,embed:discord.Embed=None) -> discord.File:

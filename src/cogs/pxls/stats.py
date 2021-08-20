@@ -8,6 +8,9 @@ from utils.discord_utils import format_number, image_to_file
 from utils.setup import stats, db_connection as db_conn
 from utils.setup import db_users_manager as db_users, db_stats_manager as db_stats
 from utils.time_converter import format_datetime, round_minutes_down, td_format
+from utils.arguments_parser import MyParser
+from cogs.pixelart.color_breakdown import _colors
+from cogs.pixelart.highlight import _highlight
 
 class PxlsStats(commands.Cog):
 
@@ -46,13 +49,13 @@ class PxlsStats(commands.Cog):
                 format_number(total_users),format_number(total_factions))
 
             canvas_stats_text = """
-            • Total Pixels `{}`/`{}` (`{}%` placeable)\n• Total Placed: `{}`\n• Total Non-Virgin: `{}`\n• Percentage Non-Virgin:\n{} `{}%`""".format(
+            • Total Pixels `{}`/`{}` (`{}%` placeable)\n• Total Placed: `{}`\n• Total Non-Virgin: `{}`\n• Percentage Non-Virgin:\n**|**{}**|** `{}%`""".format(
                 format_number(int(total_placeable)),
                 format_number(int(total_amount)),
                 format_number(total_placeable/total_amount*100),
                 format_number(total_placed),
                 format_number(int(total_non_virgin)),
-                f"`|{make_progress_bar(total_non_virgin/total_placeable*100)}|`",
+                f"`{make_progress_bar(total_non_virgin/total_placeable*100)}`",
                 format_number(total_non_virgin/total_placeable*100),
             )
 
@@ -197,6 +200,52 @@ class PxlsStats(commands.Cog):
             board_img = Image.fromarray(array)
             file = image_to_file(board_img,"board.png")
             await ctx.send(file=file)
+
+    @commands.command(description="Show the canvas colors.",aliases=["cc"],usage = "[-placed|-p]")
+    async def canvascolors(self,ctx,*options):
+        """Show the canvas colors."""
+        async with ctx.typing():
+        # get the board with the placeable pixels only
+            placeable_board = await stats.get_placable_board()
+
+            if "-placed" in options or "-p" in options:
+            # use the virgin map as a mask to get the board with placed pixels
+                virgin_array = await stats.fetch_virginmap()
+                placed_board = placeable_board.copy()
+                placed_board[virgin_array != 0] = 255
+                placed_board[virgin_array == 0] = placeable_board[virgin_array == 0]
+                img = Image.fromarray(stats.palettize_array(placed_board))
+                title = "Canvas colors breakdown (non-virgin pixels only)"
+            else:
+                img = Image.fromarray(stats.palettize_array(placeable_board))
+                title = "Canvas color breakdown"
+
+            await _colors(self.client,ctx,img,title)
+
+    @commands.command(
+        description="Highlight the selected colors on the canvas.",
+        aliases = ["chl","canvashl"],
+        usage="<colors> [-bgcolor|-bg <color>]",
+        help = """\t- `<colors>`: list of pxls colors separated by a comma
+            \t- `[-bgcolor|bg <color>]`: the color to display behind the\
+             selected colors (`none` = transparent)""")
+    async def canvashighlight(self,ctx,*args):
+        " Highlight the selected colors on the canvas"
+        # parse the arguemnts
+        parser  = MyParser(add_help=False)
+        parser.add_argument('colors', type=str, nargs='+')
+        parser.add_argument('-bgcolor',"-bg",nargs="*", type=str,
+            action='store', required=False)
+        try:
+            parsed_args= parser.parse_args(args)
+        except ValueError as e:
+            return await ctx.send(f'❌ {e}')
+
+        async with ctx.typing():
+            # get the board with the placeable pixels only
+            canvas_array_idx = await stats.get_placable_board()
+            canvas_array = stats.palettize_array(canvas_array_idx)
+            await _highlight(ctx,canvas_array,parsed_args)
 
 def make_progress_bar(percentage,nb_char=20):
     full = "​█"

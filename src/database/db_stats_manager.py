@@ -261,15 +261,17 @@ class DbStatsManager():
                 users_dict[row["name"]] = [row]
         res_list = list(users_dict.items())
 
+        if len(res_list) == 0:
+            return None, None, res_list
+        elif len(res_list[0][1]) == 1:
+            return None, None, res_list
+        else:
         # find the min and max in all the dates of each user
-        if len(res_list) > 0:
             all_datas = [user[1][1:] for user in res_list]
             all_datas = [row for data in all_datas for row in data ]
             past_time = min([datetime.strptime(d["first_datetime"],"%Y-%m-%d %H:%M:%S") for d in all_datas])
             now_time = max([datetime.strptime(d["last_datetime"],"%Y-%m-%d %H:%M:%S") for d in all_datas])
             return past_time, now_time, res_list
-        else:
-            return None, None, res_list
 
     async def get_pixels_placed_between(self,dt1,dt2,canvas,orderby_opt):
 

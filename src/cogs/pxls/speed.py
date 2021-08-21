@@ -78,6 +78,12 @@ class PxlsSpeed(commands.Cog):
                 (past_time, now_time, stats) = await db_stats.get_stats_history(
                     names, old_time,recent_time,canvas_opt)
 
+            # check that we found data
+            if len(stats) == 0:
+                msg = "❌ User{} not found.".format(
+                    's' if len(names) >1 else '')
+                return await ctx.send(msg)
+
             # check that we can calculate the speed
             if past_time == now_time:
                 return await ctx.send("❌ The time frame given is too short.")

@@ -25,29 +25,27 @@ def parse_leaderboard_args(args):
         help='Center the leaderboard on this user.',default=[])
     parser.add_argument('-canvas', '-c', action='store_true', default=False, 
         help="Flag to get the canvas leaderboard.")
-    parser.add_argument('-lines','-l',metavar="<number>", action='store', type=check_lines, default=15,
+    parser.add_argument('-lines',metavar="<number>", action='store', type=check_lines, default=15,
         help="Number of lines to show.")
-    parser.add_argument('-graph', action='store_true', default=False)
-    parser.add_argument('-last',action='store',default=None)
+    parser.add_argument('-graph','-g', action='store_true', default=False)
+    parser.add_argument('-last','-l',action='store',default=None)
     parser.add_argument('-after',
                         dest='after',
-                        nargs=2,
+                        nargs='+',
                         default=None,
                         help='start datetime in format "YYYY-MM-DD HH:mm"')
     parser.add_argument('-before',
                         dest='before',
-                        nargs=2,
+                        nargs='+',
                         default=None,
                         help='start datetime in format "YYYY-MM-DD HH:mm"')
 
     
     res = parser.parse_args(args)
     if res.after:
-        after = " ".join(res.after)
-        res.after = valid_datetime_type(after)
+        res.after = valid_datetime_type(res.after)
     if res.before:
-        before = " ".join(res.before)
-        res.before = valid_datetime_type(before)
+        res.before = valid_datetime_type(res.before)
 
     if res.after and res.before and res.before < res.after:
         raise ValueError("The 'before' date can't be earlier than the 'after' date.")
@@ -64,20 +62,20 @@ def parse_speed_args(args):
     }'''
     parser  = MyParser(add_help=False)
     parser.add_argument('names', type=str, nargs='*',default=[])
-    parser.add_argument('-canvas', action='store_true', default=False)
-    parser.add_argument("-groupby",choices=['day','hour'],required=False)
-    parser.add_argument('-progress', action='store_true', default=False)
+    parser.add_argument('-canvas','-c', action='store_true', default=False)
+    parser.add_argument("-groupby",'-g',choices=['day','hour'],required=False)
+    parser.add_argument('-progress','-p', action='store_true', default=False)
 
 
-    parser.add_argument('-last',action='store',default=None)
+    parser.add_argument('-last','-l',action='store',default=None)
     parser.add_argument('-after',
                         dest='after',
-                        nargs=2,
+                        nargs='+',
                         default=None,
                         help='start datetime in format "YYYY-MM-DD HH:mm"')
     parser.add_argument('-before',
                         dest='before',
-                        nargs=2,
+                        nargs='+',
                         default=None,
                         help='start datetime in format "YYYY-MM-DD HH:mm"')
 
@@ -85,11 +83,9 @@ def parse_speed_args(args):
 
     # Convert the args to datetime and check if they are valid
     if res.after:
-        after = " ".join(res.after)
-        res.after = valid_datetime_type(after)
+        res.after = valid_datetime_type(res.after)
     if res.before:
-        before = " ".join(res.before)
-        res.before = valid_datetime_type(before)
+        res.before = valid_datetime_type(res.before)
     
     if res.after and res.before and res.before < res.after:
         raise ValueError("The 'before' date can't be earlier than the 'after' date.")
@@ -115,21 +111,30 @@ def parse_pixelfont_args(args):
     parser  = MyParser(add_help=False)
     parser.add_argument('text', type=str, nargs="*")
     
-    parser.add_argument('-font', type=str, action='store',required=True)
-    parser.add_argument('-color', type=str, action='store',required=False,)
+    parser.add_argument('-font', type=str, action='store',required=False,default="*")
+    parser.add_argument('-color', type=str, action='store',required=False)
     parser.add_argument('-bgcolor',"-bg", type=str, action='store', required=False)
 
     return parser.parse_args(args)
 
 def valid_datetime_type(arg_datetime_str):
     """Check if the given string is a valid datetime"""
+    error_msg = "Given time ({}) not valid. Expected format: `YYYY-mm-dd HH:MM`.".format(" ".join(arg_datetime_str))
+
+    if len(arg_datetime_str) == 1:
+        format = "%Y-%m-%d"
+    elif len(arg_datetime_str) == 2:
+        format = "%Y-%m-%d %H:%M"
+    else:
+        raise ValueError(error_msg)
+
+    dt =  " ".join(arg_datetime_str)
     try:
-        d = datetime.strptime(arg_datetime_str, "%Y-%m-%d %H:%M")
-        d = d.replace(tzinfo=timezone.utc)
-        return d
+        res_dt = datetime.strptime(dt, format)
+        res_dt = res_dt.replace(tzinfo=timezone.utc)
+        return res_dt
     except ValueError:
-        msg = "Given time ({}) not valid. Expected format: `YYYY-mm-dd HH:MM`.".format(arg_datetime_str)
-        raise ValueError(msg)
+        raise ValueError(error_msg)
 
 def check_lines(value):
     try:

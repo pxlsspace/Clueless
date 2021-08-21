@@ -15,10 +15,10 @@ class Font(commands.Cog):
 
     @commands.command(
         description = "Convert a text to pixel art.",
-        aliases = ["pf","font","pixeltext"],
+        aliases = ["pf","pixeltext"],
         usage = "<text> <-font <name|*>> [-color <color|none>] [-bgcolor <color|none>]",
         help = """- `<text>` a text to convert to pixel art
-                  - `<-font <name|*>`: the name of the font (`*` will use all the fonts available)
+                  - `[-font <name|*>]`: the name of the font (`*` will use all the fonts available)
                   - `[-fontcolor]`: the color you want the text to be
                   - `[-bgcolor]`: the color for the background around the text
                   (the colors can be a pxls color name, a hex color, or `none` if you want transparent)"""

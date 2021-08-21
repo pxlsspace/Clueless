@@ -20,11 +20,11 @@ class PxlsSpeed(commands.Cog):
 
     @commands.command(usage="<name> [-canvas] [-groupby [day|hour]] [-progress] [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
     description = "Show the speed of a pxls user with a graph.",
-    help = """- `<names>`: list of pxls users names separated by a space
+    help = """- `<names>`: list of pxls users names separated by a space (`!` = your set username)
               - `[-canvas|-c]`: show the canvas stats
               - `[-groupby|-g]`: show a bar chart for each `day` or `hour`
               - `[-progress|-p]`: compare the progress between users
-              - `[-last <?d?h?m?s>]`: get the speed in the last x hours/days/minutes/seconds (default: 1 day)
+              - `[-last|-l ?d?h?m?s]`: get the speed in the last x hours/days/minutes/seconds (default: 1 day)
               - `[-before <date time>]`: show the speed before a date and time (format YYYY-mm-dd HH:MM)
               - `[-after <date time>]`: show the speed after a date and time (format YYYY-mm-dd HH:MM)"""
     )
@@ -42,13 +42,22 @@ class PxlsSpeed(commands.Cog):
 
         # select the discord user's pxls username if it has one linked
         names = param["names"]
+        pxls_user_id = discord_user["pxls_user_id"]
+        usage_text = f"(You can set your default username with `{ctx.prefix}setname <username>`)"
+
         if len(names) == 0:
-            pxls_user_id = discord_user["pxls_user_id"]
             if pxls_user_id == None:
-                return await ctx.send(f"❌ You need to specify at least one username.\n\(You can also set a default username with `{ctx.prefix}setname <username>`)")
+                return await ctx.send("❌ You need to specify at least one username.\n" + usage_text)
             else:
                 name = await db_users.get_pxls_user_name(pxls_user_id)
                 names.append(name)
+        
+        if "!" in names:
+            if pxls_user_id == None:
+                return await ctx.send("❌ You need to have a set username to use `!`.\n" + usage_text)
+            else:
+                name = await db_users.get_pxls_user_name(pxls_user_id)
+                names = [name if u=="!" else u for u in names]
 
         # check on date arguments
         canvas_opt = param["canvas"]

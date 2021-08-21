@@ -25,11 +25,11 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         usage = "[username] [-canvas] [-lines <number>] [-graph] [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
         description = "Show the all-time or canvas leaderboard.",
         aliases=["ldb"],
-        help = """- `[username]`: center the leaderboard on this user
+        help = """- `[username]`: center the leaderboard on this user (`!` = your set username)
                   - `[-canvas|-c]`: to get the canvas leaderboard
-                  - `[[-lines|-l] <number>]`: number of lines to show, must be less than 40 (default 20)
                   - `[-graph|-g]`: show a bar graph of the leaderboard
-                  - `[-last ?d?h?m?s]`: show the leaderboard of the last ? day, ? hour, ? min, ? second"""
+                  - `[-last|-l ?d?h?m?s]`: show the leaderboard of the last ? day, ? hour, ? min, ? second
+                  - `[-lines <number>]`: number of lines to show, must be less than 40 (default 20)"""
         )
     async def leaderboard(self,ctx,*args):
         ''' Shows the pxls.space leaderboard '''
@@ -38,7 +38,6 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             param = parse_leaderboard_args(args)
         except ValueError as e:
             return await ctx.send(f'❌ {e}')
-        username = param["names"]
         nb_line = int(param["lines"])
         canvas_opt = param["canvas"]
         speed_opt = False
@@ -50,6 +49,16 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         discord_user = await db_users.get_discord_user(ctx.author.id)
         current_user_theme = discord_user["color"] or "default"
         theme = get_theme(current_user_theme)
+
+        # get the linked username if "!" is in the names list
+        username = param["names"]
+        if "!" in username:
+            pxls_user_id = discord_user["pxls_user_id"]
+            if pxls_user_id == None:
+                usage_text = f"(You can set your default username with `{ctx.prefix}setname <username>`)"
+                return await ctx.send("❌ You need to have a set username to use `!`.\n" + usage_text)
+            name = await db_users.get_pxls_user_name(pxls_user_id)
+            username = [name if u=="!" else u for u in username]
 
         # if a time value is given, we will show the leaderboard during this time
         if param["before"] or param["after"] or last_opt:

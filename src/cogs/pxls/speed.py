@@ -70,6 +70,7 @@ class PxlsSpeed(commands.Cog):
             else:
                 date = param["last"] or "1d"
                 input_time = str_to_td(date)
+                input_time = input_time + timedelta(minutes=1)
                 if not input_time:
                     return await ctx.send(f"❌ Invalid `last` parameter, format must be `?d?h?m?s`.")
                 recent_time = datetime.now(timezone.utc)
@@ -190,6 +191,8 @@ class PxlsSpeed(commands.Cog):
             else:
                 title = "Speed"
 
+            diff_time = round_minutes_down(now_time)-round_minutes_down(past_time)
+            diff_time_str = td_format(diff_time)
             
             # get the image of the table
             table_data = [d[:-2] for d in formatted_data]
@@ -201,7 +204,7 @@ class PxlsSpeed(commands.Cog):
             graph_data = [[d[0],d[5],d[6]] for d in formatted_data]
             if groupby_opt:
                 graph_image = await self.client.loop.run_in_executor(None,
-                    get_grouped_graph,graph_data,groupby_opt,title,theme)
+                    get_grouped_graph,graph_data,title,theme)
             else:
                 graph_image = await self.client.loop.run_in_executor(None,
                     get_stats_graph,graph_data,title,theme)
@@ -214,6 +217,7 @@ class PxlsSpeed(commands.Cog):
 
             # create the embed
             description = f"• Between {format_datetime(past_time)} and {format_datetime(now_time)}\n"
+            description += f"• Time: `{diff_time_str}`\n"
             description += f"• Average cooldown: `{round(average_cooldown,2)}` seconds\n"
             description += f"• Best possible (without stack): ~`{format_number(best_possible)}` pixels."
             emb = discord.Embed(color=hex_str_to_int(theme.get_palette(1)[0]))
@@ -286,7 +290,7 @@ def get_stats_graph(stats_list:list,title,theme):
 
     return fig2img(fig)
 
-def get_grouped_graph(stats_list:list,groupby_opt,title,theme):
+def get_grouped_graph(stats_list:list,title,theme):
 
     # create the graph and style
     colors = theme.get_palette(len(stats_list))

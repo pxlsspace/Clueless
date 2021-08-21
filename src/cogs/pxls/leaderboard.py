@@ -67,6 +67,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             if param["before"] == None and param["after"] == None:
                 date = last_opt
                 input_time = str_to_td(date)
+                input_time = input_time + timedelta(minutes=1)
                 if not input_time:
                     return await ctx.send(f"❌ Invalid `last` parameter, format must be `?d?h?m?s`.")
                 date2 = datetime.now(timezone.utc)

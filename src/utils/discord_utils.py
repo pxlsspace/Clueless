@@ -7,10 +7,12 @@ from utils.utils import get_content
 import re
 
 STATUS_EMOJIS = {
+    "bot": "<a:status_bot:878677107042025552>",
     "fast" : "<:status_fast:878642193861079060>",
     "online": "<:status_online:878641779010842655>",
     "idle": "<:status_idle:878641855619809280>",
-    "offline": "<:status_offline:878642079914410004>"
+    "offline": "<:status_offline:878642079914410004>",
+    "inactive": "<a:status_inactive:878675014726086706>"
 }
 
 def format_table(table,column_names,alignments=None,name=None):

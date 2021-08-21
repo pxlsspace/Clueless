@@ -93,6 +93,7 @@ class PxlsStats(commands.Cog):
         {STATUS_EMOJIS["online"]}`online`: the user placed in the last 15 minutes
         {STATUS_EMOJIS["idle"]}`idle`: the user stopped placing 15/30 minutes ago
         {STATUS_EMOJIS["offline"]}`offline`: The user hasn't placed in the last 30 minutes
+        {STATUS_EMOJIS["inactive"]}`inactive`: The user hasn't placed on the current canvas
         """)
     async def userinfo(self,ctx,name=None):
         "Show some informations about a pxls user."
@@ -203,7 +204,10 @@ class PxlsStats(commands.Cog):
                 best_possible,average_cooldown = await get_best_possible(dt1,dt2)
                 fast_amount = int(best_possible * 0.95)
 
-                if last_15m >= fast_amount:
+                if last_15m > best_possible:
+                    status = "online (botting)"
+                    status_emoji = STATUS_EMOJIS["bot"]
+                elif last_15m >= fast_amount:
                     status = "online (fast)"
                     status_emoji = STATUS_EMOJIS["fast"]
                 else:
@@ -213,6 +217,10 @@ class PxlsStats(commands.Cog):
             elif last_30m != 0:
                 status = "idle"
                 status_emoji = STATUS_EMOJIS["idle"]
+            # inactive
+            elif canvas_count == 0 or canvas_count == None:
+                status = "inactive"
+                status_emoji = STATUS_EMOJIS["inactive"]
             # offline
             else:
                 status = "offline"

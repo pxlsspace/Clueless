@@ -4,7 +4,8 @@ from datetime import datetime, timedelta, timezone
 from discord.ext import commands
 from PIL import Image
 
-from utils.discord_utils import format_number, image_to_file
+from utils.cooldown import get_best_possible
+from utils.discord_utils import format_number, image_to_file,STATUS_EMOJIS
 from utils.setup import stats, db_connection as db_conn
 from utils.setup import db_users_manager as db_users, db_stats_manager as db_stats
 from utils.time_converter import format_datetime, round_minutes_down, td_format
@@ -19,7 +20,7 @@ class PxlsStats(commands.Cog):
 
     @commands.command(
         description = "Show some general pxls stats.",
-        aliases = ["gstats","gs"])
+        aliases = ["gstats","gs","canvasinfo"])
     async def generalstats(self,ctx):
         async with ctx.typing():
             # getting the general stats from pxls.space/stats
@@ -82,11 +83,19 @@ class PxlsStats(commands.Cog):
             await ctx.send(embed=emb,file=f)
 
     @commands.command(
-        aliases = ["uinfo"],
+        aliases = ["uinfo","status"],
         usage = "<username>",
-        description = "Show some informations about a pxls user.")
+        description = "Show some informations about a pxls user.",
+        help = f"""
+        -`<username>`: a pxls username (will use your set username if set)\n
+        **Status explanation:**
+        {STATUS_EMOJIS["fast"]}`online (fast)`: the user is close to the best possible in the last 15 minutes
+        {STATUS_EMOJIS["online"]}`online`: the user placed in the last 15 minutes
+        {STATUS_EMOJIS["idle"]}`idle`: the user stopped placing 15/30 minutes ago
+        {STATUS_EMOJIS["offline"]}`offline`: The user hasn't placed in the last 30 minutes
+        """)
     async def userinfo(self,ctx,name=None):
-
+        "Show some informations about a pxls user."
         if name == None:
             # select the discord user's pxls username if it has one linked
             discord_user = await db_users.get_discord_user(ctx.author.id)
@@ -136,16 +145,19 @@ class PxlsStats(commands.Cog):
 
         # get the recent activity stats
         time_intervals = [0.25,1,24,24*7] # in hours
+        time_intervals.append(0.5)
         interval_names = ["15 min","hour","day","week"]
         record_id_list = []
+        record_list = []
         now_time = datetime.now(timezone.utc)
         current_canvas_code = await stats.get_canvas_code()
         for time_interval in time_intervals:
-            time = now_time - timedelta(hours=time_interval)
+            time = now_time - timedelta(hours=time_interval) - timedelta(minutes=1)
             time = round_minutes_down(time)
             record = await db_stats.find_record(time,current_canvas_code)
             record_id = record["record_id"]
             record_id_list.append(record_id)
+            record_list.append(record)
 
         sql = """
             SELECT canvas_count, alltime_count, record_id
@@ -157,8 +169,8 @@ class PxlsStats(commands.Cog):
         """.format(", ".join(["?"]*len(record_id_list)))
         rows = await db_conn.sql_select(sql,(user_id,) + tuple(record_id_list))
 
-        recent_activity= []
-        for i,id in enumerate(record_id_list):
+        diff_list = []
+        for id in record_id_list:
             diff = None
             for row in rows:
                 # calcluate the difference for each time if the value is not null
@@ -168,18 +180,52 @@ class PxlsStats(commands.Cog):
                         diff = alltime_count - row["alltime_count"]
                     elif canvas_count != None and row["canvas_count"] != None:
                         diff = canvas_count - row["canvas_count"]
+            diff_list.append(diff)
 
-            recent_activity.append("• Last {}: `{}`".format(
-                interval_names[i],format_number(diff)))
+        recent_activity = [f"• Last {interval_names[i]}: `{format_number(diff_list[i])}`" for i in range(len(diff_list)-1)]
         recent_activity_text = "\n".join(recent_activity) 
         recent_activity_text += f"\n\nLast updated: {last_updated}"
-       
+
+        # get the status
+        last_15m = diff_list[0]
+        last_30m = diff_list[-1]
+
+        if last_15m == None or last_30m == None:
+            status = "???"
+            status_emoji = ""
+        else:
+            # online
+            if last_15m != 0:
+                # if the amount placed in the last 15m is at least 95% of the 
+                # best possible, the status is 'online (fast)'
+                dt2 = user_row["datetime"]
+                dt1 = record_list[0]["datetime"]
+                best_possible,average_cooldown = await get_best_possible(dt1,dt2)
+                fast_amount = int(best_possible * 0.95)
+
+                if last_15m >= fast_amount:
+                    status = "online (fast)"
+                    status_emoji = STATUS_EMOJIS["fast"]
+                else:
+                    status = "online"
+                    status_emoji = STATUS_EMOJIS["online"]
+            # idle
+            elif last_30m != 0:
+                status = "idle"
+                status_emoji = STATUS_EMOJIS["idle"]
+            # offline
+            else:
+                status = "offline"
+                status_emoji = STATUS_EMOJIS["offline"]
+
         # get the profile page
         profile_url = "https://pxls.space/profile/{}".format(name)
 
+        description = f"**Status**: {status_emoji} `{status}`\n"
+        description += f"[Profile page]({profile_url})"
         # create and send the embed
         emb = discord.Embed(title=f"User Info for `{name}`",color=0x66c5cc,
-            description = f"[Profile page]({profile_url})")
+            description = description)
         emb.add_field(name="**Canvas stats**",value=canvas_text,inline=True)
         emb.add_field(name="**All-time stats**",value=alltime_text,inline=True)
         emb.add_field(name="**Recent activity**",value=recent_activity_text,inline=False)

@@ -6,6 +6,13 @@ from discord.ext.commands.core import command
 from utils.utils import get_content
 import re
 
+STATUS_EMOJIS = {
+    "fast" : "<:status_fast:878642193861079060>",
+    "online": "<:status_online:878641779010842655>",
+    "idle": "<:status_idle:878641855619809280>",
+    "offline": "<:status_offline:878642079914410004>"
+}
+
 def format_table(table,column_names,alignments=None,name=None):
     ''' Format the leaderboard in a string to be printed
     - :param table: a 2D array to format

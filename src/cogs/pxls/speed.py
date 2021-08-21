@@ -70,9 +70,9 @@ class PxlsSpeed(commands.Cog):
             else:
                 date = param["last"] or "1d"
                 input_time = str_to_td(date)
-                input_time = input_time + timedelta(minutes=1)
                 if not input_time:
                     return await ctx.send(f"❌ Invalid `last` parameter, format must be `?d?h?m?s`.")
+                input_time = input_time + timedelta(minutes=1)
                 recent_time = datetime.now(timezone.utc)
                 old_time = round_minutes_down(datetime.now(timezone.utc) - input_time)
         else:

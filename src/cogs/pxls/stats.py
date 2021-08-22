@@ -109,134 +109,161 @@ class PxlsStats(commands.Cog):
             user_id = await db_users.get_pxls_user_id(name)
             if user_id == None:
                 return await ctx.send ("❌ User not found.")
+        
+        async with ctx.typing():
+            # get current pixels and leaderboard place
+            last_leaderboard = await db_stats.get_last_leaderboard()
+            user_row = None
+            for row in last_leaderboard:
+                if row["name"] == name:
+                    user_row = row
+                    break
 
-        # get current pixels and leaderboard place
-        last_leaderboard = await db_stats.get_last_leaderboard()
-        user_row = None
-        for row in last_leaderboard:
-            if row["name"] == name:
-                user_row = row
-                break
-
-        if user_row == None:
-            # if the user isn't on the last leaderboard
-            alltime_rank = canvas_rank = ">1000"
-            alltime_count = canvas_count = None
-            last_updated = "-"
-        else:
-            alltime_rank = user_row["alltime_rank"]
-            if alltime_rank > 1000:
-                alltime_rank = ">1000"
-            alltime_count = user_row["alltime_count"]
-
-            canvas_rank = user_row["canvas_rank"]
-            if canvas_rank > 1000:
-                canvas_rank = ">1000"
-            canvas_count = user_row["canvas_count"]
-            if canvas_count == 0:
-                canvas_rank = "N/A"
-
-            last_updated = format_datetime(user_row["datetime"],'R')
-
-        alltime_text = "• Rank: `{}`\n• Pixels: `{}`".format(alltime_rank,
-            format_number(alltime_count))
-        canvas_text = "• Rank: `{}`\n• Pixels: `{}`".format(canvas_rank,
-            format_number(canvas_count))
-
-        # get the recent activity stats
-        time_intervals = [0.25,1,24,24*7] # in hours
-        time_intervals.append(0.5)
-        interval_names = ["15 min","hour","day","week"]
-        record_id_list = []
-        record_list = []
-        now_time = datetime.now(timezone.utc)
-        current_canvas_code = await stats.get_canvas_code()
-        for time_interval in time_intervals:
-            time = now_time - timedelta(hours=time_interval) - timedelta(minutes=1)
-            time = round_minutes_down(time)
-            record = await db_stats.find_record(time,current_canvas_code)
-            record_id = record["record_id"]
-            record_id_list.append(record_id)
-            record_list.append(record)
-
-        sql = """
-            SELECT canvas_count, alltime_count, record_id
-            FROM pxls_user_stat
-            JOIN pxls_name ON pxls_name.pxls_name_id = pxls_user_stat.pxls_name_id
-            WHERE pxls_user_id = ?
-            AND record_id IN ({})
-            ORDER BY record_id
-        """.format(", ".join(["?"]*len(record_id_list)))
-        rows = await db_conn.sql_select(sql,(user_id,) + tuple(record_id_list))
-
-        diff_list = []
-        for id in record_id_list:
-            diff = None
-            for row in rows:
-                # calcluate the difference for each time if the value is not null
-                # and compare the canvas count if the alltime count is null
-                if row["record_id"] == id:
-                    if alltime_count != None and row["alltime_count"] != None:
-                        diff = alltime_count - row["alltime_count"]
-                    elif canvas_count != None and row["canvas_count"] != None:
-                        diff = canvas_count - row["canvas_count"]
-            diff_list.append(diff)
-
-        recent_activity = [f"• Last {interval_names[i]}: `{format_number(diff_list[i])}`" for i in range(len(diff_list)-1)]
-        recent_activity_text = "\n".join(recent_activity) 
-        recent_activity_text += f"\n\nLast updated: {last_updated}"
-
-        # get the status
-        last_15m = diff_list[0]
-        last_30m = diff_list[-1]
-
-        if last_15m == None or last_30m == None:
-            status = "???"
-            status_emoji = ""
-        else:
-            # online
-            if last_15m != 0:
-                # if the amount placed in the last 15m is at least 95% of the 
-                # best possible, the status is 'online (fast)'
-                dt2 = user_row["datetime"]
-                dt1 = record_list[0]["datetime"]
-                best_possible,average_cooldown = await get_best_possible(dt1,dt2)
-                fast_amount = int(best_possible * 0.95)
-
-                if last_15m > best_possible:
-                    status = "online (botting)"
-                    status_emoji = STATUS_EMOJIS["bot"]
-                elif last_15m >= fast_amount:
-                    status = "online (fast)"
-                    status_emoji = STATUS_EMOJIS["fast"]
-                else:
-                    status = "online"
-                    status_emoji = STATUS_EMOJIS["online"]
-            # idle
-            elif last_30m != 0:
-                status = "idle"
-                status_emoji = STATUS_EMOJIS["idle"]
-            # inactive
-            elif canvas_count == 0 or canvas_count == None:
-                status = "inactive"
-                status_emoji = STATUS_EMOJIS["inactive"]
-            # offline
+            if user_row == None:
+                # if the user isn't on the last leaderboard
+                alltime_rank = canvas_rank = ">1000"
+                alltime_count = canvas_count = None
+                last_updated = "-"
             else:
-                status = "offline"
-                status_emoji = STATUS_EMOJIS["offline"]
+                alltime_rank = user_row["alltime_rank"]
+                if alltime_rank > 1000:
+                    alltime_rank = ">1000"
+                alltime_count = user_row["alltime_count"]
 
-        # get the profile page
-        profile_url = "https://pxls.space/profile/{}".format(name)
+                canvas_rank = user_row["canvas_rank"]
+                if canvas_rank > 1000:
+                    canvas_rank = ">1000"
+                canvas_count = user_row["canvas_count"]
+                if canvas_count == 0:
+                    canvas_rank = "N/A"
 
-        description = f"**Status**: {status_emoji} `{status}`\n"
-        description += f"[Profile page]({profile_url})"
-        # create and send the embed
-        emb = discord.Embed(title=f"User Info for `{name}`",color=0x66c5cc,
-            description = description)
-        emb.add_field(name="**Canvas stats**",value=canvas_text,inline=True)
-        emb.add_field(name="**All-time stats**",value=alltime_text,inline=True)
-        emb.add_field(name="**Recent activity**",value=recent_activity_text,inline=False)
-        await ctx.send(embed=emb)
+                last_updated = format_datetime(user_row["datetime"],'R')
+
+            alltime_text = "• Rank: `{}`\n• Pixels: `{}`".format(alltime_rank,
+                format_number(alltime_count))
+            canvas_text = "• Rank: `{}`\n• Pixels: `{}`".format(canvas_rank,
+                format_number(canvas_count))
+
+            # get the recent activity stats
+            time_intervals = [0.25,1,24,24*7] # in hours
+            time_intervals.append(0.5)
+            interval_names = ["15 min","hour","day","week"]
+            record_id_list = []
+            record_list = []
+            now_time = datetime.now(timezone.utc)
+            current_canvas_code = await stats.get_canvas_code()
+            for time_interval in time_intervals:
+                time = now_time - timedelta(hours=time_interval) - timedelta(minutes=1)
+                time = round_minutes_down(time)
+                record = await db_stats.find_record(time,current_canvas_code)
+                record_id = record["record_id"]
+                record_id_list.append(record_id)
+                record_list.append(record)
+
+            sql = """
+                SELECT canvas_count, alltime_count, record_id
+                FROM pxls_user_stat
+                JOIN pxls_name ON pxls_name.pxls_name_id = pxls_user_stat.pxls_name_id
+                WHERE pxls_user_id = ?
+                AND record_id IN ({})
+                ORDER BY record_id
+            """.format(", ".join(["?"]*len(record_id_list)))
+            rows = await db_conn.sql_select(sql,(user_id,) + tuple(record_id_list))
+
+            diff_list = []
+            for id in record_id_list:
+                diff = None
+                for row in rows:
+                    # calcluate the difference for each time if the value is not null
+                    # and compare the canvas count if the alltime count is null
+                    if row["record_id"] == id:
+                        if alltime_count != None and row["alltime_count"] != None:
+                            diff = alltime_count - row["alltime_count"]
+                        elif canvas_count != None and row["canvas_count"] != None:
+                            diff = canvas_count - row["canvas_count"]
+                diff_list.append(diff)
+
+            recent_activity = [f"• Last {interval_names[i]}: `{format_number(diff_list[i])}`" for i in range(len(diff_list)-1)]
+            recent_activity_text = "\n".join(recent_activity) 
+            recent_activity_text += f"\n\nLast updated: {last_updated}"
+
+            # get the status
+            last_15m = diff_list[0]
+            last_30m = diff_list[-1]
+            last_online_date = None
+
+            if last_15m == None or last_30m == None:
+                status = "???"
+                status_emoji = ""
+            else:
+                # online
+                if last_15m != 0:
+                    # if the amount placed in the last 15m is at least 95% of the 
+                    # best possible, the status is 'online (fast)'
+                    dt2 = user_row["datetime"]
+                    dt1 = record_list[0]["datetime"]
+                    best_possible,average_cooldown = await get_best_possible(dt1,dt2)
+                    fast_amount = int(best_possible * 0.95)
+
+                    if last_15m > best_possible:
+                        status = "online (botting)"
+                        status_emoji = STATUS_EMOJIS["bot"]
+                    elif last_15m >= fast_amount:
+                        status = "online (fast)"
+                        status_emoji = STATUS_EMOJIS["fast"]
+                    else:
+                        status = "online"
+                        status_emoji = STATUS_EMOJIS["online"]
+                # idle
+                elif last_30m != 0:
+                    status = "idle"
+                    status_emoji = STATUS_EMOJIS["idle"]
+
+                else:
+                    # search for the last online time
+                    sql = """
+                        SELECT datetime, canvas_code, pxls_user_stat.record_id
+                        FROM pxls_user_stat
+                        JOIN record on record.record_id = pxls_user_stat.record_id
+                        JOIN pxls_name on pxls_name.pxls_name_id = pxls_user_stat.pxls_name_id
+                        WHERE pxls_user_id = ?
+                        AND {} = ?
+                        ORDER BY datetime
+                        LIMIT 1""".format("alltime_count" if alltime_count else "canvas_count")
+
+                    last_online = await db_conn.sql_select(sql,(user_id,alltime_count or canvas_count))
+                    if len(last_online) > 0:
+                        last_online_date = last_online[0]["datetime"]
+                        if last_online[0]["record_id"] == 1:
+                            last_online_date = "over " + format_datetime(last_online_date,'R')
+                        else:
+                            last_online_date = format_datetime(last_online_date,'R')
+
+                    # inactive
+                    if canvas_count == 0 or canvas_count == None:
+                        status = "inactive"
+                        status_emoji = STATUS_EMOJIS["inactive"]
+                    # offline
+                    else:
+                        status = "offline"
+                        status_emoji = STATUS_EMOJIS["offline"]
+
+            # get the profile page
+            profile_url = "https://pxls.space/profile/{}".format(name)
+
+            description = f"**Status**: {status_emoji} `{status}`\n"
+            if last_online_date != None:
+                description += f"*(Last pixel: {last_online_date})*\n"
+
+            description += f"[Profile page]({profile_url})"
+
+            # create and send the embed
+            emb = discord.Embed(title=f"User Info for `{name}`",color=0x66c5cc,
+                description = description)
+            emb.add_field(name="**Canvas stats**",value=canvas_text,inline=True)
+            emb.add_field(name="**All-time stats**",value=alltime_text,inline=True)
+            emb.add_field(name="**Recent activity**",value=recent_activity_text,inline=False)
+            await ctx.send(embed=emb)
 
     @commands.command(description="Get the current pxls board.",usage = "[-virgin|-initial]")
     async def board(self,ctx,*options):

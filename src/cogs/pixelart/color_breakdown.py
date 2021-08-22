@@ -97,17 +97,18 @@ def rgb_to_pxlscolor(img_colors):
 
     color_name is a pxls.space color name, if the RGB doesn't match,
     the color_name will be the hex code'''
-    res_list = []
+    res_dict = {}
     for color in img_colors:
         amount = color[0]
         rgb = color[1]
         if len(rgb) != 4 or rgb[3] != 0:
             rgb = rgb[:3]
-            color_name = rgb_to_pxls(rgb)
-            res_list.append(
-                (color_name or (rgb_to_hex(rgb)),
-                amount,
-                rgb_to_hex(rgb)))
+            color_name = rgb_to_pxls(rgb) or rgb_to_hex(rgb)
+            if color_name in res_dict:
+                res_dict[color_name]["amount"] += amount
+            else:
+                res_dict[color_name] = dict(amount=amount,hex=rgb_to_hex(rgb))
+    res_list = [(k,res_dict[k]["amount"],res_dict[k]["hex"]) for k in res_dict.keys()]
     return res_list
 
 def get_piechart(labels,values,colors):

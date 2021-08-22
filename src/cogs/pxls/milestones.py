@@ -88,7 +88,7 @@ class PxlsMilestones(commands.Cog):
             if channel == "here":
                 channel_id = ctx.message.channel.id
             elif channel == "none":
-                await db_servers.update_alert_channel(None,ctx.guild.id)
+                await db_servers.update_alert_channel(ctx.guild.id,None)
                 await ctx.send("✅ Milestone alerts won't be sent anymore.")
                 return
             else:

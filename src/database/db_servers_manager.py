@@ -1,5 +1,4 @@
 from database.db_connection import DbConnection
-from database.db_user_manager import DbUserManager
 
 class DbServersManager():
     ''' A class to manage a discord server/guild in the database '''

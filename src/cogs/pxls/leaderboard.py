@@ -2,15 +2,15 @@ import discord
 from discord.ext import commands
 from datetime import datetime, timedelta, timezone
 import plotly.graph_objects as go
-from utils.image_utils import hex_str_to_int
+from utils.image.image_utils import hex_str_to_int
 
-from utils.setup import db_stats_manager as db_stats, db_users_manager as db_users
+from utils.setup import db_stats, db_users
 from utils.time_converter import *
 from utils.arguments_parser import parse_leaderboard_args
 from utils.discord_utils import format_number, image_to_file
 from utils.table_to_image import table_to_image
 from utils.plot_utils import fig2img, get_theme, hex_to_rgba_string
-from utils.cooldown import get_best_possible
+from utils.pxls.cooldown import get_best_possible
 
 class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 

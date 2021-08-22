@@ -1,5 +1,4 @@
 import discord
-import colorsys
 import numpy as np
 from PIL import Image, ImageColor
 from io import BytesIO
@@ -7,8 +6,8 @@ from discord.ext import commands
 from blend_modes import hard_light
 
 from utils.discord_utils import image_to_file, get_image_from_message
-from utils.gif_saver import save_transparent_gif
-from utils.image_utils import get_pxls_color, is_hex_color
+from utils.image.gif_saver import save_transparent_gif
+from utils.image.image_utils import get_pxls_color, is_hex_color
 
 class Colorify(commands.Cog):
 

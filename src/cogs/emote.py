@@ -1,11 +1,12 @@
 import discord
 from discord.ext import commands
 import asyncio
-from utils.img_to_gif import img_to_animated_gif
+from utils.image.img_to_gif import img_to_animated_gif
 from PIL import Image
 from io import BytesIO
 
-from utils.discord_utils import get_image_from_message, number_emoji, format_emoji
+from utils.discord_utils import get_image_from_message, number_emoji,\
+     format_emoji
 
 class Emote(commands.Cog):
 

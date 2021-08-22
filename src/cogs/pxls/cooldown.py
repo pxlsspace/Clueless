@@ -1,6 +1,6 @@
 from discord.ext import commands
 import discord
-from utils.cooldown import get_cds, time_convert
+from utils.pxls.cooldown import get_cds, time_convert
 from utils.discord_utils import format_table
 from utils.setup import stats
 

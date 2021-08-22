@@ -1,5 +1,4 @@
 import discord
-from discord.embeds import Embed
 from discord.ext import commands
 
 EMBED_COLOR = 0x66c5cc

@@ -2,13 +2,13 @@ import discord
 from datetime import datetime
 from discord.ext import commands
 import plotly.graph_objects as go
-from utils.image_utils import hex_str_to_int
+from utils.image.image_utils import hex_str_to_int
 
 from utils.time_converter import format_datetime, str_to_td
 from utils.discord_utils import image_to_file
-from utils.cooldown import get_cd
+from utils.pxls.cooldown import get_cd
 from utils.plot_utils import add_glow, get_theme, fig2img, hex_to_rgba_string
-from utils.setup import stats, db_stats_manager as db_stats, db_users_manager as db_users
+from utils.setup import stats, db_stats, db_users
 
 class Online(commands.Cog):
 

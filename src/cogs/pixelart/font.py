@@ -1,12 +1,10 @@
 from PIL import ImageColor
-import discord
 from discord.ext import commands
-from io import BytesIO
 
 from utils.arguments_parser import parse_pixelfont_args
 from utils.font.font_manager import *
 from utils.discord_utils import image_to_file
-from utils.image_utils import get_pxls_color, is_hex_color
+from utils.image.image_utils import get_pxls_color, is_hex_color
 
 class Font(commands.Cog):
 

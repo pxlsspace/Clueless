@@ -3,7 +3,7 @@ from discord.ext import commands
 import os
 from dotenv import load_dotenv
 
-from utils.setup import db_servers_manager as db_servers
+from utils.setup import db_servers
 from utils.time_converter import str_to_td, td_format
 from utils.utils import get_content
 

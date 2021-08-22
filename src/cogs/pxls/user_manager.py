@@ -1,8 +1,8 @@
 import discord
 from discord.ext import commands
-from utils.image_utils import hex_str_to_int
+from utils.image.image_utils import hex_str_to_int
 
-from utils.setup import db_users_manager as db_users
+from utils.setup import db_users
 from utils.plot_utils import get_theme, theme_list
 
 class UserManager(commands.Cog):

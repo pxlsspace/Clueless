@@ -4,10 +4,9 @@ from datetime import datetime, timedelta, timezone
 from discord.ext import commands
 from PIL import Image
 
-from utils.cooldown import get_best_possible
+from utils.pxls.cooldown import get_best_possible
 from utils.discord_utils import format_number, image_to_file,STATUS_EMOJIS
-from utils.setup import stats, db_connection as db_conn
-from utils.setup import db_users_manager as db_users, db_stats_manager as db_stats
+from utils.setup import stats, db_conn, db_users, db_stats
 from utils.time_converter import format_datetime, round_minutes_down, td_format
 from utils.arguments_parser import MyParser
 from cogs.pixelart.color_breakdown import _colors

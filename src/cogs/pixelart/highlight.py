@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from discord.ext import commands
 from PIL import Image,ImageColor
 
-from utils.image_utils import get_pxls_color, hex_str_to_int,is_hex_color,\
+from utils.image.image_utils import get_pxls_color, hex_str_to_int,is_hex_color,\
          rgb_to_hex
 from utils.discord_utils import get_image_from_message, image_to_file, IMAGE_URL_REGEX
 from utils.arguments_parser import MyParser

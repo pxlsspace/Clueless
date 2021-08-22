@@ -4,9 +4,9 @@ from datetime import datetime, timedelta,timezone
 
 from utils.arguments_parser import MyParser
 from utils.discord_utils import format_number, image_to_file
-from utils.image_utils import hex_to_rgb, rgb_to_hex, v_concatenate, is_dark, lighten_color
+from utils.image.image_utils import hex_to_rgb, rgb_to_hex, v_concatenate, is_dark, lighten_color
 from utils.table_to_image import table_to_image
-from utils.setup import stats, db_stats_manager as db_stats
+from utils.setup import stats, db_stats
 from utils.plot_utils import fig2img, add_glow, get_theme
 from utils.time_converter import str_to_td, round_minutes_down
 

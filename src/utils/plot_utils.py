@@ -5,7 +5,7 @@ from PIL import Image
 from itertools import cycle
 from matplotlib import cm as cm
 
-from utils.image_utils import is_dark, rgb_to_hex, hex_to_rgb, lighten_color
+from utils.image.image_utils import is_dark, rgb_to_hex, hex_to_rgb, lighten_color
 
 
 """ Themes and util functions for the plotly plots """

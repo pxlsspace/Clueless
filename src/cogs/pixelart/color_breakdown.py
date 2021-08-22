@@ -7,10 +7,9 @@ from PIL import Image
 from discord.ext import commands
 from io import BytesIO
 
-from utils.setup import stats
 from utils.discord_utils import format_number, get_image_from_message, image_to_file
 from utils.table_to_image import table_to_image
-from utils.image_utils import h_concatenate, rgb_to_hex, rgb_to_pxls, hex_str_to_int
+from utils.image.image_utils import h_concatenate, rgb_to_hex, rgb_to_pxls, hex_str_to_int
 from utils.plot_utils import fig2img
 
 class ColorBreakdown(commands.Cog):

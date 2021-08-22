@@ -2,16 +2,15 @@ import plotly.graph_objects as go
 import discord
 from datetime import datetime, timedelta,timezone
 from discord.ext import commands
-from itertools import cycle
 
 from utils.discord_utils import image_to_file, format_number
-from utils.setup import db_stats_manager as db_stats, db_users_manager as db_users
+from utils.setup import db_stats, db_users
 from utils.arguments_parser import parse_speed_args
 from utils.table_to_image import table_to_image
 from utils.time_converter import format_datetime, round_minutes_down, str_to_td, td_format
 from utils.plot_utils import add_glow, get_theme,fig2img, hex_to_rgba_string
-from utils.image_utils import hex_str_to_int, v_concatenate
-from utils.cooldown import get_best_possible
+from utils.image.image_utils import hex_str_to_int, v_concatenate
+from utils.pxls.cooldown import get_best_possible
 
 class PxlsSpeed(commands.Cog):
 

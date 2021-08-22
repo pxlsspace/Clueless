@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord.ext.commands.converter import RoleConverter
 from discord.ext.commands.errors import RoleNotFound
 
-from utils.setup import db_users_manager as db_users, db_servers_manager as db_servers
+from utils.setup import db_users, db_servers
 from utils.discord_utils import UserConverter
 
 class Blacklist(commands.Cog):

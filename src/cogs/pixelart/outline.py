@@ -6,7 +6,8 @@ from io import BytesIO
 
 from utils.arguments_parser import parse_outline_args
 from utils.discord_utils import get_image_from_message, image_to_file
-from utils.image_utils import add_outline, remove_white_space, get_pxls_color, is_hex_color
+from utils.image.image_utils import add_outline, remove_white_space,\
+    get_pxls_color, is_hex_color
 
 
 class Outline(commands.Cog):

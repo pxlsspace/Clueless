@@ -5,7 +5,7 @@ from sys import stderr
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta, timezone
 
-from utils.setup import stats, db_stats_manager as db_stats, db_servers_manager as db_servers, db_users_manager as db_users
+from utils.setup import stats, db_stats, db_servers, db_users
 from utils.time_converter import local_to_utc
 
 class Clock(commands.Cog):

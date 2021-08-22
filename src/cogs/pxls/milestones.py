@@ -1,6 +1,6 @@
 from sqlite3 import IntegrityError
 from discord.ext import commands
-from utils.setup import stats,db_servers_manager as db_servers, db_users_manager as db_users
+from utils.setup import stats, db_servers, db_users
 class PxlsMilestones(commands.Cog):
 
     def __init__(self,client):

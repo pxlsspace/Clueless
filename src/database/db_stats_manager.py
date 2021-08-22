@@ -2,7 +2,7 @@ from sqlite3 import IntegrityError
 from datetime import datetime
 
 from database.db_connection import DbConnection
-from utils.pxls_stats_manager import PxlsStatsManager
+from utils.pxls.pxls_stats_manager import PxlsStatsManager
 
 class DbStatsManager():
     ''' A class to manage the pxls stats in the database '''

@@ -1,7 +1,6 @@
 import json
 import os
 from PIL import Image
-import time
 import numpy as np
 
 """ This file contains classes and functions to manage fonts and make pixel art texts"""

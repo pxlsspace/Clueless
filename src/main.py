@@ -6,7 +6,7 @@ import traceback
 from datetime import timezone
 
 from utils.help import *
-from utils.setup import DEFAULT_PREFIX, db_stats_manager as db_stats,db_servers_manager as db_servers, db_users_manager as db_users
+from utils.setup import DEFAULT_PREFIX, db_stats, db_servers, db_users
 
 load_dotenv()
 intents = discord.Intents.all()

@@ -44,7 +44,7 @@ class Online(commands.Cog):
         online_counts = [int(e[0]) for e in data if e[0] != None]
         dates = [e[1] for e in data if e[0] != None]
 
-        current_count = await stats.get_online_count()
+        current_count = stats.online_count
         online_counts.insert(0,int(current_count))
         dates.insert(0,datetime.utcnow())
 
@@ -93,7 +93,6 @@ def make_graph(dates,values,theme):
     )
 
     if theme.has_glow:
-        #add_glow(fig)
         add_glow(fig,nb_glow_lines=5, alpha_lines=0.5, diff_linewidth=4)
     if theme.has_underglow:
         fig.add_trace(go.Scatter(

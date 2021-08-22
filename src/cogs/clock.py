@@ -5,7 +5,7 @@ from sys import stderr
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta, timezone
 
-from utils.setup import stats, db_stats, db_servers, db_users
+from utils.setup import stats, db_stats, db_servers, db_users, ws_client
 from utils.time_converter import local_to_utc
 
 class Clock(commands.Cog):
@@ -43,7 +43,12 @@ class Clock(commands.Cog):
     async def before_update_stats(self):
         await self.client.wait_until_ready()
         try:
+            # update the data on startup
             await self._update_stats_data()
+
+            # start the websocket to update the board
+            ws_client.start()
+
             # wait for the time to be a round value
             round_minute = datetime.now(timezone.utc) + timedelta(minutes=1)
             round_minute = round_minute.replace(second=0,microsecond=0)
@@ -68,14 +73,19 @@ class Clock(commands.Cog):
             record_id = await self.create_record()
             if record_id == None:
                 # there is already a record saved for the current time
+                await self.update_boards()
                 return
-            # updating database with the new data
+
+            # save the new stats data in the database
             await self.save_stats(record_id)
 
             # check on update for the palette
             palette = stats.get_palette()
             canvas_code = await stats.get_canvas_code()
             await db_stats.save_palette(palette,canvas_code)
+
+            # update the board
+            await self.update_boards()
 
             # save the color stats
             await self.save_color_stats(record_id)
@@ -101,11 +111,12 @@ class Clock(commands.Cog):
 
     @update_online_count.before_loop
     async def before_update_online_count(self):
+        time_interval = 5 #minutes
         # wait for the bot to be ready
         await self.client.wait_until_ready()
         # wait that the time is a round value
         now = datetime.now(timezone.utc)
-        next_run = now.replace(minute=int(now.minute / 5) * 5, second=0, microsecond=0) + timedelta(minutes=5)
+        next_run = now.replace(minute=int(now.minute / time_interval) * time_interval, second=0, microsecond=0) + timedelta(minutes=time_interval)
         await discord.utils.sleep_until(next_run)
 
     async def check_milestones(self):
@@ -156,16 +167,12 @@ class Clock(commands.Cog):
 
     async def save_color_stats(self,record_id):
         # get the board with the placeable pixels only
-        board_array = stats.board_array
-        placemap_array = await stats.fetch_placemap()
-        placeable_board = board_array.copy()
-        placeable_board[placemap_array != 0] = 255
-        placeable_board[placemap_array == 0] = board_array[placemap_array == 0]
+        placeable_board = await stats.get_placable_board()
         placeable_board_img = Image.fromarray(placeable_board)
         board_colors = placeable_board_img.getcolors()
 
         # use the virgin map as a mask to get the board with placed pixels
-        virgin_array = await stats.fetch_virginmap()
+        virgin_array = stats.virginmap_array
         placed_board = placeable_board.copy()
         placed_board[virgin_array != 0] = 255
         placed_board[virgin_array == 0] = placeable_board[virgin_array == 0]
@@ -174,7 +181,6 @@ class Clock(commands.Cog):
 
         # Make a dictionary with the color index as key and a dictionnary of
         # amount and amount_placed as value
-        # initialise the dictionary
         colors_dict = {}
         for color_index,color in enumerate(stats.get_palette()):
             colors_dict[color_index] = {}
@@ -199,10 +205,16 @@ class Clock(commands.Cog):
 
     async def save_online_count(self):
         ''' save the current 'online count' in the database '''
-        online = await stats.get_online_count()
-        canvas_code = await stats.get_canvas_code()
-        dt = datetime.utcnow().replace(microsecond=0)
-        await db_stats.add_general_stat("online_count",online,canvas_code,dt)
+        online = stats.online_count
+        await stats.update_online_count(online) 
+
+    async def update_boards(self):
+        # update the canvas boards
+        ws_client.pause()
+        await stats.fetch_board()
+        await stats.fetch_virginmap()
+        ws_client.resume()
+        await stats.fetch_placemap()
 
 def setup(client):
     client.add_cog(Clock(client))

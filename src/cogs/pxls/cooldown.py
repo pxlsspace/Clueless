@@ -17,7 +17,7 @@ class PxlsCooldown(commands.Cog):
         if number:
             online = int(number)
         else:
-            online = await stats.get_online_count()
+            online = stats.online_count
 
         i = 0
         total = 0

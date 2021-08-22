@@ -30,9 +30,9 @@ class PxlsStats(commands.Cog):
             active_users = gen_stats["users_active_this_canvas"]
 
             # calculate canvas stats
-            board = await stats.fetch_board()
-            virginmap = await stats.fetch_virginmap()
-            placemap = await stats.fetch_placemap()
+            board = stats.board_array
+            virginmap = stats.virginmap_array
+            placemap = stats.placemap_array
             total_amount = np.sum(board!=255)
             total_placeable = np.sum(placemap!=255)
             total_non_virgin = np.sum(virginmap==0)
@@ -242,7 +242,7 @@ class PxlsStats(commands.Cog):
     async def board(self,ctx,*options):
         async with ctx.typing():
             if "-virginmap" in options or "-virgin" in options:
-                array = await stats.fetch_virginmap()
+                array = stats.virginmap_array
             elif "-initial" in options:
                 array = await stats.fetch_initial_canvas()
                 array = stats.palettize_array(array)
@@ -263,7 +263,7 @@ class PxlsStats(commands.Cog):
 
             if "-placed" in options or "-p" in options:
             # use the virgin map as a mask to get the board with placed pixels
-                virgin_array = await stats.fetch_virginmap()
+                virgin_array = stats.virginmap_array
                 placed_board = placeable_board.copy()
                 placed_board[virgin_array != 0] = 255
                 placed_board[virgin_array == 0] = placeable_board[virgin_array == 0]

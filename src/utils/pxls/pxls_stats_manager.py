@@ -13,13 +13,18 @@ class PxlsStatsManager():
         self.stats_json = {}
         self.board_info = {}
         self.current_canvas_code = None
-        self.board_array = None
+        self.online_count = None
         self.db_conn = db_conn
+
+        self.board_array = None
+        self.virginmap_array = None
+        self.placemap_array = None
 
     async def refresh(self):
         try:
             self.board_info = await self.query("info","json")
-            self.board_array = await self.fetch_board()
+            count = await self.fetch_online_count()
+            self.online_count = count
         except:
             pass
 
@@ -77,9 +82,20 @@ class PxlsStatsManager():
             rows= await self.db_conn.sql_select("SELECT canvas_code,MAX(datetime) FROM record")
             canvas_code = rows[0][0]
             return canvas_code
-    async def get_online_count(self):
+
+    async def fetch_online_count(self):
         response_json = await self.query('users','json')
-        return response_json["count"]
+        count = response_json["count"]
+        self.online_count = count
+        return count
+
+    async def update_online_count(self,count):
+        """ update the online count in the database """
+        canvas_code = await self.get_canvas_code()
+        dt = datetime.utcnow().replace(microsecond=0)
+        sql = ''' INSERT INTO pxls_general_stat(stat_name, value ,canvas_code, datetime)
+                VALUES(?,?,?,?) '''
+        await self.db_conn.sql_update(sql,("online_count",count,canvas_code,dt))
 
     def palettize_array(self,array):
         """ Convert a numpy array of palette indexes to a color numpy array
@@ -100,6 +116,7 @@ class PxlsStatsManager():
         board_bytes = await self.query('boarddata','bytes')
         board_array = np.asarray(list(board_bytes), dtype=np.uint8).reshape(
             self.board_info["height"],self.board_info["width"])
+        self.board_array = board_array
         return board_array
 
     async def fetch_virginmap(self):
@@ -107,6 +124,7 @@ class PxlsStatsManager():
         board_bytes = await self.query('virginmap','bytes')
         board_array = np.asarray(list(board_bytes), dtype=np.uint8).reshape(
             self.board_info["height"],self.board_info["width"])
+        self.virginmap_array = board_array
         return board_array
 
     async def fetch_initial_canvas(self):
@@ -121,17 +139,25 @@ class PxlsStatsManager():
         board_bytes = await self.query('placemap','bytes')
         board_array = np.asarray(list(board_bytes), dtype=np.uint8).reshape(
             self.board_info["height"],self.board_info["width"])
+        self.placemap_array = board_array
         return board_array
 
     async def get_placable_board(self):
         """fetch the board as an index array and use the placemap as a mask"""
-        canvas_array = await self.fetch_board()
-        placemap_array = await self.fetch_placemap()
+        canvas_array = self.board_array
+        placemap_array = self.placemap_array
         placeable_board = canvas_array.copy()
         placeable_board[placemap_array != 0] = 255
         placeable_board[placemap_array == 0] = canvas_array[placemap_array == 0]
 
         return placeable_board
+
+    def update_board_pixel(self,x,y,color):
+        self.board_array[y,x] = color
+    
+    def update_virginmap_pixel(self,x,y,color):
+        self.virginmap_array[y,x] = 0
+
 
     async def query(self,endpoint,content_type):
         url = self.base_url + endpoint

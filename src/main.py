@@ -25,6 +25,38 @@ async def on_ready():
     print('We have logged in as {0.user}'.format(client))
 
 @client.event
+async def on_command(ctx):
+    # log commands used in a channel
+    log_channel_id = os.environ.get("COMMAND_LOG_CHANNEL")
+
+    try:
+        log_channel = await client.fetch_channel(log_channel_id)
+    except:
+        return
+
+    if isinstance(ctx.channel, discord.channel.DMChannel):
+            context = "DM"
+    else:
+        context = f"• **Server**: {ctx.guild.name} "
+        context += f"• **Channel**: <#{ctx.channel.id}>\n"
+
+    message_time = ctx.message.created_at
+    message_time = message_time.replace(tzinfo=timezone.utc)
+    message = f"By <@{ctx.author.id}> "
+    message += f"on <t:{int(message_time.timestamp())}>\n"
+    message += f"```{ctx.message.content}```"
+    message += f"[link to the message]({ctx.message.jump_url})\n"
+
+    emb = discord.Embed(
+        color=0x00bb00,
+        title = "Command '{}' used.".format(ctx.command.qualified_name))
+    emb.add_field(name="Context:",value=context,inline=False)
+    emb.add_field(name="Message:",value=message,inline=False)
+    emb.set_thumbnail(url=ctx.author.avatar_url)
+
+    await log_channel.send(embed=emb)
+
+@client.event
 async def on_command_error(ctx,error):
     if isinstance(error,commands.MissingRequiredArgument):
         text = "❌ " + str(error) + "\n"

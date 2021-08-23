@@ -216,16 +216,20 @@ class PxlsStats(commands.Cog):
                     if last_15m > best_possible:
                         status = "online (botting)"
                         status_emoji = STATUS_EMOJIS["bot"]
+                        embed_color = 0x7ce1ec
                     elif last_15m >= fast_amount:
                         status = "online (fast)"
                         status_emoji = STATUS_EMOJIS["fast"]
+                        embed_color = 0x9676cb
                     else:
                         status = "online"
                         status_emoji = STATUS_EMOJIS["online"]
+                        embed_color = 0x43b581
                 # idle
                 elif last_30m != 0:
                     status = "idle"
                     status_emoji = STATUS_EMOJIS["idle"]
+                    embed_color = 0xfcc15e
 
                 else:
                     # search for the last online time
@@ -241,10 +245,12 @@ class PxlsStats(commands.Cog):
                     if canvas_count == 0 or canvas_count == None:
                         status = "inactive"
                         status_emoji = STATUS_EMOJIS["inactive"]
+                        embed_color = 0x484848
                     # offline
                     else:
                         status = "offline"
                         status_emoji = STATUS_EMOJIS["offline"]
+                        embed_color = 0x747f8d
 
             # get the profile page
             profile_url = "https://pxls.space/profile/{}".format(name)
@@ -258,7 +264,7 @@ class PxlsStats(commands.Cog):
             description += f"[Profile page]({profile_url})"
 
             # create and send the embed
-            emb = discord.Embed(title=f"User Info for `{name}`",color=0x66c5cc,
+            emb = discord.Embed(title=f"User Info for `{name}`",color=embed_color,
                 description = description)
             emb.add_field(name="**Canvas stats**",value=canvas_text,inline=True)
             emb.add_field(name="**All-time stats**",value=alltime_text,inline=True)

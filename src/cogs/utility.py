@@ -1,11 +1,13 @@
-import discord
-from discord.ext import commands
 import os
+import discord
+from datetime import timedelta
+from discord.ext import commands
 from dotenv import load_dotenv
 
 from utils.setup import db_servers
 from utils.time_converter import str_to_td, td_format
 from utils.utils import get_content
+from utils.discord_utils import format_number
 
 class Utility(commands.Cog):
     ''' Various utility commands'''
@@ -70,16 +72,45 @@ class Utility(commands.Cog):
             return await ctx.send("❌ Invalid `currency` parameter.")
 
     @commands.command(
-        usage="<?d?h?m?s>",
+        usage="<?y?mo?w?d?h?m?s> {-year|month|week|day|hour|minute|second}",
         description = "Convert time formats.",
         aliases = ["converttime","tconvert","tc"]
         )
-    async def timeconvert(self,ctx,input):
+    async def timeconvert(self,ctx,input, *options):
         time = str_to_td(input)
         if not time:
-            return await ctx.send(f"❌ Invalid `time` parameter, format must be `{ctx.prefix}{ctx.command.name}{ctx.command.usage}`.")
-        await ctx.send(f"{input} = {td_format(time)}.")
+            return await ctx.send(f"❌ Invalid `time` parameter, format must be `?y?mo?w?d?h?m?s`.")
 
+        if len(options) > 0:
+            options = [o.lower().strip("s") for o in options]
+            if "-year" in options or "-y" in options:
+                res_nb = time/timedelta(days=365)
+                res_unit = "year"
+            elif "-month" in options:
+                res_nb = time/timedelta(days=30)
+                res_unit = "month"
+            elif "-week" in options or "-w" in options:
+                res_nb = time/timedelta(weeks=1)
+                res_unit = "week"
+            elif "-day" in options or "-d" in options:
+                res_nb = time/timedelta(days=1)
+                res_unit = "day"
+            elif "-hour" in options or "-h" in options:
+                res_nb = time/timedelta(hours=1)
+                res_unit = "hour"
+            elif "-minute" in options or "-m" in options:
+                res_nb = time/timedelta(minutes=1)
+                res_unit = "minute"
+            elif "-second" in options or "-s" in options:
+                res_nb = time/timedelta(seconds=1)
+                res_unit = "second"
+            else:
+                return await ctx.send(f"❌ unrecognized arguments: {' '.join(options)}")
+            res = f"{format_number(res_nb)} {res_unit}{'s' if res_nb >= 2 else ''}"
+        else:
+            res = td_format(time)
+
+        await ctx.send(f"{str_to_td(input,raw=True)} = {res}.")
 
     @commands.command(hidden=True)
     @commands.is_owner()

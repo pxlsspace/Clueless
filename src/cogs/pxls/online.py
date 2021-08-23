@@ -17,7 +17,7 @@ class Online(commands.Cog):
 
     @commands.command(
         description = "Show the online count history.",
-        usage = "[-cd] [-last ?d?h?m?s]")
+        usage = "[-cd] [-last ?y?mo?w?d?h?m?s]")
     async def online(self,ctx,*args):
         last = "1d"
         if ("-last" in args):

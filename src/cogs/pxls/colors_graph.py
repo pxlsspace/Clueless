@@ -18,10 +18,10 @@ class ColorsGraph(commands.Cog):
     @commands.command(
         aliases=["colorgraph","cg"],
         description = "Show a graph of the canvas colors.",
-        usage="[colors] [-placed|-p] [-last ?d?h?m?s]",
+        usage="[colors] [-placed|-p] [-last ?y?mo?w?d?h?m?s]",
         help = """\t- `<colors>`: list of pxls colors separated by a comma
         \t- `[-placed|-p]`: only show the virgin pixels
-        \t- `[-last ?d?h?m?s]` Show the progress in the last x days/hour/min/s""")
+        \t- `[-last ?y?mo?w?d?h?m?s]` Show the progress in the last x years/months/weeks/days/hours/minutes/seconds""")
     async def colorsgraph(self,ctx,*args):
         "Show a graph of the canvas colors."
         # parse the arguemnts
@@ -39,7 +39,7 @@ class ColorsGraph(commands.Cog):
         if parsed_args.last:
             input_time = str_to_td(parsed_args.last)
             if not input_time:
-                return await ctx.send(f"❌ Invalid `last` parameter, format must be `?d?h?m?s`.")
+                return await ctx.send(f"❌ Invalid `last` parameter, format must be `?y?mo?w?d?h?m?s`.")
             dt2 = datetime.now(timezone.utc)
             dt1 = round_minutes_down(datetime.now(timezone.utc) - input_time)
         else:

@@ -23,7 +23,7 @@ class PxlsSpeed(commands.Cog):
               - `[-canvas|-c]`: show the canvas stats
               - `[-groupby|-g]`: show a bar chart for each `day` or `hour`
               - `[-progress|-p]`: compare the progress between users
-              - `[-last|-l ?d?h?m?s]`: get the speed in the last x hours/days/minutes/seconds (default: 1 day)
+              - `[-last ?y?mo?w?d?h?m?s]` Show the progress in the last x years/months/weeks/days/hours/minutes/seconds (default: 1d)
               - `[-before <date time>]`: show the speed before a date and time (format YYYY-mm-dd HH:MM)
               - `[-after <date time>]`: show the speed after a date and time (format YYYY-mm-dd HH:MM)"""
     )
@@ -70,7 +70,7 @@ class PxlsSpeed(commands.Cog):
                 date = param["last"] or "1d"
                 input_time = str_to_td(date)
                 if not input_time:
-                    return await ctx.send(f"❌ Invalid `last` parameter, format must be `?d?h?m?s`.")
+                    return await ctx.send(f"❌ Invalid `last` parameter, format must be `?y?mo?w?d?h?m?s`.")
                 input_time = input_time + timedelta(minutes=1)
                 recent_time = datetime.now(timezone.utc)
                 old_time = round_minutes_down(datetime.now(timezone.utc) - input_time)

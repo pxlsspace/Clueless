@@ -4,21 +4,57 @@ import time
 
 ''' Helper functions to convert datetime objects '''
 
-def str_to_td(input:str):
-    ''' Convert a string in the format '`x`d`x`h`x`m`x`s' to a `timedelta` object.
-    
+def str_to_td(input:str,raw=False):
+    ''' Convert a string in the format '`?`y`?`mo`?`w`?`d`?`h`?`m`?`s' to a
+     `timedelta` object.
     Return `None` if the string does not match.'''
 
-    regex = re.compile(r'((?P<days>(\d*\.)?\d+?)d)?((?P<hours>(\d*\.)?\d+?)h)?((?P<minutes>(\d*\.)?\d+?)(m|min))?((?P<seconds>(\d*\.)?\d+?)(s|sec))?')
+    time_formats = [
+        ("years","(y|year|years)"),
+        ("months","(mo|month|months)"),
+        ("weeks","(w|week|weeks)"),
+        ("days","(d|day|days])"),
+        ("hours","(h|hr|hour|hours)"),
+        ("minutes","(m|min|minute|minutes)"),
+        ("seconds","(s|sec|second|seconds)"),
+    ]
+
+    regex = r""
+    for t in time_formats:
+        regex+=r"((?P<" + t[0] + r">(\d*\.)?\d+?)" + t[1] + r")?"
+    regex = re.compile(regex)
+
     parts = regex.fullmatch(input)
     if not parts:
         return None
-
     parts = parts.groupdict()
+
+    if raw == True:
+        raw = []
+        for name,param in parts.items():
+            if param:
+                if float(param) < 2:
+                    # remove the s
+                    name = name[:-1]
+                raw.append(f"{param} {name}")
+        return ", ".join(raw)
+
     time_params = {}
     for name, param in parts.items():
         if param:
-            time_params[name] = float(param)
+            # convert months and years to day because timedelta doesn't
+            # support these time units
+            if name == "months":
+                name = "days"
+                param = float(param)*30
+            elif name == "years":
+                name = "days"
+                param = float(param)*365
+            
+            try:
+                time_params[name] += float(param)
+            except KeyError:
+                time_params[name] = float(param)
     return timedelta(**time_params)
 
 

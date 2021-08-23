@@ -28,7 +28,9 @@ def parse_leaderboard_args(args):
     parser.add_argument('-lines',metavar="<number>", action='store', type=check_lines, default=15,
         help="Number of lines to show.")
     parser.add_argument('-graph','-g', action='store_true', default=False)
+    parser.add_argument('-bars','-b', action='store_true', default=False)
     parser.add_argument('-last','-l',action='store',default=None)
+    parser.add_argument('-ranks',action='store', type=check_ranks, default=None)
     parser.add_argument('-after',
                         dest='after',
                         nargs='+',
@@ -145,3 +147,23 @@ def check_lines(value):
     if ivalue <= 0 or ivalue > 40:
         raise argparse.ArgumentTypeError("Must be an integer between 1 and 40.")
     return ivalue
+
+def check_ranks(value):
+    ranks=value.split("-")
+    if len(ranks) != 2:
+        raise argparse.ArgumentTypeError("Format must be like `<rank1>-<rank2>`.")
+    rank_low = ranks[0]
+    rank_high = ranks[1]
+    if not(rank_low.isdigit() and rank_high.isdigit()):
+        raise argparse.ArgumentTypeError("The ranks must be numbers.")
+    rank_low = int(rank_low)
+    rank_high = int(rank_high)
+    if rank_low <1 or rank_high <1 or rank_low >1000 or rank_high > 1000:
+        raise argparse.ArgumentTypeError("The ranks must be between 1 and 1000.")
+    if rank_low > rank_high:
+        raise argparse.ArgumentTypeError("The first rank must be smaller than the second one.")
+
+    if rank_high-rank_low > 40:
+        raise argparse.ArgumentTypeError("The rank range must be less than 40.")
+
+    return (rank_low,rank_high)

@@ -11,7 +11,7 @@ from utils.discord_utils import format_number, image_to_file
 from utils.table_to_image import table_to_image
 from utils.plot_utils import fig2img, get_theme, hex_to_rgba_string
 from utils.pxls.cooldown import get_best_possible
-
+from cogs.pxls.speed import get_stats_graph
 class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
     def __init__(self, client):
@@ -22,14 +22,16 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
     # TODO: error when the time frame is before the canvas start
     # or automatically get alltime values
     @commands.command(
-        usage = "[username] [-canvas] [-lines <number>] [-graph] [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
+        usage = "[username] [-canvas] [-lines <number>] [-graph] [-bars] [-ranks ?-?] [-last ?y?m?w?d?h?m?s] [-before <date time>] [-after <date time>]",
         description = "Show the all-time or canvas leaderboard.",
         aliases=["ldb"],
         help = """- `[username]`: center the leaderboard on this user (`!` = your set username)
                   - `[-canvas|-c]`: to get the canvas leaderboard
-                  - `[-graph|-g]`: show a bar graph of the leaderboard
-                  - `[-last|-l ?d?h?m?s]`: show the leaderboard of the last ? day, ? hour, ? min, ? second
-                  - `[-lines <number>]`: number of lines to show, must be less than 40 (default 20)"""
+                  - `[-lines <number>]`: number of lines to show, must be less than 40 (default 15)
+                  - `[-graph|-g]`: show a progress graph for each user in the leaderboard
+                  - `[-bars|-b]`: show a bar graph of the leaderboard
+                  - `[-ranks ?-?]`: show the leaderboard between 2 ranks
+                  - `[-last ?y?mo?w?d?h?m?s]` Show the progress in the last x years/months/weeks/days/hour/min/s""" 
         )
     async def leaderboard(self,ctx,*args):
         ''' Shows the pxls.space leaderboard '''
@@ -43,7 +45,9 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         speed_opt = False
         sort_opt = None
         last_opt = param["last"]
+        bars_opt = param["bars"]
         graph_opt = param["graph"]
+        ranks_opt = param["ranks"]
 
         # get the user theme
         discord_user = await db_users.get_discord_user(ctx.author.id)
@@ -68,7 +72,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                 date = last_opt
                 input_time = str_to_td(date)
                 if not input_time:
-                    return await ctx.send(f"❌ Invalid `last` parameter, format must be `?d?h?m?s`.")
+                    return await ctx.send(f"❌ Invalid `last` parameter, format must be `?y?mo?w?d?h?m?s`.")
                 input_time = input_time + timedelta(minutes=1)
                 date2 = datetime.now(timezone.utc)
                 date1 = round_minutes_down(datetime.now(timezone.utc) - input_time)
@@ -89,14 +93,24 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
         # fetch the leaderboard from the database
         async with ctx.typing():
-            last_date, datetime1, datetime2, ldb = await db_stats.get_pixels_placed_between(date1,date2,canvas_opt,sort)
+            canvas,last_date, datetime1, datetime2, ldb = await db_stats.get_pixels_placed_between(date1,date2,canvas_opt,sort)
+            # change the canvas opt if sort by speed on time frame on the current canvas
+            canvas_opt = canvas 
 
         # check that we can actually calculate the speed
         if speed_opt and datetime1 == datetime2:
             return await ctx.send("❌ The time frame given is too short.")
 
         # trim the leaderboard to only get the lines asked
-        if username:
+        if ranks_opt:
+            (rank_low, rank_high) = ranks_opt
+            username = []
+            try:
+                ldb = ldb[rank_low-1:rank_high]
+            except IndexError:
+                return await ctx.send("❌ Can't find values between these ranks in the leaderboard.")
+
+        elif username:
             # looking for the index and pixel count of the given user
             name_index = None
             for index,line in enumerate(ldb):
@@ -185,7 +199,9 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
         # create the image with the leaderboard data
         colors = None
-        if username:
+        if graph_opt:
+            colors = theme.get_palette(len(res_ldb))
+        elif username:
             colors = []
             for e in res_ldb:
                 if e[1] == username[0]:
@@ -225,9 +241,34 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
         if not(param["before"] or param["after"]):
             text +=  f"• Last updated: {format_datetime(last_date,'R')}"
-    
-        # make the bars graph
+
+        # make the progress graph
         if graph_opt:
+            name_list = [u[1] for u in res_ldb]
+            if last_opt == None:
+                dt1 = datetime(1900,1,1)
+                dt2 = datetime.utcnow() 
+            else:
+                dt1 = datetime1
+                dt2 = datetime2
+            stats_dt1, stats_dt2, stats_history = await db_stats.get_stats_history(name_list,dt1,dt2,canvas_opt)
+            stats = []
+            for user in stats_history:
+                name = user[0]
+                data = user[1]
+                data_dates = [stat["datetime"] for stat in data]
+                if last_opt != None:
+                    # substract the first value to each value so they start at 0
+                    data_pixels = [stat["pixels"] - data[0]["pixels"] for stat in data]
+                else:
+                    data_pixels = [stat["pixels"] for stat in data]
+                stats.append([name,data_dates,data_pixels])
+            stats.sort(key = lambda x:x[2][-1],reverse=True)
+            graph_img = await self.client.loop.run_in_executor(None,get_stats_graph,stats,"",theme)
+            graph_file = image_to_file(graph_img,"graph.png")
+
+        # make the bars graph
+        if bars_opt:
             data = [int(user[2].replace(" ","")) if user[2] != "???" else None for user in res_ldb]
             theme_colors = theme.get_palette(1)
             if username:
@@ -248,7 +289,10 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
         # send graph and embed
         await ctx.send(embed=emb,file=file)
+        # send graph image
         if graph_opt:
+            await ctx.send(file=graph_file)
+        if bars_opt:
             await ctx.send(file=bars_file)
 
     @staticmethod

@@ -256,7 +256,7 @@ synthwave_noglow_theme = Theme(
     table_outline_color = "#000000",
     off_color= "#6954b7",
     has_glow = False,
-    has_underglow = True,
+    has_underglow = False,
     palette = "synthwave",
     outline_dark=True
 )

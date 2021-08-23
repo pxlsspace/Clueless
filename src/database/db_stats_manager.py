@@ -274,46 +274,70 @@ class DbStatsManager():
             return past_time, now_time, res_list
 
     async def get_pixels_placed_between(self,dt1,dt2,canvas,orderby_opt):
+        """ Get the leaderboard between 2 dates
+        ### Parameters
+        - :param dt1: the lower date
+        - :param dt2: the most recent date
+        - :param canvas: boolean to indicate if we want canvas stats or alltime
+        - :param orderby_opt: indicate how to order the leaderboard (either \
+            `canvas`, `alltime` or `speed`)
 
-            order_dict ={
-                "speed": "b.{0}_count - a.{0}_count".format("canvas" if canvas else "alltime"),
-                "canvas": "last.canvas_count",
-                "alltime": "last.alltime_count"
-            }
-            assert orderby_opt in order_dict.keys(),"orderby paramater must be: 'placed', 'canvas' or 'alltime'"
-            orderby = order_dict[orderby_opt]
+        ### Returns
+        Return a tuple (last_date, datetime1, datetime2, leaderboard)
+        - canvas_opt: True if we had to compare canvas count to get the speed
+        - last_date: the latest date in the data (used to know the last updated time)
+        - date1: the closest date found to :param dt1:
+        - date2: the closest date found to :param dt2:
+        - leaderboard: a list of rows with the leaderboard, each row has:
+            - rank: the rank depending on how we ordered the leaderboard
+            - name: the pxls username
+            - alltime_count or canvas_count: the last count (depends on :param canvas:)
+            - placed: the amount placed in the time frame"""
+        current_canvas_code = await self.stats_manager.get_canvas_code()
+        if canvas:
+            canvas_to_select = current_canvas_code
+        else:
+            canvas_to_select = None
 
-            
-            if canvas:
-                canvas_to_select = await self.stats_manager.get_canvas_code()
-            else:
-                canvas_to_select = None
+        last_record = await self.find_record(datetime.utcnow(),canvas_to_select)
+        record1 = await self.find_record(dt1,canvas_to_select)
+        record2 = await self.find_record(dt2,canvas_to_select)
 
-            last_record = await self.find_record(datetime.utcnow(),canvas_to_select)
-            record1 = await self.find_record(dt1,canvas_to_select)
-            record2 = await self.find_record(dt2,canvas_to_select)
+        # if the record1 is on the current canvas and we're checking the speed,
+        # we *have* to compare canvas counts
+        if orderby_opt == "speed" and record1["canvas_code"] == current_canvas_code:
+            canvas = True
 
-            sql = """
-            SELECT
-                ROW_NUMBER() OVER(ORDER BY ({0}) DESC) AS rank,
-                pxls_name.name,
-                last.{1}_count,
-                b.{1}_count - a.{1}_count as placed
-            FROM pxls_user_stat a, pxls_user_stat b, pxls_user_stat last
-            INNER JOIN(pxls_name) ON pxls_name.pxls_name_id = a.pxls_name_id
-            WHERE a.pxls_name_id = b.pxls_name_id AND a.pxls_name_id = last.pxls_name_id
-                AND last.record_id = ?
-                AND a.record_id =  ?
-                AND b.record_id = ?
-            ORDER BY {0} DESC""".format(
-                    orderby,
-                    "canvas" if canvas else "alltime")
+        order_dict ={
+            "speed": "b.{0}_count - a.{0}_count".format("canvas" if canvas else "alltime"),
+            "canvas": "last.canvas_count",
+            "alltime": "last.alltime_count"
+        }
+        assert orderby_opt in order_dict.keys(),"orderby paramater must be: 'placed', 'canvas' or 'alltime'"
+        orderby = order_dict[orderby_opt]
 
-            return (
-                last_record["datetime"],
-                record1["datetime"],
-                record2["datetime"],
-                await self.db.sql_select(sql,(last_record["record_id"],record1["record_id"],record2["record_id"])))
+        sql = """
+        SELECT
+            ROW_NUMBER() OVER(ORDER BY ({0}) DESC) AS rank,
+            pxls_name.name,
+            last.{1}_count,
+            b.{1}_count - a.{1}_count as placed
+        FROM pxls_user_stat a, pxls_user_stat b, pxls_user_stat last
+        INNER JOIN(pxls_name) ON pxls_name.pxls_name_id = a.pxls_name_id
+        WHERE a.pxls_name_id = b.pxls_name_id AND a.pxls_name_id = last.pxls_name_id
+            AND last.record_id = ?
+            AND a.record_id =  ?
+            AND b.record_id = ?
+        ORDER BY {0} DESC""".format(
+                orderby,
+                "canvas" if canvas else "alltime")
+
+        return (
+            canvas,
+            last_record["datetime"],
+            record1["datetime"],
+            record2["datetime"],
+            await self.db.sql_select(sql,(last_record["record_id"],record1["record_id"],record2["record_id"])))
 
     async def find_record(self,dt,canvas_code=None):
         """ find the record with  the closest date to the given date in the database
@@ -325,7 +349,11 @@ class DbStatsManager():
             canvas_code = f"'{str(canvas_code)}'"
 
         sql = """
-            SELECT record_id, datetime, min(abs(JulianDay(datetime) - JulianDay(?)))*24*3600 as diff_with_time
+            SELECT 
+                record_id,
+                datetime,
+                canvas_code,
+                min(abs(JulianDay(datetime) - JulianDay(?)))*24*3600 as diff_with_time
             FROM record
             WHERE canvas_code IS {}
             """.format(canvas_code)

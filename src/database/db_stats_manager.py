@@ -437,3 +437,48 @@ class DbStatsManager():
         palette_colors = await self.db.sql_select(sql,canvas_code)
 
         return palette_colors
+
+    async def get_session_start_time(self,user_id,canvas:bool):
+        """ Find the last time frame where the user didn't place """
+        sql = """
+            SELECT *
+            FROM (
+                SELECT 
+                    datetime,
+                    canvas_code,
+                    record.record_id,
+                    {0}-(LAG({0}) OVER (ORDER BY datetime)) as placed
+                FROM pxls_user_stat
+                JOIN record on record.record_id = pxls_user_stat.record_id
+                JOIN pxls_name on pxls_name.pxls_name_id = pxls_user_stat.pxls_name_id
+                WHERE pxls_user_id = ?
+                ORDER BY datetime desc
+            ) p
+            WHERE p.placed = 0
+            LIMIT 1""".format("canvas_count" if canvas else "alltime_count")
+
+        res = await self.db.sql_select(sql,(user_id))
+
+        if len(res) == 0:
+            return None
+        else:
+            return res[0]
+
+
+    async def get_last_online(self,user_id,canvas:bool,last_count):
+        sql = """
+            SELECT datetime, canvas_code, pxls_user_stat.record_id
+            FROM pxls_user_stat
+            JOIN record on record.record_id = pxls_user_stat.record_id
+            JOIN pxls_name on pxls_name.pxls_name_id = pxls_user_stat.pxls_name_id
+            WHERE pxls_user_id = ?
+            AND {} = ?
+            ORDER BY datetime
+            LIMIT 1""".format("canvas_count" if canvas else "alltime_count")
+
+        res = await self.db.sql_select(sql,(user_id,last_count))
+
+        if len(res) == 0:
+            return None
+        else:
+            return res[0]

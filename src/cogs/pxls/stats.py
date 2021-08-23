@@ -191,6 +191,7 @@ class PxlsStats(commands.Cog):
             last_15m = diff_list[0]
             last_30m = diff_list[-1]
             last_online_date = None
+            session_start_str = None
 
             if last_15m == None or last_30m == None:
                 status = "???"
@@ -198,6 +199,13 @@ class PxlsStats(commands.Cog):
             else:
                 # online
                 if last_15m != 0:
+                    # get the session duration
+                    session_start = await db_stats.get_session_start_time(user_id,
+                    not(bool(alltime_count)))
+
+                    session_start_dt = session_start["datetime"]
+                    session_start_str = format_datetime(session_start_dt,"R")
+
                     # if the amount placed in the last 15m is at least 95% of the 
                     # best possible, the status is 'online (fast)'
                     dt2 = user_row["datetime"]
@@ -221,20 +229,10 @@ class PxlsStats(commands.Cog):
 
                 else:
                     # search for the last online time
-                    sql = """
-                        SELECT datetime, canvas_code, pxls_user_stat.record_id
-                        FROM pxls_user_stat
-                        JOIN record on record.record_id = pxls_user_stat.record_id
-                        JOIN pxls_name on pxls_name.pxls_name_id = pxls_user_stat.pxls_name_id
-                        WHERE pxls_user_id = ?
-                        AND {} = ?
-                        ORDER BY datetime
-                        LIMIT 1""".format("alltime_count" if alltime_count else "canvas_count")
-
-                    last_online = await db_conn.sql_select(sql,(user_id,alltime_count or canvas_count))
-                    if len(last_online) > 0:
-                        last_online_date = last_online[0]["datetime"]
-                        if last_online[0]["record_id"] == 1:
+                    last_online = await db_stats.get_last_online(user_id,not(bool(alltime_count)),alltime_count or canvas_count)
+                    if last_online != None:
+                        last_online_date = last_online["datetime"]
+                        if last_online["record_id"] == 1:
                             last_online_date = "over " + format_datetime(last_online_date,'R')
                         else:
                             last_online_date = format_datetime(last_online_date,'R')
@@ -252,6 +250,8 @@ class PxlsStats(commands.Cog):
             profile_url = "https://pxls.space/profile/{}".format(name)
 
             description = f"**Status**: {status_emoji} `{status}`\n"
+            if session_start_str != None:
+                description += f"*(Started placing: {session_start_str})*\n"
             if last_online_date != None:
                 description += f"*(Last pixel: {last_online_date})*\n"
 

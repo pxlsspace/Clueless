@@ -361,14 +361,22 @@ class DbStatsManager():
         return res[0]
 
         ### general stats functions ###
-    async def get_general_stat(self,name,dt1,dt2):
+    async def get_general_stat(self,name,dt1,dt2,canvas=False):
         ''' get all the values of a general stat after a datetime 
         (this is used to plot the stat) '''
 
-        sql = """
+        if canvas == False:
+            canvas_code = "NOT NULL" 
+        else:
+            current_canvas = await self.stats_manager.get_canvas_code()
+            canvas_code = f"'{str(current_canvas)}'"
+
+        sql = f"""
             SELECT datetime, min(abs(JulianDay(datetime) - JulianDay(?)))*24*3600 as diff_with_time
             FROM pxls_general_stat
+            WHERE canvas_code IS {canvas_code}
             """
+
         closest_data1 = await self.db.sql_select(sql,dt1)
         closest_dt1 = closest_data1[0][0]
         closest_data2 = await self.db.sql_select(sql,dt2)

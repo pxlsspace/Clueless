@@ -80,8 +80,14 @@ class Font(commands.Cog):
                     images.append([font_name,PixelText(text,font_name,font_rgba,bg_rgba).get_image()])
                 except ValueError as e:
                     return await ctx.send(f'❌ {e}')
+            # check that we have at least one image in the image list
+            if all([im[1] == None for im in images]):
+                return await ctx.send("❌ These characters weren't found in any font.")
         else:
             images.append([font,PixelText(text,font,font_rgba,bg_rgba).get_image()])
+            # check that we have at least one image in the image list
+            if all([im[1] == None for im in images]):
+                return await ctx.send("❌ These characters weren't found in the font.")
 
         # create a list of discord File to send
         files = []

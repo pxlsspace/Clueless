@@ -155,11 +155,9 @@ class PixelText():
                 self.add_space()
 
             elif char == " ":
-                empty=False
                 self.add_space(SPACE_WIDTH)
             
             elif char == "\t":
-                empty=False
                 self.add_space(2*4)
 
             elif char == ".":

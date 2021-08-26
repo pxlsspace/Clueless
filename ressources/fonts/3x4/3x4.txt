@@ -2,6 +2,6 @@ ABCDEFGHIJKLM
 NOPQRSTUVWXYZ
 abcdefghijklm
 nopqrstuvwxyz
-0123456789=;°
+1234567890=;°
 "./\-+*~#'()|
 _^@[]%?!:,`><

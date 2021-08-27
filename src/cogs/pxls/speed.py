@@ -151,8 +151,8 @@ class PxlsSpeed(commands.Cog):
                     dates = [stat["datetime"] for stat in data]
                     if param["progress"]:
                         # substract the first value to each value so they start at 0
-                        pixels = [((stat["pixels"] - data[0]["pixels"])\
-                            if (stat["pixels"] != None and data[0]["pixels"] != None) else None)\
+                        pixels = [((stat["pixels"] - lowest_pixels)\
+                            if (stat["pixels"] != None and lowest_pixels != None) else None)\
                                 for stat in data]
                     else:
                         pixels = [stat["pixels"] for stat in data]

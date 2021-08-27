@@ -58,17 +58,22 @@ async def on_command(ctx):
 
 @client.event
 async def on_command_error(ctx,error):
+
+    # handled errors
     if isinstance(error,commands.MissingRequiredArgument):
         text = "❌ " + str(error) + "\n"
         text += f'Usage: `{ctx.prefix}{ctx.command.qualified_name} {ctx.command.usage}`'
         return await ctx.send(text)
     if isinstance(error, commands.CommandNotFound):
         return
-    #     return await ctx.send("❌ " + str(error))
     if isinstance(error, commands.MissingPermissions) or isinstance(error,commands.NotOwner):
        return await ctx.send(f"❌ You don't have permissions to use the `{ctx.command.qualified_name}` command.")
     if isinstance(error,commands.CommandOnCooldown):
         return await ctx.send(f"❌ {error}")
+    if isinstance(error.original,OverflowError):
+        return await ctx.send("❌ Overflow error. <a:bruhkitty:880829401359589446>")
+
+    # unhandled errors
     await ctx.message.add_reaction(r'a:peepoLeaveNope:822571977390817340')
     print('Ignoring exception in command {}:'.format(ctx.command.qualified_name), file=sys.stderr)
     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)

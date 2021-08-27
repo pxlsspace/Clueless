@@ -77,7 +77,10 @@ class Utility(commands.Cog):
         aliases = ["converttime","tconvert","tc"]
         )
     async def timeconvert(self,ctx,input, *options):
-        time = str_to_td(input)
+        try:
+            time = str_to_td(input)
+        except OverflowError:
+            return await ctx.send(f"❌ The time given is too big.")
         if not time:
             return await ctx.send(f"❌ Invalid `time` parameter, format must be `?y?mo?w?d?h?m?s`.")
 

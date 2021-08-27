@@ -151,7 +151,9 @@ class PxlsSpeed(commands.Cog):
                     dates = [stat["datetime"] for stat in data]
                     if param["progress"]:
                         # substract the first value to each value so they start at 0
-                        pixels = [stat["pixels"] - data[0]["pixels"] for stat in data]
+                        pixels = [((stat["pixels"] - data[0]["pixels"])\
+                            if (stat["pixels"] != None and data[0]["pixels"] != None) else None)\
+                                for stat in data]
                     else:
                         pixels = [stat["pixels"] for stat in data]
 
@@ -244,7 +246,7 @@ def get_stats_graph(stats_list:list,title,theme):
         pixels = user[2]
 
         # trace the user data
-        if theme.has_underglow == True and any( [p <= 100 for p in pixels]):
+        if theme.has_underglow == True and any( [(p != None and p <= 100) for p in pixels]):
             fig.add_trace(go.Scatter(
                 x=dates,
                 y=pixels,

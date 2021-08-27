@@ -202,9 +202,9 @@ class PxlsStats(commands.Cog):
                     # get the session duration
                     session_start = await db_stats.get_session_start_time(user_id,
                     not(bool(alltime_count)))
-
-                    session_start_dt = session_start["datetime"]
-                    session_start_str = format_datetime(session_start_dt,"R")
+                    if session_start != None:
+                        session_start_dt = session_start["datetime"]
+                        session_start_str = format_datetime(session_start_dt,"R")
 
                     # if the amount placed in the last 15m is at least 95% of the 
                     # best possible, the status is 'online (fast)'

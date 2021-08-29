@@ -167,7 +167,7 @@ def create_font_template(char_height,char_width,nb_line,nb_col=1):
 if __name__ == "__main__":
 
     create_font_template(5,7,10,10).save("temp.png")
-    font_name = "square"
+    font_name = "typewriter"
 
     basepath = path.dirname(__file__)
     fonts_folder = path.abspath(path.join(basepath, "..", "..","..",
@@ -175,4 +175,7 @@ if __name__ == "__main__":
     font_img_file = path.join(fonts_folder,font_name+".png")
     print(font_img_file)
     generate_data(font_img_file)
+
+    img = Image.open(font_img_file).convert('RGB')
+    img.save(font_img_file)
     print("done!")

@@ -70,7 +70,7 @@ async def on_command_error(ctx,error):
        return await ctx.send(f"❌ You don't have permissions to use the `{ctx.command.qualified_name}` command.")
     if isinstance(error,commands.CommandOnCooldown):
         return await ctx.send(f"❌ {error}")
-    if isinstance(error.original,OverflowError):
+    if isinstance(error,commands.CommandInvokeError) and isinstance(error.original,OverflowError):
         return await ctx.send("❌ Overflow error. <a:bruhkitty:880829401359589446>")
 
     # unhandled errors

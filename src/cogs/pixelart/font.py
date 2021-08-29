@@ -21,7 +21,8 @@ class Font(commands.Cog):
                   - `[-bgcolor]`: the color for the background around the text
                   (the colors can be a pxls color name, a hex color, or `none` if you want transparent)"""
     )
-    async def pixelfont(self,ctx,*args):
+    async def pixelfont(self,ctx,*,args):
+        args = args.split(" ")
         try:
             arguments = parse_pixelfont_args(args)
         except ValueError as e:

@@ -1,7 +1,8 @@
 import discord
 from discord.ext import commands
-from utils.image.image_utils import hex_str_to_int
 
+from utils.discord_utils import UserConverter
+from utils.image.image_utils import hex_str_to_int
 from utils.setup import db_users
 from utils.plot_utils import get_theme, theme_list
 
@@ -50,13 +51,28 @@ class UserManager(commands.Cog):
         await db_users.set_user_theme(ctx.author.id,theme)
         await ctx.send(f"✅ Theme successfully set to **{theme}**.")
 
-    @commands.command(description="Show your pxls username and theme.")
-    async def whoami(self,ctx):
-        discord_user = await db_users.get_discord_user(ctx.author.id)
+    @commands.command(
+        usage = "[discord name]",
+        aliases = ["whois"],
+        description="Show your or anyone's pxls username and theme.")
+    async def whoami(self,ctx,user=None):
+
+        if user:
+            # check that the user exishts
+            try:
+                user = await UserConverter().convert(ctx,user)
+                title = f"🤔 Who is {user.name}?"
+            except commands.UserNotFound as e:
+                return await ctx.send(f"❌ {e}")
+        else:
+            user = ctx.author
+            title = "🤔 Who am I?"
+            
+        discord_user = await db_users.get_discord_user(user.id)
 
         # get the pxls username
         if discord_user["pxls_user_id"] == None:
-            pxls_username = f"Not set\n\t(use `{ctx.prefix}setname <pxls_username>`)"
+            pxls_username = f"*Not set\n\t(use `{ctx.prefix}setname <pxls username>`)*"
         else:
             pxls_username = await db_users.get_pxls_user_name(discord_user["pxls_user_id"])
         
@@ -65,11 +81,11 @@ class UserManager(commands.Cog):
 
         color = get_theme(user_theme).get_palette(1)[0]
         color = hex_str_to_int(color)
-        text = f"• **Discord name:** {ctx.author}\n"
+        text = f"• **Discord name:** {user}\n"
         text += f"• **Graph theme:** {user_theme}\n"
         text += f"• **Pxls username:** {pxls_username}"
-        embed = discord.Embed(title="🤔 Who am I?",description=text,color=color)
-        embed.set_thumbnail(url=ctx.author.avatar_url)
+        embed = discord.Embed(title=title,description=text,color=color)
+        embed.set_thumbnail(url=user.avatar_url)
         await ctx.send(embed=embed)
 
 def setup(client):

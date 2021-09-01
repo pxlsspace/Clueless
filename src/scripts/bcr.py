@@ -7,16 +7,14 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from database.db_connection import DbConnection
-from database.db_stats_manager import DbStatsManager
-from utils.setup import stats
+from utils.setup import stats, DbStatsManager, DbConnection
 
 """ Script to generate a bar chart race video for a given canvas """
 
 async def get_stats_df(dt1,dt2,canvas:bool) -> pandas.DataFrame:
     
     # config
-    dates_skipped = 1
+    dates_skipped = 4
     video_duration = 30 # seconds
     title = "Canvas 49 - Top 20"
     steps_per_period = 10

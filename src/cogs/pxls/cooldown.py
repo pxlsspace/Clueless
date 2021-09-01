@@ -1,4 +1,5 @@
 from discord.ext import commands
+from datetime import datetime
 import discord
 from utils.pxls.cooldown import get_cds, time_convert
 from utils.discord_utils import format_table
@@ -19,20 +20,27 @@ class PxlsCooldown(commands.Cog):
         else:
             online = stats.online_count
 
-        i = 0
         total = 0
         cooldowns = get_cds(online)
 
         cd_table = []
-        desc = "```\n"
-        for cd in cooldowns:
-            i+=1
-            total += cd
-            cd_table.append([f'• {i}/6',time_convert(cd),time_convert(total)])
+        desc = "```JSON\n"
+        for i,total in enumerate(cooldowns):
+            if i == 0:
+                cd = time_convert(total)
+            else:
+                cd = time_convert(total-cooldowns[i-1])
+            cd_table.append([f'{i+1}/6',cd,time_convert(total)])
         
-        desc += format_table(cd_table,["stack","cd","total"])
+        desc += format_table(cd_table,["Stack","Cooldown","Total"],["^","^","^"])
         desc += "```"
-        embed = discord.Embed(title=f"Pxls cooldown for `{online}` users",description=desc)
+
+        embed = discord.Embed(
+            color=0x66c5cc,
+            title=f"Pxls cooldown for `{online}` users",
+            description=desc
+        )
+        embed.timestamp = datetime.utcnow()
         await ctx.send(embed=embed)
 
 def setup(client):

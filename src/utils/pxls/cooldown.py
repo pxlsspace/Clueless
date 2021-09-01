@@ -1,9 +1,10 @@
 import math
 from datetime import timedelta
 from utils.setup import db_stats
+
 def sum_up_to_n(n):
     r = 0
-    for i in range(n):
+    for i in range(n+1):
         r += i
     return r
 

@@ -2,13 +2,14 @@ import discord
 import numpy as np
 from datetime import datetime, timedelta, timezone
 from discord.ext import commands
-from PIL import Image
+from PIL import Image, ImageEnhance
 
 from utils.pxls.cooldown import get_best_possible
 from utils.discord_utils import format_number, image_to_file,STATUS_EMOJIS
 from utils.setup import stats, db_conn, db_users, db_stats
 from utils.time_converter import format_datetime, round_minutes_down, td_format
 from utils.arguments_parser import MyParser
+from utils.plot_utils import matplotlib_to_plotly
 from cogs.pixelart.color_breakdown import _colors
 from cogs.pixelart.highlight import _highlight
 
@@ -271,19 +272,45 @@ class PxlsStats(commands.Cog):
             emb.add_field(name="**Recent activity**",value=recent_activity_text,inline=False)
             await ctx.send(embed=emb)
 
-    @commands.command(description="Get the current pxls board.",usage = "[-virgin|-initial]")
+    @commands.command(description="Get the current pxls board.",usage = "[-virginmap|-nonvirgin|-heatmap]")
     async def board(self,ctx,*options):
         async with ctx.typing():
             if "-virginmap" in options or "-virgin" in options:
                 array = stats.virginmap_array
-            elif "-initial" in options:
-                array = await stats.fetch_initial_canvas()
+            # elif "-initial" in options:
+            #     array = await stats.fetch_initial_canvas()
+            #     array = stats.palettize_array(array)
+            elif "-heatmap" in options:
+                # get the heatmap
+                array = await stats.fetch_heatmap()
+                # invert the values to have the inactive pixels at 255 (which is the default transparent value)
+                array = 255-array
+                heatmap_palette = matplotlib_to_plotly("plasma_r",255)
+                array = stats.palettize_array(array,heatmap_palette)
+
+                # get the canvas board
+                canvas_array = stats.board_array
+                canvas_array = stats.palettize_array(canvas_array)
+            elif "-nonvirgin" in options:
+                placeable_board = await stats.get_placable_board()
+                virgin_array = stats.virginmap_array
+                array = placeable_board.copy()
+                array[virgin_array != 0] = 255
+                array[virgin_array == 0] = placeable_board[virgin_array == 0]
                 array = stats.palettize_array(array)
             else:
                 array = stats.board_array
                 array = stats.palettize_array(array)
 
-            board_img = Image.fromarray(array)
+            if "-heatmap" in options:
+                # paste the heatmap image on top of the darken board
+                heatmap_img = Image.fromarray(array)
+                board_img = Image.fromarray(canvas_array)
+                enhancer = ImageEnhance.Brightness(board_img)
+                board_img = enhancer.enhance(0.2)
+                board_img.paste(heatmap_img,(0,0),heatmap_img)
+            else:
+                board_img = Image.fromarray(array)
             file = image_to_file(board_img,"board.png")
             await ctx.send(file=file)
 

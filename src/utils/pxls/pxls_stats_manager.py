@@ -97,12 +97,15 @@ class PxlsStatsManager():
                 VALUES(?,?,?,?) '''
         await self.db_conn.sql_update(sql,("online_count",count,canvas_code,dt))
 
-    def palettize_array(self,array):
+    def palettize_array(self,array,palette=None):
         """ Convert a numpy array of palette indexes to a color numpy array
-        (RGBA) """
+        (RGBA). If a palette is given, it will be used to map the array, if not
+        the current pxls palette will be used """
         colors_list = []
-        for color in self.get_palette():
-            rgb = ImageColor.getcolor("#" + color["value"],'RGBA')
+        if not palette:
+            palette = [f"#{c['value']}" for c in self.get_palette()]
+        for color in palette:
+            rgb = ImageColor.getcolor(color,'RGBA')
             colors_list.append(rgb)
         colors_dict = dict(enumerate(colors_list))
         colors_dict[255] = (0, 0, 0, 0)
@@ -125,6 +128,13 @@ class PxlsStatsManager():
         board_array = np.asarray(list(board_bytes), dtype=np.uint8).reshape(
             self.board_info["height"],self.board_info["width"])
         self.virginmap_array = board_array
+        return board_array
+
+    async def fetch_heatmap(self):
+        "fetch the heatmap with a get request"
+        board_bytes = await self.query('heatmap','bytes')
+        board_array = np.asarray(list(board_bytes), dtype=np.uint8).reshape(
+            self.board_info["height"],self.board_info["width"])
         return board_array
 
     async def fetch_initial_canvas(self):

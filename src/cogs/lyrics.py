@@ -2,15 +2,40 @@ import discord
 from discord.ext import commands
 from discord import Spotify
 from difflib import SequenceMatcher
+from discord_slash import cog_ext, SlashContext
+from discord_slash.utils.manage_commands import create_option
 
 from utils.genius import search_song
 from utils import azlyrics
+from utils.setup import GUILD_IDS
 
 class Lyrics(commands.Cog):
     def __init__(self,client):
         self.client = client
 
-    @commands.command(description="Get the lyrics of the song you're listening on Spotify.")
+    # slash command
+    @cog_ext.cog_slash(
+        name="lyrics",
+        description="Get the lyrics of a song.",
+        guild_ids=GUILD_IDS,
+        options=[
+        create_option(
+            name="song",
+            description="The song to search.",
+            option_type=3,
+            required=True
+        )]
+    )
+    async def _lyrics(self,ctx:SlashContext, song=None):
+        await ctx.defer()
+        await self.lyrics(ctx,query=song)
+
+    # prefix command
+    @commands.command(name="lyrics",description="Get the lyrics of the song you're listening on Spotify.")
+    async def p_lyrics(self,ctx,*,query=None):
+        async with ctx.typing():
+            await self.lyrics(ctx,query=query)
+
     async def lyrics(self,ctx,*,query=None):
         spotify_title = None
         spotify_artists = None
@@ -32,11 +57,10 @@ class Lyrics(commands.Cog):
             artists_to_search = None
 
         # search the song in azlyrics
-        async with ctx.typing():
-            if artists_to_search:
-                azlyrics_url = await azlyrics.search_song(title=title_to_search,artist=artists_to_search[0])
-            else:
-                azlyrics_url = await azlyrics.search_song(query=title_to_search)
+        if artists_to_search:
+            azlyrics_url = await azlyrics.search_song(title=title_to_search,artist=artists_to_search[0])
+        else:
+            azlyrics_url = await azlyrics.search_song(query=title_to_search)
         if azlyrics_url != None:
             title, lyrics = await azlyrics.get_lyrics(azlyrics_url)
             lyrics = format_lyrics(lyrics)
@@ -47,8 +71,7 @@ class Lyrics(commands.Cog):
             return await ctx.send(embed=embed)
 
         # search the song in genius
-        async with ctx.typing():
-            song = await search_song(f'{azlyrics.remove_feat(title_to_search)} {artists_to_search[0] or ""}')
+        song = await search_song(f'{azlyrics.remove_feat(title_to_search)} {artists_to_search[0] or ""}')
         artists_to_search = " ".join(artists_to_search)
         # check that we found a song and that it's the correct song
         if song == None or\

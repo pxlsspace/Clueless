@@ -1,14 +1,31 @@
 from discord.ext import commands
 from datetime import datetime
 import discord
+from discord_slash import cog_ext, SlashContext
+from discord_slash.utils.manage_commands import create_option
+
 from utils.pxls.cooldown import get_cds, time_convert
 from utils.discord_utils import format_table
-from utils.setup import stats
+from utils.setup import stats, GUILD_IDS
 
 class PxlsCooldown(commands.Cog):
 
     def __init__(self,client):
         self.client = client
+
+    @cog_ext.cog_slash(name="cooldown",
+        description="Show the current pxls cooldown.",
+        guild_ids=GUILD_IDS,
+        options=[
+        create_option(
+            name="users",
+            description="The number of users to see the cooldown for.",
+            option_type=3,
+            required=False
+        )]
+    )
+    async def _cooldown(self,ctx:SlashContext, users=None):
+        await self.cooldown(ctx,users)
 
     @commands.command(
         usage ="[nb user]",

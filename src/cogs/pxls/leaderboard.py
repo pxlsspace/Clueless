@@ -3,8 +3,10 @@ from discord.ext import commands
 from datetime import datetime, timedelta, timezone
 import plotly.graph_objects as go
 from utils.image.image_utils import hex_str_to_int
+from discord_slash import cog_ext, SlashContext
+from discord_slash.utils.manage_commands import create_option, create_choice
 
-from utils.setup import db_stats, db_users
+from utils.setup import db_stats, db_users, GUILD_IDS
 from utils.time_converter import *
 from utils.arguments_parser import parse_leaderboard_args
 from utils.discord_utils import format_number, image_to_file
@@ -18,10 +20,92 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         self.client = client
 
     ### Discord commands ###
+    @cog_ext.cog_slash(
+        name="leaderboard",
+        description="Show the all-time or canvas leaderboard.",
+        guild_ids=GUILD_IDS,
+        options=[
+        create_option(
+            name="username",
+            description="Center the leaderboard on this user (`!` = your set username).",
+            option_type=3,
+            required=False
+        ),
+        create_option(
+            name="canvas",
+            description="To get the canvas leaderboard.",
+            option_type=5,
+            required=False
+        ),
+        create_option(
+            name="lines",
+            description="The number of lines to show (between 1 and 40).",
+            option_type=4,
+            required=False
+        ),
+        create_option(
+            name="graph",
+            description="To show a progress graph for each user in the leaderboard.",
+            option_type=5,
+            required=False
+        ),
+        create_option(
+            name="bars",
+            description="To show a bar graph of the current leaderboard",
+            option_type=5,
+            required=False
+        ),
+        create_option(
+            name="ranks",
+            description="Show the leaderboard between 2 ranks (format: ?-?)",
+            option_type=3,
+            required=False
+        ),
+        create_option(
+            name="last",
+            description="Show the leaderboard in the last x year/month/week/day/hour/minute/second. (format: ?y?mo?w?d?h?m?s)",
+            option_type=3,
+            required=False
+        ),
+        create_option(
+            name="before",
+            description="To show the leaderboard before a specific date (format: YYYY-mm-dd HH:MM)",
+            option_type=3,
+            required=False
+        ),
+        create_option(
+            name="after",
+            description="To show the leaderboard after a specific date (format: YYYY-mm-dd HH:MM)",
+            option_type=3,
+            required=False
+        )]
+    )
+    async def _speed(self,ctx:SlashContext,username=None,canvas=False,lines=None,
+        graph=None,bars=False,ranks=None,last=None,before=None,after=None):
+        await ctx.defer()
+        args = ()
+        if username:
+            args += tuple(username.split(" "))
+        if canvas:
+            args += ("-canvas",)
+        if lines:
+            args += ("-lines",str(lines))
+        if graph:
+            args += ("-graph",)
+        if bars:
+            args += ("-bars",)
+        if ranks:
+            args += ("-ranks",ranks)
+        if last:
+            args += ("-last",last)
+        if before:
+            args += ("-before",) + tuple(before.split(" "))
+        if after:
+            args += ("-after",) + tuple(after.split(" "))
+        await self.leaderboard(ctx,*args)
 
-    # TODO: error when the time frame is before the canvas start
-    # or automatically get alltime values
     @commands.command(
+        name = "leaderboard",
         usage = "[username] [-canvas] [-lines <number>] [-graph] [-bars] [-ranks ?-?] [-last ?y?m?w?d?h?m?s] [-before <date time>] [-after <date time>]",
         description = "Show the all-time or canvas leaderboard.",
         aliases=["ldb"],
@@ -31,8 +115,12 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                   - `[-graph|-g]`: show a progress graph for each user in the leaderboard
                   - `[-bars|-b]`: show a bar graph of the leaderboard
                   - `[-ranks ?-?]`: show the leaderboard between 2 ranks
-                  - `[-last ?y?mo?w?d?h?m?s]` Show the progress in the last x years/months/weeks/days/hour/min/s""" 
+                  - `[-last ?y?mo?w?d?h?m?s]` Show the leaderboard in the last x years/months/weeks/days/hour/min/s""" 
         )
+    async def p_leaderboard(self,ctx,*args):
+        async with ctx.typing():
+            await self.leaderboard(ctx,*args)
+
     async def leaderboard(self,ctx,*args):
         ''' Shows the pxls.space leaderboard '''
 
@@ -92,10 +180,9 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             #canvas_opt = "canvas" # only get the canvas stats when sorting by speed
 
         # fetch the leaderboard from the database
-        async with ctx.typing():
-            canvas,last_date, datetime1, datetime2, ldb = await db_stats.get_pixels_placed_between(date1,date2,canvas_opt,sort)
-            # change the canvas opt if sort by speed on time frame on the current canvas
-            canvas_opt = canvas 
+        canvas,last_date, datetime1, datetime2, ldb = await db_stats.get_pixels_placed_between(date1,date2,canvas_opt,sort)
+        # change the canvas opt if sort by speed on time frame on the current canvas
+        canvas_opt = canvas
 
         # check that we can actually calculate the speed
         if speed_opt and datetime1 == datetime2:
@@ -291,9 +378,9 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         await ctx.send(embed=emb,file=file)
         # send graph image
         if graph_opt:
-            await ctx.send(file=graph_file)
+            await ctx.channel.send(file=graph_file)
         if bars_opt:
-            await ctx.send(file=bars_file)
+            await ctx.channel.send(file=bars_file)
 
     @staticmethod
     def make_bars(users,pixels,title,theme,colors=None):

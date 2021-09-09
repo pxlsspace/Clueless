@@ -1,23 +1,73 @@
 from PIL import ImageColor
 from discord.ext import commands
+from discord_slash import cog_ext, SlashContext
+from discord_slash.utils.manage_commands import create_option, create_choice
 
 from utils.arguments_parser import parse_pixelfont_args
 from utils.font.font_manager import *
 from utils.discord_utils import image_to_file
 from utils.image.image_utils import get_pxls_color, is_hex_color
+from utils.setup import GUILD_IDS
 
 class Font(commands.Cog):
 
     def __init__(self, client):
         self.client = client
 
+    fonts = get_all_fonts()
+    fonts.insert(0,'all')
+    @cog_ext.cog_slash(
+        name="pixelfont",
+        description="Convert a text to pixel art.",
+        guild_ids=GUILD_IDS,
+        options=[
+        create_option(
+            name="text",
+            description="The text to convert to pixel art.",
+            option_type=3,
+            required=True
+        ),
+        create_option(
+            name="font",
+            description="The name of the font (default: all).",
+            option_type=3,
+            required=False,
+            choices= [create_choice(name=f,value=f) for f in fonts]
+        ),
+        create_option(
+            name="color",
+            description="The color you want the text to be (default: black).",
+            option_type=3,
+            required=False
+        ),
+        create_option(
+            name="bgcolor",
+            description="The color for the text background (none = transparent) (default: white).",
+            option_type=3,
+            required=False
+        )]
+    )
+    async def _pixelfont(self,ctx:SlashContext, text,font=None,color=None, bgcolor=None):
+        await ctx.defer()
+        args = (text,)
+        if font:
+            if font == "all":
+                font = "*"
+            args += ("-font",font)
+        if color:
+            args += ("-color",color)
+        if bgcolor:
+            args += ("-bgcolor",bgcolor)
+        args = " ".join(list(args))
+        await self.pixelfont(ctx,args=args)
+
     @commands.command(
         description = "Convert a text to pixel art.",
         aliases = ["pf","pixeltext"],
-        usage = "<text> <-font <name|*>> [-color <color|none>] [-bgcolor <color|none>]",
+        usage = "<text> <-font <name|*>> [-color <color|none>] [-bgcolor color|none]",
         help = """- `<text>` a text to convert to pixel art
-                  - `[-font <name|*>]`: the name of the font (`*` will use all the fonts available)
-                  - `[-fontcolor]`: the color you want the text to be
+                  - `[-font name|*]`: the name of the font (`*` will use all the fonts available)
+                  - `[-color]`: the color you want the text to be
                   - `[-bgcolor]`: the color for the background around the text
                   (the colors can be a pxls color name, a hex color, or `none` if you want transparent)"""
     )

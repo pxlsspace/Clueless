@@ -5,12 +5,15 @@ from io import BytesIO
 from datetime import datetime, timezone
 from discord.ext import commands
 from PIL import Image,ImageColor
+from discord_slash import cog_ext, SlashContext
+from discord_slash.utils.manage_commands import create_option
 
 from utils.image.image_utils import get_pxls_color, hex_str_to_int,is_hex_color,\
          rgb_to_hex
 from utils.discord_utils import get_image_from_message, image_to_file, IMAGE_URL_REGEX
 from utils.arguments_parser import MyParser
 from utils.table_to_image import table_to_image
+from utils.setup import GUILD_IDS
 
 
 class Highlight(commands.Cog):
@@ -18,7 +21,41 @@ class Highlight(commands.Cog):
     def __init__(self, client):
         self.client = client
 
+    @cog_ext.cog_slash(
+        name="highlight",
+        description="Highlight the selected colors in an image.",
+        guild_ids=GUILD_IDS,
+        options=[
+        create_option(
+            name="colors",
+            description="List of pxls colors separated by a comma.",
+            option_type=3,
+            required=True
+        ),
+        create_option(
+            name="image",
+            description="The URL of the image you want to see the colors.",
+            option_type=3,
+            required=False
+        ),
+        create_option(
+            name="bgcolor",
+            description="The color to display behind the selected colors (none = transparent)",
+            option_type=3,
+            required=False
+        )]
+    )
+    async def _highlight(self,ctx:SlashContext, colors, image=None, bgcolor=None):
+        await ctx.defer()
+        args = (colors,)
+        if image:
+            args += (image,)
+        if bgcolor:
+            args += ("-bgcolor",bgcolor)
+        await self.highlight(ctx,*args)
+
     @commands.command(
+        name = "highlight",
         description="Highlight the selected colors in an image.",
         aliases = ["hl"],
         usage="<colors> <image|url> [-bgcolor|-bg <color>]",
@@ -26,8 +63,11 @@ class Highlight(commands.Cog):
             \t- `<image|url>`: an image URL or an attached file
             \t- `[-bgcolor|bg <color>]`: the color to display behind the\
              selected colors (`none` = transparent)""")
-    async def highlight(self,ctx,*args):
+    async def p_highlight(self,ctx,*args):
+        async with ctx.typing():
+            await self.highlight(ctx,*args)
 
+    async def highlight(self,ctx,*args):
         # parse the arguemnts
         parser  = MyParser(add_help=False)
         parser.add_argument('colors', type=str, nargs='+')
@@ -46,14 +86,13 @@ class Highlight(commands.Cog):
             input_url = urls[0]
             parsed_args.colors = parsed_args.colors[:-1]
 
-        async with ctx.typing():
-            # get the input image
-            image_bytes, url = await get_image_from_message(ctx,input_url)
-            image = Image.open(BytesIO(image_bytes))
-            image = image.convert('RGBA')
-            image_array = np.array(image)
+        # get the input image
+        image_bytes, url = await get_image_from_message(ctx,input_url)
+        image = Image.open(BytesIO(image_bytes))
+        image = image.convert('RGBA')
+        image_array = np.array(image)
 
-            await _highlight(ctx,image_array,parsed_args)
+        await _highlight(ctx,image_array,parsed_args)
 
 async def _highlight(ctx,image_array:np.ndarray,parsed_args):
     """Highlight colors in an image."""

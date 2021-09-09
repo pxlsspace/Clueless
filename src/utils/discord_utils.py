@@ -112,7 +112,7 @@ async def get_image(message:discord.Message,url=None,accept_emojis=True):
     return a byte image and the image url """
 
     # check the attachements
-    if len(message.attachments) > 0:
+    if message and len(message.attachments) > 0:
         for a in message.attachments:
             content_type = a.content_type
             if content_type != None and "image" in content_type:
@@ -122,7 +122,7 @@ async def get_image(message:discord.Message,url=None,accept_emojis=True):
             raise ValueError("Invalid file type. Only images are supported.")
 
     # check the embeds
-    elif len(message.embeds) > 0:
+    elif message and len(message.embeds) > 0:
         for e in message.embeds:
             if e.image:
                 url = message.embeds[0].image.url
@@ -131,14 +131,15 @@ async def get_image(message:discord.Message,url=None,accept_emojis=True):
                 url = e.url
 
     # check the message content
-    elif message.content != None:
+    elif url != None or (message and message.content != None):
+        content = url or message.content
         # try to find a image URL in the message content
-        urls = re.findall(IMAGE_URL_REGEX,message.content)
+        urls = re.findall(IMAGE_URL_REGEX,content)
         if len(urls) > 0:
             url = urls[0]
         # try to find an emoji if no image URL found
         elif accept_emojis == True:
-            results = re.findall(EMOJI_REGEX,message.content)
+            results = re.findall(EMOJI_REGEX,content)
             if len(results) != 0:
                 emoji_id = results[0][2]
                 is_animated = results[0][0] == 'a'

@@ -3,11 +3,14 @@ import discord
 from datetime import timedelta
 from discord.ext import commands
 from dotenv import load_dotenv
+from discord_slash import cog_ext, SlashContext
+from discord_slash.utils.manage_commands import create_option, create_choice
 
-from utils.setup import db_servers
+from utils.setup import db_servers, GUILD_IDS
 from utils.time_converter import str_to_td, td_format
 from utils.utils import get_content
 from utils.discord_utils import format_number
+from utils.help import fullname
 
 class Utility(commands.Cog):
     ''' Various utility commands'''
@@ -16,10 +19,28 @@ class Utility(commands.Cog):
         load_dotenv()
         self.client = client
 
+    @cog_ext.cog_slash(name="ping",description="pong! (show the bot latency).",
+        guild_ids=GUILD_IDS)
+    async def _ping(self,ctx:SlashContext):
+        await self.ping(ctx)
+
     @commands.command(description="pong! (show the bot latency)")
     async def ping(self,ctx):
         await ctx.send(f"pong! (bot latency: `{round(self.client.latency*1000,2)}` ms)")
 
+    @cog_ext.cog_slash(name="echo",
+        description="Repeat your text.",
+        guild_ids=GUILD_IDS,
+        options=[
+        create_option(
+            name="text",
+            description="The text to repeat.",
+            option_type=3,
+            required=True
+        )]
+    )
+    async def _echo(self,ctx:SlashContext, text: str):
+        await self.echo(ctx,text=text)
 
     @commands.command(
         usage = "<text>",
@@ -71,6 +92,34 @@ class Utility(commands.Cog):
         else:
             return await ctx.send("❌ Invalid `currency` parameter.")
 
+    choices = ["years","months","weeks","days","hours","minutes","seconds"]
+    @cog_ext.cog_slash(name="timeconvert",
+        description="Convert time formats.",
+        guild_ids=GUILD_IDS,
+        options=[
+        create_option(
+            name="time",
+            description="A time duration in the format ?y?mo?w?d?h?m?s",
+            option_type=3,
+            required=True
+        ),
+        create_option(
+            name="unit",
+            description="Convert the time to this unit.",
+            option_type=3,
+            required=False,
+            choices=[
+                create_choice(name=c, value=c
+                )
+            for c in choices]
+        )]
+    )
+    async def _timeconvert(self,ctx:SlashContext, time,unit=None):
+        if unit:
+            await self.timeconvert(ctx,time,"-" + unit)
+        else:
+            await self.timeconvert(ctx,time)
+
     @commands.command(
         usage="<?y?mo?w?d?h?m?s> {-year|month|week|day|hour|minute|second}",
         description = "Convert time formats.",
@@ -115,15 +164,67 @@ class Utility(commands.Cog):
 
         await ctx.send(f"{str_to_td(input,raw=True)} = {res}.")
 
+
+    @cog_ext.cog_slash(
+        name="rl",
+        description="Reload a bot extension (owner only).",
+        guild_ids=[389486136763875340],
+        options=[
+            create_option(
+                    name="extension",
+                    description="The extension to reload.",
+                    option_type=3,
+                    required=True
+                )
+            ])
+    async def _rl(self,ctx:SlashContext,extension):
+        appinfo = await self.client.application_info()
+        if ctx.author != appinfo.owner:
+            raise commands.NotOwner()
+
+        await self.rl(ctx,extension)
+
     @commands.command(hidden=True)
     @commands.is_owner()
     async def rl(self,ctx,extension):
         try:
             self.client.reload_extension("cogs."+extension)
         except Exception as e:
-            return await ctx.send('``` {}: {} ```'.format(type(e).__name__, e))
+            return await ctx.send('```❌ {}: {} ```'.format(type(e).__name__, e))
             
         await ctx.send(f"✅ Extension `{extension}` has been reloaded")
+
+    @cog_ext.cog_slash(
+        name="help",
+        description="Show all the slash commands and their description.",
+        guild_ids=GUILD_IDS)
+    async def _help(self,ctx:SlashContext):
+        categories = {}
+        for command in self.client.slash.commands.values():
+            if command and command.name != "rl":
+                cog_fullname = fullname(command.cog)
+                cog_fullname = cog_fullname.split(".")
+                cog_dir = cog_fullname[1:-2]
+                cog_dir = cog_dir[0].capitalize() if len(cog_dir)>0 else "Other"
+
+                text = f"• `/{command.name}`: {command.description}"
+
+                # categories are organized by cog folders
+                try:
+                    categories[cog_dir].append(text)
+                except KeyError:
+                    categories[cog_dir] = [text]
+
+        embed = discord.Embed(title="Command help",color=0x66c5cc)
+        embed.set_thumbnail(url=ctx.me.avatar_url)
+
+        for category in categories:
+            if category != "Other":
+                embed.add_field(name=f"**{category}**",value="\n".join(categories[category]),inline=False)
+        if "Other" in categories:
+            embed.add_field(name="**Other**",value="\n".join(categories["Other"]),inline=False)
+    
+        await ctx.send(embed=embed)
 
 def setup(client):
     client.add_cog(Utility(client))

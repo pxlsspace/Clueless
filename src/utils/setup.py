@@ -1,11 +1,14 @@
+from dotenv import load_dotenv
+import os
+import sys
+
 from database.db_user_manager import DbUserManager
-from utils.pxls.pxls_stats_manager import PxlsStatsManager
 from database.db_connection import DbConnection
 from database.db_servers_manager import DbServersManager
 from database.db_stats_manager import DbStatsManager
 from utils.pxls.websocket_client import WebsocketClient
-import os
-import sys
+from utils.pxls.pxls_stats_manager import PxlsStatsManager
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 # database connection
@@ -25,3 +28,13 @@ db_users = DbUserManager(db_conn)
 # websocket
 uri = "wss://pxls.space/ws"
 ws_client = WebsocketClient(uri,stats)
+
+# guild IDs
+load_dotenv()
+test_server_id = os.getenv("TEST_SERVER_ID")
+if test_server_id:
+    # add the commands only to the testing server
+    GUILD_IDS = [int(test_server_id)]
+else:
+    # add the commands globally
+    GUILD_IDS = None

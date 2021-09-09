@@ -5,21 +5,51 @@ from PIL import Image, ImageColor
 from io import BytesIO
 from discord.ext import commands
 from blend_modes import hard_light
+from discord_slash import cog_ext, SlashContext
+from discord_slash.utils.manage_commands import create_option
 
 from utils.discord_utils import image_to_file, get_image_from_message
 from utils.image.gif_saver import save_transparent_gif
 from utils.image.image_utils import get_pxls_color, is_hex_color
 from utils.image.img_to_gif import img_to_animated_gif
+from utils.setup import GUILD_IDS
 
 class Colorify(commands.Cog):
 
     def __init__(self,client) -> None:
         self.client = client
 
+    @cog_ext.cog_slash(
+        name="colorify",
+        description="Turn an image to a different color.",
+        guild_ids=GUILD_IDS,
+        options=[
+        create_option(
+            name="color",
+            description="A pxlsColor name or hex color.",
+            option_type=3,
+            required=True
+        ),
+        create_option(
+            name="image",
+            description="Can be an image URL or a custom emoji.",
+            option_type=3,
+            required=False
+        )]
+    )
+    async def _colorify(self,ctx:SlashContext, color, image=None):
+        await ctx.defer()
+        await self.colorify(ctx,color,image)
+
     @commands.command(
+        name = "colorify",
         description="Turn an image to a different color.",
         usage="<color> <image|url|emoji>",
         aliases=["colorize"])
+    async def p_colorify(self,ctx,color,url=None):
+        async with ctx.typing():
+            await self.colorify(ctx,color,url)
+
     async def colorify(self,ctx,color,url=None):
         # get the rgba from the color input
         try:
@@ -38,7 +68,6 @@ class Colorify(commands.Cog):
             return await ctx.send(f"❌ {e}")
         img = Image.open(BytesIO(img))
 
-
         try:
             is_animated = img.is_animated
             img.info["duration"]
@@ -47,37 +76,74 @@ class Colorify(commands.Cog):
 
         # animated image with a duration(gif)
         if is_animated:
-            async with ctx.typing():
-                # convert each frame to the color
-                res_frames = []
-                durations = []
-                for i in range(0,img.n_frames):
-                    img.seek(i)
-                    res_frame = img.copy()
-                    frame = colorify(res_frame,rgb)
-                    res_frames.append(frame)
-                    durations.append(img.info["duration"])
+            # convert each frame to the color
+            res_frames = []
+            durations = []
+            for i in range(0,img.n_frames):
+                img.seek(i)
+                res_frame = img.copy()
+                frame = colorify(res_frame,rgb)
+                res_frames.append(frame)
+                durations.append(img.info["duration"])
 
-                # combine the frames back to a gif
-                animated_img = BytesIO()
-                await self.client.loop.run_in_executor(None,save_transparent_gif,res_frames,durations,animated_img)
-                animated_img.seek(0)
-                file=discord.File(fp=animated_img,filename="colorify.gif")
+            # combine the frames back to a gif
+            animated_img = BytesIO()
+            await self.client.loop.run_in_executor(None,save_transparent_gif,res_frames,durations,animated_img)
+            animated_img.seek(0)
+            file=discord.File(fp=animated_img,filename="colorify.gif")
 
         # still image (png, jpeg, ..)
         else:
-            async with ctx.typing():
-                res = colorify(img,rgb)
-                file = image_to_file(res,"colorify.png")
+            res = colorify(img,rgb)
+            file = image_to_file(res,"colorify.png")
 
         await ctx.send(file=file)
-    
+
+    @cog_ext.cog_slash(
+        name="pinkify",
+        description="Turn an image pink.",
+        guild_ids=GUILD_IDS,
+        options=[
+        create_option(
+            name="image",
+            description="Can be an image URL or a custom emoji.",
+            option_type=3,
+            required=False
+        )]
+    )
+    async def _pinkify(self,ctx:SlashContext, image=None):
+        await ctx.defer()
+        await self.colorify(ctx,'pink',image)
+
     @commands.command(description="Turn an image pink.",usage="<image|url|emoji>")
     async def pinkify(self,ctx,url=None):
+        async with ctx.typing():
+            await self.colorify(ctx,'pink',url)
 
-        await self.colorify(ctx,'pink',url)
+    @cog_ext.cog_slash(
+        name="rainbowfy",
+        description="Turn an image to a rainbow GIF.",
+        guild_ids=GUILD_IDS,
+        options=[
+        create_option(
+            name="image",
+            description="Can be an image URL or a custom emoji.",
+            option_type=3,
+            required=False
+        )]
+    )
+    async def _rainbowfy(self,ctx:SlashContext, image=None):
+        await ctx.defer()
+        await self.rainbowfy(ctx, image)
 
-    @commands.command(usage = "<image|url|emoji>)",description = "Turn an image to a rainbow GIF.")
+    @commands.command(
+        name="rainbowfy",
+        usage = "<image|url|emoji>)",
+        description = "Turn an image to a rainbow GIF.")
+    async def p_rainbowfy(self,ctx,url=None):
+        async with ctx.typing():
+            await self.rainbowfy(ctx,url=None)
+
     async def rainbowfy(self,ctx,url=None):
         # get the image from the message
         try:
@@ -85,44 +151,47 @@ class Colorify(commands.Cog):
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
         img = Image.open(BytesIO(img))
+        rainbow_img =  await self.client.loop.run_in_executor(None,rainbowfy,img)
+        file=discord.File(fp=rainbow_img, filename="rainbowfy.gif")
+        await ctx.send(file=file)
 
-        # check if the image is animated
-        try:
-            is_animated = img.is_animated
-            img.info["duration"]
-            # loop through the gif it has less than 8 frames
-            if img.n_frames < 8:
-                nb_colors = img.n_frames * (8//img.n_frames +1)
-            else:
-                nb_colors = img.n_frames
-        except:
-            is_animated = False
-            nb_colors = 16
-            bytes = img_to_animated_gif(img)
-            img = Image.open(BytesIO(bytes))
+def rainbowfy(img:Image.Image) -> Image.Image:
+    """ Turn an image to a rainbow GIF. """
+    # check if the image is animated
+    try:
+        is_animated = img.is_animated
+        img.info["duration"]
+        # loop through the gif it has less than 8 frames
+        if img.n_frames < 8:
+            nb_colors = img.n_frames * (8//img.n_frames +1)
+        else:
+            nb_colors = img.n_frames
+    except:
+        is_animated = False
+        nb_colors = 16
+        bytes = img_to_animated_gif(img)
+        img = Image.open(BytesIO(bytes))
 
-        async with ctx.typing():
-            # change each frame to a different color
-            palette =  get_rainbow_palette(nb_colors,saturation=0.5,lightness=0.6)
-            res_frames = []
-            durations = []
-            for i,color in enumerate(palette):
-                if is_animated:
-                    img.seek(i%img.n_frames) # to loop in the gif if we exceed the number of frames
-                    _img = img.copy()
-                    durations.append(img.info["duration"])
-                else:
-                    _img = img
-                    durations.append(0.01)
-                res_frames.append(colorify(_img,color))
+    # change each frame to a different color
+    palette =  get_rainbow_palette(nb_colors,saturation=0.5,lightness=0.6)
+    res_frames = []
+    durations = []
+    for i,color in enumerate(palette):
+        if is_animated:
+            img.seek(i%img.n_frames) # to loop in the gif if we exceed the number of frames
+            _img = img.copy()
+            durations.append(img.info["duration"])
+        else:
+            _img = img
+            durations.append(0.01)
+        res_frames.append(colorify(_img,color))
 
-            # combine the frames back to a gif
-            animated_img = BytesIO()
-            await self.client.loop.run_in_executor(None,save_transparent_gif,
-                res_frames,durations,animated_img)
-            animated_img.seek(0)
-            file=discord.File(fp=animated_img,filename="rainbowfy.gif")
-            await ctx.send(file=file)
+    # combine the frames back to a gif
+    animated_img = BytesIO()
+    save_transparent_gif(res_frames,durations,animated_img)
+    animated_img.seek(0)
+
+    return animated_img
 
 def get_rainbow_palette(nb_colors:int,saturation:float=1,lightness:float=1) -> list:
     """ Get a list of rgb colors with a linear hue (saturation and lightness 

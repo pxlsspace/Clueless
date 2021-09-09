@@ -6,20 +6,43 @@ import functools
 from PIL import Image
 from discord.ext import commands
 from io import BytesIO
+from discord_slash import cog_ext, SlashContext
+from discord_slash.utils.manage_commands import create_option
 
 from utils.discord_utils import format_number, get_image_from_message, image_to_file
 from utils.table_to_image import table_to_image
 from utils.image.image_utils import h_concatenate, rgb_to_hex, rgb_to_pxls, hex_str_to_int
 from utils.plot_utils import fig2img
+from utils.setup import GUILD_IDS
 
 class ColorBreakdown(commands.Cog):
     def __init__(self,client):
         self.client = client
 
-    @commands.command(description="Amount of pixels for each color in an image.",
+    @cog_ext.cog_slash(name="colors",
+        description="Get the amount of pixels for each color in an image.",
+        guild_ids=GUILD_IDS,
+        options=[
+        create_option(
+            name="image",
+            description="The URL of the image you want to see the colors.",
+            option_type=3,
+            required=False
+        )]
+    )
+    async def _colors(self,ctx:SlashContext,image=None):
+        await ctx.defer()
+        await self.colors(ctx,image)
+
+    @commands.command(
+        name="colors",
+        description="Amount of pixels for each color in an image.",
         usage="<image|url>")
-    async def colors(self,ctx,url=None):
+    async def p_colors(self,ctx,url=None):
         async with ctx.typing():
+            await self.colors(ctx,url)
+
+    async def colors(self,ctx,url=None):
             # get the input image
             try:
                 img_bytes, url = await get_image_from_message(ctx,url)

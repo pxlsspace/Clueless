@@ -335,7 +335,7 @@ class PxlsStats(commands.Cog):
         usage = "[-virginmap|-nonvirgin|-heatmap]")
     async def p_board(self,ctx,*options):
         async with ctx.typing():
-            await self.board(ctx,options)
+            await self.board(ctx,*options)
 
     async def board(self,ctx,*options):
         if "-virginmap" in options or "-virgin" in options:

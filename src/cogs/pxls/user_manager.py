@@ -110,21 +110,30 @@ class UserManager(commands.Cog):
         )]
     )
     async def _whois(self,ctx:SlashContext, user):
-        await self.whoami(ctx,user.name)
+        if not isinstance(user,(discord.member.Member, discord.user.User)):
+            # the ID is passed if fetching the user object failed
+            # so we fetch the user object from the ID "manually"
+            user = await self.client.fetch_user(user)
+        await self.whoami(ctx,user)
 
     @commands.command(
+        name="whoami",
         usage = "[discord name]",
         aliases = ["whois"],
         description="Show your or anyone's linked pxls username and theme.")
-    async def whoami(self,ctx,user=None):
-
+    async def p_whoami(self,ctx,user=None):
         if user:
-            # check that the user exishts
+            # check that the user exists
             try:
                 user = await UserConverter().convert(ctx,user)
-                title = f"🤔 Who is {user.name}?"
             except commands.UserNotFound as e:
                 return await ctx.send(f"❌ {e}")
+        await self.whoami(ctx,user)
+
+
+    async def whoami(self,ctx,user=None):
+        if user:
+            title = f"🤔 Who is {user.name}?"
         else:
             user = ctx.author
             title = "🤔 Who am I?"

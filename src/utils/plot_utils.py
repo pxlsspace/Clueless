@@ -177,7 +177,9 @@ class Theme():
             return cycle_through_list(colors,nb_colors)
 
 
-    def get_layout(self,with_annotation=True):
+    def get_layout(self,with_annotation=True,annotation_text=None):
+        if not annotation_text:
+            annotation_text = "Timezone: UTC"
         if with_annotation == True:
             layout = go.Layout(
                 paper_bgcolor=self.background_color,
@@ -193,7 +195,7 @@ class Theme():
                     go.layout.Annotation(
                         x = 1,
                         y = -0.1,
-                        text = "All the dates and times displayed are in the UTC timezone.", 
+                        text = annotation_text, 
                         showarrow = False,
                         xref='paper',
                         yref='paper', 

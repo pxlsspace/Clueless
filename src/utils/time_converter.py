@@ -134,3 +134,21 @@ def round_minutes_down(some_datetime: datetime, step=15):
     )
 
     return some_datetime - change
+
+def format_timezone(tz:timezone) -> str:
+
+    if "UTC" in str(tz).upper():
+        utc_offset = ""
+    else:
+        # UTC offset
+        offset = datetime.now(tz).utcoffset().seconds/3600
+        if datetime.now(tz).utcoffset().days < 0:
+            offset = offset-24
+        offset_hours = int(offset)
+        offset_minutes = int((offset%1)*60)
+
+        utc_offset = "UTC{:+d}".format(offset_hours)
+        if offset_minutes != 0:
+            utc_offset += ":{:02d}".format(offset_minutes)
+        utc_offset = f" ({utc_offset})"
+    return f"{str(tz)}{utc_offset}" 

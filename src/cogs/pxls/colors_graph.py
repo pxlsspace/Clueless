@@ -8,9 +8,10 @@ from utils.arguments_parser import MyParser
 from utils.discord_utils import format_number, image_to_file
 from utils.image.image_utils import hex_to_rgb, rgb_to_hex, v_concatenate, is_dark, lighten_color
 from utils.table_to_image import table_to_image
-from utils.setup import stats, db_stats, GUILD_IDS
+from utils.setup import stats, db_stats, db_users, GUILD_IDS
 from utils.plot_utils import fig2img, add_glow, get_theme
-from utils.time_converter import str_to_td, round_minutes_down
+from utils.time_converter import format_timezone, str_to_td, round_minutes_down
+from utils.timezoneslib import get_timezone
 
 class ColorsGraph(commands.Cog):
 
@@ -65,6 +66,9 @@ class ColorsGraph(commands.Cog):
     
     async def colorsgraph(self,ctx,*args):
         "Show a graph of the canvas colors."
+
+        discord_user = await db_users.get_discord_user(ctx.author.id)
+
         # parse the arguemnts
         parser  = MyParser(add_help=False)
         parser.add_argument('colors', type=str, nargs='*')
@@ -130,7 +134,7 @@ class ColorsGraph(commands.Cog):
             for d in data_list:
                 d["values"] = [v - d["values"][0] for v in d["values"]]
         # create the graph and style
-        fig = await self.client.loop.run_in_executor(None,make_color_graph,data_list,colors)
+        fig = await self.client.loop.run_in_executor(None,make_color_graph,data_list,colors,discord_user["timezone"])
         if fig == None:
             return await ctx.send("❌ Invalid color name.")
         fig.update_layout(
@@ -171,8 +175,17 @@ class ColorsGraph(commands.Cog):
         files = await self.client.loop.run_in_executor(None,fig2file,fig,"colors_graph.png",table_img)
         await ctx.send(files=files)
 
-def make_color_graph(data_list,colors):
-    layout = get_theme("default").get_layout()
+def make_color_graph(data_list,colors,user_timezone=None):
+
+    # get the timezone informations
+    tz = get_timezone(user_timezone)
+    if tz == None:
+        tz = timezone.utc
+        annotation_text = "Timezone: UTC"
+    else:
+        annotation_text = f"Timezone: {format_timezone(tz)}"
+
+    layout = get_theme("default").get_layout(annotation_text=annotation_text)
     fig = go.Figure(layout=layout)
     fig.update_layout(showlegend=False)
 
@@ -183,8 +196,11 @@ def make_color_graph(data_list,colors):
             continue
         colors_found = True
 
+        dates = color["datetimes"]
+        dates = [datetime.astimezone(d.replace(tzinfo=timezone.utc),tz) for d in dates]
+
         fig.add_trace(go.Scatter(
-            x=color["datetimes"],
+            x=dates,
             y=color["values"],
             mode='lines',
             name=color["color_name"],

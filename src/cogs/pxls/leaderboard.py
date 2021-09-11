@@ -351,7 +351,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                     data_pixels = [stat["pixels"] for stat in data]
                 stats.append([name,data_dates,data_pixels])
             stats.sort(key = lambda x:x[2][-1],reverse=True)
-            graph_img = await self.client.loop.run_in_executor(None,get_stats_graph,stats,"",theme)
+            graph_img = await self.client.loop.run_in_executor(None,get_stats_graph,stats,"",theme,discord_user["timezone"])
             graph_file = image_to_file(graph_img,"graph.png")
 
         # make the bars graph

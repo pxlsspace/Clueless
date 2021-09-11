@@ -8,6 +8,7 @@ from utils.discord_utils import UserConverter
 from utils.image.image_utils import hex_str_to_int
 from utils.setup import db_users, GUILD_IDS
 from utils.plot_utils import get_theme, theme_list
+from utils.time_converter import format_timezone
 from utils.timezoneslib import get_timezone
 
 class UserManager(commands.Cog):
@@ -162,6 +163,7 @@ class UserManager(commands.Cog):
         else:
             tz = get_timezone(tz_str)
             current_time = datetime.astimezone(datetime.now(),tz).strftime("%H:%M %Z (%Y-%m-%d)")
+            tz_str = format_timezone(tz)
 
         color = get_theme(user_theme).get_palette(1)[0]
         color = hex_str_to_int(color)

@@ -9,10 +9,11 @@ from utils.discord_utils import image_to_file, format_number
 from utils.setup import db_stats, db_users, GUILD_IDS
 from utils.arguments_parser import parse_speed_args
 from utils.table_to_image import table_to_image
-from utils.time_converter import format_datetime, round_minutes_down, str_to_td, td_format
+from utils.time_converter import format_datetime, format_timezone, round_minutes_down, str_to_td, td_format
 from utils.plot_utils import add_glow, get_theme,fig2img, hex_to_rgba_string
 from utils.image.image_utils import hex_str_to_int, v_concatenate
 from utils.pxls.cooldown import get_best_possible
+from utils.timezoneslib import get_timezone
 
 class PxlsSpeed(commands.Cog):
 
@@ -115,6 +116,7 @@ class PxlsSpeed(commands.Cog):
 
         # get the user theme
         discord_user = await db_users.get_discord_user(ctx.author.id)
+        user_timezone = discord_user["timezone"]
         current_user_theme = discord_user["color"] or "default"
         theme = get_theme(current_user_theme)
 
@@ -222,8 +224,13 @@ class PxlsSpeed(commands.Cog):
             if groupby_opt:
                 if groupby_opt == "day":
                     dates = [stat["first_datetime"][:10] for stat in data]
+                    user_timezone = None
                 elif groupby_opt == "hour":
                     dates = [stat["first_datetime"][:13] for stat in data]
+                    # convert the dates to the user's timezone
+                    dates = [datetime.strptime(d,"%Y-%m-%d %H") for d in dates]
+                    tz = get_timezone(user_timezone) or timezone.utc
+                    dates = [datetime.astimezone(d.replace(tzinfo=timezone.utc),tz) for d in dates]
                 pixels = [stat["placed"] for stat in data]
             
             else:
@@ -284,10 +291,10 @@ class PxlsSpeed(commands.Cog):
         graph_data = [[d[0],d[5],d[6]] for d in formatted_data]
         if groupby_opt:
             graph_image = await self.client.loop.run_in_executor(None,
-                get_grouped_graph,graph_data,title,theme)
+                get_grouped_graph,graph_data,title,theme,user_timezone)
         else:
             graph_image = await self.client.loop.run_in_executor(None,
-                get_stats_graph,graph_data,title,theme)
+                get_stats_graph,graph_data,title,theme,user_timezone)
 
         # merge the table image and graph image
         res_image = v_concatenate(table_image,graph_image,gap_height=20)
@@ -310,11 +317,19 @@ class PxlsSpeed(commands.Cog):
 def setup(client):
     client.add_cog(PxlsSpeed(client))
 
-def get_stats_graph(stats_list:list,title,theme):
+def get_stats_graph(stats_list:list,title,theme,user_timezone=None):
+
+    # get the timezone informations
+    tz = get_timezone(user_timezone)
+    if tz == None:
+        tz = timezone.utc
+        annotation_text = "Timezone: UTC"
+    else:
+        annotation_text = f"Timezone: {format_timezone(tz)}"
 
     # create the graph
     colors = theme.get_palette(len(stats_list))
-    fig = go.Figure(layout=theme.get_layout())
+    fig = go.Figure(layout=theme.get_layout(annotation_text=annotation_text))
     fig.update_layout(showlegend=False)
     fig.update_layout(title=f"<span style='color:{colors[0]};'>{title}</span>")
 
@@ -323,6 +338,9 @@ def get_stats_graph(stats_list:list,title,theme):
         name = user[0]
         dates = user[1]
         pixels = user[2]
+
+        # convert the dates to the user timezone
+        dates = [datetime.astimezone(d.replace(tzinfo=timezone.utc),tz) for d in dates]
 
         # trace the user data
         if theme.has_underglow == True and any( [(p != None and p <= 100) for p in pixels]):
@@ -370,11 +388,19 @@ def get_stats_graph(stats_list:list,title,theme):
 
     return fig2img(fig)
 
-def get_grouped_graph(stats_list:list,title,theme):
+def get_grouped_graph(stats_list:list,title,theme,user_timezone=None):
+
+    # get the timezone informations
+    tz = get_timezone(user_timezone)
+    if tz == None:
+        tz = timezone.utc
+        annotation_text = "Timezone: UTC"
+    else:
+        annotation_text = f"Timezone: {format_timezone(tz)}"
 
     # create the graph and style
     colors = theme.get_palette(len(stats_list))
-    fig = go.Figure(layout=theme.get_layout())
+    fig = go.Figure(layout=theme.get_layout(annotation_text=annotation_text))
     fig.update_yaxes(rangemode='tozero')
 
     # the title displays the user if there is only 1 in the user_list

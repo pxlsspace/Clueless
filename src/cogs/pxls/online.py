@@ -4,14 +4,16 @@ from discord.ext import commands
 import plotly.graph_objects as go
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
+from datetime import timezone
 
 from utils.arguments_parser import MyParser
 from utils.image.image_utils import hex_str_to_int
-from utils.time_converter import format_datetime, str_to_td
+from utils.time_converter import format_datetime, str_to_td, format_timezone
 from utils.discord_utils import image_to_file
 from utils.pxls.cooldown import get_cd
 from utils.plot_utils import add_glow, get_theme, fig2img, hex_to_rgba_string
 from utils.setup import stats, db_stats, db_users, GUILD_IDS
+from utils.timezoneslib import get_timezone
 
 class Online(commands.Cog):
 
@@ -97,6 +99,7 @@ class Online(commands.Cog):
 
         # get the user theme
         discord_user = await db_users.get_discord_user(ctx.author.id)
+        user_timezone = discord_user["timezone"]
         current_user_theme = discord_user["color"] or "default"
         theme = get_theme(current_user_theme)
 
@@ -112,6 +115,7 @@ class Online(commands.Cog):
             groupby = parsed_args.groupby
             if groupby == "day":
                 format = "%Y-%m-%d"
+                user_timezone = None
             elif groupby == "hour":
                 format = "%Y-%m-%d %H"
 
@@ -158,10 +162,10 @@ class Online(commands.Cog):
         # make graph
         if parsed_args.groupby:
             fig = await self.client.loop.run_in_executor(None,
-                make_grouped_graph,dates,online_counts,theme)
+                make_grouped_graph,dates,online_counts,theme,user_timezone)
         else:
             fig = await self.client.loop.run_in_executor(None,
-                make_graph,dates,online_counts,theme)
+                make_graph,dates,online_counts,theme,user_timezone)
         fig.update_layout(title="<span style='color:{};'>{}</span>".format(
             theme.get_palette(1)[0],
             title + (f" (average per {groupby})" if parsed_args.groupby else "")))
@@ -186,10 +190,20 @@ class Online(commands.Cog):
         file = image_to_file(img,"online_count.png",emb)
         await ctx.send(embed=emb,file=file)
 
-def make_graph(dates,values,theme):
+def make_graph(dates,values,theme,user_timezone=None):
+
+    # get the timezone informations
+    tz = get_timezone(user_timezone)
+    if tz == None:
+        tz = timezone.utc
+        annotation_text = "Timezone: UTC"
+    else:
+        annotation_text = f"Timezone: {format_timezone(tz)}"
+
+    dates = [datetime.astimezone(d.replace(tzinfo=timezone.utc),tz) for d in dates]
 
     # create the graph
-    fig = go.Figure(layout=theme.get_layout())
+    fig = go.Figure(layout=theme.get_layout(annotation_text=annotation_text))
     fig.update_layout(showlegend=False)
 
     # trace the data
@@ -216,11 +230,21 @@ def make_graph(dates,values,theme):
         ))
     return fig
 
-def make_grouped_graph(dates,values,theme):
+def make_grouped_graph(dates,values,theme,user_timezone=None):
+
+ # get the timezone informations
+    tz = get_timezone(user_timezone)
+    if tz == None:
+        tz = timezone.utc
+        annotation_text = "Timezone: UTC"
+    else:
+        annotation_text = f"Timezone: {format_timezone(tz)}"
+
+    dates = [datetime.astimezone(d.replace(tzinfo=timezone.utc),tz) for d in dates]
 
     # create the graph and style
     color = theme.get_palette(1)[0]
-    fig = go.Figure(layout=theme.get_layout())
+    fig = go.Figure(layout=theme.get_layout(annotation_text=annotation_text))
     fig.update_yaxes(rangemode='tozero')
 
     # add an outline of the bg color to the text above the bars

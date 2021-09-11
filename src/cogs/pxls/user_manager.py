@@ -2,11 +2,13 @@ import discord
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
+from datetime import datetime
 
 from utils.discord_utils import UserConverter
 from utils.image.image_utils import hex_str_to_int
 from utils.setup import db_users, GUILD_IDS
 from utils.plot_utils import get_theme, theme_list
+from utils.timezoneslib import get_timezone
 
 class UserManager(commands.Cog):
 
@@ -142,7 +144,7 @@ class UserManager(commands.Cog):
 
         # get the pxls username
         if discord_user["pxls_user_id"] == None:
-            pxls_username = "*Not set\n\t(use `{}setname <pxls username>`)*".format(
+            pxls_username = "*Not set\n(use `{}setname <pxls username>`)*".format(
                 ctx.prefix if isinstance(ctx,commands.Context) else '/'
             )
         else:
@@ -151,14 +153,72 @@ class UserManager(commands.Cog):
         # get the user theme
         user_theme = discord_user["color"] or "default"
 
+        #get the timezone
+        tz_str = discord_user["timezone"]
+        if tz_str == None:
+            tz_str = "*Not set\n(use `{}settimezone <timezone>`)*".format(
+                ctx.prefix if isinstance(ctx,commands.Context) else '/')
+            current_time = None
+        else:
+            tz = get_timezone(tz_str)
+            current_time = datetime.astimezone(datetime.now(),tz).strftime("%H:%M %Z (%Y-%m-%d)")
+
         color = get_theme(user_theme).get_palette(1)[0]
         color = hex_str_to_int(color)
         text = f"• **Discord name:** {user}\n"
         text += f"• **Graph theme:** {user_theme}\n"
-        text += f"• **Pxls username:** {pxls_username}"
+        text += f"• **Pxls username:** {pxls_username}\n"
+        text += f"• **Timezone:** {tz_str}\n"
+        if current_time:
+            text += f"• **Current time:** {current_time}"
         embed = discord.Embed(title=title,description=text,color=color)
         embed.set_thumbnail(url=user.avatar_url)
         await ctx.send(embed=embed)
+
+    @cog_ext.cog_slash(
+        name="settimezone",
+        description="Set your timezone for the graphs and time inputs.",
+        guild_ids=GUILD_IDS,
+        options=[create_option(
+            name="timezone",
+            description="Your timezone name (ex: 'UTC+8', US/Pacific, PST).",
+            option_type=3,
+            required=True
+        )]
+    )
+    async def _settimezone(self,ctx,timezone):
+        await self.settimezone(ctx,timezone)
+
+    @commands.command(
+        name="settimezone",
+        description = "Set your timezone for the graphs and time inputs.",
+        aliases = ["settz","timezone"],
+        usage = "<timezone>",
+        help="- `<timezone>`: your timezone name (ex: 'UTC+8', US/Pacific, PST)")
+    async def settimezone(self, ctx, timezone:str):
+        tz = get_timezone(timezone)
+        if tz == None:
+            return await ctx.send("❌ Timzone not found.")
+        await db_users.set_user_timezone(ctx.author.id,timezone)
+        await ctx.send("✅ Timezone successfully set to `{}`.\nCurrent time: {}".format(
+            timezone,
+            datetime.astimezone(datetime.now(),tz).strftime("**%H:%M** %Z (%Y-%m-%d)")
+        ))
+
+    @cog_ext.cog_slash(
+        name="unsettimezone",
+        description="Unset your timezone.",
+        guild_ids=GUILD_IDS)
+    async def _unsettimezone(self,ctx:SlashContext):
+        await self.unsettimezone(ctx)
+
+    @commands.command(description = "Unset your timezone.",aliases=["unsettz"])
+    async def unsettimezone(self,ctx):
+        discord_user = await db_users.get_discord_user(ctx.author.id)
+        if discord_user["timezone"] == None:
+            return await ctx.send("❌ You haven't set any timezone.")
+        await db_users.set_user_timezone(ctx.author.id,None)
+        await ctx.send("✅ Timezone successfully unset.")
 
 def setup(client):
     client.add_cog(UserManager(client))

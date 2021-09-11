@@ -1,3 +1,4 @@
+import sqlite3
 from database.db_connection import DbConnection
 
 class DbUserManager():
@@ -28,6 +29,7 @@ class DbUserManager():
                 is_blacklisted BOOLEAN DEFAULT 0,
                 FOREIGN KEY(pxls_user_id) REFERENCES pxls_user(pxls_user_id)
         );"""
+        add_discord_user_timezone = "ALTER TABLE discord_user ADD COLUMN timezone TEXT"
 
         create_server_pxls_users_table = """ 
             CREATE TABLE IF NOT EXISTS server_pxls_user(
@@ -41,6 +43,10 @@ class DbUserManager():
         await self.db.sql_update(create_pxls_user_table)
         await self.db.sql_update(create_pxls_name_table)
         await self.db.sql_update(create_discord_user)
+        try:
+            await self.db.sql_update(add_discord_user_timezone)
+        except sqlite3.OperationalError:
+            pass
         await self.db.sql_update(create_server_pxls_users_table)
 
     async def create_pxls_user(self, name):
@@ -97,6 +103,11 @@ class DbUserManager():
         ''' update the theme of a discord_user'''
         sql = "UPDATE discord_user SET color = ? WHERE discord_id = ? "
         await self.db.sql_update(sql,(theme,discord_id))
+
+    async def set_user_timezone(self,discord_id,timezone):
+        ''' update the theme of a discord_user'''
+        sql = "UPDATE discord_user SET timezone = ? WHERE discord_id = ? "
+        await self.db.sql_update(sql,(timezone,discord_id))
 
     async def get_all_blacklisted_users(self):
         ''' Get all the discord users blacklisted. Returns a list of discord ID'''

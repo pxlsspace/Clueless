@@ -5,9 +5,11 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
+from datetime import datetime
 
 from utils.setup import db_servers, GUILD_IDS
 from utils.time_converter import str_to_td, td_format
+from utils.timezoneslib import get_timezone
 from utils.utils import get_content
 from utils.discord_utils import format_number
 from utils.help import fullname
@@ -225,6 +227,34 @@ class Utility(commands.Cog):
             embed.add_field(name="**Other**",value="\n".join(categories["Other"]),inline=False)
     
         await ctx.send(embed=embed)
+
+    @cog_ext.cog_slash(
+        name="time",
+        description="Show the current time in a timezone.",
+        guild_ids=GUILD_IDS,
+        options=[create_option(
+            name="timezone",
+            description="A timezone name (ex: 'UTC+8', US/Pacific, PST).",
+            option_type=3,
+            required=True
+        )]
+    )
+    async def _time(self,ctx,timezone):
+        await self.time(ctx,timezone)
+
+    @commands.command(
+        name="time",
+        description = "Show the current time in a timezone.",
+        usage = "<timezone>")
+    async def time(self, ctx, timezone:str):
+        tz = get_timezone(timezone)
+        if tz == None:
+            return await ctx.send("❌ Timzone not found.")
+
+        await ctx.send("Current `{}` time: {}".format(
+            timezone,
+            datetime.astimezone(datetime.now(),tz).strftime("**%H:%M** (%Y-%m-%d)")
+        ))
 
 def setup(client):
     client.add_cog(Utility(client))

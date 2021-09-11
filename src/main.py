@@ -82,6 +82,8 @@ async def on_slash_command_error(ctx,error):
 
 @client.event
 async def on_command_error(ctx,error):
+    if isinstance(error, commands.CommandNotFound):
+        return
     slash_command = isinstance(ctx,SlashContext)
     if slash_command:
         command_name = ctx.command
@@ -92,8 +94,6 @@ async def on_command_error(ctx,error):
         text = "❌ " + str(error) + "\n"
         text += f'Usage: `{ctx.prefix}{command_name} {ctx.command.usage}`'
         return await ctx.send(text)
-    if isinstance(error, commands.CommandNotFound):
-        return
     if isinstance(error, commands.MissingPermissions) or isinstance(error,commands.NotOwner):
        return await ctx.send(f"❌ You don't have permissions to use the `{command_name}` command.")
     if isinstance(error,commands.CommandOnCooldown):

@@ -13,6 +13,7 @@ from utils.image.gif_saver import save_transparent_gif
 from utils.image.image_utils import get_pxls_color, is_hex_color
 from utils.image.img_to_gif import img_to_animated_gif
 from utils.setup import GUILD_IDS
+from utils.arguments_parser import MyParser
 
 class Colorify(commands.Cog):
 
@@ -130,32 +131,82 @@ class Colorify(commands.Cog):
             description="Can be an image URL or a custom emoji.",
             option_type=3,
             required=False
+        ),
+        create_option(
+            name="saturation",
+            description="The rainbow saturation value between 0 and 100 (default: 50).",
+            option_type=4,
+            required=False
+        ),
+        create_option(
+            name="lightness",
+            description="The rainbow lightness value between 0 and 100 (default: 60).",
+            option_type=4,
+            required=False
         )]
     )
-    async def _rainbowfy(self,ctx:SlashContext, image=None):
+    async def _rainbowfy(self,ctx:SlashContext, image=None,saturation=None,lightness=None):
         await ctx.defer()
-        await self.rainbowfy(ctx, image)
+        args = ()
+        if image:
+            args += (image,)
+        if saturation:
+            args += ("-saturation",str(saturation))
+        if lightness:
+            args += ("-lightness",str(lightness))
+
+        await self.rainbowfy(ctx,*args)
 
     @commands.command(
         name="rainbowfy",
-        usage = "<image|url|emoji>)",
-        description = "Turn an image to a rainbow GIF.")
-    async def p_rainbowfy(self,ctx,url=None):
+        usage = "<image|url|emoji> [-saturation value] [-lightness value]",
+        description = "Turn an image to a rainbow GIF.",
+        help = """
+            - `<url|image|emoji>`: the image you want to rainbowfy
+            - `[-saturation|-s value]`: the rainbow saturation value between 0 and 100 (default: 50)
+            - `[-lightness|-l value]`: the rainbow lightness value between 0 and 100 (default: 60)""")
+    async def p_rainbowfy(self,ctx,*args):
         async with ctx.typing():
-            await self.rainbowfy(ctx,url=None)
+            await self.rainbowfy(ctx,*args)
 
-    async def rainbowfy(self,ctx,url=None):
+    async def rainbowfy(self,ctx,*args):
+
+        parser = MyParser()
+        parser.add_argument("url",action="store",nargs="*")
+        parser.add_argument("-saturation",action="store",default=50)
+        parser.add_argument("-lightness",action="store",default=60)
+        try:
+            parsed_args = parser.parse_args(args)
+        except Exception as error:
+            return await ctx.send(f"❌ {error}")
+
+        # check on arguments
+        url = parsed_args.url[0] if parsed_args.url else None
+        try:
+            saturation = int(parsed_args.saturation)
+        except ValueError:
+            return await ctx.send(f"❌ Invalid number '{parsed_args.saturation}'")
+        try:
+            lightness = int(parsed_args.lightness)
+        except ValueError:
+            return await ctx.send(f"❌ Invalid number '{parsed_args.lightness}'")
+
+        if saturation > 100 or saturation < 0:
+            return await ctx.send("❌ The saturation value must be between 0 and 100.")
+        if lightness > 100 or lightness < 0:
+            return await ctx.send("❌ The lightness value must be between 0 and 100.")
+
         # get the image from the message
         try:
             img, url = await get_image_from_message(ctx,url)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
         img = Image.open(BytesIO(img))
-        rainbow_img =  await self.client.loop.run_in_executor(None,rainbowfy,img)
+        rainbow_img =  await self.client.loop.run_in_executor(None,rainbowfy,img,saturation,lightness)
         file=discord.File(fp=rainbow_img, filename="rainbowfy.gif")
         await ctx.send(file=file)
 
-def rainbowfy(img:Image.Image) -> Image.Image:
+def rainbowfy(img:Image.Image,saturation=50,lightness=60) -> Image.Image:
     """ Turn an image to a rainbow GIF. """
     # check if the image is animated
     try:
@@ -173,7 +224,7 @@ def rainbowfy(img:Image.Image) -> Image.Image:
         img = Image.open(BytesIO(bytes))
 
     # change each frame to a different color
-    palette =  get_rainbow_palette(nb_colors,saturation=0.5,lightness=0.6)
+    palette =  get_rainbow_palette(nb_colors,saturation=saturation/100,lightness=lightness/100)
     res_frames = []
     durations = []
     for i,color in enumerate(palette):

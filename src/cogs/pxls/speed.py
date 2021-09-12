@@ -232,6 +232,8 @@ class PxlsSpeed(commands.Cog):
                     tz = get_timezone(user_timezone) or timezone.utc
                     dates = [datetime.astimezone(d.replace(tzinfo=timezone.utc),tz) for d in dates]
                 pixels = [stat["placed"] for stat in data]
+                min_pixels = min(pixels)
+                max_pixels = max(pixels)
             
             else:
                 dates = [stat["datetime"] for stat in data]
@@ -242,6 +244,7 @@ class PxlsSpeed(commands.Cog):
                             for stat in data]
                 else:
                     pixels = [stat["pixels"] for stat in data]
+                max_pixels = min_pixels= None
 
             formatted_data.append([
                 name,
@@ -249,6 +252,8 @@ class PxlsSpeed(commands.Cog):
                 diff_pixels,
                 speed_px_h,
                 speed_px_d,
+                min_pixels,
+                max_pixels,
                 dates,
                 pixels
             ])
@@ -282,13 +287,23 @@ class PxlsSpeed(commands.Cog):
         diff_time_str = td_format(diff_time)
         
         # get the image of the table
-        table_data = [d[:-2] for d in formatted_data]
+        if groupby_opt:
+            # add a "min" and "max" columns if groupby option
+            table_data = [d[:-2] for d in formatted_data]
+            titles.append("Min")
+            titles.append("Max")
+            alignments.append("right")
+            alignments.append("right")
+
+        else:
+            table_data = [d[:-4] for d in formatted_data]
+
         table_data = [[format_number(c) for c in row] for row in table_data]
         table_image = table_to_image(table_data,titles,
         alignments,table_colors,theme=theme)
 
         # create the graph
-        graph_data = [[d[0],d[5],d[6]] for d in formatted_data]
+        graph_data = [[d[0],d[7],d[8]] for d in formatted_data]
         if groupby_opt:
             graph_image = await self.client.loop.run_in_executor(None,
                 get_grouped_graph,graph_data,title,theme,user_timezone)

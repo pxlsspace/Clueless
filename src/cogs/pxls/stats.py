@@ -431,7 +431,7 @@ class PxlsStats(commands.Cog):
                 ),
                 create_option(
                     name="bgcolor",
-                    description="The color to display behind the selected colors (none = transparent)",
+                    description="To display behind the selected colors (can be a color name, hex color, 'none', 'light' or 'dark')",
                     option_type=3,
                     required=False
                 )]
@@ -448,9 +448,14 @@ class PxlsStats(commands.Cog):
         description="Highlight the selected colors on the canvas.",
         aliases = ["chl","canvashl"],
         usage="<colors> [-bgcolor|-bg <color>]",
-        help = """\t- `<colors>`: list of pxls colors separated by a comma
-            \t- `[-bgcolor|bg <color>]`: the color to display behind the\
-             selected colors (`none` = transparent)""")
+        help = """
+            - `<colors>`: list of pxls colors separated by a comma
+            - `[-bgcolor|bg <color>]`: the color to display behind the higlighted colors, it can be:
+                • a pxls name color (ex: "red")
+                • a hex color (ex: "#ff000")
+                • "none": to have a transparent background
+                • "dark": to have the background darkened
+                • "light": to have the background lightened""")
     async def p_canvashighlight(self,ctx,*,args):
         args = args.split(" ")
         async with ctx.typing():

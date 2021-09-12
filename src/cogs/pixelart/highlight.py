@@ -9,7 +9,7 @@ from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option
 
 from utils.image.image_utils import get_pxls_color, hex_str_to_int,is_hex_color,\
-         rgb_to_hex
+         rgb_to_hex, is_dark
 from utils.discord_utils import get_image_from_message, image_to_file, IMAGE_URL_REGEX
 from utils.arguments_parser import MyParser
 from utils.table_to_image import table_to_image
@@ -40,7 +40,7 @@ class Highlight(commands.Cog):
         ),
         create_option(
             name="bgcolor",
-            description="The color to display behind the selected colors (none = transparent)",
+            description="To display behind the selected colors (can be a color name, hex color, 'none', 'light' or 'dark')",
             option_type=3,
             required=False
         )]
@@ -59,10 +59,15 @@ class Highlight(commands.Cog):
         description="Highlight the selected colors in an image.",
         aliases = ["hl"],
         usage="<colors> <image|url> [-bgcolor|-bg <color>]",
-        help = """\t- `<colors>`: list of pxls colors separated by a comma
-            \t- `<image|url>`: an image URL or an attached file
-            \t- `[-bgcolor|bg <color>]`: the color to display behind the\
-             selected colors (`none` = transparent)""")
+        help = """
+            - `<colors>`: list of pxls or hex colors separated by a comma
+            - `<image|url>`: an image URL or an attached file
+            - `[-bgcolor|bg <color>]`: the color to display behind the higlighted colors, it can be:
+                • a pxls name color (ex: "red")
+                • a hex color (ex: "#ff000")
+                • "none": to have a transparent background
+                • "dark": to have the background darkened
+                • "light": to have the background lightened""")
     async def p_highlight(self,ctx,*args):
         async with ctx.typing():
             await self.highlight(ctx,*args)
@@ -117,12 +122,14 @@ async def _highlight(ctx,image_array:np.ndarray,parsed_args):
     # get bg color rgba
     bg_color = parsed_args.bgcolor
     if bg_color:
-        bg_color = " ".join(bg_color)
+        bg_color = " ".join(bg_color).lower()
         try:
             bg_rgba = get_pxls_color(bg_color)
         except ValueError:
             if bg_color == "none":
                 bg_rgba = (0,0,0,0)
+            elif bg_color in ["dark","light"]:
+                bg_rgba = None
             elif is_hex_color(bg_color):
                 bg_rgba = ImageColor.getcolor(bg_color,"RGBA")
             else:
@@ -148,8 +155,17 @@ async def _highlight(ctx,image_array:np.ndarray,parsed_args):
     color_selected_array[res_mask, :] = [0, 0, 0, 0]
 
     # put the background under the mask
-    if not bg_color:
-        hl_image = highlight_image(color_selected_array,image_array)
+
+    if not bg_color or bg_color in ["dark","light"]:
+        if bg_color == "light":
+            highlight_bg_color = (255,255,255,255)
+        elif bg_color == "dark":
+            highlight_bg_color = (0,0,0,255)
+        elif all([is_dark(rgba) for rgba in rgba_list]):
+            highlight_bg_color = (255,255,255,255)
+        else:
+            highlight_bg_color = (0,0,0,255)
+        hl_image = highlight_image(color_selected_array,image_array,background_color=highlight_bg_color)
     else:
         width = image_array.shape[1]
         height = image_array.shape[0]
@@ -184,7 +200,7 @@ async def _highlight(ctx,image_array:np.ndarray,parsed_args):
     hl_file = image_to_file(hl_image,"highlight.png")
     await ctx.send(embed=emb,files=[hl_file,table_file])
 
-def highlight_image(top_array,background_array,opacity=0.2):
+def highlight_image(top_array,background_array,opacity=0.2,background_color=(255,255,255,255)):
     msg = "top_array and background_array must have the same shape"
     assert top_array.shape == background_array.shape,msg
     assert top_array.shape[-1] in [3,4],"top_array shapee must be [:,:,3|4]"
@@ -194,7 +210,7 @@ def highlight_image(top_array,background_array,opacity=0.2):
         background_array = np.dstack((background_array, np.zeros(background_array.shape[:-1])))
 
     black_background = np.zeros_like(background_array)
-    black_background[:,:] = (0,0,0,255)
+    black_background[:,:] = background_color
     black_background[:,:,3] = background_array[:,:,3]
 
     background_array[:,:,-1] = opacity * background_array[:,:,-1]

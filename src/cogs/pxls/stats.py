@@ -320,57 +320,100 @@ class PxlsStats(commands.Cog):
                         create_choice(name=c, value=c
                         )
                     for c in choices]
+                ),
+                create_option(
+                    name="opacity",
+                    description="The opacity of the background behind the heatmap between 0 and 100 (default: 20)",
+                    option_type=4,
+                    required=False
                 )]
             )
-    async def _board(self,ctx:SlashContext, display=None):
+    async def _board(self,ctx:SlashContext, display=None,opacity=None):
         await ctx.defer()
-        if display:
-            await self.board(ctx,"-" + display)
-        else:
-            await self.board(ctx,display)
+        args = ()
+        if display == "heatmap":
+            args += ("-heatmap",)
+            if opacity:
+                args += (str(opacity),)
+        elif display:
+            args += ("-" + display,)
+        await self.board(ctx,*args)
 
     @commands.command(
         name = "board",
         description="Get the current pxls board.",
-        usage = "[-virginmap|-nonvirgin|-heatmap]")
+        usage = "[-virginmap] [-nonvirgin] [-heatmap [opacity]]",
+        help="""
+        - `[-virginmap]`: show a map of the virgin pixels (white = virgin)
+        - `[-nonvirgin]`: show the board without the virgin pixels
+        - `[-heatmap [opacity]]`: show the heatmap on top of the canvas\
+            (the opacity value should be between 0 and 100, the default value is 20)
+        
+
+        """)
     async def p_board(self,ctx,*options):
         async with ctx.typing():
             await self.board(ctx,*options)
 
-    async def board(self,ctx,*options):
-        if "-virginmap" in options or "-virgin" in options:
+    async def board(self,ctx,*args):
+        # parse the args
+        parser = MyParser(add_help=False)
+        parser.add_argument("-heatmap",action="store",default=None,nargs="*",required=False)
+        parser.add_argument("-nonvirgin",action="store_true",default=False,required=False)
+        parser.add_argument("-virginmap",action="store_true",default=False,required=False)
+        parser.usage
+        try:
+            parsed_args = parser.parse_args(args)
+        except ValueError as e:
+            return await ctx.send(f'❌ {e}')
+
+        heatmap_opacity = None
+        if parsed_args.heatmap != None:
+            # check on the opacity argument
+            if len(parsed_args.heatmap) == 0:
+                heatmap_opacity = 20
+            else:
+                heatmap_opacity = parsed_args.heatmap[0]
+                try:
+                    heatmap_opacity = int(heatmap_opacity)
+                except:
+                    return await ctx.send("❌ The opacity value must be an integer.")
+                if heatmap_opacity < 0 or heatmap_opacity > 100:
+                    return await ctx.send("❌ The opacity value must be between 0 and 100.")
+
+        # virginmap
+        if parsed_args.virginmap:
             array = stats.virginmap_array
-        # elif "-initial" in options:
-        #     array = await stats.fetch_initial_canvas()
-        #     array = stats.palettize_array(array)
-        elif "-heatmap" in options:
+        # heatmap
+        elif heatmap_opacity is not None:
             # get the heatmap
             array = await stats.fetch_heatmap()
             # invert the values to have the inactive pixels at 255 (which is the default transparent value)
             array = 255-array
             heatmap_palette = matplotlib_to_plotly("plasma_r",255)
             array = stats.palettize_array(array,heatmap_palette)
-
             # get the canvas board
             canvas_array = stats.board_array
             canvas_array = stats.palettize_array(canvas_array)
-        elif "-nonvirgin" in options:
+        # non-virgin board
+        elif parsed_args.nonvirgin:
             placeable_board = await stats.get_placable_board()
             virgin_array = stats.virginmap_array
             array = placeable_board.copy()
             array[virgin_array != 0] = 255
             array[virgin_array == 0] = placeable_board[virgin_array == 0]
             array = stats.palettize_array(array)
+        # current board
         else:
             array = stats.board_array
             array = stats.palettize_array(array)
 
-        if "-heatmap" in options:
+        if heatmap_opacity is not None:
             # paste the heatmap image on top of the darken board
             heatmap_img = Image.fromarray(array)
             board_img = Image.fromarray(canvas_array)
             enhancer = ImageEnhance.Brightness(board_img)
-            board_img = enhancer.enhance(0.2)
+            board_img = enhancer.enhance(heatmap_opacity/100)
             board_img.paste(heatmap_img,(0,0),heatmap_img)
         else:
             board_img = Image.fromarray(array)

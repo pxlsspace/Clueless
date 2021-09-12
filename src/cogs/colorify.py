@@ -171,7 +171,7 @@ class Colorify(commands.Cog):
 
     async def rainbowfy(self,ctx,*args):
 
-        parser = MyParser()
+        parser = MyParser(add_help=False)
         parser.add_argument("url",action="store",nargs="*")
         parser.add_argument("-saturation",action="store",default=50)
         parser.add_argument("-lightness",action="store",default=60)

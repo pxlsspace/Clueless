@@ -218,7 +218,11 @@ class DbStatsManager():
         """ get the stats between 2 dates grouped by day or hour """
 
         # check on the groupby param
-        if groupby_opt == "day":
+        if groupby_opt == "month":
+            groupby = "%Y-%m"
+        elif groupby_opt == "week":
+            groupby = "%Y-%W"
+        elif groupby_opt == "day":
             groupby = '%Y-%m-%d'
         elif groupby_opt == "hour":
             groupby = '%Y-%m-%d %H'

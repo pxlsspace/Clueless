@@ -49,6 +49,8 @@ class PxlsSpeed(commands.Cog):
             option_type=3,
             required=False,
             choices=[
+                create_choice(name="month", value="month"),
+                create_choice(name="week", value="week"),
                 create_choice(name="day", value="day"),
                 create_choice(name="hour",value="hour")]
         ),
@@ -93,11 +95,11 @@ class PxlsSpeed(commands.Cog):
 
     @commands.command(
         name="speed",
-        usage="<name> [-canvas] [-groupby [day|hour]] [-progress] [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
+        usage="<name> [-canvas] [-groupby [hour|day|week|month]] [-progress] [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
         description="Show the speed of a pxls user with a graph.",
         help="""- `<names>`: list of pxls users names separated by a space (`!` = your set username)
               - `[-canvas|-c]`: show the canvas stats
-              - `[-groupby|-g]`: show a bar chart for each `day` or `hour`
+              - `[-groupby|-g]`: show a bar chart for each `hour`, `day``, `week` or `month`
               - `[-progress|-p]`: compare the progress between users
               - `[-last ?y?mo?w?d?h?m?s]` Show the progress in the last x years/months/weeks/days/hours/minutes/seconds (default: 1d)
               - `[-before <date time>]`: show the speed before a date and time (format YYYY-mm-dd HH:MM)
@@ -222,18 +224,35 @@ class PxlsSpeed(commands.Cog):
 
             # format data for the graph
             if groupby_opt:
-                if groupby_opt == "day":
+                if groupby_opt == "month":
+                    dates = [datetime.strptime(stat["first_datetime"],"%Y-%m-%d %H:%M:%S").strftime("%b %Y") for stat in data]
+                    user_timezone = None
+
+                elif groupby_opt == "week":
+                    dates = []
+                    for stat in data:
+                        first_dt = datetime.strptime(stat["first_datetime"],"%Y-%m-%d %H:%M:%S")
+                        last_dt = first_dt + timedelta(days=6.9)
+                        #last_dt = datetime.strptime(stat["last_datetime"],"%Y-%m-%d %H:%M:%S")
+                        week_dates = f"{first_dt.strftime('%d-%b')} - {last_dt.strftime('%d-%b')}"
+                        dates.append(week_dates)
+                    user_timezone = None
+
+                elif groupby_opt == "day":
                     dates = [stat["first_datetime"][:10] for stat in data]
                     user_timezone = None
+
                 elif groupby_opt == "hour":
                     dates = [stat["first_datetime"][:13] for stat in data]
                     # convert the dates to the user's timezone
                     dates = [datetime.strptime(d,"%Y-%m-%d %H") for d in dates]
                     tz = get_timezone(user_timezone) or timezone.utc
                     dates = [datetime.astimezone(d.replace(tzinfo=timezone.utc),tz) for d in dates]
+
                 pixels = [stat["placed"] for stat in data]
                 min_pixels = min(pixels)
                 max_pixels = max(pixels)
+                average = sum(pixels)/len(pixels)
             
             else:
                 dates = [stat["datetime"] for stat in data]
@@ -246,17 +265,17 @@ class PxlsSpeed(commands.Cog):
                     pixels = [stat["pixels"] for stat in data]
                 max_pixels = min_pixels= None
 
-            formatted_data.append([
-                name,
-                current_pixels,
-                diff_pixels,
-                speed_px_h,
-                speed_px_d,
-                min_pixels,
-                max_pixels,
-                dates,
-                pixels
-            ])
+            user_data =[name,current_pixels,diff_pixels]
+            if groupby_opt:
+                user_data.append(average)
+                user_data.append(min_pixels)
+                user_data.append(max_pixels)
+            else:
+                user_data.append(speed_px_h)
+                user_data.append(speed_px_d)
+            user_data.append(dates)
+            user_data.append(pixels)
+            formatted_data.append(user_data)
 
         if len(formatted_data) == 0:
             msg = "❌ User{} not found{}.".format(
@@ -269,15 +288,12 @@ class PxlsSpeed(commands.Cog):
         formatted_data.sort(key = lambda x:x[2],reverse=True)
 
         # create the headers needed for the table
-        alignments = ["center","right","right","right","right"]
-        titles = ["Name","Pixels","Progress","px/h","px/d"]
         table_colors = theme.get_palette(len(formatted_data))
 
         # make the title
         if groupby_opt:
             title="Speed {}".format(
                 "per " + groupby_opt if groupby_opt else "")
-            title += f" for {formatted_data[0][0]}" if len(formatted_data) == 1 else ""
         elif canvas_opt and param["last"] == None:
             title = "Canvas Speed"
         else:
@@ -289,21 +305,20 @@ class PxlsSpeed(commands.Cog):
         # get the image of the table
         if groupby_opt:
             # add a "min" and "max" columns if groupby option
-            table_data = [d[:-2] for d in formatted_data]
-            titles.append("Min")
-            titles.append("Max")
-            alignments.append("right")
-            alignments.append("right")
+            alignments = ["center","right","right","right","right","right"]
+            titles = ["Name","Pixels","Progress",f"px/{groupby_opt}","Min","Max"]
 
         else:
-            table_data = [d[:-4] for d in formatted_data]
+            alignments = ["center","right","right","right","right"]
+            titles = ["Name","Pixels","Progress","px/h","px/d"]
+        table_data = [d[:-2] for d in formatted_data]
 
         table_data = [[format_number(c) for c in row] for row in table_data]
         table_image = table_to_image(table_data,titles,
         alignments,table_colors,theme=theme)
 
         # create the graph
-        graph_data = [[d[0],d[7],d[8]] for d in formatted_data]
+        graph_data = [[d[0],d[-2],d[-1]] for d in formatted_data]
         if groupby_opt:
             graph_image = await self.client.loop.run_in_executor(None,
                 get_grouped_graph,graph_data,title,theme,user_timezone)
@@ -323,7 +338,7 @@ class PxlsSpeed(commands.Cog):
         description += f"• Average cooldown: `{round(average_cooldown,2)}` seconds\n"
         description += f"• Best possible (without stack): ~`{format_number(best_possible)}` pixels."
         emb = discord.Embed(color=hex_str_to_int(theme.get_palette(1)[0]))
-        emb.add_field(name="Speed",value = description)
+        emb.add_field(name=title,value = description)
 
         # send the embed with the graph image
         file = image_to_file(res_image,"speed.png",emb)

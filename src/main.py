@@ -58,7 +58,10 @@ async def on_command(ctx):
     message = f"By <@{ctx.author.id}> "
     message += f"on <t:{int(message_time.timestamp())}>\n"
     if not slash_command:
-        message += f"```{ctx.message.content}```"
+        if len(message + ctx.message.content) > 1024:
+            message += "```[Message too long to show]```"
+        else:
+            message += f"```{ctx.message.content}```"
         message += f"[link to the message]({ctx.message.jump_url})\n"
     else:
         if "options" in ctx.data:
@@ -135,7 +138,10 @@ async def on_command_error(ctx,error):
         message += f"on <t:{int(message_time.timestamp())}>\n"
         
         if not slash_command:
-            message += f"```{ctx.message.content}```"
+            if len(message + ctx.message.content) >= 1024:
+                message += "```[Message too long to show]```"
+            else:
+                message += f"```{ctx.message.content}```"
             message += f"[link to the message]({ctx.message.jump_url})\n"
         else:
             if "options" in ctx.data:

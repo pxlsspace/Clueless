@@ -232,8 +232,7 @@ class PxlsSpeed(commands.Cog):
                     dates = []
                     for stat in data:
                         first_dt = datetime.strptime(stat["first_datetime"],"%Y-%m-%d %H:%M:%S")
-                        last_dt = first_dt + timedelta(days=6.9)
-                        #last_dt = datetime.strptime(stat["last_datetime"],"%Y-%m-%d %H:%M:%S")
+                        last_dt = first_dt + timedelta(days=6)
                         week_dates = f"{first_dt.strftime('%d-%b')} - {last_dt.strftime('%d-%b')}"
                         dates.append(week_dates)
                     user_timezone = None
@@ -250,10 +249,14 @@ class PxlsSpeed(commands.Cog):
                     dates = [datetime.astimezone(d.replace(tzinfo=timezone.utc),tz) for d in dates]
 
                 pixels = [stat["placed"] for stat in data]
-                min_pixels = min(pixels)
-                max_pixels = max(pixels)
-                average = sum(pixels)/len(pixels)
-            
+                # remove the "None" values to calculate the min, max, avg
+                pixels_int_only = [p for p in pixels if p != None]
+                if len(pixels_int_only) > 0:
+                    min_pixels = min(pixels_int_only)
+                    max_pixels = max(pixels_int_only)
+                    average = sum(pixels_int_only)/len(pixels_int_only)
+                else:
+                    min_pixels = max_pixels = average = None
             else:
                 dates = [stat["datetime"] for stat in data]
                 if param["progress"]:
@@ -263,7 +266,6 @@ class PxlsSpeed(commands.Cog):
                             for stat in data]
                 else:
                     pixels = [stat["pixels"] for stat in data]
-                max_pixels = min_pixels= None
 
             user_data =[name,current_pixels,diff_pixels]
             if groupby_opt:

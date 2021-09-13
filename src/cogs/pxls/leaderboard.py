@@ -364,8 +364,12 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             else:
                 names = [user[1] for user in res_ldb]
                 colors = [theme_colors[0]]*len(res_ldb)
-            fig = self.make_bars(names,data,title,theme,colors)
-
+            
+            if speed_opt and diff_time.total_seconds() < 3600*18:
+                bars_best_possible = best_possible
+            else:
+                bars_best_possible = None
+            fig = self.make_bars(names,data,title,theme,colors,bars_best_possible)
             bars_img = fig2img(fig)
             bars_file = image_to_file(bars_img,"bar_chart.png")
 
@@ -383,16 +387,14 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             await ctx.channel.send(file=bars_file)
 
     @staticmethod
-    def make_bars(users,pixels,title,theme,colors=None):
+    def make_bars(users,pixels,title,theme,colors=None,best_possible=None):
         if colors == None:
             colors = theme.get_palette(len(users))
         # create the graph and style
         fig = go.Figure(layout=theme.get_layout(with_annotation=False))
         fig.update_yaxes(rangemode='tozero')
         fig.update_xaxes(tickmode='linear')
-        fig.update_layout(annotations=[])
-        fig.update()
-        # the title displays the user if there is only 1 in the user_list
+        fig.update_layout(showlegend=False)
         fig.update_layout(title="<span style='color:{};'>{}</span>".format(
             theme.get_palette(1)[0],
             title))
@@ -406,6 +408,14 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                         {2}px 0px 0px {0},\
                         -{2}px 0px 0px {0},\
                         0px -{2}px 0px {0};">{1}</span>'.format(theme.background_color,pixel,2) for pixel in pixels]
+
+        # add a line with the "best possible"
+        if best_possible:
+            fig.add_hline(y=best_possible, line_dash="dash",
+              annotation_text=f"Best Possible ({best_possible})", 
+              annotation_position="top right",
+              annotation_font_color=theme.font_color,
+              line=dict(color=theme.font_color,width=3))
 
         # trace the user data
         if theme.has_underglow == True:

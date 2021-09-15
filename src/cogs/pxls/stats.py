@@ -6,7 +6,7 @@ from PIL import Image, ImageEnhance
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
 
-from utils.pxls.cooldown import get_best_possible
+from utils.pxls.cooldown import get_best_possible, get_cd
 from utils.discord_utils import format_number, image_to_file,STATUS_EMOJIS
 from utils.setup import stats, db_conn, db_users, db_stats, GUILD_IDS
 from utils.time_converter import format_datetime, round_minutes_down, td_format
@@ -58,6 +58,15 @@ class PxlsStats(commands.Cog):
         start_date = await db_conn.sql_select(sql,canvas_code)
         start_date = start_date[0]["datetime"]
 
+        # get average cd/online
+        data = await db_stats.get_general_stat("online_count",datetime.min,datetime.max,canvas=True)
+        online_counts = [int(e[0]) for e in data if e[0] != None]
+        cooldowns = [get_cd(count) for count in online_counts]
+        average_online = sum(online_counts)/len(online_counts)
+        min_online = min(online_counts)
+        max_online = max(online_counts)
+        average_cd = sum(cooldowns)/len(cooldowns)
+
         general_stats_text = "• Total Users: `{}`\n• Total Factions: `{}`".format(
             format_number(total_users),format_number(total_factions))
 
@@ -72,11 +81,15 @@ class PxlsStats(commands.Cog):
             format_number(total_non_virgin/total_placeable*100),
         )
 
-        info_text = "• Canvas Code: `{}`\n• Start Date: {}\n• Time Elapsed: {}\n• Canvas Users: `{}`".format(
+        info_text = "• Canvas Code: `{}`\n• Start Date: {}\n• Time Elapsed: {}\n• Canvas Users: `{}`\n• Average online: `{}` users (min: `{}`, max: `{}`)\n• Average cooldown: `{}s`".format(
             canvas_code,
             format_datetime(start_date),
-            td_format(datetime.utcnow()-start_date,hide_seconds=True),
-            active_users
+            td_format(datetime.utcnow()-start_date,hide_seconds=True,max_unit="day"),
+            active_users,
+            round(average_online,2),
+            min_online,
+            max_online,
+            round(average_cd,2)
         )
 
         # create an embed with all the infos

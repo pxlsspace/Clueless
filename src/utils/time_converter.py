@@ -73,7 +73,7 @@ def format_datetime(dt:datetime,style=None):
         return f'<t:{ts}>'
  
 
-def td_format(td_object:timedelta,hide_seconds=False):
+def td_format(td_object:timedelta,hide_seconds=False,max_unit="year"):
     ''' Convert a `timedelta` object to a string in the format:
 
     `x years, x months, x days, x min, x sec`.'''
@@ -86,6 +86,14 @@ def td_format(td_object:timedelta,hide_seconds=False):
         ('minute', 60),
         ('second', 1)]
 
+    # remove the periods bigger than the "max_unit"
+    max_unit_index = 0
+    for i,p in enumerate(periods):
+        if p[0] != max_unit:
+            max_unit_index = i+1
+        else:
+            break
+    periods = periods[max_unit_index:]
     if hide_seconds:
         periods = periods[:-1]
     strings=[]

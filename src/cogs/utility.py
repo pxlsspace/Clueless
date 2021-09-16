@@ -249,7 +249,7 @@ class Utility(commands.Cog):
     async def time(self, ctx, timezone:str):
         tz = get_timezone(timezone)
         if tz == None:
-            return await ctx.send("❌ Timzone not found.")
+            return await ctx.send("❌ Timezone not found.")
 
         await ctx.send("Current `{}` time: {}".format(
             timezone,

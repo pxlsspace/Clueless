@@ -200,7 +200,7 @@ class UserManager(commands.Cog):
     async def settimezone(self, ctx, timezone:str):
         tz = get_timezone(timezone)
         if tz == None:
-            return await ctx.send("❌ Timzone not found.")
+            return await ctx.send("❌ Timezone not found.")
         await db_users.set_user_timezone(ctx.author.id,timezone)
         await ctx.send("✅ Timezone successfully set to `{}`.\nCurrent time: {}".format(
             timezone,

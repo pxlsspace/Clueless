@@ -14,6 +14,7 @@ from utils.table_to_image import table_to_image
 from utils.plot_utils import fig2img, get_theme, hex_to_rgba_string
 from utils.pxls.cooldown import get_best_possible
 from cogs.pxls.speed import get_stats_graph
+from utils.timezoneslib import get_timezone
 class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
     def __init__(self, client):
@@ -124,8 +125,14 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
     async def leaderboard(self,ctx,*args):
         ''' Shows the pxls.space leaderboard '''
 
+        # get the user theme
+        discord_user = await db_users.get_discord_user(ctx.author.id)
+        current_user_theme = discord_user["color"] or "default"
+        theme = get_theme(current_user_theme)
+        user_timezone = discord_user["timezone"]
+
         try:
-            param = parse_leaderboard_args(args)
+            param = parse_leaderboard_args(args,get_timezone(user_timezone))
         except ValueError as e:
             return await ctx.send(f'❌ {e}')
         nb_line = int(param["lines"])
@@ -136,11 +143,6 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         bars_opt = param["bars"]
         graph_opt = param["graph"]
         ranks_opt = param["ranks"]
-
-        # get the user theme
-        discord_user = await db_users.get_discord_user(ctx.author.id)
-        current_user_theme = discord_user["color"] or "default"
-        theme = get_theme(current_user_theme)
 
         # get the linked username if "!" is in the names list
         username = param["names"]
@@ -166,8 +168,8 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                 date1 = round_minutes_down(datetime.now(timezone.utc) - input_time)
             else:
                 last_opt = None
-                date1 = param["after"] or datetime(1900,1,1,0,0,0)
-                date2 = param["before"] or datetime.now(timezone.utc)
+                date1 = param["after"] or datetime.min
+                date2 = param["before"] or datetime.max
         else:
             date1 = datetime.now(timezone.utc)
             date2 = datetime.now(timezone.utc)
@@ -351,7 +353,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                     data_pixels = [stat["pixels"] for stat in data]
                 stats.append([name,data_dates,data_pixels])
             stats.sort(key = lambda x:x[2][-1],reverse=True)
-            graph_img = await self.client.loop.run_in_executor(None,get_stats_graph,stats,"",theme,discord_user["timezone"])
+            graph_img = await self.client.loop.run_in_executor(None,get_stats_graph,stats,"",theme,user_timezone)
             graph_file = image_to_file(graph_img,"graph.png")
 
         # make the bars graph

@@ -111,16 +111,17 @@ class PxlsSpeed(commands.Cog):
 
     async def speed(self,ctx,*args):
         ''' Show the average speed of a user in the last x min, hours or days '''
-        try:
-            param = parse_speed_args(args)
-        except ValueError as e:
-            return await ctx.send(f'❌ {e}')
 
         # get the user theme
         discord_user = await db_users.get_discord_user(ctx.author.id)
         user_timezone = discord_user["timezone"]
         current_user_theme = discord_user["color"] or "default"
         theme = get_theme(current_user_theme)
+
+        try:
+            param = parse_speed_args(args,get_timezone(user_timezone))
+        except ValueError as e:
+            return await ctx.send(f'❌ {e}')
 
         # select the discord user's pxls username if it has one linked
         names = param["names"]
@@ -159,8 +160,8 @@ class PxlsSpeed(commands.Cog):
                 recent_time = datetime.now(timezone.utc)
                 old_time = round_minutes_down(datetime.now(timezone.utc) - input_time)
         else:
-            old_time = param["after"] or datetime(1900,1,1,0,0,0)
-            recent_time = param["before"] or datetime.now(timezone.utc)
+            old_time = param["after"] or datetime.min
+            recent_time = param["before"] or datetime.max
 
         # get the data we need
         if groupby_opt:

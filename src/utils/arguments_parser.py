@@ -8,7 +8,7 @@ class MyParser(argparse.ArgumentParser):
         raise ValueError(message)
         #raise argparse.ArgumentTypeError(message)   
 
-def parse_leaderboard_args(args):
+def parse_leaderboard_args(args,user_timezone:timezone=None):
     ''' Parse the leaderboard command arguments, return a dictionary with the values parsed:
 
     dict:{
@@ -45,16 +45,16 @@ def parse_leaderboard_args(args):
     
     res = parser.parse_args(args)
     if res.after:
-        res.after = valid_datetime_type(res.after)
+        res.after = valid_datetime_type(res.after,user_timezone)
     if res.before:
-        res.before = valid_datetime_type(res.before)
+        res.before = valid_datetime_type(res.before,user_timezone)
 
     if res.after and res.before and res.before < res.after:
         raise ValueError("The 'before' date can't be earlier than the 'after' date.")
         
     return vars(res)
 
-def parse_speed_args(args):
+def parse_speed_args(args,user_timezone:timezone=None):
     ''' Parse the speed command arguments, return a dictionary with the values parsed:
     
     dict:{
@@ -85,9 +85,9 @@ def parse_speed_args(args):
 
     # Convert the args to datetime and check if they are valid
     if res.after:
-        res.after = valid_datetime_type(res.after)
+        res.after = valid_datetime_type(res.after,user_timezone)
     if res.before:
-        res.before = valid_datetime_type(res.before)
+        res.before = valid_datetime_type(res.before,user_timezone)
     
     if res.after and res.before and res.before < res.after:
         raise ValueError("The 'before' date can't be earlier than the 'after' date.")
@@ -119,12 +119,18 @@ def parse_pixelfont_args(args):
 
     return parser.parse_args(args)
 
-def valid_datetime_type(arg_datetime_str):
+def valid_datetime_type(arg_datetime_str,user_timezone:timezone=None):
     """Check if the given string is a valid datetime"""
+
     error_msg = "Given time ({}) not valid. Expected format: `YYYY-mm-dd HH:MM`.".format(" ".join(arg_datetime_str))
+    user_timezone = user_timezone or timezone.utc
 
     if len(arg_datetime_str) == 1:
-        format = "%Y-%m-%d"
+        if ":" in arg_datetime_str[0]:
+            format = "%Y-%m-%d %H:%M"
+            arg_datetime_str.insert(0,datetime.now(user_timezone).strftime("%Y-%m-%d"))
+        else:
+            format = "%Y-%m-%d"
     elif len(arg_datetime_str) == 2:
         format = "%Y-%m-%d %H:%M"
     else:
@@ -133,7 +139,7 @@ def valid_datetime_type(arg_datetime_str):
     dt =  " ".join(arg_datetime_str)
     try:
         res_dt = datetime.strptime(dt, format)
-        res_dt = res_dt.replace(tzinfo=timezone.utc)
+        res_dt = res_dt.replace(tzinfo=user_timezone)
         return res_dt
     except ValueError:
         raise ValueError(error_msg)

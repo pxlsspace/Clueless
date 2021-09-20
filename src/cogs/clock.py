@@ -28,7 +28,14 @@ class Clock(commands.Cog):
         now = datetime.now()
         min = now.strftime("%M")
         if min in ['01','16','31','46']:
-            await self._update_stats_data()
+            try:
+                await self._update_stats_data()
+            except Exception as error:
+                formatted = "".join(
+                    traceback.format_exception(type(error), error, error.__traceback__)
+                )
+                print("Unexpected exception in task 'update_stats':")
+                print(formatted,file=stderr)
 
     @update_stats.error
     async def update_stats_error(self, error):
@@ -46,20 +53,20 @@ class Clock(commands.Cog):
             # update the data on startup
             await self._update_stats_data()
 
-            # start the websocket to update the board
-            ws_client.start()
-
-            # wait for the time to be a round value
-            round_minute = datetime.now(timezone.utc) + timedelta(minutes=1)
-            round_minute = round_minute.replace(second=0,microsecond=0)
-            await discord.utils.sleep_until(round_minute)
-
         except Exception as error:
             formatted = "".join(
                 traceback.format_exception(type(error), error, error.__traceback__)
             )
             print("Unexpected error before starting task 'update_stats':")
             print(formatted,file=stderr)
+
+        # start the websocket to update the board
+        ws_client.start()
+
+        # wait for the time to be a round value
+        round_minute = datetime.now(timezone.utc) + timedelta(minutes=1)
+        round_minute = round_minute.replace(second=0,microsecond=0)
+        await discord.utils.sleep_until(round_minute)
 
     async def _update_stats_data(self):
             # refreshing stats json

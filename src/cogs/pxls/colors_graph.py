@@ -54,7 +54,7 @@ class ColorsGraph(commands.Cog):
 
     @commands.command(
         name = "colorsgraph",
-        aliases=["colorgraph","cg"],
+        aliases=["colorgraph","coloursgraph","colourgraph","cg"],
         description = "Show a graph of the canvas colors.",
         usage="[colors] [-placed|-p] [-last ?y?mo?w?d?h?m?s]",
         help = """\t- `<colors>`: list of pxls colors separated by a comma

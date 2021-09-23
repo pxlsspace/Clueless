@@ -466,7 +466,7 @@ class PxlsStats(commands.Cog):
     @commands.command(
         name="canvascolors",
         description="Show the amount for each color on the canvas.",
-        aliases=["cc"],usage = "[-placed|-p]")
+        aliases=["canvascolours","cc"],usage = "[-placed|-p]")
     async def p_canvascolors(self,ctx,*options):
         async with ctx.typing():
             await self.canvascolors(ctx,*options)

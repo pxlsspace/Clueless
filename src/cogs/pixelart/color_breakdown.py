@@ -37,7 +37,8 @@ class ColorBreakdown(commands.Cog):
     @commands.command(
         name="colors",
         description="Amount of pixels for each color in an image.",
-        usage="<image|url>")
+        usage="<image|url>",
+        aliases = ["color","colours","colour"])
     async def p_colors(self,ctx,url=None):
         async with ctx.typing():
             await self.colors(ctx,url)

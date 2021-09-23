@@ -10,7 +10,7 @@ from discord_slash.utils.manage_commands import create_option
 
 from utils.image.image_utils import get_pxls_color, hex_str_to_int,is_hex_color,\
          rgb_to_hex, is_dark
-from utils.discord_utils import get_image_from_message, image_to_file, IMAGE_URL_REGEX
+from utils.discord_utils import format_number, get_image_from_message, image_to_file, IMAGE_URL_REGEX
 from utils.arguments_parser import MyParser
 from utils.table_to_image import table_to_image
 from utils.setup import GUILD_IDS
@@ -183,7 +183,7 @@ async def _highlight(ctx,image_array:np.ndarray,parsed_args):
         percentage = f"{round(amount/total_amount*100,2)}%"
         hex_color = rgb_to_hex(rgba_list[i][:-1])
 
-        data.append((color_name,amount,percentage,hex_color))
+        data.append((color_name,format_number(amount),percentage,hex_color))
     
     data.sort(key = lambda x:x[1],reverse=True)
     hex_colors = [d[-1] for d in data]

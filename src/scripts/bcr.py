@@ -15,16 +15,19 @@ async def get_stats_df(dt1,dt2,canvas:bool) -> pandas.DataFrame:
     
     # config
     dates_skipped = 4
-    video_duration = 30 # seconds
-    title = "Canvas 49 - Top 20"
+    video_duration = 90 # seconds
+    video_duration = video_duration/dates_skipped
+    title = "Canvas 49 - Colors (non-virgin pixels)"
     steps_per_period = 10
     canvas_code = "49"
+    nb_bars = 32
+    colors = True # to get a bar chart of the canvas colors
 
     db_conn = DbConnection()
     db_stats = DbStatsManager(db_conn,stats)
 
-    record1 = await db_stats.find_record(dt1)
-    record2 = await db_stats.find_record(dt2)
+    record1 = await db_stats.find_record(dt1,canvas_code)
+    record2 = await db_stats.find_record(dt2,canvas_code)
 
     sql = """
     SELECT datetime, name, alltime_count, canvas_count
@@ -40,12 +43,22 @@ async def get_stats_df(dt1,dt2,canvas:bool) -> pandas.DataFrame:
         ORDER BY canvas_count DESC
         LIMIT 100 )"""
 
+    sql_colors = """
+    SELECT datetime, color_name as name, amount_placed as canvas_count, color_hex 
+        FROM color_stat
+        JOIN record on color_stat.record_id = record.record_id
+        JOIN palette_color on color_stat.color_id = palette_color.color_id
+        WHERE record.canvas_code=? """
+
     print("getting data...")
-    rows = await db_conn.sql_select(sql,(
-        record1["record_id"],
-        record2["record_id"],
-        canvas_code,
-        record2["record_id"]))
+    if colors:
+        rows = await db_conn.sql_select(sql_colors,(canvas_code))
+    else:
+        rows = await db_conn.sql_select(sql,(
+            record1["record_id"],
+            record2["record_id"],
+            canvas_code,
+            record2["record_id"]))
     print("nb rows:",len(rows))
 
     # step 1 - group by date
@@ -67,9 +80,13 @@ async def get_stats_df(dt1,dt2,canvas:bool) -> pandas.DataFrame:
 
         users_dict[name] = None
     
-    # truncate the data to only keep the top 100 (at the time of dt2)
-    last_values_sorted = sorted(dates_dict[record2["datetime"]].items(), key=lambda x: x[1], reverse=True)
-    users_list = [u[0] for u in last_values_sorted[0:100]]
+    if not colors:
+        # truncate the data to only keep the top 100 (at the time of dt2)
+        last_values_sorted = sorted(dates_dict[record2["datetime"]].items(), key=lambda x: x[1], reverse=True)
+        users_list = [u[0] for u in last_values_sorted[0:100]]
+    else:
+        users_list = list(list(dates_dict.items())[0][1].keys())
+
     # step 2 - make columns for each user
     columns = {}
     indexes =[]
@@ -103,19 +120,25 @@ async def get_stats_df(dt1,dt2,canvas:bool) -> pandas.DataFrame:
     # Setting background to a solid color fixes the problem.
     fig.patch.set_facecolor('white')
 
+    # use the correct colors if doing a colors chart
+    if colors:
+        cmap = await db_stats.get_palette(canvas_code)
+        cmap = ["#" + c["color_hex"] for c in cmap]
+    else:
+        cmap = "tab20"
     period_length = ((video_duration*1000)/nb_dates)*dates_skipped
     print(period_length)
     bcr.bar_chart_race(
         df,
         "out.mp4",
-        n_bars=20,
+        n_bars=nb_bars,
         filter_column_colors=True,
         title=title,
         steps_per_period=steps_per_period,
         period_length=period_length,
         shared_fontdict=dict(color="#b9bbbe"),
         bar_kwargs = dict(ec="black",lw=1,alpha=0.9),
-        cmap = "tab20",
+        cmap = cmap,
         period_fmt="%Y-%m-%d %H:%M" 
     )
 

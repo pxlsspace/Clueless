@@ -46,7 +46,7 @@ class PxlsStats(commands.Cog):
         board = stats.board_array
         virginmap = stats.virginmap_array
         placemap = stats.placemap_array
-        total_amount = np.sum(board!=255)
+        total_amount = board.shape[0]*board.shape[1]
         total_placeable = np.sum(placemap!=255)
         total_non_virgin = np.sum(virginmap==0)
 
@@ -71,9 +71,11 @@ class PxlsStats(commands.Cog):
             format_number(total_users),format_number(total_factions))
 
         canvas_stats_text = """
-        • Total Pixels `{}`/`{}` (`{}%` placeable)\n• Total Placed: `{}`\n• Total Non-Virgin: `{}`\n• Percentage Non-Virgin:\n**|**{}**|** `{}%`""".format(
+        • Dimensions: `{} x {}`\n• Total Pixels: `{}`/`{}` (`{}%` placeable)\n• Total Placed: `{}`\n• Total Non-Virgin: `{}`\n• Percentage Non-Virgin:\n**|**{}**|** `{}%`""".format(
+            board.shape[1],
+            board.shape[0],
             format_number(int(total_placeable)),
-            format_number(int(total_amount)),
+            format_number(total_amount),
             format_number(total_placeable/total_amount*100),
             format_number(total_placed),
             format_number(int(total_non_virgin)),

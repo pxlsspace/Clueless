@@ -100,8 +100,8 @@ async def _colors(client,ctx,input_image,title="Color Breakdown"):
 
     # create the message with a header
     header = f"""• Number of colors: `{len(colors)}`
-                • Number of pixels: `{format_number(nb_pixels)}`
-                • Number of visible pixels: `{format_number(sum(values))}`"""
+                • Visible pixels: `{format_number(sum(values))}`
+                • Image size: `{input_image.width} x {input_image.height}` (`{format_number(nb_pixels)}` pixels)"""
     header = inspect.cleandoc(header) + "\n"
 
     # concatenate the pie chart and table image

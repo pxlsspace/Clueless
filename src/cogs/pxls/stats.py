@@ -319,7 +319,7 @@ class PxlsStats(commands.Cog):
         emb.add_field(name="**Recent activity**",value=recent_activity_text,inline=False)
         await ctx.send(embed=emb)
 
-    choices = ["heatmap","virginmap","nonvirgin"]
+    choices = ["heatmap","virginmap","nonvirgin","initial"]
     @cog_ext.cog_slash(name="board",
                 description="Get the current pxls board.",
                 guild_ids=GUILD_IDS,
@@ -361,9 +361,7 @@ class PxlsStats(commands.Cog):
         - `[-nonvirgin]`: show the board without the virgin pixels
         - `[-heatmap [opacity]]`: show the heatmap on top of the canvas\
             (the opacity value should be between 0 and 100, the default value is 20)
-        
-
-        """)
+        - `[-initial]`: show the initial state of the canvas""")
     async def p_board(self,ctx,*options):
         async with ctx.typing():
             await self.board(ctx,*options)
@@ -374,7 +372,8 @@ class PxlsStats(commands.Cog):
         parser.add_argument("-heatmap",action="store",default=None,nargs="*",required=False)
         parser.add_argument("-nonvirgin",action="store_true",default=False,required=False)
         parser.add_argument("-virginmap",action="store_true",default=False,required=False)
-        parser.usage
+        parser.add_argument("-initial",action="store_true",default=False,required=False)
+
         try:
             parsed_args = parser.parse_args(args)
         except ValueError as e:
@@ -396,7 +395,11 @@ class PxlsStats(commands.Cog):
 
         # virginmap
         if parsed_args.virginmap:
-            array = stats.virginmap_array
+            array = stats.virginmap_array.copy()
+            array[array == 255] = 1
+            array[stats.placemap_array != 0] = 255
+            array = stats.palettize_array(array,palette=["#000000","#00dd00"])
+            title = "Canvas Virginmap"
         # heatmap
         elif heatmap_opacity is not None:
             # get the heatmap
@@ -408,6 +411,7 @@ class PxlsStats(commands.Cog):
             # get the canvas board
             canvas_array = stats.board_array
             canvas_array = stats.palettize_array(canvas_array)
+            title = "Canvas Heatmap"
         # non-virgin board
         elif parsed_args.nonvirgin:
             placeable_board = await stats.get_placable_board()
@@ -416,10 +420,17 @@ class PxlsStats(commands.Cog):
             array[virgin_array != 0] = 255
             array[virgin_array == 0] = placeable_board[virgin_array == 0]
             array = stats.palettize_array(array)
+            title = "Current Board (non-virgin pixels)"
+        # initial board
+        elif parsed_args.initial:
+            array = await stats.fetch_initial_canvas()
+            array = stats.palettize_array(array)
+            title = "Initial Board"
         # current board
         else:
             array = stats.board_array
             array = stats.palettize_array(array)
+            title = "Current Board"
 
         if heatmap_opacity is not None:
             # paste the heatmap image on top of the darken board
@@ -430,8 +441,10 @@ class PxlsStats(commands.Cog):
             board_img.paste(heatmap_img,(0,0),heatmap_img)
         else:
             board_img = Image.fromarray(array)
-        file = image_to_file(board_img,"board.png")
-        await ctx.send(file=file)
+        embed = discord.Embed(title=title,color=0x66c5cc)
+        embed.timestamp = datetime.now(timezone.utc)
+        file = image_to_file(board_img,"board.png",embed)
+        await ctx.send(file=file,embed=embed)
 
     @cog_ext.cog_slash(name="canvascolors",
         description="Show the amount for each color on the canvas.",

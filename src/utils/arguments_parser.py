@@ -31,6 +31,7 @@ def parse_leaderboard_args(args,user_timezone:timezone=None):
     parser.add_argument('-bars','-b', action='store_true', default=False)
     parser.add_argument('-last','-l',action='store',default=None)
     parser.add_argument('-ranks',action='store', type=check_ranks, default=None)
+    parser.add_argument('-eta', action='store_true', default=False)
     parser.add_argument('-after',
                         dest='after',
                         nargs='+',

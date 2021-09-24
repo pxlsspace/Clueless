@@ -73,18 +73,18 @@ def format_datetime(dt:datetime,style=None):
         return f'<t:{ts}>'
  
 
-def td_format(td_object:timedelta,hide_seconds=False,max_unit="year"):
+def td_format(td_object:timedelta,hide_seconds=False,max_unit="year",short_format=False):
     ''' Convert a `timedelta` object to a string in the format:
 
     `x years, x months, x days, x min, x sec`.'''
     seconds = int(td_object.total_seconds())
     periods = [
-        ('year', 60*60*24*365),
-        ('month', 60*60*24*30),
-        ('day', 60*60*24),
-        ('hour', 60*60),
-        ('minute', 60),
-        ('second', 1)]
+        ('year' ,'y', 60*60*24*365),
+        ('month' ,'mo', 60*60*24*30),
+        ('day' ,'d', 60*60*24),
+        ('hour' ,'h', 60*60),
+        ('minute' ,'m', 60),
+        ('second' ,'s', 1)]
 
     # remove the periods bigger than the "max_unit"
     max_unit_index = 0
@@ -97,12 +97,16 @@ def td_format(td_object:timedelta,hide_seconds=False,max_unit="year"):
     if hide_seconds:
         periods = periods[:-1]
     strings=[]
-    for period_name, period_seconds in periods:
+    for period_name, period_name_short, period_seconds in periods:
         if seconds >= period_seconds:
             period_value , seconds = divmod(seconds, period_seconds)
-            has_s = 's' if period_value > 1 else ''
-            strings.append("%s %s%s" % (period_value, period_name, has_s))
-    return ", ".join(strings)
+            has_s = 's' if period_value > 1 and not short_format else ''
+            p_name = period_name_short if short_format else " " + period_name
+            strings.append("%s%s%s" % (period_value, p_name, has_s))
+    if short_format:
+        return " ".join(strings)
+    else:
+        return ", ".join(strings)
 
 
 def utc_to_local(dt):

@@ -277,7 +277,7 @@ class DbStatsManager():
             now_time = max([datetime.strptime(d["last_datetime"],"%Y-%m-%d %H:%M:%S") for d in all_datas])
             return past_time, now_time, res_list
 
-    async def get_pixels_placed_between(self,dt1,dt2,canvas,orderby_opt):
+    async def get_leaderboard_between(self,dt1,dt2,canvas,orderby_opt):
         """ Get the leaderboard between 2 dates
         ### Parameters
         - :param dt1: the lower date
@@ -342,6 +342,30 @@ class DbStatsManager():
             record1["datetime"],
             record2["datetime"],
             await self.db.sql_select(sql,(last_record["record_id"],record1["record_id"],record2["record_id"])))
+
+    async def get_pixels_at(self,datetime:datetime,user_name:str,canvas:bool=False):
+        """ get the record of a specific user at a given time"""
+
+        current_canvas_code = await self.stats_manager.get_canvas_code()
+        if canvas:
+            canvas_to_select = current_canvas_code
+        else:
+            canvas_to_select = None
+
+        record = await self.find_record(datetime,canvas_to_select)
+        record_id = record["record_id"]
+        sql = """
+            SELECT canvas_count, alltime_count, record_id
+            FROM pxls_user_stat
+            JOIN pxls_name ON pxls_name.pxls_name_id = pxls_user_stat.pxls_name_id
+            WHERE name = ?
+            AND record_id = ?"""
+        rows = await self.db.sql_select(sql,(user_name,record_id))
+
+        if len(rows) == 0:
+            return (None,None)
+        else:
+            return (record["datetime"], rows[0])
 
     async def find_record(self,dt,canvas_code=None):
         """ find the record with  the closest date to the given date in the database

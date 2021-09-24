@@ -28,7 +28,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         options=[
         create_option(
             name="username",
-            description="Center the leaderboard on this user (`!` = your set username).",
+            description="Center the leaderboard on this user ('!' = your set username).",
             option_type=3,
             required=False
         ),
@@ -52,14 +52,20 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         ),
         create_option(
             name="bars",
-            description="To show a bar graph of the current leaderboard",
+            description="To show a bar graph of the current leaderboard.",
             option_type=5,
             required=False
         ),
         create_option(
             name="ranks",
-            description="Show the leaderboard between 2 ranks (format: ?-?)",
+            description="Show the leaderboard between 2 ranks (format: ?-?).",
             option_type=3,
+            required=False
+        ),
+        create_option(
+            name="eta",
+            description="Add an ETA column showing the estimated time to pass the user above.",
+            option_type=5,
             required=False
         ),
         create_option(
@@ -70,19 +76,19 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         ),
         create_option(
             name="before",
-            description="To show the leaderboard before a specific date (format: YYYY-mm-dd HH:MM)",
+            description="To show the leaderboard before a specific date. (format: YYYY-mm-dd HH:MM)",
             option_type=3,
             required=False
         ),
         create_option(
             name="after",
-            description="To show the leaderboard after a specific date (format: YYYY-mm-dd HH:MM)",
+            description="To show the leaderboard after a specific date. (format: YYYY-mm-dd HH:MM)",
             option_type=3,
             required=False
         )]
     )
     async def _speed(self,ctx:SlashContext,username=None,canvas=False,lines=None,
-        graph=None,bars=False,ranks=None,last=None,before=None,after=None):
+        graph=None,bars=False,ranks=None,eta=None,last=None,before=None,after=None):
         await ctx.defer()
         args = ()
         if username:
@@ -97,6 +103,8 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             args += ("-bars",)
         if ranks:
             args += ("-ranks",ranks)
+        if eta:
+            args += ("-eta",)
         if last:
             args += ("-last",last)
         if before:
@@ -116,6 +124,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                   - `[-graph|-g]`: show a progress graph for each user in the leaderboard
                   - `[-bars|-b]`: show a bar graph of the leaderboard
                   - `[-ranks ?-?]`: show the leaderboard between 2 ranks
+                  - `[-eta]`: add an ETA column showing the estimated time to pass the user above
                   - `[-last ?y?mo?w?d?h?m?s]` Show the leaderboard in the last x years/months/weeks/days/hour/min/s""" 
         )
     async def p_leaderboard(self,ctx,*args):
@@ -143,6 +152,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         bars_opt = param["bars"]
         graph_opt = param["graph"]
         ranks_opt = param["ranks"]
+        eta_opt = param["eta"]
 
         # get the linked username if "!" is in the names list
         username = param["names"]
@@ -182,7 +192,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             #canvas_opt = "canvas" # only get the canvas stats when sorting by speed
 
         # fetch the leaderboard from the database
-        canvas,last_date, datetime1, datetime2, ldb = await db_stats.get_pixels_placed_between(date1,date2,canvas_opt,sort)
+        canvas,last_date, datetime1, datetime2, ldb = await db_stats.get_leaderboard_between(date1,date2,canvas_opt,sort)
         # change the canvas opt if sort by speed on time frame on the current canvas
         canvas_opt = canvas
 
@@ -215,15 +225,23 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             if name_index == None:
                 return await ctx.send("❌ User not found")
 
-            # calucluate the indexes around the user
-            min_idx = max(0,(name_index-round(nb_line/2)))
-            max_idx = min(len(ldb),name_index+round(nb_line/2)+1)
-            # if one of the idx hits the limit, we change the other idx to show more lines
-            if min_idx == 0:
-                max_idx = min_idx + nb_line
-            if max_idx == len(ldb):
-                min_idx = max_idx - nb_line
-            ldb = ldb[min_idx:max_idx]
+            if len(username) == 1:
+                # calucluate the indexes around the user
+                min_idx = max(0,(name_index-round(nb_line/2)))
+                max_idx = min(len(ldb),name_index+round(nb_line/2)+1)
+                # if one of the idx hits the limit, we change the other idx to show more lines
+                if min_idx == 0:
+                    max_idx = min_idx + nb_line
+                if max_idx == len(ldb):
+                    min_idx = max_idx - nb_line
+                ldb = ldb[min_idx:max_idx]
+            else:
+                # only keep the users in the "username" list
+                trimmed_ldb = []
+                for l in ldb:
+                    if l[1] in username:
+                         trimmed_ldb.append(l)
+                ldb = trimmed_ldb
         else:
             ldb = ldb[0:nb_line]
 
@@ -236,6 +254,11 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         if speed_opt:
             column_names.append("Speed")
             alignments2.append('right')
+        elif eta_opt:
+            column_names.append("Speed (px/d)")
+            alignments2.append('center')
+            column_names.append("ETA")
+            alignments2.append("center")
 
         # build the content of the leaderboard
         res_ldb = []
@@ -255,11 +278,6 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                 res_ldb[i].append(ldb[i][3])
             else:
                 res_ldb[i].append(ldb[i][2])
-            # format the number
-            if res_ldb[i][2] != None:
-                res_ldb[i][2] = format_number(res_ldb[i][2])
-            else:
-                res_ldb[i][2] = "???"
 
             # add the diff values
             if username:
@@ -268,13 +286,12 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                         diff = user_pixels-ldb[i][3]
                     else:
                         diff = user_pixels-ldb[i][2]
-                    diff = f'{int(diff):,}'.replace(","," ") # convert to string
                     res_ldb[i].append(diff)
                 except:
                     res_ldb[i].append("???")
 
-            # add the speed
             if speed_opt:
+                # add the speed
                 diff_pixels = ldb[i][3] or 0
                 diff_time = (datetime2 - datetime1)
                 nb_hours = diff_time/timedelta(hours=1)
@@ -285,6 +302,47 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                     res_ldb[i].append(f'{round(speed,1)} px/d')
                 else:
                     res_ldb[i].append(f'{round(speed,1)} px/h')
+            elif eta_opt:
+                # add the ETA
+                # get the speed in the last 1 day
+                eta_time = datetime2 - timedelta(days=1)
+                eta_record_time, eta_record = await db_stats.get_pixels_at(eta_time,ldb[i][1],canvas_opt)
+                if eta_record:
+                    diff_time = (datetime2 - eta_record_time)/timedelta(days=1)
+                    if ldb[i][2] != None:
+                        if canvas_opt:
+                            eta_pixels = ldb[i][2] - eta_record["canvas_count"]
+                        else:
+                            eta_pixels = ldb[i][2] - eta_record["alltime_count"]
+                        
+                        eta_speed = eta_pixels/diff_time # in px/d
+                    else:
+                        eta_speed = None
+                else:
+                    eta_speed = None
+
+                # add the eta time
+                if i == 0:
+                    eta = "N/A (first)"
+                else:
+                    eta_speed_above = res_ldb[i-1][-2]
+                    if eta_speed_above != None and eta_speed != None:
+                        diff_speed = eta_speed-eta_speed_above
+                        if diff_speed == 0:
+                            eta = "Never."
+                        elif diff_speed<0:
+                            eta = "N/A (slower)"
+                        else:
+                            goal = ldb[i-1][2] - ldb[i][2]
+                            if goal == 0:
+                                eta = "N/A (same count)"
+                            else:
+                                eta_time = goal/diff_speed # in days
+                                eta = td_format(timedelta(days=eta_time),short_format=True)
+                    else:
+                        eta = None
+                res_ldb[i].append(eta_speed)
+                res_ldb[i].append(eta)                
 
         # create the image with the leaderboard data
         colors = None
@@ -297,6 +355,10 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                     colors.append(theme.get_palette(1)[0])
                 else:
                     colors.append(None)
+
+        # format the numbers correctly
+        res_ldb= [[format_number(l) for l in r] for r in res_ldb]
+
         img = await self.client.loop.run_in_executor(
             None,table_to_image,res_ldb,column_names,alignments2,colors,theme)
 
@@ -379,6 +441,9 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         emb = discord.Embed(color=hex_str_to_int(theme.get_palette(1)[0]),
             title=title,description=text)
         file = image_to_file(img,"leaderboard.png",emb)
+
+        if eta_opt and not speed_opt:
+            emb.set_footer(text="The ETA values are calculated with the speed in the last 1 day.\n")
 
         # send graph and embed
         await ctx.send(embed=emb,file=file)

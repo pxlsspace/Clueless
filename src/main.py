@@ -12,7 +12,8 @@ from utils.setup import DEFAULT_PREFIX, db_stats, db_servers, db_users
 
 load_dotenv()
 intents = discord.Intents.all()
-client = commands.Bot(command_prefix=db_servers.get_prefix,help_command=HelpCommand(),intents=intents)
+client = commands.Bot(command_prefix=db_servers.get_prefix,
+    help_command=HelpCommand(), intents=intents, case_insensitive=True)
 slash = SlashCommand(client,sync_commands=True,sync_on_cog_reload=True)
 
 ### on event functions ###

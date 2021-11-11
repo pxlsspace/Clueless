@@ -99,7 +99,7 @@ class PxlsSpeed(commands.Cog):
         description="Show the speed of a pxls user with a graph.",
         help="""- `<names>`: list of pxls users names separated by a space (`!` = your set username)
               - `[-canvas|-c]`: show the canvas stats
-              - `[-groupby|-g]`: show a bar chart for each `hour`, `day``, `week` or `month`
+              - `[-groupby|-g]`: show a bar chart for each `hour`, `day`, `week` or `month`
               - `[-progress|-p]`: compare the progress between users
               - `[-last ?y?mo?w?d?h?m?s]` Show the progress in the last x years/months/weeks/days/hours/minutes/seconds (default: 1d)
               - `[-before <date time>]`: show the speed before a date and time (format YYYY-mm-dd HH:MM)

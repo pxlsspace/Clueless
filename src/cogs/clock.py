@@ -4,6 +4,7 @@ from PIL import Image
 from sys import stderr
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta, timezone
+from utils.discord_utils import image_to_file
 
 from utils.setup import stats, db_stats, db_servers, db_users, ws_client
 from utils.time_converter import local_to_utc
@@ -100,6 +101,9 @@ class Clock(commands.Cog):
             # check milestones
             await self.check_milestones()
 
+            # send snapshots
+            await self.send_snapshots()
+
             now = datetime.now().strftime("[%H:%M:%S]")
             print(now +": stats updated")
 
@@ -148,6 +152,24 @@ class Clock(commands.Cog):
                         await channel.send("New milestone for **"+username+"**! New count: "+str(new_count))
                     except Exception:
                         pass
+
+    async def send_snapshots(self):
+        ''' Send snapshots for the servers where a channel is set '''
+        channels = await db_servers.get_all_snapshots_channels()
+        if channels:
+            array = stats.palettize_array(stats.board_array)
+            board_img = Image.fromarray(array)
+            filename = f"snapshot_{datetime.now(timezone.utc).strftime('%FT%H%M')}.png"
+
+        for channel_id in channels:
+            try:
+                channel = self.client.get_channel(int(channel_id))
+                embed = discord.Embed(title="Canvas Snapshot",color=0x66c5cc)
+                embed.timestamp = datetime.now(timezone.utc)
+                file = image_to_file(board_img,filename,embed)
+                await channel.send(file=file,embed=embed)
+            except Exception:
+                pass
 
     async def create_record(self):
         # get the 'last updated' datetime and its timezone

@@ -1,4 +1,5 @@
 from database.db_connection import DbConnection
+from sqlite3 import OperationalError
 
 class DbServersManager():
     ''' A class to manage a discord server/guild in the database '''
@@ -16,7 +17,13 @@ class DbServersManager():
             blacklist_role_id TEXTS
         );"""
 
+        add_server_snapshots_channel = "ALTER TABLE server ADD COLUMN snapshots_channel_id TEXT"
+
         await self.db.sql_update(create_server_table)
+        try:
+            await self.db.sql_update(add_server_snapshots_channel)
+        except OperationalError:
+            pass
 
     ### create an item in a table ###
     async def create_server(self,server_id,prefix):
@@ -86,6 +93,38 @@ class DbServersManager():
                 WHERE name = ?'''
 
         rows = await self.db.sql_select(sql,name)
+        res=[]
+        for row in rows:
+            res.append(row[0])
+        return res
+
+    ### functions useful for the snapshots ###
+    async def update_snapshots_channel(self,server_id,channel_id):
+        sql = '''
+            UPDATE server
+            SET snapshots_channel_id = ?
+            WHERE server_id = ?'''
+        await self.db.sql_update(sql,(channel_id,server_id))
+
+    async def get_snapshots_channel(self,server_id):
+        ''' get the ID of the snapshots channel in a server '''
+        sql = '''
+            SELECT snapshots_channel_id 
+            FROM server
+            WHERE server_id = ?'''
+        res = await self.db.sql_select(sql,server_id)
+        if len(res) == 0:
+            return None
+        else:
+            return res[0][0]
+
+    async def get_all_snapshots_channels(self):
+        '''return a list of channels_id for the servers using snapshots'''
+        sql = '''
+            SELECT snapshots_channel_id 
+            FROM server
+            WHERE snapshots_channel_id IS NOT NULL'''
+        rows = await self.db.sql_select(sql)
         res=[]
         for row in rows:
             res.append(row[0])

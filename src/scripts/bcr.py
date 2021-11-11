@@ -17,11 +17,18 @@ async def get_stats_df(dt1,dt2,canvas:bool) -> pandas.DataFrame:
     dates_skipped = 4
     video_duration = 90 # seconds
     video_duration = video_duration/dates_skipped
-    title = "Canvas 49 - Colors (non-virgin pixels)"
     steps_per_period = 10
-    canvas_code = "49"
-    nb_bars = 32
+    canvas_code = "50"
     colors = True # to get a bar chart of the canvas colors
+
+    if colors:
+        nb_bars = 32
+        title = f"Canvas {canvas_code} - Colors (non-virgin pixels)"
+    else:
+        nb_bars = 20
+        title = f"Canvas {canvas_code} - Top {nb_bars}"
+
+    file_title = f"c{canvas_code}{'colors' if colors else 'top'+nb_bars}.mp4"
 
     db_conn = DbConnection()
     db_stats = DbStatsManager(db_conn,stats)
@@ -130,7 +137,7 @@ async def get_stats_df(dt1,dt2,canvas:bool) -> pandas.DataFrame:
     print(period_length)
     bcr.bar_chart_race(
         df,
-        "out.mp4",
+        file_title,
         n_bars=nb_bars,
         filter_column_colors=True,
         title=title,

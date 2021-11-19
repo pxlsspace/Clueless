@@ -47,20 +47,34 @@ class Template(commands.Cog):
             description="The template title.",
             option_type=3,
             required=False
+        ),
+        create_option(
+            name="ox",
+            description="Template x-position.",
+            option_type=4,
+            required=False
+        ),
+        create_option(
+            name="oy",
+            description="Template y-position.",
+            option_type=4,
+            required=False
         )]
     )
-    async def _highlight(self,ctx:SlashContext, image=None, style=None, glow=None, title=None):
+    async def _highlight(self,ctx:SlashContext, image=None, style=None, glow=None, title=None, ox=None, oy=None):
         await ctx.defer()
-        await self.template(ctx,image,style,glow,title)
+        await self.template(ctx,image,style,glow,title,ox,oy)
 
     @commands.command(
         name="template",
         description="Generate a template link from an image.",
-        usage = "<image|url> [-style <style>] [-glow] [-title <title>]",
+        usage = "<image|url> [-style <style>] [-glow] [-title <title>] [-ox <ox>] [-oy <oy>]",
         help="""- `<image|url>`: an image URL or an attached file
               - `[-style <style>]`: the template style you want (use `>styles` to see the list)
               - `[-glow]`: add glow to the template
-              - `[-title <title>]`: the template title""",
+              - `[-title <title>]`: the template title
+              - `[-ox <ox>]`: template x-position
+              - `[-oy <oy>]`: template y-position""",
         aliases=["templatize","temp"])
     async def p_template(self,ctx,*args):
 
@@ -69,6 +83,8 @@ class Template(commands.Cog):
         parser.add_argument("-style",action="store",required=False)
         parser.add_argument("-glow",action="store_true",default=False)
         parser.add_argument("-title",action="store",required=False)
+        parser.add_argument("-ox",action="store",required=False)
+        parser.add_argument("-oy",action="store",required=False)
 
         try:
             parsed_args= parser.parse_args(args)
@@ -76,9 +92,9 @@ class Template(commands.Cog):
             return await ctx.send(f'❌ {e}')
         url = parsed_args.url[0] if parsed_args.url else None
         async with ctx.typing():
-            await self.template(ctx, url, parsed_args.style, parsed_args.glow, parsed_args.title)
+            await self.template(ctx, url, parsed_args.style, parsed_args.glow, parsed_args.title, parsed_args.ox, parsed_args.oy)
 
-    async def template(self,ctx,image_url,style_name,glow,title):
+    async def template(self,ctx,image_url,style_name,glow,title,ox,oy):
         # get the image from the message
         try:
             img, url = await get_image_from_message(ctx,image_url,accept_emojis=False)
@@ -127,14 +143,20 @@ class Template(commands.Cog):
         # create a template link with the sent image
         template_title = f'&title={urllib.parse.quote(title)}' if title else ''
         template_image_url = m.attachments[0].url
-        try: # we're using a try/except block so we can still make templates if the board info is unreachable
-            x = int(stats.board_info["width"]/2)
-            y = int(stats.board_info["height"]/2)
-        except Exception:
-            x = y = 500
-        ox = x - img.width/2
-        oy = y - img.width/2
-        template_url = f"https://pxls.space/#x={x}&y={y}&scale=5&template={urllib.parse.quote(template_image_url)}&ox={ox}&oy={oy}&tw={img.width}&oo=1{template_title}"
+        if ox or oy:
+            t_ox = int(ox) if (ox and str(ox).isdigit()) else 0
+            t_oy = int(oy) if (oy and str(oy).isdigit()) else 0
+            x = int(t_ox + img.width/2)
+            y = int(t_oy + img.height/2)
+        else:
+            try: # we're using a try/except block so we can still make templates if the board info is unreachable
+                x = int(stats.board_info["width"]/2)
+                y = int(stats.board_info["height"]/2)
+            except Exception:
+                x = y = 500
+            t_ox = int(x - img.width/2)
+            t_oy = int(y - img.height/2)
+        template_url = f"https://pxls.space/#x={x}&y={y}&scale=5&template={urllib.parse.quote(template_image_url)}&ox={t_ox}&oy={t_oy}&tw={img.width}&oo=1{template_title}"
         template_embed = discord.Embed(title="**Template Link**",description=template_url, color=0x66c5cc)
         template_embed.set_footer(text=f"Generated in {round((end-start),3)}s")
         await ctx.send(embed=template_embed)

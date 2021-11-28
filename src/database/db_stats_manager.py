@@ -546,3 +546,38 @@ class DbStatsManager():
             return None
         else:
             return res[0]
+
+    async def get_stats_per_canvas(self, user_list):
+        sql_last_canvas_records = """
+            SELECT 
+                record_id,
+                min(datetime) as canvas_start,
+                max(datetime) as canvas_end,
+                canvas_code 
+            FROM record
+	        GROUP BY canvas_code """
+        last_canvas_records = await self.db.sql_select(sql_last_canvas_records)
+
+        res = []
+        for user in user_list:
+            user_data = []
+            for canvas in last_canvas_records:
+                record_id = canvas["record_id"]
+                canvas_code = canvas["canvas_code"]
+                sql = """
+                    SELECT name, alltime_count as pixels, canvas_count as placed, canvas_code
+                    FROM pxls_user_stat
+                        JOIN pxls_name on pxls_user_stat.pxls_name_id = pxls_name.pxls_name_id
+                        JOIN record r on r.record_id = pxls_user_stat.record_id
+                    WHERE r.record_id = ?
+                        AND name = ? """
+                rows = await self.db.sql_select(sql,(record_id, user))
+                if rows:
+                    user_data.append(rows[0])
+                else:
+                    user_data.append({'name':user, 'pixels':None, 'placed': None, 'canvas_code':canvas_code})
+            res.append([user, user_data])
+
+        past_time = datetime.strptime(last_canvas_records[0]["canvas_start"],"%Y-%m-%d %H:%M:%S")
+        now_time = datetime.strptime(last_canvas_records[-1]["canvas_end"],"%Y-%m-%d %H:%M:%S")
+        return (past_time, now_time, res)

@@ -66,7 +66,7 @@ def parse_speed_args(args,user_timezone:timezone=None):
     parser  = MyParser(add_help=False)
     parser.add_argument('names', type=str, nargs='*',default=[])
     parser.add_argument('-canvas','-c', action='store_true', default=False)
-    parser.add_argument("-groupby",'-g',choices=['month','week','day','hour'],required=False)
+    parser.add_argument("-groupby",'-g',choices=['canvas','month','week','day','hour'],required=False)
     parser.add_argument('-progress','-p', action='store_true', default=False)
 
 

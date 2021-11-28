@@ -49,6 +49,7 @@ class PxlsSpeed(commands.Cog):
             option_type=3,
             required=False,
             choices=[
+                create_choice(name="canvas",value="canvas"),
                 create_choice(name="month", value="month"),
                 create_choice(name="week", value="week"),
                 create_choice(name="day", value="day"),
@@ -99,7 +100,7 @@ class PxlsSpeed(commands.Cog):
         description="Show the speed of a pxls user with a graph.",
         help="""- `<names>`: list of pxls users names separated by a space (`!` = your set username)
               - `[-canvas|-c]`: show the canvas stats
-              - `[-groupby|-g]`: show a bar chart for each `hour`, `day`, `week` or `month`
+              - `[-groupby|-g]`: show a bar chart for each `hour`, `day`, `week`, `month` or `canvas`
               - `[-progress|-p]`: compare the progress between users
               - `[-last ?y?mo?w?d?h?m?s]` Show the progress in the last x years/months/weeks/days/hours/minutes/seconds (default: 1d)
               - `[-before <date time>]`: show the speed before a date and time (format YYYY-mm-dd HH:MM)
@@ -164,9 +165,11 @@ class PxlsSpeed(commands.Cog):
             recent_time = param["before"] or datetime.max
 
         # get the data we need
-        if groupby_opt:
+        if groupby_opt and groupby_opt != "canvas":
             (past_time, now_time, stats) = await db_stats.get_grouped_stats_history(
                 names, old_time, recent_time,groupby_opt,canvas_opt)
+        elif groupby_opt == "canvas":
+            (past_time, now_time, stats) = await db_stats.get_stats_per_canvas(names)
         else:
             (past_time, now_time, stats) = await db_stats.get_stats_history(
                 names, old_time,recent_time,canvas_opt)
@@ -188,7 +191,7 @@ class PxlsSpeed(commands.Cog):
         found_but_no_data = False
         for user in stats:
             data = user[1]
-            if groupby_opt:
+            if groupby_opt and groupby_opt != "canvas":
                 # truncate the first data if we're groupping by day/hour
                 data = data[1:]
 
@@ -248,6 +251,10 @@ class PxlsSpeed(commands.Cog):
                     dates = [datetime.strptime(d,"%Y-%m-%d %H") for d in dates]
                     tz = get_timezone(user_timezone) or timezone.utc
                     dates = [datetime.astimezone(d.replace(tzinfo=timezone.utc),tz) for d in dates]
+
+                elif groupby_opt == "canvas":
+                    dates = ["C"+stat["canvas_code"] for stat in data]
+                    user_timezone = None
 
                 pixels = [stat["placed"] for stat in data]
                 # remove the "None" values to calculate the min, max, avg

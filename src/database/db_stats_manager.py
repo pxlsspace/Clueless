@@ -1,5 +1,5 @@
 from sqlite3 import IntegrityError
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from database.db_connection import DbConnection
 from utils.pxls.pxls_stats_manager import PxlsStatsManager
@@ -516,12 +516,15 @@ class DbStatsManager():
                 JOIN record on record.record_id = pxls_user_stat.record_id
                 JOIN pxls_name on pxls_name.pxls_name_id = pxls_user_stat.pxls_name_id
                 WHERE pxls_user_id = ?
+                AND datetime > ?
                 ORDER BY datetime desc
             ) p
             WHERE p.placed = 0
             LIMIT 1""".format("canvas_count" if canvas else "alltime_count")
 
-        res = await self.db.sql_select(sql,(user_id))
+        # only search in the last 7 days to make the query faster
+        td = datetime.utcnow()-timedelta(days=7)
+        res = await self.db.sql_select(sql,(user_id,td))
 
         if len(res) == 0:
             return None

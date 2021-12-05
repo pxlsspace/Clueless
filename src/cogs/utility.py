@@ -6,13 +6,15 @@ from dotenv import load_dotenv
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
 from datetime import datetime
+from utils.arguments_parser import valid_datetime_type
 
 from utils.setup import db_servers, GUILD_IDS
-from utils.time_converter import str_to_td, td_format
+from utils.time_converter import format_timezone, str_to_td, td_format
 from utils.timezoneslib import get_timezone
 from utils.utils import get_content
-from utils.discord_utils import format_number
+from utils.discord_utils import format_number, image_to_file
 from utils.help import fullname
+from utils.table_to_image import table_to_image
 
 class Utility(commands.Cog):
     ''' Various utility commands'''
@@ -255,6 +257,35 @@ class Utility(commands.Cog):
             timezone,
             datetime.astimezone(datetime.now(),tz).strftime("**%H:%M** (%Y-%m-%d)")
         ))
+
+    @commands.group(hidden=True, usage="<sql expression>")
+    @commands.is_owner()
+    async def sql(self, ctx, *, sql_expression):
+        async with ctx.typing():
+            try:
+                rows = await db_servers.db.sql_select(sql_expression)
+            except Exception as e:
+                return await ctx.send(f"❌ SQL error: ```{e}```")
+        if len(rows) == 0:
+            return await ctx.send("No match found.")
+        elif len(rows) > 100:
+            return await ctx.send(f"❌ Too many lines to show ({len(rows)})")
+
+        titles = rows[0].keys()
+        rows = [list(row) for row in rows]
+        img = table_to_image(rows,titles)
+        file = image_to_file(img,"table.png")
+        await ctx.send(file=file)
+
+    @commands.command(hidden=True, usage="<sql expression>")
+    @commands.is_owner()
+    async def sqlcommit(self, ctx, *, sql_expression):
+        async with ctx.typing():
+            try:
+                nb_lines = await db_servers.db.sql_update(sql_expression)
+            except Exception as e:
+                return await ctx.send(f"❌ SQL error: ```{e}```")
+        return await ctx.send(f"Done! ({nb_lines} lines affected)")
 
 def setup(client):
     client.add_cog(Utility(client))

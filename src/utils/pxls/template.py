@@ -115,6 +115,7 @@ def stylize(style,stylesize,palette,glow_opacity=0):
         res[i] = cstyle
     return(res)
 
+# from https://github.com/Seon82/pyCharity/blob/master/src/handlers/pxls/template.py#L91
 def reduce(rendered_array,palette):
     best_match_idx = np.zeros(rendered_array.shape[:2], dtype=np.uint8)
     best_match_dist = np.full(rendered_array.shape[:2], 500)  # 500<sqrt(3*255^2)
@@ -126,7 +127,7 @@ def reduce(rendered_array,palette):
         best_match_idx[closer_mask] = idx
 
     alpha_values = rendered_array[:,:,3]
-    best_match_idx[alpha_values!=255] = 255 # alpha index
+    best_match_idx[alpha_values<128] = 255 # alpha index
 
     return best_match_idx
 

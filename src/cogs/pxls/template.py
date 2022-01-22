@@ -10,6 +10,7 @@ from discord_slash.utils.manage_commands import create_option, create_choice
 
 from utils.arguments_parser import MyParser
 from utils.discord_utils import format_number, get_image_from_message, image_to_file
+from utils.image.image_utils import remove_white_space
 from utils.pxls.template import *
 from utils.setup import stats, GUILD_IDS
 
@@ -59,11 +60,17 @@ class Template(commands.Cog):
             description="Template y-position.",
             option_type=4,
             required=False
+        ),
+        create_option(
+            name="nocrop",
+            description="If you don't want the template to be automatically cropped. (default: False)",
+            option_type=5,
+            required=False
         )]
     )
-    async def _highlight(self,ctx:SlashContext, image=None, style=None, glow=None, title=None, ox=None, oy=None):
+    async def _highlight(self,ctx:SlashContext, image=None, style=None, glow=None, title=None, ox=None, oy=None, nocrop=None):
         await ctx.defer()
-        await self.template(ctx,image,style,glow,title,ox,oy)
+        await self.template(ctx,image,style,glow,title,ox,oy,nocrop)
 
     @commands.command(
         name="template",
@@ -74,7 +81,8 @@ class Template(commands.Cog):
               - `[-glow]`: add glow to the template
               - `[-title <title>]`: the template title
               - `[-ox <ox>]`: template x-position
-              - `[-oy <oy>]`: template y-position""",
+              - `[-oy <oy>]`: template y-position
+              - `[-nocrop]`: if you don't want the template to be automatically cropped""",
         aliases=["templatize","temp"])
     async def p_template(self,ctx,*args):
 
@@ -85,6 +93,7 @@ class Template(commands.Cog):
         parser.add_argument("-title",action="store",required=False)
         parser.add_argument("-ox",action="store",required=False)
         parser.add_argument("-oy",action="store",required=False)
+        parser.add_argument("-nocrop",action="store_true",default=False)
 
         try:
             parsed_args= parser.parse_args(args)
@@ -92,9 +101,9 @@ class Template(commands.Cog):
             return await ctx.send(f'❌ {e}')
         url = parsed_args.url[0] if parsed_args.url else None
         async with ctx.typing():
-            await self.template(ctx, url, parsed_args.style, parsed_args.glow, parsed_args.title, parsed_args.ox, parsed_args.oy)
+            await self.template(ctx, url, parsed_args.style, parsed_args.glow, parsed_args.title, parsed_args.ox, parsed_args.oy, parsed_args.nocrop)
 
-    async def template(self,ctx,image_url,style_name,glow,title,ox,oy):
+    async def template(self,ctx,image_url,style_name,glow,title,ox,oy,nocrop):
         # get the image from the message
         try:
             img, url = await get_image_from_message(ctx,image_url,accept_emojis=False)
@@ -119,6 +128,10 @@ class Template(commands.Cog):
             glow_opacity = 0.2
         else:
             glow_opacity = 0
+
+        # crop the white space around the image
+        if not(nocrop):
+            img = remove_white_space(img)
 
         # convert the image to a template style
         img_array = np.array(img)

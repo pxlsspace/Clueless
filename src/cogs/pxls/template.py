@@ -148,9 +148,7 @@ class Template(commands.Cog):
         embed.set_footer(text="Warning: if you delete this message the template might break.")
         embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
         embed.set_thumbnail(url=url)
-        file_title = title.replace(" ","_") if title else "template"
-        file_title +=".png"
-        file = image_to_file(template_image,file_title)
+        file = image_to_file(template_image,"template.png")
         m = await ctx.send(embed=embed,file=file)
 
         # create a template link with the sent image

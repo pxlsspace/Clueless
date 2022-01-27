@@ -23,7 +23,7 @@ class HelpCommand(commands.HelpCommand):
                 cog_fullname = fullname(cog)
                 cog_fullname = cog_fullname.split(".")
                 cog_dir = cog_fullname[1:-2]
-                cog_dir = cog_dir[0].capitalize() if len(cog_dir)>0 else "Other"
+                cog_dir = cog_dir[0].replace("_"," ").title() if len(cog_dir)>0 else "Other"
 
             for command in commands:
                 if command.hidden == False:

@@ -23,6 +23,18 @@ async def get_content(url:str,content_type,**kwargs):
                         else:
                             return await r.read()
                 else:
-                    raise BadResponseError(f"The URL leads to a {r.status}")
+                    raise BadResponseError(f"The URL leads to an error {r.status}")
         except (InvalidURL, ClientConnectionError):
             raise ValueError ("The URL provided is invalid.")
+
+def make_progress_bar(percentage,nb_char=20):
+    full = "​█"
+    empty = " "
+    res_bar = ""
+    bar_idx = int((percentage/100)*nb_char)
+    for i in range(nb_char):
+        if i < bar_idx:
+            res_bar += full
+        else:
+            res_bar += empty
+    return res_bar

@@ -16,6 +16,7 @@ aiohttp==3.7.4.post0
 alive_progress==1.6.2
 beautifulsoup4==4.10.0
 discord==1.7.3
-Pillow==8.3.2
-python-dotenv==0.19.0
+Pillow==9.0.0
+python-dotenv==0.19.2
 kaleido==0.2.1
+numba==0.55.0

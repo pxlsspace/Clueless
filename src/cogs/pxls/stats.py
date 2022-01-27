@@ -12,6 +12,7 @@ from utils.setup import stats, db_conn, db_users, db_stats, GUILD_IDS
 from utils.time_converter import format_datetime, round_minutes_down, td_format
 from utils.arguments_parser import MyParser
 from utils.plot_utils import matplotlib_to_plotly
+from utils.utils import make_progress_bar
 from cogs.pixelart.color_breakdown import _colors
 from cogs.pixelart.highlight import _highlight
 
@@ -548,18 +549,6 @@ class PxlsStats(commands.Cog):
         canvas_array_idx = await stats.get_placable_board()
         canvas_array = stats.palettize_array(canvas_array_idx)
         await _highlight(ctx,canvas_array,parsed_args)
-
-def make_progress_bar(percentage,nb_char=20):
-    full = "​█"
-    empty = " "
-    res_bar = ""
-    bar_idx = int((percentage/100)*nb_char)
-    for i in range(nb_char):
-        if i < bar_idx:
-            res_bar += full
-        else:
-            res_bar += empty
-    return res_bar
 
 def setup(client):
     client.add_cog(PxlsStats(client))

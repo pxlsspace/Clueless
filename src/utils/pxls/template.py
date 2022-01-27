@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 from utils.setup import stats
 from utils.image.image_utils import hex_to_rgb
+from numba import jit
 
 class InvalidStyleException(Exception):
     def __init__(self, *args: object) -> None:
@@ -118,7 +119,7 @@ def stylize(style,stylesize,palette,glow_opacity=0):
 # from https://github.com/Seon82/pyCharity/blob/master/src/handlers/pxls/template.py#L91
 def reduce(rendered_array,palette):
     best_match_idx = np.zeros(rendered_array.shape[:2], dtype=np.uint8)
-    best_match_dist = np.full(rendered_array.shape[:2], 500)  # 500<sqrt(3*255^2)
+    best_match_dist = np.full(rendered_array.shape[:2], 500)  # 500>sqrt(3*255^2)
 
     for idx, color in enumerate(palette):
         color_distance = np.linalg.norm(rendered_array - color, axis=-1)
@@ -131,6 +132,15 @@ def reduce(rendered_array,palette):
 
     return best_match_idx
 
+@jit(nopython=True)
+def fast_templatize(n, m, st, red, style_size):
+    res = np.zeros((style_size*n,style_size*m,4),dtype=np.uint8)
+    for i in range(n):
+        for j in range(m):
+            if red[i,j] != 255: # non-alpha values
+                res[style_size*i:style_size*i+style_size,style_size*j:style_size*j+style_size] = st[red[i][j]]
+    return res
+
 def templatize(style:dict, image:Image.Image, glow_opacity=0) -> np.ndarray:
     style_array = style["array"]
     style_size = style["size"]
@@ -142,10 +152,5 @@ def templatize(style:dict, image:Image.Image, glow_opacity=0) -> np.ndarray:
     palette = get_rgba_palette()
     red = reduce(image_array,palette)
     st = stylize(style_array,style_size,palette,glow_opacity)
-    res = np.zeros((style_size*n,style_size*m,4),dtype=np.uint8)
-    for i in range(n):
-        for j in range(m):
-            if red[i,j] != 255: # non-alpha values
-                res[style_size*i:style_size*i+style_size,style_size*j:style_size*j+style_size] = st[red[i][j]]
-    res = np.array(res)
+    res = fast_templatize(n,m,st,red,style_size)
     return res

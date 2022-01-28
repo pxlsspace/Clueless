@@ -18,7 +18,7 @@ async def get_stats_df(dt1,dt2,canvas:bool) -> pandas.DataFrame:
     video_duration = 90 # seconds
     video_duration = video_duration/dates_skipped
     steps_per_period = 10
-    canvas_code = "50"
+    canvas_code = "52"
     colors = True # to get a bar chart of the canvas colors
 
     if colors:
@@ -28,7 +28,7 @@ async def get_stats_df(dt1,dt2,canvas:bool) -> pandas.DataFrame:
         nb_bars = 20
         title = f"Canvas {canvas_code} - Top {nb_bars}"
 
-    file_title = f"c{canvas_code}{'colors' if colors else 'top'+nb_bars}.mp4"
+    file_title = f"c{canvas_code}{'colors' if colors else 'top'+str(nb_bars)}.mp4"
 
     db_conn = DbConnection()
     db_stats = DbStatsManager(db_conn,stats)

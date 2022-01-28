@@ -92,11 +92,15 @@ class Clock(commands.Cog):
             canvas_code = await stats.get_canvas_code()
             await db_stats.save_palette(palette,canvas_code)
 
+            ws_client.pause()
+
             # update the board
             await self.update_boards()
 
             # save the color stats
             await self.save_color_stats(record_id)
+
+            ws_client.resume()
 
             # check milestones
             await self.check_milestones()
@@ -239,10 +243,8 @@ class Clock(commands.Cog):
 
     async def update_boards(self):
         # update the canvas boards
-        ws_client.pause()
         await stats.fetch_board()
         await stats.fetch_virginmap()
-        ws_client.resume()
         await stats.fetch_placemap()
 
 def setup(client):

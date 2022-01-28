@@ -1,5 +1,5 @@
 from database.db_connection import DbConnection
-from sqlite3 import OperationalError
+from sqlite3 import OperationalError, IntegrityError
 
 
 class DbServersManager():
@@ -33,7 +33,15 @@ class DbServersManager():
         """add a 'server' to the database"""
         sql = """ INSERT INTO server(server_id,prefix)
                 VALUES(?,?) """
-        await self.db.sql_update(sql, (server_id, prefix))
+        try:
+            return await self.db.sql_update(sql, (server_id, prefix))
+        except IntegrityError:
+            return 0
+
+    async def delete_server(self, server_id):
+        """remove a server from the database"""
+        sql = """ DELETE FROM server WHERE server_id = ? """
+        return await self.db.sql_update(sql, server_id)
 
     async def update_prefix(self, prefix, server_id):
         """change the prefix of a server"""

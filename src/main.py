@@ -237,6 +237,53 @@ async def on_guild_join(guild):
     await db_servers.create_server(guild.id, DEFAULT_PREFIX)
     print("joined a new server: {0.name} (id: {0.id})".format(guild))
 
+    # get the log channel
+    log_channel_id = os.environ.get("ERROR_LOG_CHANNEL")
+    try:
+        log_channel = await client.fetch_channel(log_channel_id)
+    except Exception:
+        # don't log if no log channel is set
+        return
+
+    # make the embed and send it in the log channel
+    embed = discord.Embed(
+        title="**Joined a new server!**",
+        color=0x66C5CC,
+        timestamp=guild.created_at,
+    )
+    embed.add_field(name="**Server Name**", value=guild.name)
+    embed.add_field(name="**Owner**", value=guild.owner)
+    embed.add_field(name="**Members**", value=guild.member_count)
+    embed.set_thumbnail(url=guild.icon_url)
+    embed.set_footer(text=f"ID • {guild.id} | Server Created")
+    await log_channel.send(embed=embed)
+
+
+@client.event
+async def on_guild_remove(guild):
+    await db_servers.delete_server(guild.id)
+    print("left server: {0.name} (id: {0.id})".format(guild))
+
+    # get the log channel
+    log_channel_id = os.environ.get("ERROR_LOG_CHANNEL")
+    try:
+        log_channel = await client.fetch_channel(log_channel_id)
+    except Exception:
+        # don't log if no log channel is set
+        return
+
+    # make the embed and send it in the log channel
+    embed = discord.Embed(
+        title="**Left a server**",
+        color=0xFF3621,
+        timestamp=guild.created_at,
+    )
+    embed.add_field(name="**Server Name**", value=guild.name)
+    embed.add_field(name="**Owner**", value=guild.owner)
+    embed.add_field(name="**Members**", value=guild.member_count)
+    embed.set_thumbnail(url=guild.icon_url)
+    embed.set_footer(text=f"ID • {guild.id} | Server Created")
+    await log_channel.send(embed=embed)
 
 if __name__ == "__main__":
 

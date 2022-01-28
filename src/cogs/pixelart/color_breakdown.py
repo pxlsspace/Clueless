@@ -15,56 +15,65 @@ from utils.image.image_utils import h_concatenate, rgb_to_hex, rgb_to_pxls, hex_
 from utils.plot_utils import fig2img
 from utils.setup import GUILD_IDS
 
+
 class ColorBreakdown(commands.Cog):
-    def __init__(self,client):
+    def __init__(self, client):
         self.client = client
 
-    @cog_ext.cog_slash(name="colors",
+    @cog_ext.cog_slash(
+        name="colors",
         description="Get the amount of pixels for each color in an image.",
         guild_ids=GUILD_IDS,
         options=[
-        create_option(
-            name="image",
-            description="The URL of the image you want to see the colors.",
-            option_type=3,
-            required=False
-        )]
+            create_option(
+                name="image",
+                description="The URL of the image you want to see the colors.",
+                option_type=3,
+                required=False,
+            )
+        ],
     )
-    async def _colors(self,ctx:SlashContext,image=None):
+    async def _colors(self, ctx: SlashContext, image=None):
         await ctx.defer()
-        await self.colors(ctx,image)
+        await self.colors(ctx, image)
 
     @commands.command(
         name="colors",
         description="Amount of pixels for each color in an image.",
         usage="<image|url>",
-        aliases = ["color","colours","colour"])
-    async def p_colors(self,ctx,url=None):
+        aliases=["color", "colours", "colour"],
+    )
+    async def p_colors(self, ctx, url=None):
         async with ctx.typing():
-            await self.colors(ctx,url)
+            await self.colors(ctx, url)
 
-    async def colors(self,ctx,url=None):
-            # get the input image
-            try:
-                img_bytes, url = await get_image_from_message(ctx,url)
-            except ValueError as e:
-                return await ctx.send(f'❌ {e}')
+    async def colors(self, ctx, url=None):
+        # get the input image
+        try:
+            img_bytes, url = await get_image_from_message(ctx, url)
+        except ValueError as e:
+            return await ctx.send(f"❌ {e}")
 
-            input_image = Image.open(BytesIO(img_bytes))
-            input_image = input_image.convert('RGBA')
-            await _colors(self.client,ctx,input_image)
+        input_image = Image.open(BytesIO(img_bytes))
+        input_image = input_image.convert("RGBA")
+        await _colors(self.client, ctx, input_image)
 
-async def _colors(client,ctx,input_image,title="Color Breakdown"):
 
-    nb_pixels = input_image.size[0]*input_image.size[1]
+async def _colors(client, ctx, input_image, title="Color Breakdown"):
+
+    nb_pixels = input_image.size[0] * input_image.size[1]
 
     # get the colors table
-    image_colors = await client.loop.run_in_executor(None,input_image.getcolors,nb_pixels)
+    image_colors = await client.loop.run_in_executor(
+        None, input_image.getcolors, nb_pixels
+    )
     if len(image_colors) > 5000:
-        return await ctx.send("❌ This image has too many colors ({})".format(len(image_colors)))
+        return await ctx.send(
+            "❌ This image has too many colors ({})".format(len(image_colors))
+        )
     if image_colors:
         pxls_colors = rgb_to_pxlscolor(image_colors)
-        pxls_colors.sort(key = lambda x:x[1],reverse=True)
+        pxls_colors.sort(key=lambda x: x[1], reverse=True)
     else:
         return await ctx.send("❌ Unsupported format or image mode.")
 
@@ -76,28 +85,36 @@ async def _colors(client,ctx,input_image,title="Color Breakdown"):
     for i in range(len(labels)):
         color_name = labels[i]
         amount = values[i]
-        percentage = round(amount/sum(values)*100,2)
+        percentage = round(amount / sum(values) * 100, 2)
 
         amount = format_number(amount)
         percentage = str(percentage) + " %"
-        data.append([color_name,amount,percentage])
+        data.append([color_name, amount, percentage])
 
     # make the table image
     if len(data) > 40:
         # crop the table if it has too many values
         data_cropped = data[:40]
         colors_cropped = colors[:40]
-        data_cropped.append(["...","...","..."])
+        data_cropped.append(["...", "...", "..."])
         colors_cropped.append(None)
     else:
         data_cropped = data
         colors_cropped = colors
-    func = functools.partial(table_to_image,data_cropped,['Color','Qty','%'],['center','right','right'],colors_cropped)
-    table_img = await client.loop.run_in_executor(None,func)
+    func = functools.partial(
+        table_to_image,
+        data_cropped,
+        ["Color", "Qty", "%"],
+        ["center", "right", "right"],
+        colors_cropped,
+    )
+    table_img = await client.loop.run_in_executor(None, func)
 
     # make the pie chart image
-    piechart = get_piechart(labels,values,colors)
-    piechart_img = await client.loop.run_in_executor(None,fig2img,piechart,600,600,1.5)
+    piechart = get_piechart(labels, values, colors)
+    piechart_img = await client.loop.run_in_executor(
+        None, fig2img, piechart, 600, 600, 1.5
+    )
 
     # create the message with a header
     header = f"""• Number of colors: `{len(colors)}`
@@ -106,21 +123,26 @@ async def _colors(client,ctx,input_image,title="Color Breakdown"):
     header = inspect.cleandoc(header) + "\n"
 
     # concatenate the pie chart and table image
-    res_img = await client.loop.run_in_executor(None,h_concatenate,table_img,piechart_img)
+    res_img = await client.loop.run_in_executor(
+        None, h_concatenate, table_img, piechart_img
+    )
 
     # send an embed with the color table, the pie chart
-    emb = discord.Embed(title=title,description=header,color=hex_str_to_int(colors[0]))
-    file = await client.loop.run_in_executor(None,image_to_file,res_img,"color_breakdown.png",emb)
+    emb = discord.Embed(title=title, description=header, color=hex_str_to_int(colors[0]))
+    file = await client.loop.run_in_executor(
+        None, image_to_file, res_img, "color_breakdown.png", emb
+    )
     # set the input image as thumbnail
-    f = image_to_file(input_image,"input.png")
+    f = image_to_file(input_image, "input.png")
     emb.set_thumbnail(url="attachment://input.png")
-    await ctx.send(files=[file,f],embed=emb)
+    await ctx.send(files=[file, f], embed=emb)
+
 
 def rgb_to_pxlscolor(img_colors):
-    '''convert a list (amount,RGB) to a list of (color_name,amount,hex code)
+    """convert a list (amount,RGB) to a list of (color_name,amount,hex code)
 
     color_name is a pxls.space color name, if the RGB doesn't match,
-    the color_name will be the hex code'''
+    the color_name will be the hex code"""
     res_dict = {}
     for color in img_colors:
         amount = color[0]
@@ -131,22 +153,23 @@ def rgb_to_pxlscolor(img_colors):
             if color_name in res_dict:
                 res_dict[color_name]["amount"] += amount
             else:
-                res_dict[color_name] = dict(amount=amount,hex=rgb_to_hex(rgb))
-    res_list = [(k,res_dict[k]["amount"],res_dict[k]["hex"]) for k in res_dict.keys()]
+                res_dict[color_name] = dict(amount=amount, hex=rgb_to_hex(rgb))
+    res_list = [(k, res_dict[k]["amount"], res_dict[k]["hex"]) for k in res_dict.keys()]
     return res_list
 
-def get_piechart(labels,values,colors):
+
+def get_piechart(labels, values, colors):
     layout = go.Layout(
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        font_color="white"
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="white"
     )
-    fig = go.Figure(data=[go.Pie(labels=labels,
-                                values=values)],layout=layout)
-    fig.update_traces( textinfo='percent', textfont_size=20,
-                    marker=dict(colors=colors, line=dict(color='#000000', width=1)))
-    fig.update_traces(textposition='inside')
-    fig.update_layout(uniformtext_minsize=12, uniformtext_mode='hide')
+    fig = go.Figure(data=[go.Pie(labels=labels, values=values)], layout=layout)
+    fig.update_traces(
+        textinfo="percent",
+        textfont_size=20,
+        marker=dict(colors=colors, line=dict(color="#000000", width=1)),
+    )
+    fig.update_traces(textposition="inside")
+    fig.update_layout(uniformtext_minsize=12, uniformtext_mode="hide")
     fig.update_layout(showlegend=False)
     return fig
 

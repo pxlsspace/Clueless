@@ -11,25 +11,29 @@ from utils.utils import get_content
 load_dotenv()
 TOKEN = os.environ.get("GENIUS_ACCESS_TOKEN")
 BASE_URL = "https://api.genius.com/"
-HEADERS = {'Authorization': 'Bearer '+ TOKEN}
+HEADERS = {"Authorization": "Bearer " + TOKEN}
 
-class Song():
-    """ object used to store the informations about a song """
-    def __init__(self,title,full_title,artists,genius_url,image_url,lyrics) -> None:
+
+class Song:
+    """object used to store the informations about a song"""
+
+    def __init__(self, title, full_title, artists, genius_url, image_url, lyrics) -> None:
         self.title = title
         self.full_title = full_title
         self.artists = artists
-        self.genius_url=genius_url
+        self.genius_url = genius_url
         self.image_url = image_url
         self.lyrics = lyrics
 
+
 async def get_response(query):
-    url = BASE_URL + query + "&access_token="+TOKEN
-    json = await get_content(url,"json")
+    url = BASE_URL + query + "&access_token=" + TOKEN
+    json = await get_content(url, "json")
     return json
 
+
 async def search_song(song_query):
-    """ Search a song from a query using the"""
+    """Search a song from a query using the"""
     query = "search?q=" + urllib.parse.quote(song_query)
     songs_json = await get_response(query)
     hits = songs_json["response"]["hits"]
@@ -43,9 +47,9 @@ async def search_song(song_query):
         artist = song_json["primary_artist"]["name"]
         song_url = song_json["url"]
         image_url = song_json["song_art_image_thumbnail_url"]
-        #lyrics = await get_lyrics(song_url)
+        # lyrics = await get_lyrics(song_url)
         lyrics = None
-        song = Song(title,full_title,artist,song_url,image_url,lyrics)
+        song = Song(title, full_title, artist, song_url, image_url, lyrics)
         return song
 
 
@@ -55,11 +59,11 @@ async def get_lyrics(song_url):
     """Uses BeautifulSoup to scrape song info off of a Genius song URL."""
 
     # Scrape the song lyrics from the HTML
-    #text = requests.get(song_url).text.replace('<br/>', '\n')
-    text = await get_content(song_url,"bytes")
-    text = text.decode('utf-8')
-    text = text.replace('<br/>', '\n')
-    html = BeautifulSoup(text, "html.parser" )
+    # text = requests.get(song_url).text.replace('<br/>', '\n')
+    text = await get_content(song_url, "bytes")
+    text = text.decode("utf-8")
+    text = text.replace("<br/>", "\n")
+    html = BeautifulSoup(text, "html.parser")
 
     # Determine the class of the div
     div = html.find("div", class_=re.compile("^lyrics$|Lyrics__Root"))

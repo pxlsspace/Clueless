@@ -4,20 +4,29 @@ import re
 from io import BytesIO
 from datetime import datetime, timezone
 from discord.ext import commands
-from PIL import Image,ImageColor
+from PIL import Image, ImageColor
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option
 
-from utils.image.image_utils import get_pxls_color, hex_str_to_int,is_hex_color,\
-         rgb_to_hex, is_dark
-from utils.discord_utils import format_number, get_image_from_message, image_to_file, IMAGE_URL_REGEX
+from utils.image.image_utils import (
+    get_pxls_color,
+    hex_str_to_int,
+    is_hex_color,
+    rgb_to_hex,
+    is_dark,
+)
+from utils.discord_utils import (
+    format_number,
+    get_image_from_message,
+    image_to_file,
+    IMAGE_URL_REGEX,
+)
 from utils.arguments_parser import MyParser
 from utils.table_to_image import table_to_image
 from utils.setup import GUILD_IDS
 
 
 class Highlight(commands.Cog):
-
     def __init__(self, client):
         self.client = client
 
@@ -26,40 +35,41 @@ class Highlight(commands.Cog):
         description="Highlight the selected colors in an image.",
         guild_ids=GUILD_IDS,
         options=[
-        create_option(
-            name="colors",
-            description="List of pxls colors separated by a comma.",
-            option_type=3,
-            required=True
-        ),
-        create_option(
-            name="image",
-            description="The URL of the image you want to see the colors.",
-            option_type=3,
-            required=False
-        ),
-        create_option(
-            name="bgcolor",
-            description="To display behind the selected colors (can be a color name, hex color, 'none', 'light' or 'dark')",
-            option_type=3,
-            required=False
-        )]
+            create_option(
+                name="colors",
+                description="List of pxls colors separated by a comma.",
+                option_type=3,
+                required=True,
+            ),
+            create_option(
+                name="image",
+                description="The URL of the image you want to see the colors.",
+                option_type=3,
+                required=False,
+            ),
+            create_option(
+                name="bgcolor",
+                description="To display behind the selected colors (can be a color name, hex color, 'none', 'light' or 'dark')",
+                option_type=3,
+                required=False,
+            ),
+        ],
     )
-    async def _highlight(self,ctx:SlashContext, colors, image=None, bgcolor=None):
+    async def _highlight(self, ctx: SlashContext, colors, image=None, bgcolor=None):
         await ctx.defer()
         args = (colors,)
         if image:
             args += (image,)
         if bgcolor:
-            args += ("-bgcolor",bgcolor)
-        await self.highlight(ctx,*args)
+            args += ("-bgcolor", bgcolor)
+        await self.highlight(ctx, *args)
 
     @commands.command(
-        name = "highlight",
+        name="highlight",
         description="Highlight the selected colors in an image.",
-        aliases = ["hl"],
+        aliases=["hl"],
         usage="<colors> <image|url> [-bgcolor|-bg <color>]",
-        help = """
+        help="""
             - `<colors>`: list of pxls or hex colors separated by a comma
             - `<image|url>`: an image URL or an attached file
             - `[-bgcolor|bg <color>]`: the color to display behind the higlighted colors, it can be:
@@ -67,39 +77,42 @@ class Highlight(commands.Cog):
                 • a hex color (ex: "#ff000")
                 • "none": to have a transparent background
                 • "dark": to have the background darkened
-                • "light": to have the background lightened""")
-    async def p_highlight(self,ctx,*args):
+                • "light": to have the background lightened""",
+    )
+    async def p_highlight(self, ctx, *args):
         async with ctx.typing():
-            await self.highlight(ctx,*args)
+            await self.highlight(ctx, *args)
 
-    async def highlight(self,ctx,*args):
+    async def highlight(self, ctx, *args):
         # parse the arguemnts
-        parser  = MyParser(add_help=False)
-        parser.add_argument('colors', type=str, nargs='+')
-        parser.add_argument('-bgcolor',"-bg",nargs="*", type=str,
-            action='store', required=False)
+        parser = MyParser(add_help=False)
+        parser.add_argument("colors", type=str, nargs="+")
+        parser.add_argument(
+            "-bgcolor", "-bg", nargs="*", type=str, action="store", required=False
+        )
         try:
-            parsed_args= parser.parse_args(args)
+            parsed_args = parser.parse_args(args)
         except ValueError as e:
-            return await ctx.send(f'❌ {e}')
+            return await ctx.send(f"❌ {e}")
 
         # check if there is an image URL in the arguments
         input_url = None
         possible_url = parsed_args.colors[-1]
-        urls = re.findall(IMAGE_URL_REGEX,possible_url)
+        urls = re.findall(IMAGE_URL_REGEX, possible_url)
         if len(urls) > 0:
             input_url = urls[0]
             parsed_args.colors = parsed_args.colors[:-1]
 
         # get the input image
-        image_bytes, url = await get_image_from_message(ctx,input_url)
+        image_bytes, url = await get_image_from_message(ctx, input_url)
         image = Image.open(BytesIO(image_bytes))
-        image = image.convert('RGBA')
+        image = image.convert("RGBA")
         image_array = np.array(image)
 
-        await _highlight(ctx,image_array,parsed_args)
+        await _highlight(ctx, image_array, parsed_args)
 
-async def _highlight(ctx,image_array:np.ndarray,parsed_args):
+
+async def _highlight(ctx, image_array: np.ndarray, parsed_args):
     """Highlight colors in an image."""
 
     # get color rgba
@@ -108,13 +121,13 @@ async def _highlight(ctx,image_array:np.ndarray,parsed_args):
     colors = [c.strip(" ").lower() for c in colors]
     colors = list(dict.fromkeys(colors))
 
-    rgba_list =[]
+    rgba_list = []
     for color in colors:
         try:
             rgba = get_pxls_color(color)
         except ValueError:
             if is_hex_color(color):
-                rgba = ImageColor.getcolor(color,"RGBA")
+                rgba = ImageColor.getcolor(color, "RGBA")
             else:
                 return await ctx.send(f'❌ The color "{color}" is invalid.')
         rgba_list.append(rgba)
@@ -127,26 +140,28 @@ async def _highlight(ctx,image_array:np.ndarray,parsed_args):
             bg_rgba = get_pxls_color(bg_color)
         except ValueError:
             if bg_color == "none":
-                bg_rgba = (0,0,0,0)
-            elif bg_color in ["dark","light"]:
+                bg_rgba = (0, 0, 0, 0)
+            elif bg_color in ["dark", "light"]:
                 bg_rgba = None
             elif is_hex_color(bg_color):
-                bg_rgba = ImageColor.getcolor(bg_color,"RGBA")
+                bg_rgba = ImageColor.getcolor(bg_color, "RGBA")
             else:
-                return await ctx.send(f'❌ The background color "{bg_color}" is invalid.')
+                return await ctx.send(
+                    f'❌ The background color "{bg_color}" is invalid.'
+                )
 
     # find the number of pixels non-transparent
-    alpha_values = image_array[:,:,3]
-    total_amount = np.sum(alpha_values==255)
+    alpha_values = image_array[:, :, 3]
+    total_amount = np.sum(alpha_values == 255)
 
     # create a mask for each color and do a logical or between all the masks
-    res_mask = np.zeros((image_array.shape[0],image_array.shape[1]))
-    res_mask[:,:] = False
+    res_mask = np.zeros((image_array.shape[0], image_array.shape[1]))
+    res_mask[:, :] = False
     color_amounts = []
     for rgba in rgba_list:
         mask = np.all(image_array == rgba, axis=2)
-        res_mask = np.logical_or(res_mask,mask)
-        color_amount = np.count_nonzero(mask!=0)
+        res_mask = np.logical_or(res_mask, mask)
+        color_amount = np.count_nonzero(mask != 0)
         color_amounts.append(color_amount)
     res_mask = ~res_mask
 
@@ -156,74 +171,87 @@ async def _highlight(ctx,image_array:np.ndarray,parsed_args):
 
     # put the background under the mask
 
-    if not bg_color or bg_color in ["dark","light"]:
+    if not bg_color or bg_color in ["dark", "light"]:
         if bg_color == "light":
-            highlight_bg_color = (255,255,255,255)
+            highlight_bg_color = (255, 255, 255, 255)
         elif bg_color == "dark":
-            highlight_bg_color = (0,0,0,255)
+            highlight_bg_color = (0, 0, 0, 255)
         elif all([is_dark(rgba) for rgba in rgba_list]):
-            highlight_bg_color = (255,255,255,255)
+            highlight_bg_color = (255, 255, 255, 255)
         else:
-            highlight_bg_color = (0,0,0,255)
-        hl_image = highlight_image(color_selected_array,image_array,background_color=highlight_bg_color)
+            highlight_bg_color = (0, 0, 0, 255)
+        hl_image = highlight_image(
+            color_selected_array, image_array, background_color=highlight_bg_color
+        )
     else:
         width = image_array.shape[1]
         height = image_array.shape[0]
-        hl_image = Image.new('RGBA',(width,height),bg_rgba)
+        hl_image = Image.new("RGBA", (width, height), bg_rgba)
         color_selected_img = Image.fromarray(color_selected_array)
-        hl_image.paste(color_selected_img,(0,0),color_selected_img)
+        hl_image.paste(color_selected_img, (0, 0), color_selected_img)
 
     data = []
     # make a table with the values
     for i in range(len(colors)):
         color_name = colors[i].strip(" ")
-        if not '#' in color_name:
+        if "#" not in color_name:
             color_name = color_name.title()
         amount = color_amounts[i]
         percentage = f"{round(amount/total_amount*100,2)}%"
         hex_color = rgb_to_hex(rgba_list[i][:-1])
 
-        data.append((color_name,format_number(amount),percentage,hex_color))
-    
-    data.sort(key = lambda x:x[1],reverse=True)
+        data.append((color_name, format_number(amount), percentage, hex_color))
+
+    data.sort(key=lambda x: x[1], reverse=True)
     hex_colors = [d[-1] for d in data]
     data = [d[:-1] for d in data]
-    table_img = table_to_image(data,["Color","Amount","Percentage"],colors=hex_colors)
+    table_img = table_to_image(
+        data, ["Color", "Amount", "Percentage"], colors=hex_colors
+    )
 
     # set embed color to the top 1 color in colors
     selected_color_int = hex_str_to_int(hex_colors[0])
     emb = discord.Embed(
         title="Color highlight",
         color=selected_color_int,
-        timestamp = datetime.now(timezone.utc))
-    table_file = image_to_file(table_img,"table.png",emb)
-    hl_file = image_to_file(hl_image,"highlight.png")
-    await ctx.send(embed=emb,files=[hl_file,table_file])
+        timestamp=datetime.now(timezone.utc),
+    )
+    table_file = image_to_file(table_img, "table.png", emb)
+    hl_file = image_to_file(hl_image, "highlight.png")
+    await ctx.send(embed=emb, files=[hl_file, table_file])
 
-def highlight_image(top_array,background_array,opacity=0.2,background_color=(255,255,255,255)):
+
+def highlight_image(
+    top_array, background_array, opacity=0.2, background_color=(255, 255, 255, 255)
+):
     msg = "top_array and background_array must have the same shape"
-    assert top_array.shape == background_array.shape,msg
-    assert top_array.shape[-1] in [3,4],"top_array shapee must be [:,:,3|4]"
-    assert background_array.shape[-1] in [3,4],"background_array shape must be [:,:,3|4]"
+    assert top_array.shape == background_array.shape, msg
+    assert top_array.shape[-1] in [3, 4], "top_array shapee must be [:,:,3|4]"
+    assert background_array.shape[-1] in [
+        3,
+        4,
+    ], "background_array shape must be [:,:,3|4]"
     # convert background to rgba
     if background_array.shape[-1] != 4:
-        background_array = np.dstack((background_array, np.zeros(background_array.shape[:-1])))
+        background_array = np.dstack(
+            (background_array, np.zeros(background_array.shape[:-1]))
+        )
 
     black_background = np.zeros_like(background_array)
-    black_background[:,:] = background_color
-    black_background[:,:,3] = background_array[:,:,3]
+    black_background[:, :] = background_color
+    black_background[:, :, 3] = background_array[:, :, 3]
 
-    background_array[:,:,-1] = opacity * background_array[:,:,-1]
+    background_array[:, :, -1] = opacity * background_array[:, :, -1]
 
     black_background_img = Image.fromarray(black_background)
     background_img = Image.fromarray(background_array)
     top_img = Image.fromarray(top_array)
 
-    black_background_img = Image.alpha_composite(black_background_img,background_img)
-    #black_background_img.paste(background_img,(0,0),black_background_img)
-    black_background_img.paste(top_img,(0,0),top_img)
+    black_background_img = Image.alpha_composite(black_background_img, background_img)
+    black_background_img.paste(top_img, (0, 0), top_img)
 
     return black_background_img
+
 
 def setup(client):
     client.add_cog(Highlight(client))

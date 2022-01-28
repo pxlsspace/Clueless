@@ -3,9 +3,10 @@ import json
 import threading
 import websockets
 
+
 class WebsocketClient:
     """A threaded websocket client to update the canvas board and online count
-     in real-time."""
+    in real-time."""
 
     def __init__(self, uri: str, stats_manager):
         self.uri = uri

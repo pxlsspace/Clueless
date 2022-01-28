@@ -5,10 +5,11 @@ import numpy as np
 
 from utils.utils import get_content
 
-class PxlsStatsManager():
-    ''' A helper to get data from pxls.space/stats'''
 
-    def __init__(self,db_conn):
+class PxlsStatsManager():
+    """A helper to get data from pxls.space/stats"""
+
+    def __init__(self, db_conn):
         self.base_url = "http://pxls.space/"
         self.stats_json = {}
         self.board_info = {}
@@ -22,14 +23,13 @@ class PxlsStatsManager():
 
     async def refresh(self):
         try:
-            self.board_info = await self.query("info","json")
+            self.board_info = await self.query("info", "json")
             count = await self.fetch_online_count()
             self.online_count = count
-        except:
+        except Exception:
             pass
 
-        self.stats_json = await self.query("stats/stats.json","json")
-
+        self.stats_json = await self.query("stats/stats.json", "json")
 
     def get_general_stats(self):
         general = self.stats_json["general"].copy()
@@ -45,18 +45,18 @@ class PxlsStatsManager():
         tz = pytz.timezone(tz_string)
 
         lastupdated = lastupdated[:21]
-        date_time_obj = datetime.strptime(lastupdated, '%Y/%m/%d - %H:%M:%S')
+        date_time_obj = datetime.strptime(lastupdated, "%Y/%m/%d - %H:%M:%S")
         date_time_obj = tz.localize(date_time_obj)
         return date_time_obj
 
-    def get_alltime_stat(self,name):
+    def get_alltime_stat(self, name):
         at_table = self.stats_json["toplist"]["alltime"]
         for user in at_table:
             if user["username"] == name:
                 return user["pixels"]
         return None
 
-    def get_canvas_stat(self,name):
+    def get_canvas_stat(self, name):
         at_table = self.stats_json["toplist"]["canvas"]
         for user in at_table:
             if user["username"] == name:
@@ -65,90 +65,96 @@ class PxlsStatsManager():
 
     def get_all_alltime_stats(self):
         return self.stats_json["toplist"]["alltime"]
-        
+
     def get_all_canvas_stats(self):
         return self.stats_json["toplist"]["canvas"]
 
     def get_palette(self):
         try:
             return self.board_info["palette"]
-        except:
+        except Exception:
             return self.stats_json["board_info"]["palette"]
-    
+
     async def get_canvas_code(self):
         try:
             return self.board_info["canvasCode"]
-        except:
-            rows= await self.db_conn.sql_select("SELECT canvas_code,MAX(datetime) FROM record")
+        except Exception:
+            rows = await self.db_conn.sql_select(
+                "SELECT canvas_code, MAX(datetime) FROM record"
+            )
             canvas_code = rows[0][0]
             return canvas_code
 
     async def fetch_online_count(self):
-        response_json = await self.query('users','json')
+        response_json = await self.query("users", "json")
         count = response_json["count"]
         self.online_count = count
         return count
 
-    async def update_online_count(self,count):
-        """ update the online count in the database """
+    async def update_online_count(self, count):
+        """update the online count in the database"""
         canvas_code = await self.get_canvas_code()
         dt = datetime.utcnow().replace(microsecond=0)
-        sql = ''' INSERT INTO pxls_general_stat(stat_name, value ,canvas_code, datetime)
-                VALUES(?,?,?,?) '''
-        await self.db_conn.sql_update(sql,("online_count",count,canvas_code,dt))
+        sql = """INSERT INTO pxls_general_stat(stat_name, value ,canvas_code, datetime)
+                VALUES(?,?,?,?)"""
+        await self.db_conn.sql_update(sql, ("online_count", count, canvas_code, dt))
 
-    def palettize_array(self,array,palette=None):
-        """ Convert a numpy array of palette indexes to a color numpy array
+    def palettize_array(self, array, palette=None):
+        """Convert a numpy array of palette indexes to a color numpy array
         (RGBA). If a palette is given, it will be used to map the array, if not
-        the current pxls palette will be used """
+        the current pxls palette will be used"""
         colors_list = []
         if not palette:
             palette = [f"#{c['value']}" for c in self.get_palette()]
         for color in palette:
-            rgb = ImageColor.getcolor(color,'RGBA')
+            rgb = ImageColor.getcolor(color, "RGBA")
             colors_list.append(rgb)
         colors_dict = dict(enumerate(colors_list))
         colors_dict[255] = (0, 0, 0, 0)
 
-        img = np.stack(np.vectorize(colors_dict.get)(array),
-             axis=-1)
+        img = np.stack(np.vectorize(colors_dict.get)(array), axis=-1)
         return img.astype(np.uint8)
 
     async def fetch_board(self):
         "fetch the board with a get request"
-        board_bytes = await self.query('boarddata','bytes')
+        board_bytes = await self.query("boarddata", "bytes")
         board_array = np.asarray(list(board_bytes), dtype=np.uint8).reshape(
-            self.board_info["height"],self.board_info["width"])
+            self.board_info["height"], self.board_info["width"]
+        )
         self.board_array = board_array
         return board_array
 
     async def fetch_virginmap(self):
         "fetch the virgin map with a get request"
-        board_bytes = await self.query('virginmap','bytes')
+        board_bytes = await self.query("virginmap", "bytes")
         board_array = np.asarray(list(board_bytes), dtype=np.uint8).reshape(
-            self.board_info["height"],self.board_info["width"])
+            self.board_info["height"], self.board_info["width"]
+        )
         self.virginmap_array = board_array
         return board_array
 
     async def fetch_heatmap(self):
         "fetch the heatmap with a get request"
-        board_bytes = await self.query('heatmap','bytes')
+        board_bytes = await self.query("heatmap", "bytes")
         board_array = np.asarray(list(board_bytes), dtype=np.uint8).reshape(
-            self.board_info["height"],self.board_info["width"])
+            self.board_info["height"], self.board_info["width"]
+        )
         return board_array
 
     async def fetch_initial_canvas(self):
         "fetch the initial canvas with a get request"
-        board_bytes = await self.query('initialboarddata','bytes')
+        board_bytes = await self.query("initialboarddata", "bytes")
         board_array = np.asarray(list(board_bytes), dtype=np.uint8).reshape(
-            self.board_info["height"],self.board_info["width"])
+            self.board_info["height"], self.board_info["width"]
+        )
         return board_array
 
     async def fetch_placemap(self):
         "fetch the placemap with a get request"
-        board_bytes = await self.query('placemap','bytes')
+        board_bytes = await self.query("placemap", "bytes")
         board_array = np.asarray(list(board_bytes), dtype=np.uint8).reshape(
-            self.board_info["height"],self.board_info["width"])
+            self.board_info["height"], self.board_info["width"]
+        )
         self.placemap_array = board_array
         return board_array
 
@@ -162,13 +168,12 @@ class PxlsStatsManager():
 
         return placeable_board
 
-    def update_board_pixel(self,x,y,color):
-        self.board_array[y,x] = color
-    
-    def update_virginmap_pixel(self,x,y,color):
-        self.virginmap_array[y,x] = 0
+    def update_board_pixel(self, x, y, color):
+        self.board_array[y, x] = color
 
+    def update_virginmap_pixel(self, x, y, color):
+        self.virginmap_array[y, x] = 0
 
-    async def query(self,endpoint,content_type):
+    async def query(self, endpoint, content_type):
         url = self.base_url + endpoint
-        return await get_content(url,content_type) 
+        return await get_content(url, content_type)

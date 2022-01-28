@@ -1,18 +1,20 @@
 import discord
 from discord.ext import commands
 
-EMBED_COLOR = 0x66c5cc
-class HelpCommand(commands.HelpCommand):
+EMBED_COLOR = 0x66C5CC
 
+
+class HelpCommand(commands.HelpCommand):
     def __init__(self, **options):
-        super().__init__(command_attrs=dict(description="Show this message."),**options)
+        super().__init__(command_attrs=dict(description="Show this message."), **options)
+
     # function called on ">help"
     async def send_bot_help(self, mapping):
         prefix = self.context.prefix
         categories = {}
 
         for cog in mapping:
-            if cog == None:
+            if cog is None:
                 commands = mapping[cog]
                 cog_dir = "Other"
             else:
@@ -23,14 +25,17 @@ class HelpCommand(commands.HelpCommand):
                 cog_fullname = fullname(cog)
                 cog_fullname = cog_fullname.split(".")
                 cog_dir = cog_fullname[1:-2]
-                cog_dir = cog_dir[0].replace("_"," ").title() if len(cog_dir)>0 else "Other"
+                cog_dir = (
+                    cog_dir[0].replace("_", " ").title()
+                    if len(cog_dir) > 0
+                    else "Other"
+                )
 
             for command in commands:
-                if command.hidden == False:
+                if not command.hidden:
                     text = "• `{}{}`: {}".format(
-                        prefix,
-                        command.name,
-                        command.description or 'N/A')
+                        prefix, command.name, command.description or "N/A"
+                    )
 
                     # categories are organized by cog folders
                     try:
@@ -40,75 +45,98 @@ class HelpCommand(commands.HelpCommand):
 
         # create the embed header
         emb = discord.Embed(
-            title='Command help',
+            title="Command help",
             color=EMBED_COLOR,
-            description=f'Use `{prefix}help [command]` to see more information about a command.')
+            description=f"Use `{prefix}help [command]` to see more information about a command.",
+        )
         emb.set_thumbnail(url=self.context.me.avatar_url)
 
         # add a field per category
         for category in categories:
             if category != "Other":
-                emb.add_field(name=category,value="\n".join(categories[category]),inline=False)
+                emb.add_field(
+                    name=category, value="\n".join(categories[category]), inline=False
+                )
         if "Other" in categories:
-            emb.add_field(name="Other",value="\n".join(categories["Other"]),inline=False)
+            emb.add_field(
+                name="Other", value="\n".join(categories["Other"]), inline=False
+            )
 
         await self.get_destination().send(embed=emb)
 
     # function called on ">help <cog name>"
     async def send_cog_help(self, cog):
-        return await self.get_destination().send(f'No command called "{cog.qualified_name}" found.')
+        return await self.get_destination().send(
+            f'No command called "{cog.qualified_name}" found.'
+        )
 
     # function called on ">help <group command>"
     async def send_group_help(self, group):
         prefix = self.context.prefix
-        emb = discord.Embed(title = f'**Command {group.name}**',color = EMBED_COLOR)
+        emb = discord.Embed(title=f"**Command {group.name}**", color=EMBED_COLOR)
         emb.set_thumbnail(url=self.context.me.avatar_url)
-        emb.add_field(name="Description: ",value=group.description or "N/A",inline=False)
-        emb.add_field(name="Usage:",value=f"`{prefix}{group.name}{group.usage or ''}`",inline=False)
-        emb.set_footer(text="<> is a required argument. [] is an optional argument. {} is a set of required items, you must choose one.")
+        emb.add_field(
+            name="Description: ", value=group.description or "N/A", inline=False
+        )
+        emb.add_field(
+            name="Usage:", value=f"`{prefix}{group.name}{group.usage or ''}`", inline=False
+        )
+        emb.set_footer(
+            text="<> is a required argument. [] is an optional argument. {} is a set of required items, you must choose one."
+        )
 
-        if group.aliases != None and len(group.aliases) > 0: 
+        if group.aliases is not None and len(group.aliases) > 0:
             aliases = [a for a in group.aliases]
-            value=""
+            value = ""
             for a in aliases:
-                value += f'`{a}` '
-            emb.add_field(name="Alias(es): ",value=value,inline=False)
+                value += f"`{a}` "
+            emb.add_field(name="Alias(es): ", value=value, inline=False)
 
-        if group.commands != None and len(group.commands) > 0:
+        if group.commands is not None and len(group.commands) > 0:
             commands_value = ""
             for command in group.commands:
-                if command.hidden == True:
+                if command.hidden:
                     continue
                 commands_value += f"• `{command.qualified_name} {command.usage or ''}`: {command.description or 'N/A'}\n"
-            emb.add_field(name="Sub-commands: ",value=commands_value,inline=False)
+            emb.add_field(name="Sub-commands: ", value=commands_value, inline=False)
 
         await self.get_destination().send(embed=emb)
-
 
     # function called on ">help <command>"
     async def send_command_help(self, command):
         prefix = self.context.prefix
-        emb = discord.Embed(title = f'**Command {command.qualified_name}**',color = EMBED_COLOR)
+        emb = discord.Embed(
+            title=f"**Command {command.qualified_name}**", color=EMBED_COLOR
+        )
         emb.set_thumbnail(url=self.context.me.avatar_url)
-        emb.add_field(name="Usage:",value=f"`{prefix}{command.qualified_name} {command.usage or ''}`",inline=False)
-        emb.add_field(name="Description:",value=command.description or "N/A",inline=False)
-        emb.set_footer(text="<> is a required argument. [] is an optional argument. {} is a set of required items, you must choose one.")
+        emb.add_field(
+            name="Usage:",
+            value=f"`{prefix}{command.qualified_name} {command.usage or ''}`",
+            inline=False,
+        )
+        emb.add_field(
+            name="Description:", value=command.description or "N/A", inline=False
+        )
+        emb.set_footer(
+            text="<> is a required argument. [] is an optional argument. {} is a set of required items, you must choose one."
+        )
 
-        if command.aliases != None and len(command.aliases) > 0: 
+        if command.aliases is not None and len(command.aliases) > 0:
             aliases = [a for a in command.aliases]
-            value=""
+            value = ""
             for a in aliases:
-                value += f'`{a}` '
-            emb.add_field(name="Alias(es): ",value=value,inline=False)
+                value += f"`{a}` "
+            emb.add_field(name="Alias(es): ", value=value, inline=False)
 
-        if command.help != None:
-            emb.add_field(name="Parameter(s):",value = command.help)
+        if command.help is not None:
+            emb.add_field(name="Parameter(s):", value=command.help)
         await self.get_destination().send(embed=emb)
 
+
 def fullname(o):
-    ''' get the full name of a class/object'''
+    """get the full name of a class/object"""
     klass = o.__class__
     module = klass.__module__
-    if module == 'builtins':
-        return klass.__qualname__ # avoid outputs like 'builtins.str'
-    return module + '.' + klass.__qualname__
+    if module == "builtins":
+        return klass.__qualname__  # avoid outputs like 'builtins.str'
+    return module + "." + klass.__qualname__

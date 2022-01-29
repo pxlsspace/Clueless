@@ -13,21 +13,35 @@ class DbServersManager():
         """create database tables"""
         create_server_table = """
             CREATE TABLE IF NOT EXISTS server(
-            server_id TEXT PRIMARY KEY,
-            prefix TEXT,
-            alert_channel_id INTEGER,
-            blacklist_role_id TEXTS
-        );"""
-
+                server_id TEXT PRIMARY KEY,
+                prefix TEXT,
+                alert_channel_id INTEGER,
+                blacklist_role_id TEXT
+            );
+        """
         add_server_snapshots_channel = (
             "ALTER TABLE server ADD COLUMN snapshots_channel_id TEXT"
         )
+
+        create_command_usage_table = """
+            CREATE TABLE IF NOT EXISTS command_usage(
+                command_name TEXT,
+                is_dm BOOLEAN,
+                server_name TEXT,
+                channel_id TEXT,
+                author_id TEXT,
+                datetime TIMESTAMP,
+                args TEXT,
+                is_slash BOOLEAN
+            );
+        """
 
         await self.db.sql_update(create_server_table)
         try:
             await self.db.sql_update(add_server_snapshots_channel)
         except OperationalError:
             pass
+        await self.db.sql_update(create_command_usage_table)
 
     async def create_server(self, server_id, prefix):
         """add a 'server' to the database"""
@@ -155,3 +169,32 @@ class DbServersManager():
             return None
         else:
             return rows[0][0]
+
+    async def create_command_usage(self, command_name, is_dm, server_name,
+                                   channel_id, author_id, datetime, args, is_slash):
+        sql = """
+            INSERT INTO command_usage(
+                command_name,
+                is_dm,
+                server_name,
+                channel_id,
+                author_id,
+                datetime,
+                args,
+                is_slash
+            )
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?) """
+
+        return await self.db.sql_update(
+            sql,
+            (
+                command_name,
+                is_dm,
+                server_name,
+                channel_id,
+                author_id,
+                datetime,
+                args,
+                is_slash,
+            ),
+        )

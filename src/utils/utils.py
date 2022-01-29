@@ -40,3 +40,8 @@ def make_progress_bar(percentage, nb_char=20):
         else:
             res_bar += empty
     return res_bar
+
+
+def ordinal(n):
+    """Get a rank suffix (1 -> 1st, 2 -> 2nd, ...)"""
+    return "%d%s" % (n, "tsnrhtdd"[(n // 10 % 10 != 1) * (n % 10 < 4) * n % 10 :: 4])

@@ -43,35 +43,36 @@ async def on_slash_command(ctx):
 
 @client.event
 async def on_command(ctx):
-    # log commands used in a channel
-    log_channel_id = os.environ.get("COMMAND_LOG_CHANNEL")
-
-    try:
-        log_channel = await client.fetch_channel(log_channel_id)
-    except Exception:
-        return
-
+    """Save the command usage in the database and in a discord channel if set"""
     slash_command = isinstance(ctx, SlashContext)
     if slash_command:
         command_name = ctx.command
     else:
         command_name = ctx.command.qualified_name
 
-    if isinstance(ctx.channel, discord.channel.DMChannel):
+    is_dm = isinstance(ctx.channel, discord.channel.DMChannel)
+
+    if is_dm:
+        server_name = None
+        channel_id = None
         context = "DM"
     else:
-        context = f"• **Server**: {ctx.guild.name} "
-        context += f"• **Channel**: <#{ctx.channel.id}>\n"
+        server_name = ctx.guild.name
+        channel_id = ctx.channel.id
+        context = f"• **Server**: {server_name} "
+        context += f"• **Channel**: <#{channel_id}>\n"
 
     message_time = ctx.message.created_at if not slash_command else ctx.created_at
     message_time = message_time.replace(tzinfo=timezone.utc)
-    message = f"By <@{ctx.author.id}> "
+    author_id = ctx.author.id
+    message = f"By <@{author_id}> "
     message += f"on <t:{int(message_time.timestamp())}>\n"
     if not slash_command:
         if len(message + ctx.message.content) > 1024:
-            message += "```[Message too long to show]```"
+            args = "[Message too long to show]"
         else:
-            message += f"```{ctx.message.content}```"
+            args = ctx.message.content
+        message += f"```{args}```"
         message += f"[link to the message]({ctx.message.jump_url})\n"
     else:
         if "options" in ctx.data:
@@ -80,13 +81,31 @@ async def on_command(ctx):
             )
         else:
             options = ""
-        message += f'```/{command_name}{" " + options}```'
+        args = f"/{command_name}{' ' + options}"
+        message += f"```{args}```"
 
+    # save commands used in the database
+    await db_servers.create_command_usage(
+        command_name,
+        is_dm,
+        server_name,
+        channel_id,
+        author_id,
+        message_time.replace(tzinfo=None),
+        args,
+        slash_command,
+    )
+
+    # log commands used in a channel if a log channel is set
+    log_channel_id = os.environ.get("COMMAND_LOG_CHANNEL")
+    try:
+        log_channel = await client.fetch_channel(log_channel_id)
+    except Exception:
+        return
     emb = discord.Embed(color=0x00BB00, title="Command '{}' used.".format(command_name))
     emb.add_field(name="Context:", value=context, inline=False)
     emb.add_field(name="Message:", value=message, inline=False)
     emb.set_thumbnail(url=ctx.author.avatar_url)
-
     await log_channel.send(embed=emb)
 
 
@@ -284,6 +303,7 @@ async def on_guild_remove(guild):
     embed.set_thumbnail(url=guild.icon_url)
     embed.set_footer(text=f"ID • {guild.id} | Server Created")
     await log_channel.send(embed=embed)
+
 
 if __name__ == "__main__":
 

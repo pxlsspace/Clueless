@@ -1,16 +1,20 @@
 import os
 import discord
-from datetime import timedelta
+import re
+import platform
+import discord_slash
+from datetime import datetime, timedelta, timezone
 from discord.ext import commands
 from dotenv import load_dotenv
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
-from datetime import datetime
+from discord_slash.utils.manage_components import create_button, create_actionrow
+from discord_slash.model import ButtonStyle
 
-from utils.setup import db_servers, GUILD_IDS
+from utils.setup import BOT_INVITE, SERVER_INVITE, db_servers, GUILD_IDS, VERSION
 from utils.time_converter import str_to_td, td_format
 from utils.timezoneslib import get_timezone
-from utils.utils import get_content
+from utils.utils import get_content, ordinal
 from utils.discord_utils import format_number, image_to_file
 from utils.help import fullname
 from utils.table_to_image import table_to_image
@@ -298,6 +302,194 @@ class Utility(commands.Cog):
             except Exception as e:
                 return await ctx.send(f"❌ SQL error: ```{e}```")
         return await ctx.send(f"Done! ({nb_lines} lines affected)")
+
+    # Populate the command usage database with logs sent in the log channel
+    # (This is meant to be used only once)
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def log2db(self, ctx):
+        log_channel_id = os.environ.get("COMMAND_LOG_CHANNEL")
+        try:
+            log_channel = await self.client.fetch_channel(log_channel_id)
+        except Exception:
+            return await ctx.send(":x: log channel not set.")
+        await ctx.send("parsing log messages ...")
+        async with ctx.typing():
+            count = 0
+            async for log in log_channel.history(limit=None, oldest_first=True):
+                count += 1
+
+                # command name
+                title = log.embeds[0].title
+                command_name_match = re.findall("Command '(.*)' used.", title)
+                if command_name_match:
+                    command_name = command_name_match[0]
+                else:
+                    continue
+
+                # context
+                context = log.embeds[0].fields[0].value
+                context_regex = r"(?P<DM>DM)|• \*\*Server\*\*\:(?P<server_name>.*) • \*\*Channel\*\*\: <#(?P<channel_id>\d*)>"
+                context_match = re.search(context_regex, context).groupdict()
+                dm = True if context_match["DM"] else False
+                server_name = context_match["server_name"]
+                channel_id = context_match["channel_id"]
+
+                content = log.embeds[0].fields[1].value
+                content = content.replace("\n", " ")  # remove new lines to make it easier for regex
+                # author and date
+                author_and_date_regex = r"By <@(?P<user_id>\d*)> on <t:(?P<timestamp>\d*)>"
+                author_and_date_match = re.search(author_and_date_regex, content).groupdict()
+                user_id = author_and_date_match["user_id"]
+                timestamp = author_and_date_match["timestamp"]
+                dt = datetime.fromtimestamp(int(timestamp), tz=timezone.utc)
+                dt = dt.replace(tzinfo=None)
+
+                # message content
+                message_regex = r"```(?P<command>.*)`\`\`"
+                message_match = re.search(message_regex, content).groupdict()
+                args = message_match["command"]
+                is_slash = "/" == args[0]
+
+                await db_servers.create_command_usage(
+                    command_name,
+                    dm,
+                    server_name,
+                    channel_id,
+                    user_id,
+                    dt,
+                    args,
+                    is_slash,
+                )
+            await ctx.send(
+                ":white_check_mark: finished parsing {} messages from {}".format(
+                    count, log_channel.mention
+                )
+            )
+
+    @cog_ext.cog_slash(
+        name="botinfo",
+        description="Show some stats and information about the bot.",
+        guild_ids=GUILD_IDS,
+    )
+    async def _botinfo(self, ctx: SlashContext):
+        await self.botinfo(ctx)
+
+    @commands.command(description="Show some stats and information about the bot.")
+    async def botinfo(self, ctx):
+        app_info = await self.client.application_info()
+        owner = app_info.owner
+        me = ctx.me
+        bot_age = td_format(datetime.now() - me.created_at, hide_seconds=True)
+
+        # get some bot stats
+        guild_count = len(self.client.guilds)
+        command_count = len(self.client.commands)
+        usage_count = await db_servers.db.sql_select(
+            "SELECT COUNT(*) FROM command_usage"
+        )
+        usage_count = usage_count[0][0]
+        user_count = await db_servers.db.sql_select(
+            "SELECT COUNT(DISTINCT author_id) FROM command_usage"
+        )
+        user_count = user_count[0][0]
+        prefix_usage = await db_servers.db.sql_select(
+            "SELECT COUNT(*) FROM command_usage WHERE is_slash = FALSE"
+        )
+        prefix_usage_percentage = round((prefix_usage[0][0] / usage_count) * 100, 2)
+        stats = f"• Currently in **{guild_count}** servers\n"
+        stats += f"• **{command_count}** commands available\n"
+        stats += f"• Used **{format_number(usage_count)}** times by **{user_count}** different users\n"
+        stats += (
+            f"• **{prefix_usage_percentage}%** of the commands are used with a prefix"
+        )
+
+        # get the top 5 of the most used commands
+        sql = """
+            SELECT command_name, COUNT(command_name) as usage
+            FROM command_usage
+            GROUP BY command_name
+            ORDER BY COUNT(command_name) DESC
+            LIMIT 5
+        """
+        top_commands_array = await db_servers.db.sql_select(sql)
+        top_commands = ""
+        for i, command in enumerate(top_commands_array):
+            command_name = command["command_name"]
+            usage = format_number(command["usage"])
+            top_commands += f"{i+1}) `>{command_name}` | used **{usage}** times\n"
+
+        # get user info
+        sql = """
+            SELECT * FROM (
+                SELECT
+                    RANK() OVER(ORDER BY COUNT() DESC) as rank,
+                    author_id,
+                    COUNT() as usage
+                FROM command_usage
+                GROUP BY author_id
+            ) WHERE author_id = ?
+        """  # usage count and rank
+        user_usage = await db_servers.db.sql_select(sql, ctx.author.id)
+        if user_usage:
+            user_usage_count = user_usage[0]["usage"]
+            user_usage_rank = user_usage[0]["rank"]
+            user_usage_rank = ordinal(user_usage_rank)
+        else:
+            user_usage_count = 0
+            user_usage_rank = None
+
+        sql = """
+            SELECT command_name, COUNT(command_name) as usage
+            FROM command_usage
+            WHERE author_id = ?
+            GROUP BY command_name
+            ORDER BY COUNT(command_name) DESC
+            LIMIT 1
+        """  # most used command
+        most_used_command = await db_servers.db.sql_select(sql, ctx.author.id)
+
+        user_info = f"• You have used this bot **{user_usage_count}** times!\n"
+        user_info += f"• Your user rank is: **{user_usage_rank}**"
+        if most_used_command:
+            user_info += "\n• Your most used command is `>{}` with **{}** use".format(
+                most_used_command[0]["command_name"], most_used_command[0]["usage"]
+            )
+
+        # format and send the data in an embed
+        embed = discord.Embed(title="Bot Information", color=0x66C5CC)
+        embed.description = f"Creator: {owner}\n"
+        embed.description += f"Bot version: `{VERSION}` - Ping: `{round(self.client.latency*1000,2)} ms`\n"
+        embed.description += f"Bot age: {bot_age}"
+        embed.add_field(name="**Bot Stats**", value=stats, inline=False)
+        embed.add_field(
+            name=f"**Top {len(top_commands_array)} Commands**",
+            value=top_commands,
+            inline=False,
+        )
+        embed.add_field(name=f"**Your stats** ({ctx.author})", value=user_info)
+
+        embed.set_thumbnail(url=ctx.me.avatar_url)
+        embed.set_author(name=me, icon_url=me.avatar_url)
+        versions = "This bot runs on Python {} using discord.py {} and discord-interactions {}".format(
+            platform.python_version(), discord.__version__, discord_slash.__version__
+        )
+        embed.set_footer(text=versions)
+
+        buttons = [
+            create_button(
+                style=ButtonStyle.URL,
+                label="Add the bot to your server",
+                url=BOT_INVITE,
+            ),
+            create_button(
+                style=ButtonStyle.URL,
+                label="Join the Clueless dev server",
+                url=SERVER_INVITE,
+            ),
+        ]
+        action_row = create_actionrow(*buttons)
+        await ctx.send(embed=embed, components=[action_row])
 
 
 def setup(client):

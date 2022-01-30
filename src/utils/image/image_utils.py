@@ -3,6 +3,7 @@ import numpy as np
 import re
 import matplotlib.colors as mc
 import colorsys
+from numba import jit
 
 from utils.setup import stats
 
@@ -211,3 +212,57 @@ def lighten_color(color, amount=0.5):
     res_color = colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
     res_color = tuple([int(v * 255) for v in res_color])
     return res_color
+
+
+# this is mostly copied from PxlsFiddle code
+@jit(nopython=True)
+def get_image_scale(image_array: np.ndarray) -> int:
+    """return the scale for an upscaled image or None if not found"""
+    min_pixel_width = 99999999
+    min_pixel_height = 99999999
+    prev_x = 0
+    prev_y = 0
+    height = image_array.shape[0]
+    width = image_array.shape[1]
+    previous_color = image_array[0, 0]
+    for y in range(height):
+        for x in range(width):
+            color = image_array[y, x]
+            if x == 0:
+                previous_color = color.copy()
+            # find the next pixel with a different color
+            elif (color != previous_color).any() and not (
+                color[-1] == 0 and previous_color[-1] == 0  # to exclude transparent pixels
+            ):
+                # check if the diff is smaller than the min
+                if (x - prev_x) < min_pixel_width:
+                    # print(f"x: {x} y: {y}, prev_x: {prev_x} run: {x - prev_x} vs {min_pixel_width}")
+                    # print(previous_color, color)
+                    min_pixel_width = x - prev_x
+                previous_color = color.copy()
+                prev_x = x
+        prev_x = 0
+
+    for x in range(width):
+        for y in range(height):
+            color = image_array[y, x]
+            if y == 0:
+                previous_color = color.copy()
+            elif (color != previous_color).any() and not (
+                color[-1] == 0 and previous_color[-1] == 0
+            ):
+                if (y - prev_y) < min_pixel_height:
+                    # print(f"x: {x} y: {y}, prev_y: {prev_y} run: {y - prev_y} vs {min_pixel_height}")
+                    # print(previous_color, color)
+                    min_pixel_height = y - prev_y
+                previous_color = color.copy()
+                prev_y = y
+        prev_y = 0
+
+    # use the largest value, it's easier to tweak down than to tweak up.
+    pixel_size = max(min_pixel_width, min_pixel_height)
+
+    if pixel_size != 1e6:
+        return pixel_size
+    else:
+        return None

@@ -108,7 +108,7 @@ class ColorsGraph(commands.Cog):
         # format colors in a list
         colors = parsed_args.colors
         if parsed_args.colors:
-            colors = " ".join(colors).lower()
+            colors = " ".join(colors).lower().replace("gray", "grey")
             colors = colors.split(",")
             colors = [color.strip(" ") for color in colors]
 

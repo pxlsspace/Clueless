@@ -21,11 +21,11 @@ def fast_detemplatize(array, true_height, true_width, block_size):
                     py = y * block_size + j
                     px = x * block_size + i
                     alpha = array[py, px, 3]
-                    if alpha != 0:
+                    if alpha > 128:
                         result[y, x] = array[py, px]
                         result[y, x, 3] = 255
                         break
-                # to break of the double loop
+                # to break out of the double loop
                 else:
                     continue
                 break

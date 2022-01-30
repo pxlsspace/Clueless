@@ -417,7 +417,12 @@ class Utility(commands.Cog):
         for i, command in enumerate(top_commands_array):
             command_name = command["command_name"]
             usage = format_number(command["usage"])
-            top_commands += f"{i+1}) `>{command_name}` | used **{usage}** times\n"
+            top_commands += "{}) `>{}` | used **{}** times (**{}%**)\n".format(
+                i + 1,
+                command_name,
+                usage,
+                format_number((int(command["usage"]) / usage_count) * 100),
+            )
 
         # get user info
         sql = """
@@ -452,8 +457,10 @@ class Utility(commands.Cog):
         user_info = f"• You have used this bot **{user_usage_count}** times!\n"
         user_info += f"• Your user rank is: **{user_usage_rank}**"
         if most_used_command:
-            user_info += "\n• Your most used command is `>{}` with **{}** use".format(
-                most_used_command[0]["command_name"], most_used_command[0]["usage"]
+            user_info += "\n• Your most used command is `>{}` with **{}** uses, thats **{}%** of your total uses.".format(
+                most_used_command[0]["command_name"],
+                most_used_command[0]["usage"],
+                format_number((int(most_used_command[0]["usage"]) / user_usage_count) * 100),
             )
 
         # format and send the data in an embed

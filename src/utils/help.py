@@ -67,7 +67,7 @@ class HelpCommand(commands.HelpCommand):
     # function called on ">help <cog name>"
     async def send_cog_help(self, cog):
         return await self.get_destination().send(
-            f'No command called "{cog.qualified_name}" found.'
+            f'No command named "{cog.qualified_name}" found.'
         )
 
     # function called on ">help <group command>"

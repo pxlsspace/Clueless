@@ -381,7 +381,7 @@ class Utility(commands.Cog):
         owner = app_info.owner
         me = ctx.me
         bot_age = td_format(datetime.now() - me.created_at, hide_seconds=True)
-
+        server_prefix = await db_servers.get_prefix(self.client, ctx)
         # get some bot stats
         guild_count = len(self.client.guilds)
         command_count = len(self.client.commands)
@@ -457,7 +457,7 @@ class Utility(commands.Cog):
         user_info = f"• You have used this bot **{user_usage_count}** times!\n"
         user_info += f"• Your user rank is: **{user_usage_rank}**"
         if most_used_command:
-            user_info += "\n• Your most used command is `>{}` with **{}** uses, thats **{}%** of your total uses.".format(
+            user_info += "\n• Your most used command is `>{}` with **{}** uses, that's **{}%** of your total uses.".format(
                 most_used_command[0]["command_name"],
                 most_used_command[0]["usage"],
                 format_number((int(most_used_command[0]["usage"]) / user_usage_count) * 100),
@@ -467,7 +467,8 @@ class Utility(commands.Cog):
         embed = discord.Embed(title="Bot Information", color=0x66C5CC)
         embed.description = f"Creator: {owner}\n"
         embed.description += f"Bot version: `{VERSION}` - Ping: `{round(self.client.latency*1000,2)} ms`\n"
-        embed.description += f"Bot age: {bot_age}"
+        embed.description += f"Bot age: {bot_age}\n"
+        embed.description += f"Server prefix: `{server_prefix}`"
         embed.add_field(name="**Bot Stats**", value=stats, inline=False)
         embed.add_field(
             name=f"**Top {len(top_commands_array)} Commands**",

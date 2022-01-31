@@ -54,6 +54,7 @@ class PxlsStats(commands.Cog):
         total_amount = board.shape[0] * board.shape[1]
         total_placeable = np.sum(placemap != 255)
         total_non_virgin = np.sum(virginmap == 0)
+        pixel_per_user = int(total_placed) / int(active_users)
 
         # get canvas info
         canvas_code = await stats.get_canvas_code()
@@ -74,34 +75,64 @@ class PxlsStats(commands.Cog):
         max_online = max(online_counts)
         average_cd = sum(cooldowns) / len(cooldowns)
 
+        # calculate the reset ETA
+        goal = 95  # % of canvas filled
+        canvas_time = (datetime.utcnow() - start_date) / timedelta(days=1)  # canvas uptime in days
+        canvas_fill_speed = total_non_virgin / canvas_time  # in px/day
+        pixels_to_fill = (total_placeable * goal / 100) - total_non_virgin
+        eta = pixels_to_fill / canvas_fill_speed  # in days
+        if eta <= 0:
+            eta = "where reset 💀"
+        else:
+            td_eta = timedelta(days=eta)
+            days = td_eta.days
+            seconds = td_eta.seconds
+            hours = round(seconds / 3600)
+            eta_array = []
+            if days:
+                eta_array.append(f"{days} day{'s' if days > 1 else ''}")
+            if hours or days == 0:
+                eta_array.append(f"{hours} hour{'s' if days > 1 else ''}")
+            eta = ", ".join(eta_array)
+
         general_stats_text = "• Total Users: `{}`\n• Total Factions: `{}`".format(
             format_number(total_users), format_number(total_factions)
         )
 
-        canvas_stats_text = """
-        • Dimensions: `{} x {}`\n• Total Pixels: `{}`/`{}` (`{}%` placeable)\n• Total Placed: `{}`\n• Total Non-Virgin: `{}`\n• Percentage Non-Virgin:\n**|**{}**|** `{}%`""".format(
-            board.shape[1],
-            board.shape[0],
-            format_number(int(total_placeable)),
-            format_number(total_amount),
-            format_number(total_placeable / total_amount * 100),
-            format_number(total_placed),
-            format_number(int(total_non_virgin)),
-            f"`{make_progress_bar(total_non_virgin/total_placeable*100)}`",
-            format_number(total_non_virgin / total_placeable * 100),
-        )
-
-        info_text = "• Canvas Code: `{}`\n• Start Date: {}\n• Time Elapsed: {}\n• Canvas Users: `{}`\n• Average online: `{}` users (min: `{}`, max: `{}`)\n• Average cooldown: `{}s`".format(
+        info_text = "• Canvas Code: `{}`\n• Start Date: {}\n• Time Elapsed: {}\n• Dimensions: `{} x {}`\n• Total Pixels: `{}`/`{}` (`{}%` placeable)\n".format(
             canvas_code,
             format_datetime(start_date),
             td_format(
                 datetime.utcnow() - start_date, hide_seconds=True, max_unit="day"
             ),
+            board.shape[1],
+            board.shape[0],
+            format_number(int(total_placeable)),
+            format_number(total_amount),
+            format_number(total_placeable / total_amount * 100),
+        )
+
+        canvas_stats_text = """
+        • Canvas Users: `{}`\n• Average online: `{}` users (min: `{}`, max: `{}`)\n• Average cooldown: `{}s`\n• Total Placed: `{}`\n• Average pixels per user: `{}`""".format(
             active_users,
             round(average_online, 2),
             min_online,
             max_online,
             round(average_cd, 2),
+            format_number(total_placed),
+            format_number(int(pixel_per_user)),
+        )
+
+        completion_text = """
+        • Total Non-Virgin: `{}`/`{}`\n• Filling speed: `{}` px/day\n• Percentage Non-Virgin:\n**|**{}**|** `{}%`\nReset ETA (until {}% full): ~`{}`
+        """.format(
+            format_number(int(total_non_virgin)),
+            format_number(int(total_placeable)),
+            format_number(canvas_fill_speed),
+            f"`{make_progress_bar(total_non_virgin/total_placeable*100)}`",
+            format_number(total_non_virgin / total_placeable * 100),
+            goal,
+            eta,
         )
 
         # create an embed with all the infos
@@ -109,6 +140,8 @@ class PxlsStats(commands.Cog):
         emb.add_field(name="**General Stats**", value=general_stats_text, inline=False)
         emb.add_field(name="**Canvas Info**", value=info_text, inline=False)
         emb.add_field(name="**Canvas Stats**", value=canvas_stats_text, inline=False)
+        emb.add_field(name="**Canvas Completion**", value=completion_text, inline=False)
+
         emb.add_field(
             name="\u200b",
             value="Last updated: " + format_datetime(last_updated, "R"),

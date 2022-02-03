@@ -75,12 +75,26 @@ class PxlsStats(commands.Cog):
         max_online = max(online_counts)
         average_cd = sum(cooldowns) / len(cooldowns)
 
-        # calculate the reset ETA
-        goal = 95  # % of canvas filled
+        # calculate the filling speed
         canvas_time = (datetime.utcnow() - start_date) / timedelta(days=1)  # canvas uptime in days
         canvas_fill_speed = total_non_virgin / canvas_time  # in px/day
-        pixels_to_fill = (total_placeable * goal / 100) - total_non_virgin
-        eta = pixels_to_fill / canvas_fill_speed  # in days
+
+        # calculate the ETA with the filling speed in the last 2 days
+        goal = 95  # % of canvas filled
+        time_interval = 2  # number of days to calculate the recent filling speed
+        time_to_search = round_minutes_down(
+            datetime.utcnow() - timedelta(days=time_interval) - timedelta(minutes=1)
+        )
+        record = await db_stats.find_record(time_to_search, canvas_code)
+        record_time = round_minutes_down(record["datetime"].replace(tzinfo=timezone.utc))
+        sql = "SELECT SUM(amount_placed) AS non_virgin FROM color_stat WHERE record_id = ?"
+        non_virgin_interval = await db_stats.db.sql_select(sql, record["record_id"])
+        time_diff = (round_minutes_down(last_updated) - record_time)
+        filling_progress = total_non_virgin - non_virgin_interval[0]["non_virgin"]
+        canvas_fill_speed_interval = filling_progress / (time_diff / timedelta(days=1))
+        pixels_until_goal = (total_placeable * goal / 100) - total_non_virgin
+        eta = pixels_until_goal / canvas_fill_speed_interval
+
         if eta <= 0:
             eta = "where reset 💀"
         else:
@@ -124,11 +138,13 @@ class PxlsStats(commands.Cog):
         )
 
         completion_text = """
-        • Total Non-Virgin: `{}`/`{}`\n• Filling speed: `{}` px/day\n• Percentage Non-Virgin:\n**|**{}**|** `{}%`\nReset ETA (until {}% full): ~`{}`
+        • Total Non-Virgin: `{}`/`{}`\n• Average filling speed: `{}` px/day\n(last {}: `{}` px/day)\n• Percentage Non-Virgin:\n**|**{}**|** `{}%`\nReset ETA (until {}% full): ~`{}`
         """.format(
             format_number(int(total_non_virgin)),
             format_number(int(total_placeable)),
             format_number(canvas_fill_speed),
+            td_format(time_diff, hide_seconds=True),
+            format_number(canvas_fill_speed_interval),
             f"`{make_progress_bar(total_non_virgin/total_placeable*100)}`",
             format_number(total_non_virgin / total_placeable * 100),
             goal,

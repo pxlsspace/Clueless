@@ -212,7 +212,7 @@ class Utility(commands.Cog):
                 cog_fullname = fullname(command.cog)
                 cog_fullname = cog_fullname.split(".")
                 cog_dir = cog_fullname[1:-2]
-                cog_dir = cog_dir[0].capitalize() if len(cog_dir) > 0 else "Other"
+                cog_dir = cog_dir[0].replace("_", " ").title() if len(cog_dir) > 0 else "Other"
 
                 text = f"• `/{command.name}`: {command.description}"
 

@@ -11,7 +11,7 @@ from discord_slash.utils.manage_commands import create_option, create_choice
 from utils.arguments_parser import MyParser
 from utils.discord_utils import format_number, get_image_from_message, image_to_file
 from utils.image.image_utils import remove_white_space
-from utils.pxls.template import STYLES, get_style, templatize
+from utils.pxls.template import STYLES, get_style, templatize, reduce, get_rgba_palette
 from utils.setup import stats, GUILD_IDS
 
 
@@ -158,10 +158,16 @@ class Template(commands.Cog):
         if not (nocrop):
             img = remove_white_space(img)
 
-        # convert the image to a template style
+        # reduce the image to the pxls palette
         img_array = np.array(img)
+        palette = get_rgba_palette()
+        reduced_array = await self.client.loop.run_in_executor(
+            None, reduce, img_array, palette
+        )
+
+        # convert the image to a template style
         template_array = await self.client.loop.run_in_executor(
-            None, templatize, style, img_array, glow_opacity
+            None, templatize, style, reduced_array, glow_opacity
         )
         template_image = Image.fromarray(template_array)
         alpha_values = img_array[:, :, 3]
@@ -176,9 +182,11 @@ class Template(commands.Cog):
             text="Warning: if you delete this message the template might break."
         )
         embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
-        embed.set_thumbnail(url=url)
+        reduced_image = Image.fromarray(stats.palettize_array(reduced_array))
+        reduced_file = image_to_file(reduced_image, "reduced.png")
+        embed.set_thumbnail(url="attachment://reduced.png")
         file = image_to_file(template_image, "template.png")
-        m = await ctx.send(embed=embed, file=file)
+        m = await ctx.send(embed=embed, files=[file, reduced_file])
 
         # create a template link with the sent image
         template_title = f"&title={urllib.parse.quote(title)}" if title else ""

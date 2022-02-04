@@ -159,7 +159,6 @@ def templatize(style: dict, image: Image.Image, glow_opacity=0) -> np.ndarray:
     m = image_array.shape[1]
 
     palette = get_rgba_palette()
-    red = reduce(image_array, palette)
     st = stylize(style_array, style_size, palette, glow_opacity)
-    res = fast_templatize(n, m, st, red, style_size)
+    res = fast_templatize(n, m, st, image_array, style_size)
     return res

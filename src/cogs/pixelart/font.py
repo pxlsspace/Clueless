@@ -60,27 +60,29 @@ class Font(commands.Cog):
             args += ("-color", color)
         if bgcolor:
             args += ("-bgcolor", bgcolor)
-        args = " ".join(list(args))
-        await self.pixelfont(ctx, args=args)
+        await self.pixelfont(ctx, *args)
 
     @commands.command(
+        name="pixelfont",
         description="Convert a text to pixel art.",
         aliases=["pf", "pixeltext"],
-        usage="<text> <-font <name|*>> [-color <color|none>] [-bgcolor color|none]",
+        usage="<text> [-font <name|*>] [-color <color|none>] [-bgcolor <color|none>]",
         help="""- `<text>` a text to convert to pixel art
                   - `[-font name|*]`: the name of the font (`*` will use all the fonts available)
                   - `[-color]`: the color you want the text to be
                   - `[-bgcolor]`: the color for the background around the text
                   (the colors can be a pxls color name, a hex color, or `none` if you want transparent)""",
     )
-    async def pixelfont(self, ctx, *, args):
+    async def p_pixelfont(self, ctx, *, args):
         args = args.split(" ")
+        async with ctx.typing():
+            await self.pixelfont(ctx, *args)
+
+    async def pixelfont(self, ctx, *args):
         try:
             arguments = parse_pixelfont_args(args)
         except ValueError as e:
-            return await ctx.send(
-                f"❌ {e}\nUsage: `{ctx.prefix}{ctx.command.name} {ctx.command.usage}`"
-            )
+            return await ctx.send(f"❌ {e}")
 
         fonts = get_all_fonts()
         if len(fonts) == 0:
@@ -95,35 +97,35 @@ class Font(commands.Cog):
             return await ctx.send(msg)
 
         font_color = arguments.color
-        if font_color == "none":
-            font_rgba = (0, 0, 0, 0)
-
-        elif font_color is not None:
+        if font_color:
             # get the rgba from the color input
+            font_color = " ".join(font_color).lower()
             try:
                 font_rgba = get_pxls_color(font_color)
             except ValueError:
-                if is_hex_color(font_color):
+                if font_color == "none":
+                    font_rgba = (0, 0, 0, 0)
+                elif is_hex_color(font_color):
                     font_rgba = ImageColor.getcolor(font_color, "RGBA")
                 else:
-                    return await ctx.send(f"❌ The font color {font_color} is invalid.")
+                    return await ctx.send(f"❌ The font color `{font_color}` is invalid.")
         else:
             font_rgba = None
 
         background_color = arguments.bgcolor
-        if background_color == "none":
-            bg_rgba = (0, 0, 0, 0)
-
-        elif background_color is not None:
+        if background_color:
             # get the rgba from the color input
+            background_color = " ".join(background_color).lower()
             try:
                 bg_rgba = get_pxls_color(background_color)
             except ValueError:
-                if is_hex_color(background_color):
+                if background_color == "none":
+                    bg_rgba = (0, 0, 0, 0)
+                elif is_hex_color(background_color):
                     bg_rgba = ImageColor.getcolor(background_color, "RGBA")
                 else:
                     return await ctx.send(
-                        f"❌ The background color {background_color} is invalid."
+                        f"❌ The background color `{background_color}` is invalid."
                     )
         else:
             bg_rgba = None

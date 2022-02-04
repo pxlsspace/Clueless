@@ -595,20 +595,28 @@ class PxlsStats(commands.Cog):
                 option_type=3,
                 required=False,
             ),
+            create_option(
+                name="placed",
+                description="To highlight the colors only on the non-virgin pixels.",
+                option_type=5,
+                required=False,
+            ),
         ],
     )
-    async def _canvashighlight(self, ctx: SlashContext, colors, bgcolor=None):
+    async def _canvashighlight(self, ctx: SlashContext, colors, bgcolor=None, placed=None):
         await ctx.defer()
         args = (colors,)
         if bgcolor:
             args += ("-bgcolor", bgcolor)
+        if placed:
+            args += ("-placed",)
         await self.canvashighlight(ctx, *args)
 
     @commands.command(
         name="canvashighlight",
         description="Highlight the selected colors on the canvas.",
         aliases=["chl", "canvashl"],
-        usage="<colors> [-bgcolor|-bg <color>]",
+        usage="<colors> [-bgcolor|-bg <color>] [-placed]",
         help="""
             - `<colors>`: list of pxls colors separated by a comma
             - `[-bgcolor|bg <color>]`: the color to display behind the higlighted colors, it can be:
@@ -616,7 +624,9 @@ class PxlsStats(commands.Cog):
                 • a hex color (ex: "#ff000")
                 • "none": to have a transparent background
                 • "dark": to have the background darkened
-                • "light": to have the background lightened""",
+                • "light": to have the background lightened
+            - `[-placed|-p]`: highlight the colors only on the non-virgin pixels.
+        """,
     )
     async def p_canvashighlight(self, ctx, *, args):
         args = args.split(" ")
@@ -631,6 +641,7 @@ class PxlsStats(commands.Cog):
         parser.add_argument(
             "-bgcolor", "-bg", nargs="*", type=str, action="store", required=False
         )
+        parser.add_argument("-placed", action="store_true", default=False, required=False)
         try:
             parsed_args = parser.parse_args(args)
         except ValueError as e:
@@ -638,8 +649,12 @@ class PxlsStats(commands.Cog):
 
         # get the board with the placeable pixels only
         canvas_array_idx = await stats.get_placable_board()
-        canvas_array = stats.palettize_array(canvas_array_idx)
-        await _highlight(ctx, canvas_array, parsed_args)
+        if parsed_args.placed:
+            # only keep virgin pixels
+            virgin_array = stats.virginmap_array
+            canvas_array_idx[virgin_array != 0] = 255
+        array = stats.palettize_array(canvas_array_idx)
+        await _highlight(ctx, array, parsed_args)
 
 
 def setup(client):

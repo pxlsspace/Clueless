@@ -43,14 +43,15 @@ def make_table_array(data, titles, alignments, colors=None, outline_dark=True):
     for i, lines in enumerate(data):
         for j, col in enumerate(lines):
             text = str(col)
-            pt = PixelText(text, font_name, colors[i], BACKGROUND_COLOR)
 
+            pt = PixelText(text, font_name, colors[i], (0, 0, 0, 0))
             text_array = pt.make_array()
             if outline_dark and image_utils.is_dark(colors[i]):
-                text_array = add_outline(
-                    text_array, image_utils.lighten_color(colors[i], 0.3)
-                )
+                outline_color = image_utils.lighten_color(colors[i], 0.3)
+                text_array = add_outline(text_array, outline_color)
+                text_array = replace(text_array, (0, 0, 0, 0), BACKGROUND_COLOR)
             else:
+                text_array = replace(text_array, (0, 0, 0, 0), BACKGROUND_COLOR)
                 text_array = add_border(text_array, 1, BACKGROUND_COLOR)
             col_array[j].append(text_array)
 
@@ -161,11 +162,9 @@ def add_border(array, width: int, color: tuple):
 
 def add_outline(array, color):
     """add an outline around a text"""
-    array = replace(array, BACKGROUND_COLOR, (0, 0, 0, 0))
     img = Image.fromarray(array)
     img = image_utils.add_outline(img, color, crop=False)
     outline_array = np.array(img)
-    outline_array = replace(outline_array, (0, 0, 0, 0), BACKGROUND_COLOR)
     return outline_array
 
 

@@ -201,11 +201,12 @@ async def _highlight(ctx, image_array: np.ndarray, parsed_args):
         percentage = f"{round(amount/total_amount*100,2)}%"
         hex_color = rgb_to_hex(rgba_list[i][:-1])
 
-        data.append((color_name, format_number(amount), percentage, hex_color))
+        data.append((color_name, amount, percentage, hex_color))
 
     data.sort(key=lambda x: x[1], reverse=True)
     hex_colors = [d[-1] for d in data]
     data = [d[:-1] for d in data]
+    data = [[format_number(c) for c in row] for row in data]
     table_img = table_to_image(
         data, ["Color", "Amount", "Percentage"], colors=hex_colors
     )

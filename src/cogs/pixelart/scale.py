@@ -80,7 +80,7 @@ class Scale(commands.Cog):
         embed = discord.Embed(title="Downscale", color=0x66C5CC)
         embed.description = "Original pixel size: **{0}x{0}**\n".format(scale)
         embed.description += (
-            "({0.shape[1]}x{0.shape[0]}) -> ({1.shape[1]}x{1.shape[0]})".format(
+            "`{0.shape[1]}x{0.shape[0]}` -> `{1.shape[1]}x{1.shape[0]}`".format(
                 input_image_array, downscaled_array
             )
         )
@@ -156,7 +156,7 @@ class Scale(commands.Cog):
 
         embed = discord.Embed(title="Upscale", color=0x66C5CC)
         embed.description = "Final pixel size: **{0}x{0}**\n".format(scale)
-        embed.description += "({0.width}x{0.height}) -> ({1.width}x{1.height})".format(
+        embed.description += "`{0.width}x{0.height}` -> `{1.width}x{1.height}`".format(
             input_image, res_image
         )
         res_file = image_to_file(res_image, "upscaled.png", embed=embed)

@@ -110,7 +110,7 @@ def remove_white_space(original_image):
     """Remove the extra transparent pixels around a PNG image"""
     image = original_image.convert("RGBA")
     image_array = np.array(image)
-    mask = image_array[:, :, 3] == 255
+    mask = image_array[:, :, 3] > 128
     r = mask.any(1)
     if r.any():
         m, n = mask.shape

@@ -1,4 +1,5 @@
 import functools
+import discord
 from PIL import Image, ImageColor
 from discord.ext import commands
 from io import BytesIO
@@ -6,7 +7,7 @@ from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option
 
 from utils.arguments_parser import parse_outline_args
-from utils.discord_utils import get_image_from_message, image_to_file
+from utils.discord_utils import format_number, get_image_from_message, image_to_file
 from utils.image.image_utils import (
     add_outline,
     remove_white_space,
@@ -134,7 +135,7 @@ class Outline(commands.Cog):
     @commands.command(
         name="crop",
         usage="<image|url>",
-        description="Remove the 'white space' from a PNG image.",
+        description="Remove the empty space from a PNG image.",
         help="""- `<url|image>`: an image URL or an attached image""",
     )
     async def p_crop(self, ctx, url=None):
@@ -152,11 +153,20 @@ class Outline(commands.Cog):
         image_cropped = await self.client.loop.run_in_executor(
             None, remove_white_space, input_image
         )
+        ratio = (image_cropped.width * image_cropped.height) / (input_image.width * input_image.height)
+        embed = discord.Embed(title="Crop", color=0x66C5CC)
+        if ratio == 1:
+            embed.description = "There was nothing to crop here. <a:bruhkitty:880829401359589446>"
+        else:
+            embed.description = f"The cropped image is **{format_number((1-ratio)*100)}%** smaller.\n"
+            embed.description += "`{0.width}x{0.height}` -> `{1.width}x{1.height}`".format(
+                input_image, image_cropped
+            )
         file = await self.client.loop.run_in_executor(
-            None, image_to_file, image_cropped, "cropped.png"
+            None, image_to_file, image_cropped, "cropped.png", embed
         )
 
-        await ctx.send(file=file)
+        await ctx.send(file=file, embed=embed)
 
 
 def setup(client):

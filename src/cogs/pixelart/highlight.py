@@ -122,14 +122,15 @@ async def _highlight(ctx, image_array: np.ndarray, parsed_args):
     colors = list(dict.fromkeys(colors))
 
     rgba_list = []
-    for color in colors:
+    for i, color in enumerate(colors):
         try:
-            rgba = get_pxls_color(color)
+            color, rgba = get_pxls_color(color)
+            colors[i] = color
         except ValueError:
             if is_hex_color(color):
                 rgba = ImageColor.getcolor(color, "RGBA")
             else:
-                return await ctx.send(f'❌ The color "{color}" is invalid.')
+                return await ctx.send(f"❌ The color `{color}` is invalid.")
         rgba_list.append(rgba)
 
     # get bg color rgba
@@ -137,7 +138,7 @@ async def _highlight(ctx, image_array: np.ndarray, parsed_args):
     if bg_color:
         bg_color = " ".join(bg_color).lower()
         try:
-            bg_rgba = get_pxls_color(bg_color)
+            bg_color, bg_rgba = get_pxls_color(bg_color)
         except ValueError:
             if bg_color == "none":
                 bg_rgba = (0, 0, 0, 0)
@@ -147,7 +148,7 @@ async def _highlight(ctx, image_array: np.ndarray, parsed_args):
                 bg_rgba = ImageColor.getcolor(bg_color, "RGBA")
             else:
                 return await ctx.send(
-                    f'❌ The background color "{bg_color}" is invalid.'
+                    f"❌ The background color `{bg_color}` is invalid."
                 )
 
     # find the number of pixels non-transparent

@@ -47,7 +47,7 @@ class Colorify(commands.Cog):
         name="colorify",
         description="Turn an image to a different color.",
         usage="<color> <image|url|emoji>",
-        aliases=["colorize"],
+        aliases=["colorize", "colourify"],
     )
     async def p_colorify(self, ctx, color, url=None):
         async with ctx.typing():
@@ -56,12 +56,12 @@ class Colorify(commands.Cog):
     async def colorify(self, ctx, color, url=None):
         # get the rgba from the color input
         try:
-            rgba = get_pxls_color(color)
+            color, rgba = get_pxls_color(color)
         except ValueError:
             if is_hex_color(color):
                 rgba = ImageColor.getcolor(color, "RGBA")
             else:
-                return await ctx.send(f"❌ The color {color} is invalid.")
+                return await ctx.send(f"❌ The color `{color}` is invalid.\n(use quotes if the color has 2 or more words)")
         rgb = rgba[:-1]
 
         # get the image from the message

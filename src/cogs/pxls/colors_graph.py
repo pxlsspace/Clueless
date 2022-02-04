@@ -7,6 +7,7 @@ from discord_slash.utils.manage_commands import create_option
 from utils.arguments_parser import MyParser
 from utils.discord_utils import format_number, image_to_file
 from utils.image.image_utils import (
+    get_pxls_color,
     hex_to_rgb,
     rgb_to_hex,
     v_concatenate,
@@ -108,10 +109,12 @@ class ColorsGraph(commands.Cog):
         # format colors in a list
         colors = parsed_args.colors
         if parsed_args.colors:
-            colors = " ".join(colors).lower().replace("gray", "grey")
-            colors = colors.split(",")
-            colors = [color.strip(" ") for color in colors]
-
+            colors = " ".join(colors).split(",")
+            for i, c in enumerate(colors):
+                try:
+                    colors[i] = get_pxls_color(c)[0].lower()
+                except Exception:
+                    return await ctx.send(f"❌ The color `{c}` is invalid.")
         # init the 'placed' option
         placed_opt = False
         if parsed_args.placed:
@@ -165,7 +168,7 @@ class ColorsGraph(commands.Cog):
         # format the table data
         table_rows = []
         for d in data_list:
-            if len(colors) > 0 and not d["color_name"].lower() in colors:
+            if len(colors) > 0 and d["color_name"].lower() not in colors:
                 continue
             diff_time = d["datetimes"][-1] - d["datetimes"][0]
             diff_values = d["values"][-1] - d["values"][0]
@@ -219,7 +222,7 @@ def make_color_graph(data_list, colors, user_timezone=None):
 
     colors_found = False
     for color in data_list:
-        if len(colors) > 0 and not color["color_name"].lower() in colors:
+        if len(colors) > 0 and color["color_name"].lower() not in colors:
             continue
         colors_found = True
 

@@ -95,8 +95,8 @@ def parse_pixelfont_args(args):
     parser.add_argument("text", type=str, nargs="*")
 
     parser.add_argument("-font", type=str, action="store", required=False, default="*")
-    parser.add_argument("-color", type=str, action="store", required=False)
-    parser.add_argument("-bgcolor", "-bg", type=str, action="store", required=False)
+    parser.add_argument("-color", type=str, nargs="*", action="store", required=False)
+    parser.add_argument("-bgcolor", "-bg", nargs="*", type=str, action="store", required=False)
 
     return parser.parse_args(args)
 

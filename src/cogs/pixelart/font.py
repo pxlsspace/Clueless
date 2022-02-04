@@ -101,7 +101,7 @@ class Font(commands.Cog):
             # get the rgba from the color input
             font_color = " ".join(font_color).lower()
             try:
-                font_rgba = get_pxls_color(font_color)
+                font_color, font_rgba = get_pxls_color(font_color)
             except ValueError:
                 if font_color == "none":
                     font_rgba = (0, 0, 0, 0)
@@ -117,7 +117,7 @@ class Font(commands.Cog):
             # get the rgba from the color input
             background_color = " ".join(background_color).lower()
             try:
-                bg_rgba = get_pxls_color(background_color)
+                background_color, bg_rgba = get_pxls_color(background_color)
             except ValueError:
                 if background_color == "none":
                     bg_rgba = (0, 0, 0, 0)

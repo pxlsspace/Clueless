@@ -123,13 +123,15 @@ def remove_white_space(original_image):
 
 
 def get_pxls_color(input):
-    """Get the RGBA value of a pxls color by its name."""
+    """Get the RGBA value of a pxls color by its name. Return `(color_name, rgba)`"""
     color_name = input.lower().replace("gray", "grey")
+    color_name = color_name.replace('"', '')
+    color_name = color_name.replace("_", " ")
     for color in stats.get_palette():
-        if color["name"].lower() == color_name.lower():
+        if color["name"].lower().replace(" ", "") == color_name.lower().replace(" ", ""):
             rgb = ImageColor.getcolor(f'#{color["value"]}', "RGBA")
-            return rgb
-    raise ValueError("The color '{}' was not found in the pxls palette. ".format(input))
+            return color["name"], rgb
+    raise ValueError("The color `{}` was not found in the pxls palette. ".format(input))
 
 
 def is_hex_color(input_string):

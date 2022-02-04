@@ -93,12 +93,12 @@ class Outline(commands.Cog):
 
         # get the rgba from the color input
         try:
-            rgba = get_pxls_color(color)
+            color, rgba = get_pxls_color(color)
         except ValueError:
             if is_hex_color(color):
                 rgba = ImageColor.getcolor(color, "RGBA")
             else:
-                return await ctx.send(f"❌ The color {color} is invalid.")
+                return await ctx.send(f"❌ The color `{color}` is invalid.\n(use quotes if the color has 2 or more words)")
 
         # get the input image
         try:

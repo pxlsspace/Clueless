@@ -62,7 +62,7 @@ class PxlsCooldown(commands.Cog):
 
         embed = discord.Embed(
             color=0x66C5CC,
-            title=f"Pxls cooldown for `{online}` user{'s' if online > 1 else ''}",
+            title=f"Pxls cooldown for `{online}` user{'s' if online != 1 else ''}",
             description=desc,
         )
         embed.timestamp = datetime.utcnow()

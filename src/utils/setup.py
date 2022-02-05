@@ -12,7 +12,7 @@ from utils.pxls.pxls_stats_manager import PxlsStatsManager
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 load_dotenv()
 
-VERSION = "1.1.3"
+VERSION = "1.1.4"
 BOT_INVITE = os.getenv("BOT_INVITE")
 SERVER_INVITE = os.getenv("SERVER_INVITE")
 

@@ -79,7 +79,8 @@ def add_outline(original_image, color, full=True, outline_width=1, crop=True):
         color.append(255)
     # create a mask of the outline color
     image_array = np.array(original_image)
-    mask = image_array[:, :, 3] == 255
+    mask = image_array[:, :, 3] > 128
+    image_array[~mask] = [0, 0, 0, 0]
     bg = np.zeros_like(image_array)
     bg[mask] = color
 
@@ -97,8 +98,18 @@ def add_outline(original_image, color, full=True, outline_width=1, crop=True):
             ):
                 background.paste(outline, (x, y), outline)
 
+    # exclude the original image pixels from the background created
+    image = Image.fromarray(image_array)
+    outline_mask = np.full((background.height, background.width), False)
+    outline_mask[
+        outline_width:outline_width + image_array.shape[0],
+        outline_width:outline_width + image_array.shape[1]
+    ] = mask
+    bg_array = np.array(background)
+    bg_array[outline_mask] = [0, 0, 0, 0]
     # merge the outline with the image
-    background.paste(original_image, (outline_width, outline_width), original_image)
+    background = Image.fromarray(bg_array)
+    background.paste(image, (outline_width, outline_width), image)
 
     if crop:
         background = remove_white_space(background)

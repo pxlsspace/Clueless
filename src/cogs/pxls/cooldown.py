@@ -36,7 +36,12 @@ class PxlsCooldown(commands.Cog):
     )
     async def cooldown(self, ctx, number=None):
         if number:
-            online = int(number)
+            try:
+                online = int(number)
+            except ValueError:
+                return await ctx.send("❌ The number of users must be an integer.")
+            if online < 0:
+                return await ctx.send("❌ The number of users must be positive.")
         else:
             online = stats.online_count
 
@@ -57,7 +62,7 @@ class PxlsCooldown(commands.Cog):
 
         embed = discord.Embed(
             color=0x66C5CC,
-            title=f"Pxls cooldown for `{online}` users",
+            title=f"Pxls cooldown for `{online}` user{'s' if online > 1 else ''}",
             description=desc,
         )
         embed.timestamp = datetime.utcnow()

@@ -13,8 +13,8 @@ from utils.time_converter import format_datetime, round_minutes_down, td_format
 from utils.arguments_parser import MyParser
 from utils.plot_utils import matplotlib_to_plotly
 from utils.utils import make_progress_bar
-from cogs.pixelart.color_breakdown import _colors
-from cogs.pixelart.highlight import _highlight
+from cogs.pixel_art.color_breakdown import _colors
+from cogs.pixel_art.highlight import _highlight
 
 
 class PxlsStats(commands.Cog):

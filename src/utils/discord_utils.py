@@ -254,3 +254,22 @@ class UserConverter(commands.Converter):
             if found := discord.utils.find(check, ctx.bot.users):
                 return found
             raise commands.UserNotFound(argument)
+
+
+async def get_embed_author(ctx) -> discord.User:
+    """Get the author User from an embed if it has "Requested by name#0000" in the footer,
+    return ``None`` if not found."""
+    embeds = ctx.origin_message.embeds
+    if not embeds:
+        return None
+    try:
+        found = re.findall(r"Requested by (.*)#([0-9]{4})", embeds[0].footer.text)
+        if not found:
+            return None
+        name = found[0][0]
+        discrim = found[0][1]
+        predicate = lambda u: u.name == name and u.discriminator == discrim  # noqa: E731
+        result = discord.utils.find(predicate, ctx.bot.users)
+        return result
+    except Exception:
+        return None

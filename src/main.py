@@ -9,7 +9,6 @@ from datetime import timezone
 from discord_slash import SlashCommand
 from discord_slash.context import SlashContext
 
-from utils.help import HelpCommand
 from utils.setup import DEFAULT_PREFIX, db_stats, db_servers, db_users
 
 load_dotenv()
@@ -17,7 +16,7 @@ intents = discord.Intents.all()
 activity = discord.Activity(type=discord.ActivityType.watching, name="you placing those pixels 👀")
 client = commands.Bot(
     command_prefix=db_servers.get_prefix,
-    help_command=HelpCommand(),
+    help_command=None,
     intents=intents,
     case_insensitive=True,
     activity=activity,

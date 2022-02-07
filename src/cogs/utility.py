@@ -16,7 +16,6 @@ from utils.time_converter import str_to_td, td_format
 from utils.timezoneslib import get_timezone
 from utils.utils import get_content, ordinal
 from utils.discord_utils import format_number, image_to_file
-from utils.help import fullname
 from utils.table_to_image import table_to_image
 
 
@@ -199,45 +198,6 @@ class Utility(commands.Cog):
             return await ctx.send("```❌ {}: {} ```".format(type(e).__name__, e))
 
         await ctx.send(f"✅ Extension `{extension}` has been reloaded")
-
-    @cog_ext.cog_slash(
-        name="help",
-        description="Show all the slash commands and their description.",
-        guild_ids=GUILD_IDS,
-    )
-    async def _help(self, ctx: SlashContext):
-        categories = {}
-        for command in self.client.slash.commands.values():
-            if command and command.name != "rl":
-                cog_fullname = fullname(command.cog)
-                cog_fullname = cog_fullname.split(".")
-                cog_dir = cog_fullname[1:-2]
-                cog_dir = cog_dir[0].replace("_", " ").title() if len(cog_dir) > 0 else "Other"
-
-                text = f"• `/{command.name}`: {command.description}"
-
-                # categories are organized by cog folders
-                try:
-                    categories[cog_dir].append(text)
-                except KeyError:
-                    categories[cog_dir] = [text]
-
-        embed = discord.Embed(title="Command help", color=0x66C5CC)
-        embed.set_thumbnail(url=ctx.me.avatar_url)
-
-        for category in categories:
-            if category != "Other":
-                embed.add_field(
-                    name=f"**{category}**",
-                    value="\n".join(categories[category]),
-                    inline=False,
-                )
-        if "Other" in categories:
-            embed.add_field(
-                name="**Other**", value="\n".join(categories["Other"]), inline=False
-            )
-
-        await ctx.send(embed=embed)
 
     @cog_ext.cog_slash(
         name="time",

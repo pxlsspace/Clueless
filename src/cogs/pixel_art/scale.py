@@ -8,7 +8,7 @@ from discord_slash.utils.manage_commands import create_option
 from PIL import Image
 
 from utils.image.image_utils import remove_white_space, get_image_scale
-from utils.pxls.detemplatize import detemplatize
+from utils.pxls.template_manager import detemplatize
 from utils.discord_utils import get_image_from_message, image_to_file
 from utils.setup import GUILD_IDS
 

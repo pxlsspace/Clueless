@@ -6,7 +6,7 @@ from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option
 
 from utils.discord_utils import format_number, image_to_file
-from utils.pxls.detemplatize import get_progress, get_template
+from utils.pxls.template_manager import get_progress, get_template
 from utils.setup import GUILD_IDS
 from utils.utils import make_progress_bar
 

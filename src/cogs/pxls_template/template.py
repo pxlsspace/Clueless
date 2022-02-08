@@ -170,8 +170,7 @@ class Template(commands.Cog):
             None, templatize, style, reduced_array, glow_opacity
         )
         template_image = Image.fromarray(template_array)
-        alpha_values = img_array[:, :, 3]
-        total_amount = np.sum(alpha_values == 255)
+        total_amount = np.sum(reduced_array != 255)
         total_amount = format_number(int(total_amount))
         end = time.time()
 

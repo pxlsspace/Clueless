@@ -7,7 +7,12 @@ from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option
 
 from utils.setup import db_stats, db_users, GUILD_IDS
-from utils.time_converter import str_to_td, round_minutes_down, td_format, format_datetime
+from utils.time_converter import (
+    str_to_td,
+    round_minutes_down,
+    td_format,
+    format_datetime,
+)
 from utils.arguments_parser import parse_leaderboard_args
 from utils.discord_utils import format_number, image_to_file
 from utils.table_to_image import table_to_image
@@ -88,7 +93,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             ),
         ],
     )
-    async def _speed(
+    async def _leaderboard(
         self,
         ctx: SlashContext,
         username=None,

@@ -327,10 +327,10 @@ class PxlsSpeed(commands.Cog):
             formatted_data.append(user_data)
 
         if len(formatted_data) == 0:
-            msg = "❌ User{} not found{}.".format(
-                "s" if len(names) > 1 else "",
-                " (try adding `-c` in the command)" if found_but_no_data else "",
-            )
+            if found_but_no_data and not canvas_opt:
+                msg = f"❌ User{'s' if len(names) > 1 else ''} not found in the all-time leaderboard.\n(try using `-canvas` to use the canvas data instead.)"
+            else:
+                msg = f"❌ User{'s' if len(names) > 1 else ''} not found."
             return await ctx.send(msg)
 
         # sort the data by the 3rd column (progress in the time frame)

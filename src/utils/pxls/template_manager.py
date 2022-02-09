@@ -1,4 +1,5 @@
 import numpy as np
+import asyncio
 from PIL import Image
 from numba import jit
 from urllib.parse import parse_qs, urlparse
@@ -7,6 +8,109 @@ from io import BytesIO
 from utils.utils import get_content
 from utils.setup import stats
 from utils.pxls.template import get_rgba_palette, reduce
+
+
+class Template():
+    def __init__(self, url: str, stylized_url: str, title: str, image_array: np.ndarray, ox: int, oy: int, canvas_code) -> None:
+        # template meta data
+        self.url = url
+        self.stylized_url = stylized_url
+        self.title = title
+        self.ox = ox
+        self.oy = oy
+        self.canvas_code = canvas_code
+
+        # template image and array
+        self.image_array = image_array  # array of RGBA
+        self.palettized_array: np.ndarray = reduce(image_array, get_rgba_palette())  # array of palette indexes
+        self.image = Image.fromarray(image_array)
+
+        # template size and dimensions
+        self.width = self.image_array.shape[1]
+        self.height = self.image_array.shape[0]
+        self.total_size = np.sum(self.image_array[:, :, 3] == 255)
+        self.placeable_mask = self.make_placeable_mask()
+        self.total_placeable = np.sum(self.placeable_mask)
+
+        # progress (init with self.update_progress())
+        self.placed_mask = None
+        self.current_progress = None
+
+    def make_placeable_mask(self) -> np.ndarray:
+        """Make a mask of the template shape where the placeable pixels are True."""
+        # get the placemap cropped to the template size
+        cropped_placemap = self.crop_array_to_template(stats.placemap_array)
+        # create a mask with all the non-transparent pixels on the template image (True = non-transparent)
+        placeable_mask = self.palettized_array != 255
+        # exclude pixels outside of the placemap
+        placeable_mask[cropped_placemap == 255] = False
+        return placeable_mask
+
+    def make_placed_mask(self) -> np.ndarray:
+        """Make a mask of the template shape where the correct pixels are True."""
+        # get the current board cropped to the template size
+        cropped_board = self.crop_array_to_template(stats.board_array)
+        # create a mask with the pixels of the template matching the board
+        placed_mask = self.palettized_array == cropped_board
+        # exclude the pixels outside of the placemap
+        placed_mask[~self.placeable_mask] = False
+        return placed_mask
+
+    def update_progress(self) -> int:
+        """Update the mask with the correct pixels and the number of correct pixels."""
+        self.placed_mask = self.make_placed_mask()
+        self.current_progress = np.sum(self.placed_mask)
+        return self.current_progress
+
+    def crop_array_to_template(self, array: np.ndarray) -> np.ndarray:
+        """Crop an array to fit in the template bounds
+        (used to crop the board and placemap to the template size for previews and such)
+        :param array: a palettized numpy array of indexes"""
+        # deal with out of bounds coords:
+        # to do that we copy the part of the array matching the template area
+        # and we paste it on a new array with the template size at the correct coords
+        y0 = min(max(0, self.oy), array.shape[0])
+        y1 = max(0, min(array.shape[0], self.oy + self.height))
+        x0 = min(max(0, self.ox), array.shape[1])
+        x1 = max(0, min(array.shape[1], self.ox + self.width))
+        _cropped_array = array[y0:y1, x0:x1].copy()
+        cropped_array = np.full_like(self.palettized_array, 255)
+        cropped_array[y0 - self.oy : y1 - self.oy, x0 - self.ox : x1 - self.ox] = _cropped_array
+
+        return cropped_array
+
+    def get_progress_image(self, opacity=0.65) -> Image.Image:
+        """
+        Get an image with the canvas progress colored as such:
+        - Green = correct
+        - Red = incorrect
+        - Blue = not placeable
+        - Transparent = outside of the template
+
+        If the `opacity` is < 1, layer this progress image with the chosen opacity
+        """
+        if self.placed_mask is None:
+            self.update_progress()
+        progress_array = np.zeros((self.height, self.width, 4), dtype=np.uint8)
+        progress_array[self.placed_mask] = [0, 255, 0, 255 * opacity]  # correct pixels = green
+        progress_array[~self.placed_mask] = [255, 0, 0, 255 * opacity]  # incorrect pixels = red
+        progress_array[~self.placeable_mask] = [0, 0, 255, 255]  # not placeable = blue
+        progress_array[self.palettized_array == 255] = [0, 0, 0, 0]  # outside of the template = transparent
+        progress_image = Image.fromarray(progress_array)
+
+        # layer the board under the progress image if the progress opacity is less than 1
+        if opacity < 1:
+            cropped_board = self.crop_array_to_template(stats.board_array)
+            # remove the pixels outside of the template visible pixels area
+            cropped_board[self.palettized_array == 255] = 255
+            board_image = Image.fromarray(stats.palettize_array(cropped_board))
+            res_image = Image.new("RGBA", board_image.size)
+            res_image = Image.alpha_composite(res_image, board_image)
+            res_image = Image.alpha_composite(res_image, progress_image)
+        else:
+            res_image = progress_image
+
+        return res_image
 
 
 @jit(nopython=True)
@@ -61,7 +165,8 @@ def parse_template(template_url: str):
     return params
 
 
-async def get_template(template_url: str):
+async def get_template_from_url(template_url: str) -> Template:
+    """Make a Template object from a template URL"""
     params = parse_template(template_url)
 
     if params is None:
@@ -74,63 +179,20 @@ async def get_template(template_url: str):
         image_bytes = await get_content(image_url, "image")
     except Exception:
         raise ValueError("Couldn't download the template image.")
+    canvas_code = await stats.get_canvas_code()
 
-    template_image = Image.open(BytesIO(image_bytes))
-    template_image = template_image.convert("RGBA")
-    template_array = np.array(template_image)
+    def _get_template():
+        template_image = Image.open(BytesIO(image_bytes))
+        if template_image.mode != "RGBA":
+            template_image = template_image.convert("RGBA")
+        template_array = np.array(template_image)
 
-    detemp_array = detemplatize(template_array, true_width)
-    detemp_image = Image.fromarray(detemp_array)
-    return (detemp_image, params)
+        detemp_array = detemplatize(template_array, true_width)
+        ox = int(params["ox"])
+        oy = int(params["oy"])
+        return Template(template_url, image_url, params.get("title"), detemp_array, ox, oy, canvas_code)
 
-
-def get_progress(template_array: np.ndarray, params, get_progress_image=True):
-    """Return tuple(correct pixels, total pixels, progress image)"""
-    x = int(params["ox"])
-    y = int(params["oy"])
-    width = template_array.shape[1]
-    height = template_array.shape[0]
-    palettized_array = reduce(template_array, get_rgba_palette())
-
-    # deal with out of bounds coords:
-    # to do that we copy the part of the board matching the template area
-    # and we paste it on a new array with the template size at the correct coords
-    y0 = max(0, y)
-    y1 = min(stats.board_array.shape[0], y + height)
-    x0 = max(0, x)
-    x1 = min(stats.board_array.shape[1], x + width)
-    _cropped_board = stats.board_array[y0:y1, x0:x1].copy()
-    _cropped_placemap = stats.placemap_array[y0:y1, x0:x1].copy()
-    cropped_board = np.full_like(palettized_array, 255)
-    cropped_board[y0 - y : y1 - y, x0 - x : x1 - x] = _cropped_board
-    cropped_placemap = np.full_like(palettized_array, 255)
-    cropped_placemap[y0 - y : y1 - y, x0 - x : x1 - x] = _cropped_placemap
-
-    # template size
-    alpha_mask = (template_array[:, :, 3] == 255)  # create a mask with all the non-transparent pixels on the template image (True = non-transparent)
-    alpha_mask[cropped_placemap == 255] = False  # exclude pixels outside of the placemap
-    total_pixels = np.sum(alpha_mask)  # count the "True" pixels on the mask
-
-    # correct pixels
-    placed_mask = (palettized_array == cropped_board)  # create a mask with the pixels of the template matching the board
-    placed_mask[cropped_placemap == 255] = False  # exclude the pixcels outside of the placemap
-    correct_pixels = np.sum(placed_mask)  # count the "True" pixels on the mask
-
-    if get_progress_image:
-        progress_array = np.zeros((height, width, 4), dtype=np.uint8)
-        opacity = 0.65
-        progress_array[placed_mask] = [0, 255, 0, 255 * opacity]  # correct pixels = green
-        progress_array[~placed_mask] = [255, 0, 0, 255 * opacity]  # incorrect pixels = red
-        progress_array[cropped_placemap == 255] = [0, 0, 255, 255]  # not placeable = blue
-        progress_array[palettized_array == 255] = [0, 0, 0, 0]  # outside of the template = transparent
-        progress_image = Image.fromarray(progress_array)
-
-        cropped_board[palettized_array == 255] = 255  # crop the board to the template visible pixels
-        board_image = Image.fromarray(stats.palettize_array(cropped_board))
-        res_image = Image.new("RGBA", board_image.size)
-        res_image = Image.alpha_composite(res_image, board_image)
-        res_image = Image.alpha_composite(res_image, progress_image)
-    else:
-        res_image = None
-
-    return (correct_pixels, total_pixels, res_image)
+    loop = asyncio.get_running_loop()
+    # run this part of the code in executor to make it not blocking
+    template = await loop.run_in_executor(None, _get_template)
+    return template

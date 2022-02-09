@@ -1,12 +1,11 @@
 import discord
-import numpy as np
 
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option
 
 from utils.discord_utils import format_number, image_to_file
-from utils.pxls.template_manager import get_progress, get_template
+from utils.pxls.template_manager import get_template_from_url
 from utils.setup import GUILD_IDS
 from utils.utils import make_progress_bar
 
@@ -45,26 +44,19 @@ class Detemplatize(commands.Cog):
 
     async def detemplatize(self, ctx, template_url):
         try:
-            (detemp_image, params) = await get_template(template_url)
+            template = await get_template_from_url(template_url)
         except ValueError as e:
             return await ctx.send(f":x: {e}")
 
         # get template info
-        if "title" in params.keys():
-            title = params["title"]
+        title = template.title or "`N/A`"
+        total_pixels = template.total_size
+        total_placeable = template.total_placeable
+        correct_pixels = template.update_progress()
+        if total_placeable == 0:
+            correct_percentage = "NaN"
         else:
-            title = "`N/A`"
-
-        detemp_array = np.array(detemp_image)
-        total_pixels = np.sum(detemp_array[:, :, 3] == 255)
-        (
-            correct_pixels,
-            total_placeable,
-            progress_image,
-        ) = await self.client.loop.run_in_executor(
-            None, get_progress, detemp_array, params, False
-        )
-        correct_percentage = round((correct_pixels / total_placeable) * 100, 2)
+            correct_percentage = round((correct_pixels / total_placeable) * 100, 2)
 
         total_placeable = format_number(int(total_placeable))
         correct_pixels = format_number(int(correct_pixels))
@@ -72,15 +64,15 @@ class Detemplatize(commands.Cog):
 
         embed = discord.Embed(title="**Detemplatize**", color=0x66C5CC)
         embed.description = f"**Title**: {title}\n"
-        embed.description += f"**Size**: {total_pixels} pixels ({detemp_image.width}x{detemp_image.height})\n"
-        embed.description += f"**Coordinates**: ({params['ox']}, {params['oy']})\n"
+        embed.description += f"**Size**: {total_pixels} pixels ({template.width}x{template.height})\n"
+        embed.description += f"**Coordinates**: ({template.ox}, {template.oy})\n"
         embed.description += (
-            f"**Templatized Image**: [[click to open]]({params['template']})\n"
+            f"**Templatized Image**: [[click to open]]({template.stylized_url})\n"
         )
         embed.description += f"**Progress**: {correct_percentage}% done ({correct_pixels}/{total_placeable})\n"
-        embed.description += f"[Template link]({template_url})"
+        embed.description += f"[Template link]({template.url})"
 
-        detemp_file = image_to_file(detemp_image, "detemplatize.png", embed)
+        detemp_file = image_to_file(template.image, "detemplatize.png", embed)
         await ctx.send(file=detemp_file, embed=embed)
 
     @cog_ext.cog_slash(
@@ -110,45 +102,37 @@ class Detemplatize(commands.Cog):
 
     async def progress(self, ctx, template_url):
         try:
-            (detemp_image, params) = await get_template(template_url)
+            template = await get_template_from_url(template_url)
         except ValueError as e:
             return await ctx.send(f":x: {e}")
 
-        if "title" in params.keys():
-            title = params["title"]
-        else:
-            title = "`N/A`"
+        # get the current template progress stats
+        title = template.title or "`N/A`"
+        total_placeable = template.total_placeable
+        correct_pixels = template.update_progress()
+        progress_image = template.get_progress_image(1)
 
-        # get the progress stats
-        detemp_array = np.array(detemp_image)
-        (
-            correct_pixels,
-            total_amount,
-            progress_image,
-        ) = await self.client.loop.run_in_executor(
-            None, get_progress, detemp_array, params
-        )
-        if total_amount == 0:
+        if total_placeable == 0:
             return await ctx.send(
                 ":x: The template seems to be outside the canvas, make sure it's correctly positioned."
             )
-        correct_percentage = round((correct_pixels / total_amount) * 100, 2)
-        togo_pixels = total_amount - correct_pixels
+        correct_percentage = round((correct_pixels / total_placeable) * 100, 2)
+        togo_pixels = total_placeable - correct_pixels
 
         # make the progress bar
         bar = make_progress_bar(correct_percentage)
 
         # format the progress stats
-        total_amount = format_number(int(total_amount))
+        total_placeable = format_number(int(total_placeable))
         correct_pixels = format_number(int(correct_pixels))
         togo_pixels = format_number(int(togo_pixels))
 
         embed = discord.Embed(title="**Progress**", color=0x66C5CC)
         embed.description = f"**Title**: {title}\n"
-        embed.description += f"**Correct pixels**: {correct_pixels}/{total_amount}\n"
+        embed.description += f"**Correct pixels**: {correct_pixels}/{total_placeable}\n"
         embed.description += f"**Pixels to go**: {togo_pixels}\n"
         embed.description += f"**Progress**:\n|`{bar}`| {correct_percentage}%\n"
-        embed.description += f"[Template link]({template_url})"
+        embed.description += f"[Template link]({template.url})"
         embed.set_footer(text="Green = correct, Red = wrong, Blue = not placeable")
 
         detemp_file = image_to_file(progress_image, "progress.png", embed)

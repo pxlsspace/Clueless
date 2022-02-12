@@ -48,6 +48,8 @@ async def on_command(ctx):
     slash_command = isinstance(ctx, SlashContext)
     if slash_command:
         command_name = ctx.command
+        if hasattr(ctx, "subcommand_name") and ctx.subcommand_name:
+            command_name += " " + ctx.subcommand_name
     else:
         command_name = ctx.command.qualified_name
 
@@ -76,10 +78,18 @@ async def on_command(ctx):
         message += f"```{args}```"
         message += f"[link to the message]({ctx.message.jump_url})\n"
     else:
-        if "options" in ctx.data:
-            options = " ".join(
-                [f'{o["name"]}:{o["value"]}' for o in ctx.data["options"]]
-            )
+        options_data = ctx.data.get("options")
+        if options_data and len(options_data) > 0:
+            if options_data[0]["type"] != 1:
+                options = " ".join(
+                    [f'{o["name"]}:{o["value"]}' for o in options_data]
+                )
+            else:
+                options = options_data[0]["name"] + " "
+                if "options" in options_data[0]:
+                    options += " ".join(
+                        [f'{o["name"]}:{o["value"]}' for o in options_data[0]["options"]]
+                    )
         else:
             options = ""
         args = f"/{command_name}{' ' + options}"
@@ -186,10 +196,18 @@ async def on_command_error(ctx, error):
                 message += f"```{ctx.message.content}```"
             message += f"[link to the message]({ctx.message.jump_url})\n"
         else:
-            if "options" in ctx.data:
-                options = " ".join(
-                    [f'{o["name"]}:{o["value"]}' for o in ctx.data["options"]]
-                )
+            options_data = ctx.data.get("options")
+            if options_data and len(options_data) > 0:
+                if options_data[0]["type"] != 1:
+                    options = " ".join(
+                        [f'{o["name"]}:{o["value"]}' for o in options_data]
+                    )
+                else:
+                    options = options_data[0]["name"] + " "
+                    if "options" in options_data[0]:
+                        options += " ".join(
+                            [f'{o["name"]}:{o["value"]}' for o in options_data[0]["options"]]
+                        )
             else:
                 options = ""
             message += f'```/{command_name}{" " + options}```'

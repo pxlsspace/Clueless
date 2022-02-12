@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option
-from discord_slash.model import ButtonStyle
+from discord_slash.model import ButtonStyle, CogSubcommandObject
 from discord_slash.utils.manage_components import (
     create_button,
     create_actionrow,
@@ -124,7 +124,12 @@ class Help(commands.Cog):
                 category_infos = CATEGORIES.get(category) or CATEGORIES[None]
                 category_emoji_id = category_infos["emoji_id"]
                 category_emoji = self.client.get_emoji(id=category_emoji_id)
-                commands_text = " ".join([f"`{c.name}`" for c in category_commands])
+                commands_text = ""
+                for c in category_commands:
+                    if isinstance(c, CogSubcommandObject):
+                        commands_text += f"`{c.base} {c.name}` "
+                    else:
+                        commands_text += f"`{c.name}` "
                 emb.add_field(
                     name=f"{category_emoji} {category}",
                     value=commands_text,
@@ -136,7 +141,12 @@ class Help(commands.Cog):
             category_infos = CATEGORIES.get("Other") or CATEGORIES[None]
             category_emoji_id = category_infos["emoji_id"]
             category_emoji = ctx.bot.get_emoji(id=category_emoji_id)
-            commands_text = " ".join([f"`{c.name}`" for c in commands])
+            commands_text = ""
+            for c in commands:
+                if isinstance(c, CogSubcommandObject):
+                    commands_text += f"`{c.base} {c.name}` "
+                else:
+                    commands_text += f"`{c.name}` "
             emb.add_field(
                 name=f"{category_emoji} Other", value=commands_text, inline=False
             )
@@ -168,7 +178,9 @@ class Help(commands.Cog):
         commands_text = ""
         for command in commands:
             commands_text += "• `{}{}`: {}\n".format(
-                prefix, command.name, command.description or "N/A"
+                prefix,
+                (command.base + " " + command.name) if isinstance(command, CogSubcommandObject) else command.name,
+                command.description or "N/A",
             )
 
         emb = discord.Embed(
@@ -200,7 +212,10 @@ class Help(commands.Cog):
         """called when >help <command> or /help <command> is used."""
         if is_slash:
             prefix = "/"
-            command_name = command.name
+            if isinstance(command, CogSubcommandObject):
+                command_name = command.base + " " + command.name
+            else:
+                command_name = command.name
             command_usage = get_slash_command_usage(command)
             command_params = get_slash_command_parameters(command)
         else:
@@ -263,7 +278,8 @@ class Help(commands.Cog):
             for command in group.commands:
                 if command.hidden:
                     continue
-                commands_value += "• `{} {}`: {}".format(
+                commands_value += "• `{}{} {}`: {}\n".format(
+                    prefix,
                     command.qualified_name,
                     command.usage or '',
                     command.description or 'N/A',
@@ -313,7 +329,18 @@ class Help(commands.Cog):
                 return await ctx.send(
                     f":x: No command or category named `{command_name}` found."
                 )
-
+            try:
+                if cmd.has_subcommands:
+                    if len(keys) == 1:
+                        return await ctx.send(":x: Command name incomplete")
+                    elif len(keys) == 2:
+                        cmd = self.client.slash.subcommands.get(keys[0]).get(keys[1])
+                    elif len(keys) == 3:
+                        cmd = self.client.slash.subcommands.get(keys[0]).get(keys[1]).get(keys[2])
+                    if cmd is not None:
+                        return await self.send_command_help(ctx, cmd, is_slash)
+            except AttributeError:
+                pass
             for key in keys[1:]:
                 try:
                     found = cmd.all_commands.get(key)
@@ -401,12 +428,21 @@ def get_slash_mapping(slash):
     categories = {}
     for command in slash.commands.values():
         if command and command.name != "rl":
+            if command.has_subcommands:
+                continue
             category_name = get_cog_category(command.cog)
             # categories are organized by cog folders
             try:
                 categories[category_name].append(command)
             except KeyError:
                 categories[category_name] = [command]
+    for subcommands in slash.subcommands.values():
+        for subcommand in subcommands.values():
+            category_name = get_cog_category(subcommand.cog)
+            try:
+                categories[category_name].append(subcommand)
+            except KeyError:
+                categories[category_name] = [subcommand]
     return categories
 
 

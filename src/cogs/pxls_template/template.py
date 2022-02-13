@@ -100,7 +100,7 @@ class Template(commands.Cog):
     )
     async def p_template(self, ctx, *args):
 
-        parser = MyParser()
+        parser = MyParser(add_help=False)
         parser.add_argument("url", action="store", nargs="*")
         parser.add_argument("-style", action="store", required=False)
         parser.add_argument("-glow", action="store_true", default=False)

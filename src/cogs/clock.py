@@ -4,10 +4,11 @@ from PIL import Image
 from sys import stderr
 from discord.ext import commands, tasks
 from datetime import datetime, timedelta, timezone
-from utils.discord_utils import image_to_file
 
-from utils.setup import stats, db_stats, db_servers, db_users, ws_client
+from utils.discord_utils import image_to_file
+from utils.setup import stats, db_stats, db_servers, db_users, ws_client, db_templates
 from utils.time_converter import local_to_utc
+from main import tracked_templates
 
 
 class Clock(commands.Cog):
@@ -53,6 +54,11 @@ class Clock(commands.Cog):
         try:
             # update the data on startup
             await self._update_stats_data()
+            # load the templates from the database
+            await tracked_templates.load_all_templates()
+            app_info = await self.client.application_info()
+            bot_owner_id = app_info.owner.id
+            tracked_templates.bot_owner_id = bot_owner_id
 
         except Exception as error:
             formatted = "".join(
@@ -124,7 +130,24 @@ class Clock(commands.Cog):
 
     @tasks.loop(minutes=5)
     async def update_online_count(self):
-        await self.save_online_count()
+        # save online count
+        try:
+            await self.save_online_count()
+        except Exception as error:
+            formatted = "".join(
+                traceback.format_exception(type(error), error, error.__traceback__)
+            )
+            print("Unexpected exception in task 'save_online_count':")
+            print(formatted, file=stderr)
+        # update template stats
+        try:
+            await self.update_template_stats()
+        except Exception as error:
+            formatted = "".join(
+                traceback.format_exception(type(error), error, error.__traceback__)
+            )
+            print("Unexpected exception in task 'update_template_stats':")
+            print(formatted, file=stderr)
 
     @update_online_count.before_loop
     async def before_update_online_count(self):
@@ -256,6 +279,21 @@ class Clock(commands.Cog):
         await stats.fetch_board()
         await stats.fetch_virginmap()
         await stats.fetch_placemap()
+
+    async def update_template_stats(self):
+        """Update all the tracked templates"""
+        canvas_code = await stats.get_canvas_code()
+        dt = datetime.utcnow()
+        dt = dt.replace(microsecond=0)
+        for temp in tracked_templates.list[:]:
+            if canvas_code is not None and temp.canvas_code != canvas_code:
+                name = temp.name
+                # await db_templates.delete_template(temp)
+                tracked_templates.list.remove(temp)
+                print(f"template '{name}' deleted")
+                continue
+            progress = temp.update_progress()
+            await db_templates.create_template_stat(temp, dt, progress)
 
 
 def setup(client):

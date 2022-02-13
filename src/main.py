@@ -9,7 +9,9 @@ from datetime import timezone
 from discord_slash import SlashCommand
 from discord_slash.context import SlashContext
 
-from utils.setup import DEFAULT_PREFIX, db_stats, db_servers, db_users
+from utils.pxls.template_manager import TemplateManager
+from utils.setup import DEFAULT_PREFIX, db_stats, db_servers, db_users, db_templates
+
 
 load_dotenv()
 intents = discord.Intents.all()
@@ -23,6 +25,8 @@ client = commands.Bot(
 )
 slash = SlashCommand(client, sync_commands=True, sync_on_cog_reload=True)
 
+tracked_templates = TemplateManager()
+
 
 @client.event
 async def on_connect():
@@ -30,6 +34,7 @@ async def on_connect():
     await db_servers.create_tables()
     await db_users.create_tables()
     await db_stats.create_tables()
+    await db_templates.create_tables()
 
 
 @client.event

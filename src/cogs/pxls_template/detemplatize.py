@@ -1,5 +1,5 @@
 import discord
-
+from PIL import Image
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option
@@ -71,7 +71,7 @@ class Detemplatize(commands.Cog):
         embed.description += f"**Progress**: {correct_percentage}% done ({correct_pixels}/{total_placeable})\n"
         embed.description += f"[Template link]({template.url})"
 
-        detemp_file = image_to_file(template.image, "detemplatize.png", embed)
+        detemp_file = image_to_file(Image.fromarray(template.image_array), "detemplatize.png", embed)
         await ctx.send(file=detemp_file, embed=embed)
 
 

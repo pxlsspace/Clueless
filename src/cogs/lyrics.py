@@ -62,31 +62,36 @@ class Lyrics(commands.Cog):
             artists_to_search = None
 
         # search the song in azlyrics
-        if artists_to_search:
-            azlyrics_url = await azlyrics.search_song(
-                title=title_to_search, artist=artists_to_search[0]
-            )
-        else:
-            azlyrics_url = await azlyrics.search_song(query=title_to_search)
-        if azlyrics_url is not None:
-            title, lyrics = await azlyrics.get_lyrics(azlyrics_url)
-            lyrics = format_lyrics(lyrics)
-            if len(lyrics) > 4096:
-                lyrics = "**The lyrics are too long to be displayed\nClick on the title to see them on the site**"
-            embed = discord.Embed(
-                title=title, url=azlyrics_url, description=lyrics, color=0x9999CC
-            )
-            embed.set_footer(
-                text="source: azlyrics.com",
-                icon_url="http://images.azlyrics.com/az_logo_tr.png",
-            )
-            return await ctx.send(embed=embed)
-
+        try:
+            if artists_to_search:
+                azlyrics_url = await azlyrics.search_song(
+                    title=title_to_search, artist=artists_to_search[0]
+                )
+            else:
+                azlyrics_url = await azlyrics.search_song(query=title_to_search)
+            if azlyrics_url is not None:
+                title, lyrics = await azlyrics.get_lyrics(azlyrics_url)
+                lyrics = format_lyrics(lyrics)
+                if len(lyrics) > 4096:
+                    lyrics = "**The lyrics are too long to be displayed\nClick on the title to see them on the site**"
+                embed = discord.Embed(
+                    title=title, url=azlyrics_url, description=lyrics, color=0x9999CC
+                )
+                embed.set_footer(
+                    text="source: azlyrics.com",
+                    icon_url="http://images.azlyrics.com/az_logo_tr.png",
+                )
+                return await ctx.send(embed=embed)
+        except Exception:
+            pass
         # search the song in genius
-        song = await search_song(
-            f'{azlyrics.remove_feat(title_to_search)} {artists_to_search[0] or ""}'
-        )
-        artists_to_search = " ".join(artists_to_search)
+        if artists_to_search:
+            song = await search_song(
+                f'{azlyrics.remove_feat(title_to_search)} {artists_to_search[0] or ""}'
+            )
+            artists_to_search = " ".join(artists_to_search)
+        else:
+            song = await search_song(title_to_search)
         # check that we found a song and that it's the correct song
         if song is None or (
             spotify_title and not is_similar(spotify_title, song.title)

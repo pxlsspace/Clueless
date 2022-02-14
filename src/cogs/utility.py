@@ -344,7 +344,8 @@ class Utility(commands.Cog):
         server_prefix = await db_servers.get_prefix(self.client, ctx)
         # get some bot stats
         guild_count = len(self.client.guilds)
-        command_count = len(self.client.commands)
+        commands_count = len(self.client.commands)
+        slash_commands_count = len(self.client.slash.commands)
         usage_count = await db_servers.db.sql_select(
             "SELECT COUNT(*) FROM command_usage"
         )
@@ -358,7 +359,7 @@ class Utility(commands.Cog):
         )
         prefix_usage_percentage = round((prefix_usage[0][0] / usage_count) * 100, 2)
         stats = f"• Currently in **{guild_count}** servers\n"
-        stats += f"• **{command_count}** commands available\n"
+        stats += f"• Number of commands: **{commands_count}** prefix commands | **{slash_commands_count}** slash commands\n"
         stats += f"• Used **{format_number(usage_count)}** times by **{user_count}** different users\n"
         stats += (
             f"• **{prefix_usage_percentage}%** of the commands are used with a prefix"

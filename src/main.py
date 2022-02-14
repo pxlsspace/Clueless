@@ -90,7 +90,7 @@ async def on_command(ctx):
                     [f'{o["name"]}:{o["value"]}' for o in options_data]
                 )
             else:
-                options = options_data[0]["name"] + " "
+                options = ""
                 if "options" in options_data[0]:
                     options += " ".join(
                         [f'{o["name"]}:{o["value"]}' for o in options_data[0]["options"]]

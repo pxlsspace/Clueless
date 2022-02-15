@@ -145,13 +145,13 @@ class TemplateManager():
     def check_valid_name(self, name: str):
         """Check if a name is valid:
         - if it's only alphanumeric chars or '-' or '_'.
-        - between 3 and 40 characters
+        - between 2 and 40 characters
 
         Raise ValueError if invalid name or return the name"""
         if not re.match(r"^[A-Za-z0-9_-]*$", name):
             raise ValueError("The template name can only contain letters, numbers, hyphens (`-`) and underscores (`_`).")
-        if len(name) < 3 or len(name) > 40:
-            raise ValueError("The template name must be between 3 and 40 characters.")
+        if len(name) < 2 or len(name) > 40:
+            raise ValueError("The template name must be between 2 and 40 characters.")
         return name.lower()
 
     async def save(self, template: Template, name: str, owner_id: int, hidden: bool = False):

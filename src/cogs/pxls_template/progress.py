@@ -15,7 +15,7 @@ from utils.utils import make_progress_bar
 from utils.time_converter import round_minutes_down, str_to_td, td_format, format_datetime
 from utils.table_to_image import table_to_image
 from utils.arguments_parser import MyParser
-from utils.plot_utils import get_theme
+from utils.plot_utils import get_theme, get_gradient_palette
 from cogs.pxls.speed import get_grouped_graph, get_stats_graph
 from utils.image.image_utils import v_concatenate
 
@@ -295,6 +295,7 @@ class Progress(commands.Cog):
         table = []
         now = round_minutes_down(datetime.utcnow(), 5)
         for template in public_tracked_templates:
+            line_colors = [None, None, None, None]
             # template info
             name = template.name
             total = template.total_placeable
@@ -302,10 +303,12 @@ class Progress(commands.Cog):
             last_progress = await db_templates.get_template_progress(template, now)
             if not last_progress:
                 current_progress = togo = percentage = "N/A"
+                line_colors.append(None)
             else:
                 current_progress = last_progress["progress"]
                 togo = total - current_progress
                 percentage = (current_progress / total) * 100
+                line_colors.append(get_percentage_color(percentage))
 
             # timeframes speeds
             timeframes = [{"hours": 1}, {"hours": 6}, {"days": 1}, {"days": 7}]
@@ -315,19 +318,28 @@ class Progress(commands.Cog):
                 tf_progress = await db_templates.get_template_progress(template, now - td)
                 if not tf_progress or not last_progress:
                     values.append("N/A")
+                    line_colors.append(None)
                 else:
                     delta_progress = last_progress["progress"] - tf_progress["progress"]
                     delta_time = last_progress["datetime"] - tf_progress["datetime"]
                     if delta_time == timedelta(0):
                         values.append("N/A")
+                        line_colors.append(None)
                     else:
                         # speed in pixels / hour
-                        values.append(delta_progress / (delta_time / timedelta(hours=1)))
-            table.append([name, total, current_progress, togo, percentage] + values)
+                        speed_px_h = delta_progress / (delta_time / timedelta(hours=1))
+                        values.append(speed_px_h)
+                        line_colors.append(get_speed_color(speed_px_h))
+
+            table.append([name, total, current_progress, togo, percentage] + values + [line_colors])
 
         table.sort(key=lambda x: (x[sort] is not None and not(isinstance(x[sort], str)), x[sort]), reverse=True)
-        table = [[format_number(c) for c in row] for row in table]
-        table_image = table_to_image(table, titles)
+        table_data = [line[:-1] for line in table]
+        table_colors = [line[-1] for line in table]
+        table_data = [[format_number(c) for c in row] for row in table_data]
+        theme = get_theme("default")
+        theme.outline_dark = False
+        table_image = table_to_image(table_data, titles, colors=table_colors, theme=theme)
         table_file = image_to_file(table_image, "progress.png", embed=embed)
         await ctx.send(embed=embed, file=table_file)
 
@@ -592,3 +604,23 @@ class Progress(commands.Cog):
 
 def setup(client):
     client.add_cog(Progress(client))
+
+
+def get_speed_color(speed, max_speed=600, min_speed=-400):
+    if speed >= 0:
+        palette = get_gradient_palette(["#ffffff", "#70dd13", "#31a117"], 101)
+        palette_idx = min(speed, max_speed)
+        palette_idx = palette_idx / max_speed
+        palette_idx = int(palette_idx * (len(palette) - 1))
+        return palette[palette_idx]
+    elif speed < 0:
+        palette = get_gradient_palette(["#ff6474", "#ff0000", "#991107"], 101)
+        palette_idx = max(speed, min_speed)
+        palette_idx = palette_idx / min_speed
+        palette_idx = int(palette_idx * (len(palette) - 1))
+        return palette[palette_idx]
+
+
+def get_percentage_color(percentage):
+    palette = get_gradient_palette(["#ff3b3b", "#fff491", "#beff40", "#70dd13", "#31a117"], 101)
+    return palette[int(percentage)]

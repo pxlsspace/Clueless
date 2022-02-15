@@ -4,6 +4,7 @@ from io import BytesIO
 from PIL import Image
 from itertools import cycle
 from matplotlib import cm as cm
+from matplotlib.colors import LinearSegmentedColormap
 
 from utils.image.image_utils import is_dark, rgb_to_hex, hex_to_rgb, lighten_color
 
@@ -142,6 +143,22 @@ def cycle_through_list(list, number_of_element: int):
         if count == number_of_element:
             break
     return res
+
+
+def get_gradient_palette(color_list, nb_colors):
+    """Generate a gradient with the colors of `color_list`
+    as a list of hex colors and a size of `nb_colors`"""
+    cmap = LinearSegmentedColormap.from_list(
+        name="speed",
+        colors=color_list,
+    )
+    color_list = []
+    for i in range(nb_colors):
+        rgba = cmap(i / (nb_colors - 1), bytes=True)
+        rgb = rgba[:-1]
+        hex = rgb_to_hex(rgb)
+        color_list.append(hex)
+    return color_list
 
 
 class Theme:

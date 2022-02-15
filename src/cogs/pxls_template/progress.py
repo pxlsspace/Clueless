@@ -11,6 +11,7 @@ from main import tracked_templates
 from utils.discord_utils import format_number, image_to_file, UserConverter
 from utils.pxls.template_manager import get_template_from_url, parse_template
 from utils.setup import GUILD_IDS, db_templates, db_users
+from utils.timezoneslib import get_timezone
 from utils.utils import make_progress_bar
 from utils.time_converter import round_minutes_down, str_to_td, td_format, format_datetime
 from utils.table_to_image import table_to_image
@@ -465,11 +466,14 @@ class Progress(commands.Cog):
             ),
             create_option(
                 name="groupby",
-                description="Show a bar chart for each 5 min time frame.",
+                description="Show a bar chart for each 5 min interval, hour or day.",
                 option_type=3,
                 required=False,
                 choices=[
                     create_choice(name="5min", value="5min"),
+                    create_choice(name="hour", value="hour"),
+                    create_choice(name="day", value="day"),
+
                 ],
             ),
         ],
@@ -488,7 +492,7 @@ class Progress(commands.Cog):
         parser = MyParser(add_help=False)
         parser.add_argument("template", action="store")
         parser.add_argument("-last", "-l", action="store", default=None)
-        parser.add_argument("-groupby", "-g", choices=["5min"], required=False)
+        parser.add_argument("-groupby", "-g", choices=["5min", "hour", "day"], required=False)
 
         try:
             parsed_args = parser.parse_args(args)
@@ -524,7 +528,8 @@ class Progress(commands.Cog):
         discord_user = await db_users.get_discord_user(ctx.author.id)
         current_user_theme = discord_user["color"] or "default"
         theme = get_theme(current_user_theme)
-        user_timezone = discord_user["timezone"]
+        user_timezone_name = discord_user["timezone"]
+        user_timezone = get_timezone(user_timezone_name)
 
         # get the data
         template_stats = await db_templates.get_all_template_data(template, dt1, dt2)
@@ -532,59 +537,91 @@ class Progress(commands.Cog):
             return await ctx.send(":x: Couldn't find any data for this template.")
         template_stats = list([list(r) for r in template_stats])
         df = pd.DataFrame(template_stats, columns=["datetime", "progress"])
+        df = df.set_index("datetime")
 
-        if not groupby:
-            dates = [d.to_pydatetime() for d in df["datetime"].tolist()]
-            values = df['progress'].tolist()
-        else:
-            if groupby == "5min":
-                dates = [d.to_pydatetime() for d in df["datetime"].tolist()]
-                df = df.diff()
-                values = df['progress'].tolist()
-                values.pop(0)
-                dates.pop(0)
-            else:
-                return await ctx.send(":x: this groupby option is not supported yet.")
+        dates = [d.to_pydatetime() for d in df.index.tolist()]
+        values = df['progress'].tolist()
 
-        # calculate the speed (between the given dates)
         oldest_progress = values[0]
         oldest_time = dates[0]
         latest_progress = values[-1]
         latest_time = dates[-1]
 
-        if groupby is not None:
-            delta_progress = sum(values)
-        else:
-            delta_progress = latest_progress - oldest_progress
+        if groupby:
+            # set the datetimes to the correct user time zone
+            df = df.tz_localize("UTC").tz_convert(user_timezone)
+            df = df.diff()
+
+            if groupby == "5min":
+                dates = [d.to_pydatetime() for d in df.index.tolist()]
+                values = df['progress'].tolist()
+                values.pop(0)
+                oldest_time = dates.pop(0)
+            else:
+                if groupby == "hour":
+                    format = "%Y-%m-%d %H"
+                elif groupby == "day":
+                    format = "%Y-%m-%d"
+                else:
+                    return await ctx.send(":x: Invalid `groupby` option.")
+
+                df = df.groupby(df.index.strftime(format))["progress"].sum()
+                dates = [datetime.strptime(d, format) for d in df.index.tolist()]
+                values = df.values
+                oldest_time = dates[0]
+                if dt1 != datetime.min:
+                    values = values[1:]
+                    dates = dates[1:]
+
+            if len(dates) == 0 or len(values) == 0:
+                return await ctx.send(":x: The time frame given is too short.")
+            values = [int(v) for v in values]
+
         delta_time = latest_time - oldest_time
-        if delta_time == timedelta(0):
-            return await ctx.send(":x: The time frame given is too short.")
+
+        if groupby:
+            # calculate the speed as px/<groupby>
+            delta_progress = sum(values)
+            average_speed = sum(values) / len(values)
+            min_value = min(values)
+            max_value = max(values)
         else:
-            speed_px_h = (delta_progress / (delta_time / timedelta(hours=1)))
-            speed_px_d = (delta_progress / (delta_time / timedelta(days=1)))
+            # calculate the speed (between the given dates)
+            delta_progress = latest_progress - oldest_progress
+
+            if delta_time == timedelta(0):
+                return await ctx.send(":x: The time frame given is too short.")
+            else:
+                speed_px_h = (delta_progress / (delta_time / timedelta(hours=1)))
+                speed_px_d = (delta_progress / (delta_time / timedelta(days=1)))
 
         # make the graph
-        if groupby is None:
+        if not groupby:
             graph_image = get_stats_graph(
                 [[template.name, dates, values]],
                 "Template Speed",
                 theme,
-                user_timezone
+                user_timezone_name,
             )
         else:
             graph_image = get_grouped_graph(
                 [[template.name, dates, values]],
                 f"Template speed (grouped by {groupby})",
                 theme,
-                user_timezone
+                user_timezone_name,
             )
 
         # make the table
-        table_data = [[template.name, template.total_placeable, delta_progress, speed_px_h, speed_px_d]]
+        if groupby:
+            table_data = [[template.name, template.total_placeable, delta_progress, average_speed, min_value, max_value]]
+            titles = ["Name", "Size", "Progress", f"px/{groupby}", "min", "max"]
+            alignments = ["center", "right", "right", "right", "right", "right"]
+        else:
+            table_data = [[template.name, template.total_placeable, delta_progress, speed_px_h, speed_px_d]]
+            titles = ["Name", "Size", "Progress", "px/h", "px/d"]
+            alignments = ["center", "right", "right", "right", "right"]
         table_data = [[format_number(c) for c in row] for row in table_data]
-        titles = ["Name", "Size", "Progress", "px/h", "px/d"]
-        alignments = ["center", "right", "right", "right", "right"]
-        colors = theme.get_palette(0)
+        colors = theme.get_palette(1)
         table_image = table_to_image(table_data, titles, alignments, colors, theme)
 
         # make the embed

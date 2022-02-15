@@ -639,27 +639,29 @@ class Progress(commands.Cog):
         await ctx.send(embed=embed, file=res_file)
 
 
-def setup(client):
-    client.add_cog(Progress(client))
+pos_speed_palette = get_gradient_palette(["#ffffff", "#70dd13", "#31a117"], 101)
+neg_speed_palette = get_gradient_palette(["#ff6474", "#ff0000", "#991107"], 101)
+percentage_palette = get_gradient_palette(["#ff3b3b", "#fff491", "#beff40", "#70dd13", "#31a117"], 101)
 
 
 def get_speed_color(speed, max_speed=600, min_speed=-400):
     if speed >= 0:
-        palette = get_gradient_palette(["#ffffff", "#70dd13", "#31a117"], 101)
         palette_idx = min(speed, max_speed)
         palette_idx = palette_idx / max_speed
-        palette_idx = int(palette_idx * (len(palette) - 1))
-        return palette[palette_idx]
+        palette_idx = int(palette_idx * (len(pos_speed_palette) - 1))
+        return pos_speed_palette[palette_idx]
     elif speed < 0:
-        palette = get_gradient_palette(["#ff6474", "#ff0000", "#991107"], 101)
         palette_idx = max(speed, min_speed)
         palette_idx = palette_idx / min_speed
-        palette_idx = int(palette_idx * (len(palette) - 1))
-        return palette[palette_idx]
+        palette_idx = int(palette_idx * (len(neg_speed_palette) - 1))
+        return neg_speed_palette[palette_idx]
 
 
 def get_percentage_color(percentage):
     percentage = min(100, percentage)
     percentage = max(0, percentage)
-    palette = get_gradient_palette(["#ff3b3b", "#fff491", "#beff40", "#70dd13", "#31a117"], 101)
-    return palette[int(percentage)]
+    return percentage_palette[int(percentage)]
+
+
+def setup(client):
+    client.add_cog(Progress(client))

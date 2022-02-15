@@ -92,13 +92,16 @@ class DbTemplateManager():
 
     async def get_template_progress(self, template: "Template", datetime):
         """ Get the progress of a template at a given datetime"""
-        template_id = await self.get_template_id(template)
         sql = """
             SELECT *, min(abs(JulianDay(datetime) - JulianDay(?)))*24*3600 as diff_with_time
             FROM template_stat
-            WHERE template_id = ?
+            WHERE template_id = (
+                SELECT id
+                FROM template
+                WHERE name = ? AND canvas_code = ? and owner_id = ? and hidden = ?
+            )
         """
-        res = await self.db.sql_select(sql, (datetime, template_id))
+        res = await self.db.sql_select(sql, (datetime, template.name, template.canvas_code, template.owner_id, template.hidden))
         if not res or all([r is None for r in list(res[0])]):
             return None
         else:

@@ -29,25 +29,22 @@ def make_table_array(data, titles, alignments, colors=None, outline_dark=True):
     font = FontManager(font_name, TEXT_COLOR, BACKGROUND_COLOR)
     # insert title/headers values
     data.insert(0, titles)
-    colors.insert(0, None)
+    colors.insert(0, [None] * len(titles))
 
-    # convert colors to rgba
-    if colors:
-        for i, color in enumerate(colors):
-            if not color:
-                colors[i] = TEXT_COLOR
-            else:
-                colors[i] = hex_to_rgba(color)
     # get the numpy arrays for all the text
     col_array = [[] for i in range(len(data[0]))]
     for i, lines in enumerate(data):
         for j, col in enumerate(lines):
             text = str(col)
-
-            pt = PixelText(text, font_name, colors[i], (0, 0, 0, 0))
+            color = colors[i][j]
+            if not color:
+                color = TEXT_COLOR
+            else:
+                color = hex_to_rgba(color)
+            pt = PixelText(text, font_name, color, (0, 0, 0, 0))
             text_array = pt.make_array()
-            if outline_dark and image_utils.is_dark(colors[i]):
-                outline_color = image_utils.lighten_color(colors[i], 0.3)
+            if outline_dark and image_utils.is_dark(color):
+                outline_color = image_utils.lighten_color(color, 0.3)
                 text_array = add_outline(text_array, outline_color)
                 text_array = replace(text_array, (0, 0, 0, 0), BACKGROUND_COLOR)
             else:
@@ -195,18 +192,26 @@ def make_styled_corner(array, color):
 
 
 def table_to_image(data, titles, alignments=None, colors=None, theme: Theme = None):
-    """Create an image of the table to display it
-    - :param: data: a 2d list with the content of the table
-    - :param: titles: a list of titles for each column of the table
-    - :param: alignments: a list of alignments for each column, either `center`, `left`, `right`
-    - :param: colors: a list of color for each line, the colors must be a string of hex code (e.g. #ffffff)
-    - :param theme: a Theme object to set the table colors"""
+    """Create an image from a 2D array.
+
+    Parameters
+    ----------
+    - data: list(list(Any)): a 2d list with the content of the table
+    - titles: list(str): a list of titles for each column of the table
+    - alignments list(str): a list of alignments for each column, either `center`, `left`, `right`
+    - colors: list(str) or list(list(str)): a list of color for each line, the colors must be a string of hex code (e.g. #ffffff)
+    - theme: Theme: a Theme object to set the table colors"""
+
     # check on params
     if len(data[0]) != len(titles):
         raise ValueError("The number of column in data and titles don't match.")
     if alignments and len(data[0]) != len(alignments):
         raise ValueError("The number of column in data and alignments don't match.")
-
+    if colors:
+        if not isinstance(colors[0], list) and len(colors) != len(data):
+            raise ValueError("Incorrect shape for the colors list.")
+        elif isinstance(colors[0], list) and (len(colors[0]) != len(data[0]) or len(colors) != len(data)):
+            raise ValueError("Incorrect shape for the colors list.")
     # use the theme colors if a theme is given
     if theme is not None:
         global BACKGROUND_COLOR, TEXT_COLOR, LINE_COLOR, OUTER_OUTLINE_COLOR
@@ -227,8 +232,12 @@ def table_to_image(data, titles, alignments=None, colors=None, theme: Theme = No
     LINE_COLOR = ImageColor.getcolor(LINE_COLOR, "RGBA")
     OUTER_OUTLINE_COLOR = ImageColor.getcolor(OUTER_OUTLINE_COLOR, "RGBA")
 
+    # reshape the colors table
     if colors is None:
-        colors = [None] * len(data)
+        colors = [[None] * len(data[0])] * len(data)
+    elif not isinstance(colors[0], list):
+        colors = [[c] * len(data[0]) for c in colors]
+
     if alignments is None:
         alignments = ["center"] * len(data[0])
 

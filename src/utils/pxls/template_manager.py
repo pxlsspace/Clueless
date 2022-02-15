@@ -152,7 +152,7 @@ class TemplateManager():
             raise ValueError("The template name can only contain letters, numbers, hyphens (`-`) and underscores (`_`).")
         if len(name) < 2 or len(name) > 40:
             raise ValueError("The template name must be between 2 and 40 characters.")
-        return name.lower()
+        return name
 
     async def save(self, template: Template, name: str, owner_id: int, hidden: bool = False):
         """Save the template:
@@ -163,7 +163,7 @@ class TemplateManager():
         - if there is a template with the same name
         - if there is a template with the same image"""
 
-        template.name = name.lower()
+        template.name = name
         template.owner_id = owner_id
         template.hidden = hidden
 
@@ -189,7 +189,7 @@ class TemplateManager():
         """Get a template from its name, get the owner's hidden Template if hidden is True,
         Return None if not found."""
         for temp in self.list:
-            if temp.name == name.lower():
+            if temp.name.lower() == name.lower():
                 if hidden:
                     if temp.hidden and temp.owner_id == owner_id:
                         return temp
@@ -199,7 +199,7 @@ class TemplateManager():
         return None
 
     async def delete_template(self, name, command_user_id, hidden):
-        temp = self.get_template(name.lower(), command_user_id, hidden)
+        temp = self.get_template(name, command_user_id, hidden)
         if not temp:
             raise ValueError(f"No template named `{name}` found.")
         if temp.owner_id != command_user_id and command_user_id != self.bot_owner_id:
@@ -209,7 +209,6 @@ class TemplateManager():
         self.list.remove(temp)
 
     async def update_template(self, current_name, command_user_id, new_url=None, new_name=None, new_owner_id=None):
-        current_name = current_name.lower()
         old_temp = self.get_template(current_name, command_user_id, False)
         if not old_temp:
             raise ValueError(f"No template named `{current_name}` found.")
@@ -234,7 +233,7 @@ class TemplateManager():
             new_name = self.check_valid_name(new_name)
             # check duplicate name
             temp_with_same_name = self.get_template(new_name)
-            if temp_with_same_name:
+            if temp_with_same_name and temp_with_same_name != old_temp:
                 raise ValueError(f"There is already a template with the name `{new_name}`.")
             new_temp.name = new_name
         if new_owner_id:

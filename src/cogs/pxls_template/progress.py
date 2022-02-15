@@ -622,5 +622,7 @@ def get_speed_color(speed, max_speed=600, min_speed=-400):
 
 
 def get_percentage_color(percentage):
+    percentage = min(100, percentage)
+    percentage = max(0, percentage)
     palette = get_gradient_palette(["#ff3b3b", "#fff491", "#beff40", "#70dd13", "#31a117"], 101)
     return palette[int(percentage)]

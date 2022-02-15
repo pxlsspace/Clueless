@@ -70,8 +70,8 @@ class Progress(commands.Cog):
                 template = await get_template_from_url(template_input)
             except ValueError as e:
                 return await ctx.send(f":x: {e}")
-            # check if we have a tracked template with the same image
-            template_with_same_image = tracked_templates.check_duplicate_image(template)
+            # check if we have a tracked template with the same image and coords
+            template_with_same_image = tracked_templates.check_duplicate_template(template)
             if template_with_same_image:
                 template = template_with_same_image
                 is_tracked = True

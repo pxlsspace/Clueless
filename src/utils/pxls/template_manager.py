@@ -124,8 +124,8 @@ class TemplateManager():
         self.list: list[Template] = []
         self.bot_owner_id = None
 
-    def check_duplicate_image(self, template: Template):
-        """Check if there is already a template with the same image.
+    def check_duplicate_template(self, template: Template):
+        """Check if there is already a template with the same image and same coordinates.
 
         Return the template if it is found or None."""
         if template.hidden:
@@ -138,6 +138,7 @@ class TemplateManager():
             if (
                 template.palettized_array.shape == t.palettized_array.shape
                 and (template.palettized_array == t.palettized_array).all()
+                and (template.oy == t.oy and template.ox == t.ox)
             ):
                 return t
         return None
@@ -175,10 +176,10 @@ class TemplateManager():
         if same_name_template:
             raise ValueError(f"There is already a template with the name `{template.name}`.")
 
-        # check duplicate images
-        same_image_template = self.check_duplicate_image(template)
+        # check duplicate images/coords
+        same_image_template = self.check_duplicate_template(template)
         if same_image_template:
-            raise ValueError(f"There is already a template with the same image named `{same_image_template.name}`.")
+            raise ValueError(f"There is already a template with the same image and coords named `{same_image_template.name}`.")
 
         # save in db
         await db_templates.create_template(template)
@@ -219,9 +220,9 @@ class TemplateManager():
             new_temp = await get_template_from_url(new_url)
             if new_temp.total_placeable == 0:
                 raise ValueError("The template seems to be outside the canvas, make sure it's correctly positioned.")
-            temp_same_image = self.check_duplicate_image(new_temp)
+            temp_same_image = self.check_duplicate_template(new_temp)
             if temp_same_image:
-                raise ValueError(f"There is already a template with the same image named `{temp_same_image.name}`.")
+                raise ValueError(f"There is already a template with the same image and coords named `{temp_same_image.name}`.")
             new_temp.name = old_temp.name
             new_temp.owner_id = old_temp.owner_id
             new_temp.hidden = old_temp.hidden

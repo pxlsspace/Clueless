@@ -223,7 +223,7 @@ class Progress(commands.Cog):
         options=[
             create_option(
                 name="sort",
-                description="Sort the table by the chosen column. (default: px/h (last 1d))",
+                description="Sort the table by the chosen column. (default: px/h (last 1h))",
                 option_type=3,
                 required=False,
                 choices=[create_choice(name=c, value=str(i)) for i, c in enumerate(sort_options)],
@@ -253,7 +253,7 @@ class Progress(commands.Cog):
             - `last6h`: the speed in the last 6 hours
             - `last1d`: the speed in the last day
             - `last7d`: the speed in the last week
-        (default: `last1d`)
+        (default: `last1h`)
         """,
     )
     async def p_list(self, ctx, *args):
@@ -279,7 +279,7 @@ class Progress(commands.Cog):
 
         titles = ["Name", "Size", "Correct", "To Go", "%", "px/h (last 1h)", "px/h (last 6h)", "px/h (last 1d)", "px/h (last 7d)"]
         if sort is None:
-            sort = 7
+            sort = 5
         # make the embed base
         embed = discord.Embed(title="Tracked Templates", color=0x66C5CC)
         embed.description = "Sorted By: `{}`\nTotal Templates: `{}`".format(

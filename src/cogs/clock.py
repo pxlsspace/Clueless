@@ -54,11 +54,17 @@ class Clock(commands.Cog):
         try:
             # update the data on startup
             await self._update_stats_data()
+
             # load the templates from the database
-            await tracked_templates.load_all_templates()
+            canvas_code = await stats.get_canvas_code()
             app_info = await self.client.application_info()
+            await tracked_templates.load_all_templates(canvas_code)
             bot_owner_id = app_info.owner.id
             tracked_templates.bot_owner_id = bot_owner_id
+
+            # initialise the combo
+            bot_id = app_info.id
+            tracked_templates.update_combo(bot_id, canvas_code)
 
         except Exception as error:
             formatted = "".join(
@@ -294,6 +300,11 @@ class Clock(commands.Cog):
                 continue
             progress = temp.update_progress()
             await db_templates.create_template_stat(temp, dt, progress)
+        # update the combo and save its progress
+        tracked_templates.update_combo(self.client.user.id, canvas_code)
+        combo_progress = tracked_templates.combo.update_progress()
+        if await db_templates.create_combo_stat(tracked_templates.combo, dt, combo_progress) is None:
+            print("Warning: combo stats could not saved.")
 
 
 def setup(client):

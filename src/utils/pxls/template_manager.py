@@ -2,6 +2,7 @@ import numpy as np
 import asyncio
 import re
 import copy
+import time
 from PIL import Image
 from numba import jit
 from urllib.parse import parse_qs, urlparse
@@ -27,19 +28,22 @@ class Template():
         self.name = None
 
         # template image and array
-        self.image_array = image_array  # array of RGBA
         self.palettized_array: np.ndarray = reduce(image_array, get_rgba_palette())  # array of palette indexes
 
         # template size and dimensions
-        self.width = self.image_array.shape[1]
-        self.height = self.image_array.shape[0]
-        self.total_size = int(np.sum(self.image_array[:, :, 3] == 255))
+        self.width = self.palettized_array.shape[1]
+        self.height = self.palettized_array.shape[0]
+        self.total_size = int(np.sum(self.palettized_array != 255))
         self.placeable_mask = self.make_placeable_mask()
         self.total_placeable = int(np.sum(self.placeable_mask))
 
         # progress (init with self.update_progress())
         self.placed_mask = None
         self.current_progress = None
+
+    def get_array(self) -> np.ndarray:
+        """Return the combo image as an array of RGB colors"""
+        return stats.palettize_array(self.palettized_array)
 
     def make_placeable_mask(self) -> np.ndarray:
         """Make a mask of the template shape where the placeable pixels are True."""
@@ -118,11 +122,42 @@ class Template():
         return res_image
 
 
+class Combo(Template):
+    """Extension of template to contain a combo template"""
+    def __init__(self, title: str, palettized_array: np.ndarray, ox: int, oy: int, name, bot_id, canvas_code) -> None:
+        # template metadata
+        self.title = name
+        self.ox = ox
+        self.oy = oy
+        self.canvas_code = canvas_code
+        self.url = None
+        self.stylized_url = None
+
+        # used for the template tracker
+        self.owner_id = bot_id
+        self.hidden = False
+        self.name = name
+
+        self.palettized_array: np.ndarray = palettized_array
+
+        # template size and dimensions
+        self.width = self.palettized_array.shape[1]
+        self.height = self.palettized_array.shape[0]
+        self.total_size = int(np.sum(self.palettized_array != 255))
+        self.placeable_mask = None
+        self.total_placeable = None
+
+        # progress (init with self.update_progress())
+        self.placed_mask = None
+        self.current_progress = None
+
+
 class TemplateManager():
     """A low level object with a list of tracked templates"""
     def __init__(self) -> None:
         self.list: list[Template] = []
-        self.bot_owner_id = None
+        self.bot_owner_id: int = None
+        self.combo: Combo = None
 
     def check_duplicate_template(self, template: Template):
         """Check if there is already a template with the same image and same coordinates.
@@ -147,12 +182,15 @@ class TemplateManager():
         """Check if a name is valid:
         - if it's only alphanumeric chars or '-' or '_'.
         - between 2 and 40 characters
+        - cannot be "@combo"
 
         Raise ValueError if invalid name or return the name"""
         if not re.match(r"^[A-Za-z0-9_-]*$", name):
             raise ValueError("The template name can only contain letters, numbers, hyphens (`-`) and underscores (`_`).")
         if len(name) < 2 or len(name) > 40:
             raise ValueError("The template name must be between 2 and 40 characters.")
+        if name == "@combo":
+            raise ValueError("This name is reserved for the @combo template.")
         return name
 
     async def save(self, template: Template, name: str, owner_id: int, hidden: bool = False):
@@ -185,10 +223,14 @@ class TemplateManager():
         await db_templates.create_template(template)
         # save in list
         self.list.append(template)
+        # update the @combo
+        self.update_combo()
 
     def get_template(self, name, owner_id=None, hidden=False):
         """Get a template from its name, get the owner's hidden Template if hidden is True,
         Return None if not found."""
+        if name == "@combo" and self.combo is not None:
+            return self.combo
         for temp in self.list:
             if temp.name.lower() == name.lower():
                 if hidden:
@@ -205,9 +247,12 @@ class TemplateManager():
             raise ValueError(f"No template named `{name}` found.")
         if temp.owner_id != command_user_id and command_user_id != self.bot_owner_id:
             raise ValueError("You cannot delete a template that you don't own.")
+        if isinstance(temp, Combo):
+            raise ValueError("You cannot delete the combo.")
 
         await db_templates.delete_template(temp)
         self.list.remove(temp)
+        self.update_combo()
 
     async def update_template(self, current_name, command_user_id, new_url=None, new_name=None, new_owner_id=None):
         old_temp = self.get_template(current_name, command_user_id, False)
@@ -215,6 +260,8 @@ class TemplateManager():
             raise ValueError(f"No template named `{current_name}` found.")
         if old_temp.owner_id != command_user_id and command_user_id != self.bot_owner_id:
             raise ValueError("You cannot edit a template that you don't own.")
+        if isinstance(old_temp, Combo):
+            raise ValueError("You cannot edit the combo.")
 
         if new_url:
             new_temp = await get_template_from_url(new_url)
@@ -242,8 +289,10 @@ class TemplateManager():
         new_temp.hidden = False
         if not await db_templates.update_template(old_temp, new_temp.url, new_temp.name, new_temp.owner_id):
             raise ValueError("There was an error while updating the template.")
+        old_temp_index = self.list.index(old_temp)
         self.list.remove(old_temp)
-        self.list.append(new_temp)
+        self.list.insert(old_temp_index, new_temp)
+        self.update_combo()
 
     def get_all_public_templates(self):
         return [t for t in self.list if not t.hidden]
@@ -251,29 +300,64 @@ class TemplateManager():
     def get_hidden_templates(self, owner_id):
         return [t for t in self.list if t.hidden and t.owner_id == owner_id]
 
-    async def load_all_templates(self):
-        import time
+    async def load_all_templates(self, canvas_code):
+        """Load all the templates from the database in self.list"""
         start = time.time()
-        canvas_code = await stats.get_canvas_code()
         db_list = await db_templates.get_all_templates(canvas_code)
         count = 0
+        has_combo = False
         for db_temp in db_list:
             name = db_temp["name"]
             owner_id = db_temp["owner_id"]
             hidden = db_temp["hidden"]
             url = db_temp["url"]
-            try:
-                temp = await get_template_from_url(url)
-                temp.name = name
-                temp.owner_id = int(owner_id)
-                temp.hidden = bool(hidden)
-                temp.canvas_code = canvas_code
-                self.list.append(temp)
-                count += 1
-            except Exception as e:
-                print("Failed to load template {}: {}".format(name, e))
+            if name != "@combo":
+                try:
+                    temp = await get_template_from_url(url)
+                    temp.name = name
+                    temp.owner_id = int(owner_id)
+                    temp.hidden = bool(hidden)
+                    temp.canvas_code = canvas_code
+                    self.list.append(temp)
+                    count += 1
+                except Exception as e:
+                    print("Failed to load template {}: {}".format(name, e))
+            else:
+                has_combo = True
         end = time.time()
-        print(f"{count}/{len(db_list)} Templates loaded (time: {round(end-start, 2)}s)")
+        nb_templates = len(db_list) - (1 if has_combo else 0)
+        print(f"{count}/{nb_templates} Templates loaded (time: {round(end-start, 2)}s)")
+
+    def make_combo_image(self) -> np.ndarray:
+        """Make an index array combining all the template arrays in self.list"""
+        combo = np.full((stats.board_array.shape[0], stats.board_array.shape[1]), 255)
+        for template in self.list[::-1]:  # reverse order to put the new templates at the bottom
+            ox = template.ox
+            oy = template.oy
+            # paste the template on the combo image but exclude transparent pixels
+            current_combo_at_temp_coords = template.crop_array_to_template(combo)
+            template_mask = template.palettized_array != 255
+            current_combo_at_temp_coords[template_mask] = template.palettized_array[template_mask]
+            paste(combo, current_combo_at_temp_coords, (oy, ox))
+        return combo
+
+    def update_combo(self, bot_id=None, canvas_code=None) -> Combo:
+        """Update the combo template or create it if it doesn't exist"""
+        palettized_array = self.make_combo_image()
+        if self.combo is None:
+            if bot_id and canvas_code:
+                self.combo = Combo("@clueless-combo", palettized_array, 0, 0, "@combo", bot_id, canvas_code)
+            else:
+                raise Exception("Cannot init the combo with empty bot_id or canvas_code")
+        else:
+            self.combo.palettized_array = palettized_array
+
+        # remove the non placeable pixels
+        self.combo.palettized_array[stats.placemap_array == 255] = 255
+        # update the placeable mask
+        self.combo.placeable_mask = self.combo.make_placeable_mask()
+        self.combo.total_placeable = int(np.sum(self.combo.placeable_mask))
+        return self.combo
 
 
 @jit(nopython=True)
@@ -359,3 +443,19 @@ async def get_template_from_url(template_url: str) -> Template:
     # run this part of the code in executor to make it not blocking
     template = await loop.run_in_executor(None, _get_template)
     return template
+
+
+def paste_slices(tup):
+    pos, w, max_w = tup
+    wall_min = max(pos, 0)
+    wall_max = min(pos + w, max_w)
+    block_min = -min(pos, 0)
+    block_max = max_w - max(pos + w, max_w)
+    block_max = block_max if block_max != 0 else None
+    return slice(wall_min, wall_max), slice(block_min, block_max)
+
+
+def paste(wall, block, loc):
+    loc_zip = zip(loc, block.shape, wall.shape)
+    wall_slices, block_slices = zip(*map(paste_slices, loc_zip))
+    wall[wall_slices] = block[block_slices]

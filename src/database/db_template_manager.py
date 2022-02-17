@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 # This import is only necessary for type hints
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from utils.pxls.template_manager import Template
+    from utils.pxls.template_manager import Template, Combo
 
 
 class DbTemplateManager():
@@ -149,3 +149,11 @@ class DbTemplateManager():
         if not rows:
             return None
         return rows
+
+    async def create_combo_stat(self, combo: "Combo", datetime, progress):
+        """Save the combo stats in the database, create a combo template in the
+        database if it's not found"""
+        if not await self.get_template_id(combo):
+            await self.create_template(combo)
+            print("New combo created in the database")
+        return await self.create_template_stat(combo, datetime, progress)

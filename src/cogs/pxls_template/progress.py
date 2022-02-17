@@ -111,7 +111,8 @@ class Progress(commands.Cog):
         info_text = f"Title: `{title}`\n"
         if template.name:
             info_text += f"Name: `{template.name}`\n"
-        info_text += f"Link: [click to open]({template.url})\n"
+        if template.url:
+            info_text += f"Link: [click to open]({template.url})\n"
 
         embed.add_field(name="**Info**", value=info_text, inline=False)
 
@@ -163,7 +164,7 @@ class Progress(commands.Cog):
             prefix = ctx.prefix if isinstance(ctx, commands.Context) else "/"
             embed.set_footer(text=f"[Not Tracked]\nUse {prefix}progress add <name> <url> to start tracking.")
         detemp_file = image_to_file(progress_image, "progress.png", embed)
-        template_file = image_to_file(Image.fromarray(template.image_array), "template_image.png")
+        template_file = image_to_file(Image.fromarray(template.get_array()), "template_image.png")
         await ctx.send(files=[template_file, detemp_file], embed=embed)
 
     @cog_ext.cog_subcommand(
@@ -295,6 +296,7 @@ class Progress(commands.Cog):
         # gather the templates data
         table = []
         now = round_minutes_down(datetime.utcnow(), 5)
+        public_tracked_templates.append(tracked_templates.combo)
         for template in public_tracked_templates:
             line_colors = [None, None, None, None]
             # template info
@@ -556,7 +558,7 @@ class Progress(commands.Cog):
                 dates = [d.to_pydatetime() for d in df.index.tolist()]
                 values = df['progress'].tolist()
                 values.pop(0)
-                oldest_time = dates.pop(0)
+                oldest_time = dates.pop(0).replace(tzinfo=None)
             else:
                 if groupby == "hour":
                     format = "%Y-%m-%d %H"

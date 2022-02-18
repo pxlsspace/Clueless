@@ -215,7 +215,7 @@ class Progress(commands.Cog):
             return await ctx.send(f":x: {e}")
         return await ctx.send(f"✅ Template `{name}` added to the tracker.")
 
-    sort_options = ["Name", "Size", "Correct", "To Go", "%", "px/h (last 1h)", "px/h (last 6h)", "px/h (last 1d)", "px/h (last 7d)"]
+    sort_options = ["Name", "Size", "Correct", "To Go", "%", "px/h (last 1h)", "px/h (last 6h)", "px/h (last 1d)", "px/h (last 7d)", "ETA"]
 
     @cog_ext.cog_subcommand(
         base="progress",
@@ -260,7 +260,7 @@ class Progress(commands.Cog):
     )
     async def p_list(self, ctx, *args):
         parser = MyParser(add_help=False)
-        sort_options = ["name", "size", "correct", "togo", "%", "last1h", "last6h", "last1d", "last7d"]
+        sort_options = ["name", "size", "correct", "togo", "%", "last1h", "last6h", "last1d", "last7d", "eta"]
 
         parser.add_argument("-sort", "-s", choices=sort_options, required=False)
         try:
@@ -279,7 +279,7 @@ class Progress(commands.Cog):
         if len(public_tracked_templates) == 0:
             return await ctx.send("No templates tracked :'(")
 
-        titles = ["Name", "Size", "Correct", "To Go", "%", "px/h (last 1h)", "px/h (last 6h)", "px/h (last 1d)", "px/h (last 7d)"]
+        titles = ["Name", "Size", "Correct", "To Go", "%", "px/h (last 1h)", "px/h (last 6h)", "px/h (last 1d)", "px/h (last 7d)", "ETA"]
         if sort is None:
             sort = 5
         # make the embed base
@@ -333,13 +333,57 @@ class Progress(commands.Cog):
                         speed_px_h = delta_progress / (delta_time / timedelta(hours=1))
                         values.append(speed_px_h)
                         line_colors.append(get_speed_color(speed_px_h))
+            # ETA
+            speed_last_7d = values[-1]
+            if togo != "N/A" and speed_last_7d != "N/A":
+                if togo == 0:
+                    eta = 0
+                    line_colors.append(get_eta_color(0))
+                elif speed_last_7d <= 0:
+                    eta = 999999
+                    line_colors.append("#b11206")
+                else:
+                    eta = togo / speed_last_7d
+                    line_colors.append(get_eta_color(eta))
+            else:
+                eta = "N/A"
+                line_colors.append(None)
 
-            table.append([name, total, current_progress, togo, percentage] + values + [line_colors])
+            table.append([name, total, current_progress, togo, percentage] + values + [eta] + [line_colors])
 
-        table.sort(key=lambda x: (x[sort] is not None and not(isinstance(x[sort], str)), x[sort]), reverse=True)
+        # sort the table
+        if sort == 0:
+            # sorting by name: keep normal order and ignore case
+            reverse = False
+            key = lambda x: (x[sort] is None or isinstance(x[sort], str), x[sort].lower())  # noqa: E731
+
+        elif sort == len(titles) - 1:
+            # sorting by ETA: keep normal order
+            reverse = False
+            key = lambda x: (x[sort] is None or isinstance(x[sort], str), x[sort])  # noqa: E731
+        else:
+            # sorting by a number: reverse the order and ignore strings
+            reverse = True
+            key = lambda x: (x[sort] is not None and not(isinstance(x[sort], str)), x[sort])  # noqa: E731
+        table.sort(key=key, reverse=reverse)
         table_data = [line[:-1] for line in table]
         table_colors = [line[-1] for line in table]
-        table_data = [[format_number(c) for c in row] for row in table_data]
+        # format the data
+        for i, row in enumerate(table_data):
+            if row[-1] is not None and row[-1] != "N/A":
+                if row[-1] >= 999999:
+                    row[-1] = "Never."
+                elif row[-1] <= 0:
+                    row[-1] = "-Done-"
+                else:
+                    row[-1] = td_format(
+                        timedelta(hours=row[-1]),
+                        hide_seconds=True,
+                        max_unit="day",
+                        short_format=True,
+                    )
+            table_data[i] = [format_number(c) for c in row]
+        # make the table image
         theme = get_theme("default")
         theme.outline_dark = False
         table_image = table_to_image(table_data, titles, colors=table_colors, theme=theme)
@@ -643,7 +687,7 @@ class Progress(commands.Cog):
 
 pos_speed_palette = get_gradient_palette(["#ffffff", "#70dd13", "#31a117"], 101)
 neg_speed_palette = get_gradient_palette(["#ff6474", "#ff0000", "#991107"], 101)
-percentage_palette = get_gradient_palette(["#ff3b3b", "#fff491", "#beff40", "#70dd13", "#31a117"], 101)
+percentage_palette = get_gradient_palette(["#e21000", "#fca80e", "#fff491", "#beff40", "#31a117"], 101)
 
 
 def get_speed_color(speed, max_speed=600, min_speed=-400):
@@ -663,6 +707,13 @@ def get_percentage_color(percentage):
     percentage = min(100, percentage)
     percentage = max(0, percentage)
     return percentage_palette[int(percentage)]
+
+
+def get_eta_color(eta_hours, max_days=40):
+    eta_idx = max(0, min(eta_hours / 24, max_days))
+    eta_idx = 1 - (eta_idx / max_days)
+    eta_idx = int(eta_idx * (len(percentage_palette) - 1))
+    return percentage_palette[eta_idx]
 
 
 def setup(client):

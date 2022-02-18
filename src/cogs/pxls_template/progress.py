@@ -558,7 +558,7 @@ class Progress(commands.Cog):
                 dates = [d.to_pydatetime() for d in df.index.tolist()]
                 values = df['progress'].tolist()
                 values.pop(0)
-                oldest_time = dates.pop(0).replace(tzinfo=None)
+                oldest_time = dates.pop(0).astimezone(timezone.utc).replace(tzinfo=None)
             else:
                 if groupby == "hour":
                     format = "%Y-%m-%d %H"

@@ -256,6 +256,7 @@ class TemplateManager():
         await db_templates.delete_template(temp)
         self.list.remove(temp)
         self.update_combo()
+        return temp
 
     async def update_template(self, current_name, command_user_id, new_url=None, new_name=None, new_owner_id=None):
         old_temp = self.get_template(current_name, command_user_id, False)

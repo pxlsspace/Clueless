@@ -596,10 +596,14 @@ class Progress(commands.Cog):
 
     async def delete(self, ctx, template_name):
         try:
-            await tracked_templates.delete_template(template_name, ctx.author.id, False)
+            deleted_temp = await tracked_templates.delete_template(
+                template_name,
+                ctx.author.id,
+                False,
+            )
         except Exception as e:
             return await ctx.send(f":x: {e}")
-        return await ctx.send("✅ Template deleted.")
+        return await ctx.send(f"✅ Template `{deleted_temp.name}` successfully deleted.")
 
     @cog_ext.cog_subcommand(
         base="progress",

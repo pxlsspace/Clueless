@@ -208,12 +208,28 @@ class Progress(commands.Cog):
             return await ctx.send(
                 ":x: The template seems to be outside the canvas, make sure it's correctly positioned."
             )
-        template.update_progress()
+        correct_pixels = template.update_progress()
         try:
             await tracked_templates.save(template, name, ctx.author.id)
         except ValueError as e:
             return await ctx.send(f":x: {e}")
-        return await ctx.send(f"✅ Template `{name}` added to the tracker.")
+
+        # Send template infos
+
+        correct_percentage = format_number((correct_pixels / template.total_placeable) * 100)
+        total_placeable = format_number(int(template.total_placeable))
+        correct_pixels = format_number(int(correct_pixels))
+        total_pixels = format_number(int(template.total_size))
+
+        embed = discord.Embed(title=f"✅ Template `{name}` added to the tracker.", color=0x66C5CC)
+        embed.description = f"**Title**: {template.title or '`N/A`'}\n"
+        embed.description += f"[Template link]({template.url})\n"
+        embed.description += f"**Size**: {total_pixels} pixels ({template.width}x{template.height})\n"
+        embed.description += f"**Coordinates**: ({template.ox}, {template.oy})\n"
+        embed.description += f"**Progress**: {correct_percentage}% done ({correct_pixels}/{total_placeable})\n"
+
+        detemp_file = image_to_file(Image.fromarray(template.get_array()), "detemplatize.png", embed)
+        await ctx.send(file=detemp_file, embed=embed)
 
     sort_options = ["Name", "Size", "Correct", "To Go", "%", "px/h (last 1h)", "px/h (last 6h)", "px/h (last 1d)", "px/h (last 7d)", "ETA"]
 

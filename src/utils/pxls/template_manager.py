@@ -7,6 +7,9 @@ from PIL import Image
 from numba import jit
 from urllib.parse import parse_qs, urlparse
 from io import BytesIO
+from cogs.pixel_art.highlight import highlight_image
+from utils.font.font_manager import PixelText
+from utils.image.gif_saver import save_transparent_gif
 
 from utils.utils import get_content
 from utils.setup import stats, db_templates
@@ -293,6 +296,7 @@ class TemplateManager():
         self.list.remove(old_temp)
         self.list.insert(old_temp_index, new_temp)
         self.update_combo()
+        return old_temp, new_temp
 
     def get_all_public_templates(self):
         return [t for t in self.list if not t.hidden]
@@ -459,3 +463,100 @@ def paste(wall, block, loc):
     loc_zip = zip(loc, block.shape, wall.shape)
     wall_slices, block_slices = zip(*map(paste_slices, loc_zip))
     wall[wall_slices] = block[block_slices]
+
+
+def crop_array_to_shape(array1, height, width, oy, ox):
+    y0 = min(max(0, oy), array1.shape[0])
+    y1 = max(0, min(array1.shape[0], oy + height))
+    x0 = min(max(0, ox), array1.shape[1])
+    x1 = max(0, min(array1.shape[1], ox + width))
+    _cropped_array = array1[y0:y1, x0:x1].copy()
+    cropped_array = np.full((height, width), 255)
+    cropped_array[y0 - oy : y1 - oy, x0 - ox : x1 - ox] = _cropped_array
+    return cropped_array
+
+
+def make_before_after_gif(old_temp: Template, new_temp: Template, extra_padding=5, with_text=True) -> Image.Image:
+    """
+    Make a before/after GIF comparing 2 templates images layered over the canvas
+
+    Parameters
+    ----------
+    old_temp: the template that will show first on the GIF
+    new_temp: the template that will show last on the GIF
+    extra_padding: the number of pixels to add around the image
+    with_text: add a "Before" and "After" text on the image if set to True
+    """
+
+    if with_text:
+        before_text = PixelText("Before", "roman", (255, 255, 255, 255), (0, 0, 0, 0))
+        after_text = PixelText("After", "roman", (255, 255, 255, 255), (0, 0, 0, 0))
+        text_height = before_text.font.max_height
+    else:
+        text_height = 0
+
+    old_temp_x0 = old_temp.ox
+    old_temp_x1 = old_temp.ox + old_temp.width
+    old_temp_y0 = old_temp.oy
+    old_temp_y1 = old_temp.oy + old_temp.height
+
+    new_temp_x0 = new_temp.ox
+    new_temp_x1 = new_temp.ox + new_temp.width
+    new_temp_y0 = new_temp.oy
+    new_temp_y1 = new_temp.oy + new_temp.height
+
+    # origin coords
+    min_y0 = min(old_temp_y0, new_temp_y0) - extra_padding - text_height
+    min_x0 = min(old_temp_x0, new_temp_x0) - extra_padding
+    # end coords
+    max_y1 = max(old_temp_y1, new_temp_y1) + extra_padding
+    max_x1 = max(old_temp_x1, new_temp_x1) + extra_padding
+    # result images size
+    max_height = max_y1 - min_y0
+    max_width = max_x1 - min_x0
+
+    # crop the current canvas to the result images size
+    background_before = crop_array_to_shape(stats.board_array, max_height, max_width, min_y0, min_x0)
+    background_before = stats.palettize_array(background_before)
+    background_after = background_before.copy()
+
+    # add padding to images so they can have the exact same size
+    old_y0_offset = old_temp_y0 - min_y0
+    old_x0_offset = old_temp_x0 - min_x0
+    old_y1_offset = max_y1 - old_temp_y1
+    old_x1_offset = max_x1 - old_temp_x1
+    old_temp_padding = [
+        (old_y0_offset, old_y1_offset),
+        (old_x0_offset, old_x1_offset),
+    ]
+    array_before = np.pad(old_temp.palettized_array, old_temp_padding, constant_values=255)
+    array_before = stats.palettize_array(array_before)
+
+    new_y0_offset = new_temp_y0 - min_y0
+    new_x0_offset = new_temp_x0 - min_x0
+    new_y1_offset = max_y1 - new_temp_y1
+    new_x1_offset = max_x1 - new_temp_x1
+    new_temp_padding = [
+        (new_y0_offset, new_y1_offset),
+        (new_x0_offset, new_x1_offset),
+    ]
+    array_after = np.pad(new_temp.palettized_array, new_temp_padding, constant_values=255)
+    array_after = stats.palettize_array(array_after)
+
+    # paste the template images on the canvas and darken the canvas
+    img_before = highlight_image(array_before, background_before, 0.3, (0, 0, 0, 255))
+    img_after = highlight_image(array_after, background_after, 0.3, (0, 0, 0, 255))
+
+    # add the text
+    if with_text:
+        before_text_image = before_text.get_image()
+        after_text_image = after_text.get_image()
+        img_before.paste(before_text_image, (2, 2), before_text_image)
+        img_after.paste(after_text_image, (2, 2), after_text_image)
+
+    # generate the GIF (can take long with a large image)
+    frames = [img_before, img_after]
+    diff_gif = BytesIO()
+    save_transparent_gif(frames, 1200, diff_gif)
+    diff_gif.seek(0)
+    return diff_gif

@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 from main import tracked_templates
 from utils.discord_utils import format_number, image_to_file, UserConverter
-from utils.pxls.template_manager import get_template_from_url, parse_template
+from utils.pxls.template_manager import get_template_from_url, make_before_after_gif, parse_template
 from utils.setup import GUILD_IDS, db_templates, db_users
 from utils.timezoneslib import get_timezone
 from utils.utils import make_progress_bar
@@ -452,10 +452,119 @@ class Progress(commands.Cog):
 
     async def update(self, ctx, current_name, new_url=None, new_name=None, new_owner_id=None):
         try:
-            await tracked_templates.update_template(current_name, ctx.author.id, new_url, new_name, new_owner_id)
+            old_temp, new_temp = await tracked_templates.update_template(
+                current_name,
+                ctx.author.id,
+                new_url, new_name,
+                new_owner_id,
+            )
         except Exception as e:
             return await ctx.send(f":x: {e}")
-        return await ctx.send("✅ Template updated.")
+        embed = discord.Embed(title=f"**✅ Template {old_temp.name} Updated**", color=0x66C5CC)
+
+        # Show name update
+        if new_name is not None:
+            embed.add_field(name="Name Changed", value=f"`{old_temp.name}` → `{new_temp.name}`", inline=False)
+
+        # Show owner update
+        if new_owner_id is not None:
+            embed.add_field(name="Ownership transfered", value=f"<@{old_temp.owner_id}> → <@{new_temp.owner_id}>", inline=False)
+
+        # Show all the template info updated
+        if new_url is not None:
+            info = "__**Info**__\n"
+            # title
+            if old_temp.title != new_temp.title:
+                info += f"• **Title**: `{old_temp.title}` → `{new_temp.title}`\n"
+            else:
+                info += f"• **Title**: `{new_temp.title}` *(unchanged)*\n"
+            # url
+            info += f"• **URL**: [[old]]({old_temp.url}) → [[new]]({new_temp.url})\n"
+            # coords
+            old_coords = (old_temp.ox, old_temp.oy)
+            new_coords = (new_temp.ox, new_temp.oy)
+            if old_coords != new_coords:
+                info += "• **Coords**: {} → {}\n".format(old_coords, new_coords)
+            else:
+                info += f"• **Coords**: ({new_temp.ox}, {new_temp.oy}) *(unchanged)*\n"
+            # dimensions
+            old_dims = f"({old_temp.width}x{old_temp.height})"
+            new_dims = f"({new_temp.width}x{new_temp.height})"
+            if (old_dims, old_temp.total_size) != (new_dims, new_temp.total_size):
+                info += "• **Dimensions**: {} → {}\n".format(old_dims, new_dims)
+            else:
+                info += f"• **Dimensions**: {new_dims} *(unchanged)*\n"
+            # size
+            old_size = old_temp.total_placeable
+            new_size = new_temp.total_placeable
+            if old_size != new_size:
+                diff_size = new_size - old_size
+                info += "• **Size**: {} → {} `[{}{}]`\n".format(
+                    format_number(old_size),
+                    format_number(new_size),
+                    "+" if diff_size > 0 else "",
+                    format_number(diff_size),
+                )
+            else:
+                info += f"• **Size**: {format_number(new_size)} *(unchanged)*\n"
+
+            # progress
+            progress = "\n__**Progress**__\n"
+            new_prog = new_temp.update_progress()
+            old_prog = old_temp.update_progress()
+            if old_prog != new_prog:
+                diff_prog = new_prog - old_prog
+                progress += "• **Correct Pixels**: {} → {} `[{}{}]`\n".format(
+                    format_number(old_prog),
+                    format_number(new_prog),
+                    "+" if diff_prog > 0 else "",
+                    format_number(diff_prog),
+                )
+            else:
+                progress += f"• **Correct Pixels**: {format_number(new_prog)} *(unchanged)*\n"
+            old_togo = old_temp.total_placeable - old_prog
+            new_togo = new_temp.total_placeable - new_prog
+            # to go
+            if old_togo != new_togo:
+                diff_togo = new_togo - old_togo
+                progress += "• **Pixels to go**: {} → {} `[{}{}]`\n".format(
+                    format_number(old_togo),
+                    format_number(new_togo),
+                    "+" if diff_togo > 0 else "",
+                    format_number(diff_togo),
+
+                )
+            else:
+                progress += f"• **Pixels to go**: {format_number(new_togo)} *(unchanged)*\n"
+            # percentage
+            old_percentage = old_prog / old_temp.total_placeable
+            new_percentage = new_prog / new_temp.total_placeable
+            if old_percentage != new_percentage:
+                diff_percentage = new_percentage - old_percentage
+                progress += "• **Percentage**: {}% → {}% `[{}{}%]`\n".format(
+                    format_number(old_percentage * 100),
+                    format_number(new_percentage * 100),
+                    "+" if diff_percentage > 0 else "",
+                    format_number(diff_percentage * 100),
+                )
+            else:
+                progress += f"• **Percentage**: {format_number(new_percentage)}% *(unchanged)*\n"
+            progress += "\n__**Image Difference**__\n"
+            # make the image
+            try:
+                diff_gif = await self.client.loop.run_in_executor(
+                    None, make_before_after_gif, old_temp, new_temp
+                )
+                filename = "diff.gif"
+                file = discord.File(fp=diff_gif, filename=filename)
+                embed.set_image(url=f"attachment://{filename}")
+            except Exception:
+                progress += "**[An error occured while generating the diff GIF image.]**\n"
+                file = None
+            embed.add_field(name="URL Changed", value=info + progress)
+        else:
+            file = None
+        return await ctx.send(embed=embed, file=file)
 
     @cog_ext.cog_subcommand(
         base="progress",

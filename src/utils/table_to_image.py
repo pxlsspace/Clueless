@@ -9,22 +9,17 @@ DEFAULT_FONT = "minecraft"
 OUTER_OUTLINE_WIDTH = 3
 
 
-def make_table_array(data, titles, alignments, colors, bg_colors, theme: Theme):
+def make_table_array(data, alignments, colors, bg_colors, theme: Theme):
     """Make a numpy array using the data provided"""
     # config
     line_width = 1  # grid width
     vertical_margin = 2
     horizontal_margin = 4  # margin inside each cell
-    title_gap_height = OUTER_OUTLINE_WIDTH  # space between the title and the content
+    title_gap_height = theme.table_outline_width  # space between the title and the content
 
     # colors
     outer_outline_color = hex_to_rgba(theme.table_outline_color)
     line_color = hex_to_rgba(theme.grid_color)
-
-    # insert title/headers values
-    data.insert(0, titles)
-    colors.insert(0, [None] * len(titles))
-    bg_colors.insert(0, [None] * len(titles))
 
     # get the numpy arrays for all the text
     col_array = [[] for i in range(len(data[0]))]
@@ -241,16 +236,6 @@ def table_to_image(data, titles, alignments=None, colors=None, theme: Theme = No
     elif not isinstance(bg_colors[0], list):
         bg_colors = [[c] * len(data[0]) for c in bg_colors]
 
-    if alternate_bg:
-        for i, row in enumerate(bg_colors):
-            for j, col in enumerate(row):
-                if bg_colors[i][j] is None:
-                    if i % 2 == 0:
-                        bg_color = theme.table_outline_color
-                    else:
-                        bg_color = None
-                    bg_colors[i][j] = bg_color
-
     if alignments is None:
         alignments = ["center"] * len(data[0])
 
@@ -261,12 +246,27 @@ def table_to_image(data, titles, alignments=None, colors=None, theme: Theme = No
     colors = colors.copy()
     bg_colors = bg_colors.copy()
 
+    # insert title/headers values
+    data.insert(0, titles)
+    colors.insert(0, [None] * len(titles))
+    bg_colors.insert(0, [theme.headers_background_color] * len(titles))
+
+    if alternate_bg:
+        for i, row in enumerate(bg_colors):
+            for j, col in enumerate(row):
+                if bg_colors[i][j] is None:
+                    if i % 2 == 0:
+                        bg_color = theme.odd_row_color
+                    else:
+                        bg_color = None
+                    bg_colors[i][j] = bg_color
+
     # get the table numpy array
-    table_array = make_table_array(data, titles, alignments, colors, bg_colors, theme)
+    table_array = make_table_array(data, alignments, colors, bg_colors, theme)
 
     # add style
-    table_array = add_border(table_array, OUTER_OUTLINE_WIDTH, hex_to_rgba(theme.table_outline_color))
-    make_styled_corner(table_array, hex_to_rgba(theme.grid_color), OUTER_OUTLINE_WIDTH)
+    table_array = add_border(table_array, theme.table_outline_width, hex_to_rgba(theme.table_outline_color))
+    make_styled_corner(table_array, hex_to_rgba(theme.grid_color), theme.table_outline_width)
     table_array = add_border(table_array, 1, hex_to_rgba(theme.grid_color))
 
     # convert to image

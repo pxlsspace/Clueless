@@ -167,6 +167,7 @@ class Theme:
         name,
         description,
         background_color,
+        headers_background_color,
         grid_color,
         font_color,
         table_outline_color,
@@ -175,11 +176,14 @@ class Theme:
         has_underglow,
         palette,
         outline_dark,
+        odd_row_color,
+        table_outline_width,
     ):
 
         self.name = name
         self.description = description
         self.background_color = background_color
+        self.headers_background_color = headers_background_color
         self.grid_color = grid_color
         self.font_color = font_color
         self.table_outline_color = table_outline_color
@@ -188,6 +192,8 @@ class Theme:
         self.has_underglow = has_underglow
         self.palette = palette
         self.outline_dark = outline_dark
+        self.odd_row_color = odd_row_color
+        self.table_outline_width = table_outline_width
 
     def get_palette(self, nb_colors):
         if self.palette == "synthwave":
@@ -234,6 +240,22 @@ class Theme:
                 "#B66D3D",
                 "#8B2FA8",
                 "#125CC7",
+            ]
+            return cycle_through_list(colors, nb_colors)
+
+        elif self.palette == "discord":
+            colors = [
+                "#5866ef",
+                "#3da560",
+                "#f37b68",
+                "#ec4145",
+                "#9b84ec",
+                "#f9a62b",
+                "#0cba99",
+                "#4f5d7e",
+                "#fe73f6",
+                "#583694",
+                "#09b0f2",
             ]
             return cycle_through_list(colors, nb_colors)
 
@@ -302,6 +324,7 @@ default_theme = Theme(
     name="default",
     description="Pastel colors, dark background.",
     background_color="#202225",
+    headers_background_color="#000000",
     grid_color="#393b40",
     font_color="#b9bbbe",
     table_outline_color="#000000",
@@ -310,12 +333,15 @@ default_theme = Theme(
     has_underglow=False,
     palette="default",
     outline_dark=True,
+    odd_row_color="#000000",
+    table_outline_width=3,
 )
 
 synthwave_theme = Theme(
     name="synthwave",
     description="Neon colors, dark/blue background (can be slower).",
     background_color="#1d192c",
+    headers_background_color="#000000",
     grid_color="#514384",
     font_color="#c1ebff",
     table_outline_color="#000000",
@@ -324,12 +350,15 @@ synthwave_theme = Theme(
     has_underglow=True,
     palette="synthwave",
     outline_dark=True,
+    odd_row_color="#000000",  # TO CHANGE
+    table_outline_width=3,
 )
 
 synthwave_noglow_theme = Theme(
     name="synthwave-noglow",
     description="Same as `synthwave` but without glow which makes it faster.",
     background_color="#1d192c",
+    headers_background_color="#000000",
     grid_color="#514384",
     font_color="#c1ebff",
     table_outline_color="#000000",
@@ -338,12 +367,15 @@ synthwave_noglow_theme = Theme(
     has_underglow=False,
     palette="synthwave",
     outline_dark=True,
+    odd_row_color="#000000",  # TO CHANGE
+    table_outline_width=3,
 )
 
 pxls_theme = Theme(
     name="pxls",
     description="Similar to the pxls purple theme, uses the pxls palette for the lines/bars.",
     background_color="#3d204d",
+    headers_background_color="#341943",
     grid_color="#693684",
     font_color="#dddddd",
     table_outline_color="#2a1436",
@@ -352,12 +384,15 @@ pxls_theme = Theme(
     has_underglow=False,
     palette="pxls",
     outline_dark=False,
+    odd_row_color="#341943",
+    table_outline_width=3,
 )
 
 pastel_theme = Theme(
     name="pastel",
     description="Pastel colors, light-purple background.",
     background_color="#937ac3",
+    headers_background_color="#7f65b1",
     grid_color="#fac4ff",
     font_color="#fac4ff",
     table_outline_color="#725c9d",
@@ -366,12 +401,15 @@ pastel_theme = Theme(
     has_underglow=False,
     palette="pastel",
     outline_dark=True,
+    odd_row_color="#7f65b1",
+    table_outline_width=3,
 )
 
 red_theme = Theme(
     name="red",
     description="It's red.",
     background_color="#1e0300",
+    headers_background_color="#000000",
     grid_color="#7b0001",
     font_color="#ffbbb9",
     table_outline_color="#000000",
@@ -380,6 +418,8 @@ red_theme = Theme(
     has_underglow=True,
     palette="autumn",
     outline_dark=False,
+    odd_row_color="#000000",
+    table_outline_width=3,
 )
 
 theme_list = [
@@ -394,6 +434,6 @@ theme_list = [
 
 def get_theme(theme_name) -> Theme:
     for theme in theme_list:
-        if theme.name == theme_name:
+        if theme.name.lower() == theme_name.lower():
             return theme
     return None

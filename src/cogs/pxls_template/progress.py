@@ -1,11 +1,11 @@
 import discord
 import pandas as pd
 from PIL import Image
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
+from copy import deepcopy
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
-from datetime import datetime, timedelta
 
 from main import tracked_templates
 from utils.discord_utils import format_number, image_to_file, UserConverter
@@ -400,9 +400,16 @@ class Progress(commands.Cog):
                     )
             table_data[i] = [format_number(c) for c in row]
         # make the table image
-        theme = get_theme("default")
+        theme = deepcopy(get_theme("default"))
         theme.outline_dark = False
-        table_image = table_to_image(table_data, titles, colors=table_colors, theme=theme)
+        table_image = table_to_image(
+            table_data,
+            titles,
+            colors=table_colors,
+            theme=theme,
+            alternate_bg=True,
+            scale=3,
+        )
         table_file = image_to_file(table_image, "progress.png", embed=embed)
         await ctx.send(embed=embed, file=table_file)
 

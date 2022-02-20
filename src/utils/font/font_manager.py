@@ -152,7 +152,7 @@ class PixelText():
 
         self.image_array = []
 
-    def make_array(self):
+    def make_array(self, accept_empty=False):
         """Change the self.array object to have the numpy array of the text
         by concatenating numpy arrays of each characters"""
         self.image_array = np.zeros((self.font.max_height, 1, 4), dtype=np.uint8)
@@ -180,7 +180,7 @@ class PixelText():
                 self.add_dot()
                 self.add_space()
 
-        if empty:
+        if empty and not accept_empty:
             return None
         else:
             return self.image_array

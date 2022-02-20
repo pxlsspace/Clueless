@@ -1,55 +1,58 @@
 from PIL import Image, ImageColor
 import numpy as np
 
-from utils.font.font_manager import FontManager, PixelText
+from utils.font.font_manager import PixelText
 from utils import image_utils
-from utils.plot_utils import Theme
+from utils.plot_utils import Theme, get_theme
 
-font_name = "minecraft"
-
-BACKGROUND_COLOR = "#202225"
-TEXT_COLOR = "#b9bbbe"
-LINE_COLOR = "#2f3136"
-OUTER_OUTLINE_COLOR = "#000000"
+DEFAULT_FONT = "minecraft"
 OUTER_OUTLINE_WIDTH = 3
 
-BACKGROUND_COLOR = ImageColor.getcolor(BACKGROUND_COLOR, "RGBA")
-TEXT_COLOR = ImageColor.getcolor(TEXT_COLOR, "RGBA")
-LINE_COLOR = ImageColor.getcolor(LINE_COLOR, "RGBA")
-OUTER_OUTLINE_COLOR = ImageColor.getcolor(OUTER_OUTLINE_COLOR, "RGBA")
 
-
-def make_table_array(data, titles, alignments, colors=None, outline_dark=True):
+def make_table_array(data, titles, alignments, colors, bg_colors, theme: Theme):
     """Make a numpy array using the data provided"""
-    line_width = 1
+    # config
+    line_width = 1  # grid width
     vertical_margin = 2
     horizontal_margin = 4  # margin inside each cell
     title_gap_height = OUTER_OUTLINE_WIDTH  # space between the title and the content
 
-    font = FontManager(font_name, TEXT_COLOR, BACKGROUND_COLOR)
+    # colors
+    outer_outline_color = hex_to_rgba(theme.table_outline_color)
+    line_color = hex_to_rgba(theme.grid_color)
+
     # insert title/headers values
     data.insert(0, titles)
     colors.insert(0, [None] * len(titles))
+    bg_colors.insert(0, [None] * len(titles))
 
     # get the numpy arrays for all the text
     col_array = [[] for i in range(len(data[0]))]
     for i, lines in enumerate(data):
         for j, col in enumerate(lines):
             text = str(col)
+            # convert colors to RGBA
             color = colors[i][j]
             if not color:
-                color = TEXT_COLOR
+                color = hex_to_rgba(theme.font_color)
             else:
                 color = hex_to_rgba(color)
-            pt = PixelText(text, font_name, color, (0, 0, 0, 0))
-            text_array = pt.make_array()
-            if outline_dark and image_utils.is_dark(color):
+            bg_color = bg_colors[i][j]
+            if not bg_color:
+                bg_color = hex_to_rgba(theme.background_color)
+            else:
+                bg_color = hex_to_rgba(bg_color)
+            bg_colors[i][j] = bg_color
+            # make the text images
+            pt = PixelText(text, DEFAULT_FONT, color, (0, 0, 0, 0))
+            text_array = pt.make_array(accept_empty=True)
+            if theme.outline_dark and image_utils.is_dark(color):
                 outline_color = image_utils.lighten_color(color, 0.3)
                 text_array = add_outline(text_array, outline_color)
-                text_array = replace(text_array, (0, 0, 0, 0), BACKGROUND_COLOR)
+                text_array = replace(text_array, (0, 0, 0, 0), bg_color)
             else:
-                text_array = replace(text_array, (0, 0, 0, 0), BACKGROUND_COLOR)
-                text_array = add_border(text_array, 1, BACKGROUND_COLOR)
+                text_array = replace(text_array, (0, 0, 0, 0), bg_color)
+                text_array = add_border(text_array, 1, bg_color)
             col_array[j].append(text_array)
 
     # create a numpy array for the whole table
@@ -77,7 +80,7 @@ def make_table_array(data, titles, alignments, colors=None, outline_dark=True):
 
         for i, element in enumerate(col):
             diff_with_longest = longest_element - element.shape[1]
-
+            bg_color = bg_colors[i][j]
             # align the element in the center for titles
             # and depending on the alignments list for the rest
             if i == 0:
@@ -86,38 +89,38 @@ def make_table_array(data, titles, alignments, colors=None, outline_dark=True):
                 align = alignments[j]
             if align == "right":
                 padding = np.zeros((element.shape[0], diff_with_longest, 4), dtype=np.uint8)
-                padding[:, :] = font.background_color
+                padding[:, :] = bg_color
                 element = np.append(padding, element, axis=1)
             if align == "left":
                 padding = np.zeros((element.shape[0], diff_with_longest, 4), dtype=np.uint8)
-                padding[:, :] = font.background_color
+                padding[:, :] = bg_color
                 element = np.append(element, padding, axis=1)
             if align == "center":
                 half, rest = divmod(diff_with_longest, 2)
                 padding_left = np.zeros((element.shape[0], half, 4), dtype=np.uint8)
-                padding_left[:, :] = font.background_color
+                padding_left[:, :] = bg_color
                 padding_right = np.zeros((element.shape[0], half + rest, 4), dtype=np.uint8)
-                padding_right[:, :] = font.background_color
+                padding_right[:, :] = bg_color
 
                 element = np.append(padding_left, element, axis=1)
                 element = np.append(element, padding_right, axis=1)
 
             # add the margin inside the cells
             hmargin = np.zeros((element.shape[0], horizontal_margin, 4), dtype=np.uint8)
-            hmargin[:, :] = font.background_color
+            hmargin[:, :] = bg_color
             element = np.concatenate((hmargin, element, hmargin), axis=1)
 
             vmargin = np.zeros((vertical_margin, element.shape[1], 4), dtype=np.uint8)
-            vmargin[:, :] = font.background_color
+            vmargin[:, :] = bg_color
             element = np.concatenate((vmargin, element, vmargin), axis=0)
 
             # add the grid line around the element
-            element = add_border(element, line_width, LINE_COLOR)
+            element = add_border(element, line_width, line_color)
 
             # add a gap under the title
             if i == 0:
                 title_gap = np.zeros((title_gap_height, element.shape[1], 4), dtype=np.uint8)
-                title_gap[:, :] = OUTER_OUTLINE_COLOR
+                title_gap[:, :] = outer_outline_color
                 element = np.concatenate((element, title_gap), axis=0)
 
             # remove the outline at the top to avoid double lines
@@ -174,10 +177,9 @@ def replace(array, value_to_replace, new_value):
     return array
 
 
-def make_styled_corner(array, color):
+def make_styled_corner(array, color, width):
     """make the styled gaps in each corner (this is just for aesthetic purposes)"""
     # top left
-    width = OUTER_OUTLINE_WIDTH
     array[:width, width * 2] = color
     array[width * 2, 0:width] = color
     # top right
@@ -191,8 +193,9 @@ def make_styled_corner(array, color):
     array[-width:, -(width * 2) - 1] = color
 
 
-def table_to_image(data, titles, alignments=None, colors=None, theme: Theme = None):
-    """Create an image from a 2D array.
+def table_to_image(data, titles, alignments=None, colors=None, theme: Theme = None, bg_colors=None, alternate_bg=False, scale=4):
+    """
+    Create an image from a 2D array.
 
     Parameters
     ----------
@@ -200,7 +203,11 @@ def table_to_image(data, titles, alignments=None, colors=None, theme: Theme = No
     - titles: list(str): a list of titles for each column of the table
     - alignments list(str): a list of alignments for each column, either `center`, `left`, `right`
     - colors: list(str) or list(list(str)): a list of color for each line, the colors must be a string of hex code (e.g. #ffffff)
-    - theme: Theme: a Theme object to set the table colors"""
+    - theme: Theme: a Theme object to set the table colors
+    - bg_colors: list(str) or list(list(str)): a list of color for each cell background
+    - alternate_bg: Bool: Alternate the background color on even rows if set to True
+    - scale: int: the scale for the final image (default: x4)
+    """
 
     # check on params
     if len(data[0]) != len(titles):
@@ -212,31 +219,37 @@ def table_to_image(data, titles, alignments=None, colors=None, theme: Theme = No
             raise ValueError("Incorrect shape for the colors list.")
         elif isinstance(colors[0], list) and (len(colors[0]) != len(data[0]) or len(colors) != len(data)):
             raise ValueError("Incorrect shape for the colors list.")
-    # use the theme colors if a theme is given
-    if theme is not None:
-        global BACKGROUND_COLOR, TEXT_COLOR, LINE_COLOR, OUTER_OUTLINE_COLOR
-        BACKGROUND_COLOR = theme.background_color
-        TEXT_COLOR = theme.font_color
-        LINE_COLOR = theme.grid_color
-        OUTER_OUTLINE_COLOR = theme.table_outline_color
-        outline_dark = theme.outline_dark
+    if bg_colors:
+        if not isinstance(bg_colors[0], list) and len(bg_colors) != len(data):
+            raise ValueError("Incorrect shape for the bg_colors list.")
+        elif isinstance(bg_colors[0], list) and (len(bg_colors[0]) != len(data[0]) or len(bg_colors) != len(data)):
+            raise ValueError("Incorrect shape for the bg_colors list.")
 
-    else:
-        BACKGROUND_COLOR = "#202225"
-        TEXT_COLOR = "#b9bbbe"
-        LINE_COLOR = "#2f3136"
-        OUTER_OUTLINE_COLOR = "#000000"
-        outline_dark = True
-    BACKGROUND_COLOR = ImageColor.getcolor(BACKGROUND_COLOR, "RGBA")
-    TEXT_COLOR = ImageColor.getcolor(TEXT_COLOR, "RGBA")
-    LINE_COLOR = ImageColor.getcolor(LINE_COLOR, "RGBA")
-    OUTER_OUTLINE_COLOR = ImageColor.getcolor(OUTER_OUTLINE_COLOR, "RGBA")
+    # use the theme default theme if None is given
+    if theme is None:
+        theme = get_theme("default")
 
     # reshape the colors table
     if colors is None:
-        colors = [[None] * len(data[0])] * len(data)
+        colors = [[None for _ in range(len(data[0]))] for _ in range(len(data))]
     elif not isinstance(colors[0], list):
         colors = [[c] * len(data[0]) for c in colors]
+
+    # reshape the bg_colors table
+    if bg_colors is None:
+        bg_colors = [[None for _ in range(len(data[0]))] for _ in range(len(data))]
+    elif not isinstance(bg_colors[0], list):
+        bg_colors = [[c] * len(data[0]) for c in bg_colors]
+
+    if alternate_bg:
+        for i, row in enumerate(bg_colors):
+            for j, col in enumerate(row):
+                if bg_colors[i][j] is None:
+                    if i % 2 == 0:
+                        bg_color = theme.table_outline_color
+                    else:
+                        bg_color = None
+                    bg_colors[i][j] = bg_color
 
     if alignments is None:
         alignments = ["center"] * len(data[0])
@@ -246,20 +259,18 @@ def table_to_image(data, titles, alignments=None, colors=None, theme: Theme = No
     titles = titles.copy()
     alignments = alignments.copy()
     colors = colors.copy()
+    bg_colors = bg_colors.copy()
 
     # get the table numpy array
-    table_array = make_table_array(
-        data, titles, alignments, colors, outline_dark=outline_dark
-    )
+    table_array = make_table_array(data, titles, alignments, colors, bg_colors, theme)
 
     # add style
-    table_array = add_border(table_array, OUTER_OUTLINE_WIDTH, OUTER_OUTLINE_COLOR)
-    make_styled_corner(table_array, LINE_COLOR)
-    table_array = add_border(table_array, 1, LINE_COLOR)
+    table_array = add_border(table_array, OUTER_OUTLINE_WIDTH, hex_to_rgba(theme.table_outline_color))
+    make_styled_corner(table_array, hex_to_rgba(theme.grid_color), OUTER_OUTLINE_WIDTH)
+    table_array = add_border(table_array, 1, hex_to_rgba(theme.grid_color))
 
     # convert to image
     image = Image.fromarray(table_array)
-    scale = 4
     new_width = image.size[0] * scale
     new_height = image.size[1] * scale
     image = image.resize((new_width, new_height), Image.NEAREST)

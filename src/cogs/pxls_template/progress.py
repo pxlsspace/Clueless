@@ -404,6 +404,9 @@ class Progress(commands.Cog):
         current_user_theme = discord_user["color"] or "default"
         theme = deepcopy(get_theme(current_user_theme))
         bg_colors = None
+        if theme.name == "light":
+            bg_colors = table_colors
+            table_colors = None
         theme.outline_dark = False
         table_image = table_to_image(
             table_data,

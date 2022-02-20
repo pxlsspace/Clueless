@@ -422,6 +422,23 @@ red_theme = Theme(
     table_outline_width=3,
 )
 
+light_theme = Theme(
+    name="light",
+    description="To burn your eyes.",
+    background_color="#d4ddeb",
+    headers_background_color="#adbbce",
+    grid_color="#f2f3f5",
+    font_color="#23272a",
+    table_outline_color="#f2f3f5",
+    off_color="#adbbce",
+    has_glow=False,
+    has_underglow=False,
+    palette="discord",
+    outline_dark=False,
+    odd_row_color="#adbbce",
+    table_outline_width=0,
+)
+
 theme_list = [
     default_theme,
     synthwave_theme,
@@ -429,6 +446,7 @@ theme_list = [
     pastel_theme,
     pxls_theme,
     red_theme,
+    light_theme,
 ]
 
 

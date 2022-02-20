@@ -400,12 +400,16 @@ class Progress(commands.Cog):
                     )
             table_data[i] = [format_number(c) for c in row]
         # make the table image
-        theme = deepcopy(get_theme("default"))
+        discord_user = await db_users.get_discord_user(ctx.author.id)
+        current_user_theme = discord_user["color"] or "default"
+        theme = deepcopy(get_theme(current_user_theme))
+        bg_colors = None
         theme.outline_dark = False
         table_image = table_to_image(
             table_data,
             titles,
             colors=table_colors,
+            bg_colors=bg_colors,
             theme=theme,
             alternate_bg=True,
             scale=3,

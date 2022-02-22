@@ -6,10 +6,13 @@ from copy import deepcopy
 from discord.ext import commands
 from discord_slash import cog_ext, SlashContext
 from discord_slash.utils.manage_commands import create_option, create_choice
+from discord_slash.utils.manage_components import create_button, create_actionrow
+from discord_slash.model import ButtonStyle
+import urllib.parse
 
 from main import tracked_templates
 from utils.discord_utils import format_number, image_to_file, UserConverter
-from utils.pxls.template_manager import get_template_from_url, make_before_after_gif, parse_template
+from utils.pxls.template_manager import Combo, get_template_from_url, make_before_after_gif, parse_template
 from utils.setup import GUILD_IDS, db_templates, db_users
 from utils.timezoneslib import get_timezone
 from utils.utils import make_progress_bar
@@ -106,66 +109,86 @@ class Progress(commands.Cog):
         togo_pixels = int(togo_pixels)
 
         embed = discord.Embed(title="**Progress Check**", color=0x66C5CC)
-        embed.set_thumbnail(url="attachment://template_image.png")
+        if isinstance(template, Combo):
+            embed.set_thumbnail(url="attachment://template_image.png")
 
-        info_text = f"Title: `{title}`\n"
+        info_text = f"• Title: `{title}`\n"
         if template.name:
-            info_text += f"Name: `{template.name}`\n"
-        if template.url:
-            info_text += f"Link: [click to open]({template.url})\n"
+            info_text += f"• Name: `{template.name}`\n"
 
         embed.add_field(name="**Info**", value=info_text, inline=False)
 
-        progress_text = f"Correct pixels: `{format_number(correct_pixels)}`/`{format_number(total_placeable)}`\n"
-        progress_text += f"Pixels to go: `{format_number(togo_pixels)}`\n"
-        progress_text += f"Progress:\n**|`{bar}`|** `{correct_percentage}%`\n"
-        embed.add_field(name="**Current Progress**", value=progress_text, inline=False)
+        progress_text = f"• Correct pixels: `{format_number(correct_pixels)}`/`{format_number(total_placeable)}`\n"
+        progress_text += f"• Pixels to go: `{format_number(togo_pixels)}`\n"
+        progress_text += f"• Progress:\n**|`{bar}`|** `{correct_percentage}%`\n"
 
         if is_tracked:
-            timeframes = [{"minutes": 5}, {"hours": 1}, {"hours": 6}, {"days": 1}, {"days": 7}]
-            timeframe_names = ["5 minutes", "hour", "6 hours", "day", "week"]
             now = round_minutes_down(datetime.utcnow(), 5)
             last_progress = await db_templates.get_template_progress(template, now)
-            values = ""
-            for i, tf in enumerate(timeframes):
-                td = timedelta(**tf)
-                tf_progress = await db_templates.get_template_progress(template, now - td)
-                if tf_progress is None or last_progress is None:
-                    delta_progress = "`N/A`"
-                else:
-                    delta_progress = last_progress["progress"] - tf_progress["progress"]
-                values += "• Last {}: `{}` px\n".format(
-                    timeframe_names[i],
-                    format_number(delta_progress),
-                )
             oldest_record = await db_templates.get_template_oldest_progress(template)
             if oldest_record and oldest_record["datetime"]:
                 oldest_record_time = oldest_record['datetime']
-                oldest_record_time.replace(tzinfo=timezone.utc)
+                last_record_time = last_progress["datetime"]
                 oldest_progress = oldest_record["progress"]
                 progress_since_tracking = correct_pixels - oldest_progress
-                tracking_time = datetime.utcnow() - oldest_record_time
+                tracking_time = last_record_time - oldest_record_time
                 if tracking_time != timedelta(0):
                     speed_px_h = (progress_since_tracking / (tracking_time / timedelta(hours=1)))
                     speed_px_d = (progress_since_tracking / (tracking_time / timedelta(days=1)))
-                    values += "• Average: `{}` px/day\n(`{}` px/hour)".format(
+                    progress_text += "• Average speed: `{}` px/day\n(`{}` px/hour)".format(
                         format_number(speed_px_d),
                         format_number(speed_px_h),
                     )
             else:
                 # if there is no data for this template in the db, the starting tracking time is now
                 oldest_record_time = datetime.now(timezone.utc)
-            embed.add_field(name="**Speed:**", value=values, inline=False)
 
             owner = self.client.get_user(template.owner_id)
             embed.set_footer(text=f"Owner • {owner}\nTracking Since")
             embed.timestamp = oldest_record_time
+
         else:
             prefix = ctx.prefix if isinstance(ctx, commands.Context) else "/"
             embed.set_footer(text=f"[Not Tracked]\nUse {prefix}progress add <name> <url> to start tracking.")
+        embed.add_field(name="**Current Progress**", value=progress_text, inline=False)
         detemp_file = image_to_file(progress_image, "progress.png", embed)
-        template_file = image_to_file(Image.fromarray(template.get_array()), "template_image.png")
-        await ctx.send(files=[template_file, detemp_file], embed=embed)
+
+        if isinstance(template, Combo):
+            # send the template image first and edit the embed with the URL button
+            # using the sent image
+            template_file = image_to_file(Image.fromarray(template.get_array()), "template_image.png")
+            m = await ctx.send(files=[template_file, detemp_file], embed=embed)
+            template_title = "&title=clueless-combo"
+            template_image_url = m.embeds[0].thumbnail.url
+            template_url = "https://pxls.space/#x={}&y={}&scale=4&template={}&ox={}&oy={}&tw={}&oo=1{}".format(
+                int(template.width / 2),
+                int(template.height / 2),
+                urllib.parse.quote(template_image_url),
+                0,
+                0,
+                template.width,
+                template_title,
+            )
+            buttons = [
+                create_button(
+                    style=ButtonStyle.URL,
+                    label="Template URL",
+                    url=template_url,
+                ),
+            ]
+            action_row = create_actionrow(*buttons)
+
+            await m.edit(components=[action_row])
+        else:
+            buttons = [
+                create_button(
+                    style=ButtonStyle.URL,
+                    label="Template URL",
+                    url=template.url,
+                ),
+            ]
+            action_row = create_actionrow(*buttons)
+            await ctx.send(files=[detemp_file], embed=embed, components=[action_row])
 
     @cog_ext.cog_subcommand(
         base="progress",

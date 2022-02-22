@@ -3,6 +3,8 @@ import asyncio
 import re
 import copy
 import time
+import urllib.parse
+from datetime import datetime, timedelta
 from PIL import Image
 from numba import jit
 from urllib.parse import parse_qs, urlparse
@@ -10,6 +12,7 @@ from io import BytesIO
 from cogs.pixel_art.highlight import highlight_image
 from utils.font.font_manager import PixelText
 from utils.image.gif_saver import save_transparent_gif
+from utils.time_converter import round_minutes_down, td_format
 
 from utils.utils import get_content
 from utils.setup import stats, db_templates
@@ -124,12 +127,72 @@ class Template():
 
         return res_image
 
+    async def get_progress_at(self, dt: datetime):
+        """Get the template at a given datetime
+        (or None if the template doesnt have data)"""
+        progress = await db_templates.get_template_progress(self, dt)
+        if progress:
+            return progress["datetime"], progress["progress"]
+        else:
+            return None, None
+
+    def get_virgin_abuse(self):
+        """Return the number of correct pixels that are also virgin pixels"""
+        template_virginmap = self.crop_array_to_template(stats.virginmap_array)
+        abuse_mask = np.logical_and(template_virginmap, self.placed_mask)
+        return int(np.sum(abuse_mask))
+
+    async def get_eta(self, as_string=True):
+        now = round_minutes_down(datetime.utcnow())
+        td = timedelta(days=7)
+        old_datetime, old_progress = await self.get_progress_at(now - td)
+        now_datetime, now_progress = await self.get_progress_at(now)
+        if not old_progress or not now_progress:
+            return None
+
+        diff_pixels = now_progress - old_progress
+        diff_time = now_datetime - old_datetime
+        togo = self.total_placeable - now_progress
+        if togo == 0:
+            return "done" if as_string else 0
+        if diff_time == timedelta(0):
+            return None
+        speed = diff_pixels / (diff_time / timedelta(hours=1))
+        eta = togo / speed
+        if eta <= 0:
+            eta = now_progress / speed
+            if as_string:
+                return "-" + td_format(timedelta(hours=-eta), short_format=True, hide_seconds=True, max_unit="day")
+            else:
+                return timedelta(hours=eta)
+        if as_string:
+            return td_format(timedelta(hours=eta), short_format=True, hide_seconds=True, max_unit="day")
+        else:
+            return timedelta(hours=eta)
+
+    def generate_url(self, template_image_url=None, scale=4):
+        """Generate the template URL"""
+        template_image_url = template_image_url or self.stylized_url
+        template_title = f"&title={self.title}" if self.title else ""
+
+        template_url = "https://pxls.space/#x={}&y={}&scale={}&template={}&ox={}&oy={}&tw={}&oo=1{}".format(
+            int(self.width / 2),
+            int(self.height / 2),
+            scale,
+            urllib.parse.quote(template_image_url),
+            self.ox,
+            self.oy,
+            self.width,
+            template_title,
+        )
+        return template_url
+
 
 class Combo(Template):
     """Extension of template to contain a combo template"""
     def __init__(self, title: str, palettized_array: np.ndarray, ox: int, oy: int, name, bot_id, canvas_code) -> None:
         # template metadata
-        self.title = name
+        self.title = title
         self.ox = ox
         self.oy = oy
         self.canvas_code = canvas_code

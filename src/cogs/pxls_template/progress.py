@@ -668,7 +668,7 @@ class Progress(commands.Cog):
             # dimensions
             old_dims = f"({old_temp.width}x{old_temp.height})"
             new_dims = f"({new_temp.width}x{new_temp.height})"
-            if (old_dims, old_temp.total_size) != (new_dims, new_temp.total_size):
+            if old_dims != new_dims:
                 info += "• **Dimensions**: {} → {}\n".format(old_dims, new_dims)
             else:
                 info += f"• **Dimensions**: {new_dims} *(unchanged)*\n"

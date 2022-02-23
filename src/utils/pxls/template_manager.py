@@ -170,14 +170,33 @@ class Template():
         else:
             return timedelta(hours=eta)
 
-    def generate_url(self, template_image_url=None, scale=4):
-        """Generate the template URL"""
+    def generate_url(self, template_image_url=None, default_scale=4, open_on_togo=False):
+        """Generate the template URL
+
+        Parameters
+        ----------
+        template_image_url: the image to use for the template (use the Template.stylized_image if None)
+        scale: the scale at which to display the template (if open_on_togo is False)
+        open_on_togo: open the template zoomed on an inccorect pixel"""
         template_image_url = template_image_url or self.stylized_url
-        template_title = f"&title={self.title}" if self.title else ""
+        template_title = f"&title={urllib.parse.quote(self.title)}" if self.title else ""
+
+        # coords
+        x = y = None
+        if open_on_togo:
+            # open on the pixels to place
+            (x, y) = self.find_coords()
+            scale = 40
+
+        if x is None or y is None:
+            # open on the center of the template
+            x = self.ox + self.width // 2
+            y = self.oy + self.height // 2
+            scale = default_scale
 
         template_url = "https://pxls.space/#x={}&y={}&scale={}&template={}&ox={}&oy={}&tw={}&oo=1{}".format(
-            int(self.width / 2),
-            int(self.height / 2),
+            x,
+            y,
             scale,
             urllib.parse.quote(template_image_url),
             self.ox,
@@ -186,6 +205,46 @@ class Template():
             template_title,
         )
         return template_url
+
+    def find_coords(self, chunk_size=10):
+        """Find the coordinates at which there are the most pixels to placed
+
+        chunk_size: the size of the chunks we're dividing the template into"""
+        def to_chunks(arr, nrows, ncols):
+            """divide arr into chunks of size nrows x ncols"""
+            h, w = arr.shape
+            assert h % nrows == 0, f"{h} rows is not evenly divisible by {nrows}"
+            assert w % ncols == 0, f"{w} cols is not evenly divisible by {ncols}"
+            return (arr.reshape(h // nrows, nrows, -1, ncols)
+                    .swapaxes(1, 2)
+                    .reshape(-1, nrows, ncols))
+
+        # mask with all the pixels to place
+        togo_mask = np.logical_and(~self.placed_mask, self.placeable_mask)
+
+        # pad the mask to be dividable by the block size
+        right_pad = (chunk_size - togo_mask.shape[1] % chunk_size)
+        bottom_pad = (chunk_size - togo_mask.shape[0] % chunk_size)
+        togo_mask = np.pad(togo_mask, [(0, bottom_pad), (0, right_pad)])
+
+        # convert to a list of chunk size sub-arrays
+        chunked_mask = to_chunks(togo_mask, chunk_size, chunk_size)
+
+        # find the chunk with the most pixels to place
+        max_index = fast_max_chunk(chunked_mask)
+        if max_index == -1:
+            # there are no chunk with pixels to placed
+            return (None, None)
+
+        # convert the chunk index to coords in the the template
+        highest_chunk_coords = np.unravel_index(max_index, [c // chunk_size for c in togo_mask.shape])
+
+        # get the coordinate at the center of the block
+        coords_in_template = [(c * chunk_size) + chunk_size // 2 for c in highest_chunk_coords]
+
+        # add the template ox and oy to get the final coords in the canvas
+        coords_in_canvas = (coords_in_template[1] + self.ox, coords_in_template[0] + self.oy)
+        return coords_in_canvas
 
 
 class Combo(Template):
@@ -624,3 +683,16 @@ def make_before_after_gif(old_temp: Template, new_temp: Template, extra_padding=
     save_transparent_gif(frames, 1200, diff_gif)
     diff_gif.seek(0)
     return diff_gif
+
+
+@jit(nopython=True)
+def fast_max_chunk(chunked_mask):
+    """find the index of the chunk with the most pixels to place in a chunk list"""
+    max_index = -1
+    chunk_pixels = 0
+    for i, chunk in enumerate(chunked_mask):
+        sum = np.sum(chunk)
+        if sum > chunk_pixels:
+            chunk_pixels = sum
+            max_index = i
+    return max_index

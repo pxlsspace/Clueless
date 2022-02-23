@@ -152,7 +152,7 @@ class Progress(commands.Cog):
             # using the sent image
             m = await ctx.send(files=[template_file, detemp_file], embed=embed)
             template_image_url = m.embeds[0].thumbnail.url
-            template_url = template.generate_url(template_image_url, scale=1)
+            template_url = template.generate_url(template_image_url, default_scale=1)
             buttons = [
                 create_button(
                     style=ButtonStyle.URL,
@@ -167,7 +167,7 @@ class Progress(commands.Cog):
                 create_button(
                     style=ButtonStyle.URL,
                     label="Open Template",
-                    url=template.url,
+                    url=template.generate_url(open_on_togo=True),
                 ),
             ]
             action_row = create_actionrow(*buttons)
@@ -296,7 +296,7 @@ class Progress(commands.Cog):
                 create_button(
                     style=ButtonStyle.URL,
                     label="Open Template",
-                    url=template.url,
+                    url=template.generate_url(open_on_togo=True),
                 ),
             ]
             components = [create_actionrow(*buttons)]
@@ -304,7 +304,7 @@ class Progress(commands.Cog):
         else:
             m = await ctx.send(file=template_file, embed=embed)
             template_image_url = m.embeds[0].thumbnail.url
-            template_url = template.generate_url(template_image_url, scale=1)
+            template_url = template.generate_url(template_image_url, default_scale=1)
             buttons = [
                 create_button(
                     style=ButtonStyle.URL,

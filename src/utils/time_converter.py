@@ -22,10 +22,10 @@ def str_to_td(input: str, raw=False):
 
     regex = r""
     for t in time_formats:
-        regex += r"((?P<" + t[0] + r">(\d*\.)?\d+?)" + t[1] + r")?"
+        regex += r"((?P<" + t[0] + r">(\d*\.)?\d*?)" + t[1] + r")?"
     regex = re.compile(regex)
 
-    parts = regex.fullmatch(input)
+    parts = regex.fullmatch(input.lower())
     if not parts:
         return None
     parts = parts.groupdict()
@@ -33,7 +33,10 @@ def str_to_td(input: str, raw=False):
     if raw:
         raw = []
         for name, param in parts.items():
-            if param:
+            # empty string means 1 (eg: "hour" = "1hour")
+            if param is not None:
+                if param == "":
+                    param = 1
                 if float(param) < 2:
                     # remove the s
                     name = name[:-1]
@@ -42,7 +45,11 @@ def str_to_td(input: str, raw=False):
 
     time_params = {}
     for name, param in parts.items():
-        if param:
+        if param is not None:
+            # empty string means 1 (eg: "hour" = "1hour")
+            if param == "":
+                param = 1
+
             # convert months and years to day because timedelta doesn't
             # support these time units
             if name == "months":

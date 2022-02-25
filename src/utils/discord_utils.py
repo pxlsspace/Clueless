@@ -295,3 +295,46 @@ async def autocomplete_palette_with_none(inter: disnake.AppCmdInter, user_input:
 async def autocomplete_pxls_name(inter: disnake.AppCmdInter, user_input: str):
     names = await db_stats.get_all_pxls_names()
     return [name for name in names if user_input.lower() in name.lower()][:25]
+
+
+class Confirm(disnake.ui.View):
+    """Simple View that gives a confirmation menu."""
+
+    message: disnake.Message
+
+    def __init__(self, author: disnake.User, timeout=180):
+        super().__init__(timeout=timeout)
+        self.value = None
+        self.author = author
+
+    async def interaction_check(self, inter: disnake.MessageInteraction) -> bool:
+        if inter.author != self.author:
+            embed = disnake.Embed(
+                title="This isn't your command!",
+                description="You cannot interact with a command you did not call.",
+                color=0xFF3621,
+            )
+            await inter.send(ephemeral=True, embed=embed)
+            return False
+        return True
+
+    async def on_timeout(self) -> None:
+        for c in self.children[:]:
+            self.remove_item(c)
+        # make sure to update the message with the new buttons
+        await self.message.edit(view=self)
+
+    # When the confirm button is pressed, set the inner value to `True`,
+    # remove the buttons and stop the View from listening to more input.
+    @disnake.ui.button(label="Confirm", style=disnake.ButtonStyle.green)
+    async def confirm(self, button: disnake.ui.Button, interaction: disnake.MessageInteraction):
+        self.value = True
+        await interaction.response.edit_message(view=None)
+        self.stop()
+
+    # This one is similar to the confirmation button except sets the inner value to `False`
+    @disnake.ui.button(label="Cancel", style=disnake.ButtonStyle.red)
+    async def cancel(self, button: disnake.ui.Button, interaction: disnake.MessageInteraction):
+        self.value = False
+        await interaction.response.edit_message(view=None)
+        self.stop()

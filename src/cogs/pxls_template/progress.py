@@ -6,7 +6,7 @@ from copy import deepcopy
 from disnake.ext import commands
 
 from main import tracked_templates
-from utils.discord_utils import format_number, image_to_file, UserConverter
+from utils.discord_utils import Confirm, format_number, image_to_file, UserConverter
 from utils.pxls.template_manager import Combo, get_template_from_url, make_before_after_gif, parse_template
 from utils.setup import db_templates, db_users
 from utils.timezoneslib import get_timezone
@@ -728,14 +728,52 @@ class Progress(commands.Cog):
 
     async def delete(self, ctx, template_name):
         try:
-            deleted_temp = await tracked_templates.delete_template(
-                template_name,
-                ctx.author.id,
-                False,
-            )
+            temp = tracked_templates.get_template(template_name, ctx.author.id, False)
+            if not temp:
+                raise ValueError(f"No template named `{template_name}` found.")
+            if temp.owner_id != ctx.author.id and ctx.author.id != tracked_templates.bot_owner_id:
+                raise ValueError("You cannot delete a template that you don't own.")
+            if isinstance(temp, Combo):
+                raise ValueError("You cannot delete the combo.")
         except Exception as e:
             return await ctx.send(f":x: {e}")
-        return await ctx.send(f"✅ Template `{deleted_temp.name}` successfully deleted.")
+
+        confirm_title = f"⚠️ Are you sure you want to DELETE `{temp.name}` from the tracker?"
+        confirm_text = "This is **IRREVERSIBLE**!\nThis template and all its stats will be **FOREVER LOST** if you proceed."
+        confirm_embed = disnake.Embed(title=confirm_title, description=confirm_text, color=0xffcc00)
+        confirm_view = Confirm(ctx.author)
+        confirm_view.message = await ctx.send(embed=confirm_embed, view=confirm_view)
+        if isinstance(ctx, disnake.AppCmdInter):
+            confirm_view.message = await ctx.original_message()
+
+        await confirm_view.wait()
+
+        if not confirm_view.value:
+            if confirm_view.value is None:
+                title = "Operation Timed out"
+            else:
+                title = "Operation Cancelled"
+            embed = disnake.Embed(
+                title=title,
+                description=f"The template `{temp.name}` was **not** deleted.",
+                color=0x66C5CC,
+            )
+        else:
+            try:
+                deleted_temp = await tracked_templates.delete_template(
+                    template_name,
+                    ctx.author.id,
+                    False,
+                )
+            except Exception as e:
+                return await ctx.send(f":x: {e}")
+            embed = disnake.Embed(
+                title="✅ Template Deleted",
+                description=f"The template `{deleted_temp.name}` and all its stats were successfully deleted.",
+                color=0x3ba55d,
+            )
+
+        return await confirm_view.message.edit(embed=embed)
 
     @_progress.sub_command(name="speed")
     async def _speed(

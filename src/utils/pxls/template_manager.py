@@ -1,3 +1,4 @@
+import sqlite3
 import numpy as np
 import asyncio
 import re
@@ -413,7 +414,15 @@ class TemplateManager():
         if new_owner_id:
             new_temp.owner_id = new_owner_id
         new_temp.hidden = False
-        if not await db_templates.update_template(old_temp, new_temp.url, new_temp.name, new_temp.owner_id):
+        try:
+            temp_id = await db_templates.update_template(
+                old_temp, new_temp.url, new_temp.name, new_temp.owner_id
+            )
+        except sqlite3.IntegrityError:
+            raise ValueError(
+                "You cannot transfer the ownership to a user that has never used the bot."
+            )
+        if not temp_id:
             raise ValueError("There was an error while updating the template.")
         old_temp_index = self.list.index(old_temp)
         self.list.remove(old_temp)

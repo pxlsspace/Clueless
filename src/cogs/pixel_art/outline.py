@@ -1,59 +1,42 @@
 import functools
-import discord
+import disnake
 from PIL import Image, ImageColor
-from discord.ext import commands
+from disnake.ext import commands
 from io import BytesIO
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option
 
 from utils.arguments_parser import parse_outline_args
-from utils.discord_utils import format_number, get_image_from_message, image_to_file
+from utils.discord_utils import autocomplete_palette, format_number, get_image_from_message, image_to_file
 from utils.image.image_utils import (
     add_outline,
     remove_white_space,
     get_pxls_color,
     is_hex_color,
 )
-from utils.setup import GUILD_IDS
 
 
 class Outline(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @cog_ext.cog_slash(
-        name="outline",
-        description="Convert time formats.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="color",
-                description="Color of the outline, can be the name of a pxlsColor or a hexcolor.",
-                option_type=3,
-                required=True,
-            ),
-            create_option(
-                name="image",
-                description="The URL of the image you want to outline.",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="sparse",
-                description="To have a sparse outline (outline without the corners).",
-                option_type=5,
-                required=False,
-            ),
-            create_option(
-                name="width",
-                description="The width of the outline in pixels.",
-                option_type=4,
-                required=False,
-            ),
-        ],
-    )
-    async def _outline(self, ctx: SlashContext, color, image=None, sparse=False, width=None):
-        await ctx.defer()
+    @commands.slash_command(name="outline")
+    async def _outline(
+            self,
+            inter: disnake.AppCmdInter,
+            color: str = commands.Param(autocomplete=autocomplete_palette),
+            image: str = None,
+            sparse: bool = False,
+            width: int = commands.Param(default=None, gt=0, le=32),
+    ):
+        """Add an outline to an image.
+
+        Parameters
+        ----------
+        color: Color of the outline, can be the name of a pxlsColor or a hexcolor.
+        image: The URL of the image you want to outline.
+        sparse: To have a sparse outline (outline without the corners) (default: False).
+        width: The width of the outline in pixels. (default: 1)
+        """
+        await inter.response.defer()
         args = (color,)
         if image:
             args += (image,)
@@ -61,7 +44,7 @@ class Outline(commands.Cog):
             args += ("-sparse",)
         if width:
             args += ("-width", str(width))
-        await self.outline(ctx, *args)
+        await self.outline(inter, *args)
 
     @commands.command(
         name="outline",
@@ -90,6 +73,8 @@ class Outline(commands.Cog):
         width = param["width"]
         if width > 32:
             return await ctx.send("❌ This outline width is too big (max: 32).")
+        elif width < 1:
+            return await ctx.send("❌ This outline width is too small (min: 1).")
 
         # get the rgba from the color input
         try:
@@ -115,22 +100,16 @@ class Outline(commands.Cog):
 
         await ctx.send(file=file)
 
-    @cog_ext.cog_slash(
-        name="crop",
-        description="Remove the 'white space' from a PNG image.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="image",
-                description="The URL of the image.",
-                option_type=3,
-                required=False,
-            )
-        ],
-    )
-    async def _crop(self, ctx: SlashContext, image=None):
-        await ctx.defer()
-        await self.crop(ctx, image)
+    @commands.slash_command(name="crop")
+    async def _crop(self, inter: disnake.AppCmdInter, image: str = None):
+        """Remove the 'white space' from a PNG image.
+
+        Parameters
+        ----------
+        image: The URL of the image.
+        """
+        await inter.response.defer()
+        await self.crop(inter, image)
 
     @commands.command(
         name="crop",
@@ -154,12 +133,12 @@ class Outline(commands.Cog):
             None, remove_white_space, input_image
         )
         ratio = (image_cropped.width * image_cropped.height) / (input_image.width * input_image.height)
-        embed = discord.Embed(title="Crop", color=0x66C5CC)
+        embed = disnake.Embed(title="Crop", color=0x66C5CC)
         if ratio == 1:
             embed.description = "There was nothing to crop here. <a:bruhkitty:880829401359589446>"
         else:
             embed.description = f"The cropped image is **{format_number((1-ratio)*100)}%** smaller.\n"
-            embed.description += "`{0.width}x{0.height}` -> `{1.width}x{1.height}`".format(
+            embed.description += "`{0.width}x{0.height}` → `{1.width}x{1.height}`".format(
                 input_image, image_cropped
             )
         file = await self.client.loop.run_in_executor(

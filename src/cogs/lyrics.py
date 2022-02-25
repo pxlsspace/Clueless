@@ -1,13 +1,10 @@
-import discord
-from discord.ext import commands
-from discord import Spotify
+import disnake
+from disnake.ext import commands
+from disnake import Spotify
 from difflib import SequenceMatcher
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option
 
 from utils.genius import search_song
 from utils import azlyrics
-from utils.setup import GUILD_IDS
 
 
 class Lyrics(commands.Cog):
@@ -15,31 +12,26 @@ class Lyrics(commands.Cog):
         self.client = client
 
     # slash command
-    @cog_ext.cog_slash(
-        name="lyrics",
-        description="Get the lyrics of a song.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="song",
-                description="The song to search.",
-                option_type=3,
-                required=True,
-            )
-        ],
-    )
-    async def _lyrics(self, ctx: SlashContext, song=None):
-        await ctx.defer()
-        await self.lyrics(ctx, query=song)
+    @commands.slash_command(name="lyrics")
+    async def _lyrics(self, inter: disnake.AppCmdInter, song: str = None):
+        """Get the lyrics of the song you're listening on Spotify.
+
+        Parameters
+        ----------
+        song: The song to search.
+        """
+        await inter.response.defer()
+        await self.lyrics(inter, query=song)
 
     # prefix command
     @commands.command(
         name="lyrics",
         description="Get the lyrics of the song you're listening on Spotify.",
+        usage="[song]"
     )
-    async def p_lyrics(self, ctx, *, query=None):
+    async def p_lyrics(self, ctx, *, song=None):
         async with ctx.typing():
-            await self.lyrics(ctx, query=query)
+            await self.lyrics(ctx, query=song)
 
     async def lyrics(self, ctx, *, query=None):
         spotify_title = None
@@ -52,7 +44,7 @@ class Lyrics(commands.Cog):
                     spotify_title = activity.title
                     spotify_artists = activity.artists
             if spotify_title is None and spotify_artists is None:
-                return await ctx.send("❌ You're not playing any song on Spotify.")
+                return await ctx.send("❌ You are not playing any song on Spotify.")
             else:
                 title_to_search = spotify_title
                 artists_to_search = spotify_artists
@@ -74,7 +66,7 @@ class Lyrics(commands.Cog):
                 lyrics = format_lyrics(lyrics)
                 if len(lyrics) > 4096:
                     lyrics = "**The lyrics are too long to be displayed\nClick on the title to see them on the site**"
-                embed = discord.Embed(
+                embed = disnake.Embed(
                     title=title, url=azlyrics_url, description=lyrics, color=0x9999CC
                 )
                 embed.set_footer(
@@ -101,7 +93,7 @@ class Lyrics(commands.Cog):
                 + ((f" by **{artists_to_search}**") if artists_to_search else "")
             )
 
-        # get the song informations and lyrics
+        # get the song information and lyrics
         song_cover_url = song.image_url
         lyrics = song.lyrics
         song_url = song.genius_url
@@ -112,8 +104,8 @@ class Lyrics(commands.Cog):
         if len(lyrics) > 4096:
             lyrics = "**The lyrics are too long to be displayed\nClick on the title to see them on the site**"
 
-        # send the embed with the informations
-        embed = discord.Embed(
+        # send the embed with the information
+        embed = disnake.Embed(
             color=0xFFFF64, title=f"Lyrics for {song.full_title}", description=lyrics
         )
         embed.set_thumbnail(url=song_cover_url)

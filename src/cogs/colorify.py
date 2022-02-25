@@ -1,47 +1,38 @@
-import discord
+import disnake
 import numpy as np
 from matplotlib.colors import hsv_to_rgb
 from PIL import Image, ImageColor
 from io import BytesIO
-from discord.ext import commands
+from disnake.ext import commands
 from blend_modes import hard_light
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option
 
-from utils.discord_utils import image_to_file, get_image_from_message
+from utils.discord_utils import image_to_file, get_image_from_message, autocomplete_palette
 from utils.image.gif_saver import save_transparent_gif
 from utils.image.image_utils import get_pxls_color, is_hex_color
 from utils.image.img_to_gif import img_to_animated_gif
-from utils.setup import GUILD_IDS
 from utils.arguments_parser import MyParser
 
 
 class Colorify(commands.Cog):
-    def __init__(self, client) -> None:
-        self.client = client
+    def __init__(self, client: commands.Bot) -> None:
+        self.client: commands.Bot = client
 
-    @cog_ext.cog_slash(
-        name="colorify",
-        description="Turn an image to a different color.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="color",
-                description="A pxlsColor name or hex color.",
-                option_type=3,
-                required=True,
-            ),
-            create_option(
-                name="image",
-                description="Can be an image URL or a custom emoji.",
-                option_type=3,
-                required=False,
-            ),
-        ],
-    )
-    async def _colorify(self, ctx: SlashContext, color, image=None):
-        await ctx.defer()
-        await self.colorify(ctx, color, image)
+    @commands.slash_command(name="colorify")
+    async def _colorify(
+        self,
+        inter: disnake.AppCmdInter,
+        color: str = commands.Param(autocomplete=autocomplete_palette),
+        image: str = None,
+    ):
+        """Turn an image to a different color.
+
+        Parameters
+        ----------
+        color: A pxlsColor name or hex color.
+        image: Can be an image URL or a custom emoji.
+        """
+        await inter.response.defer()
+        await self.colorify(inter, color, image)
 
     @commands.command(
         name="colorify",
@@ -95,7 +86,7 @@ class Colorify(commands.Cog):
                 None, save_transparent_gif, res_frames, durations, animated_img
             )
             animated_img.seek(0)
-            file = discord.File(fp=animated_img, filename="colorify.gif")
+            file = disnake.File(fp=animated_img, filename="colorify.gif")
 
         # still image (png, jpeg, ..)
         else:
@@ -104,57 +95,39 @@ class Colorify(commands.Cog):
 
         await ctx.send(file=file)
 
-    @cog_ext.cog_slash(
-        name="pinkify",
-        description="Turn an image pink.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="image",
-                description="Can be an image URL or a custom emoji.",
-                option_type=3,
-                required=False,
-            )
-        ],
-    )
-    async def _pinkify(self, ctx: SlashContext, image=None):
-        await ctx.defer()
-        await self.colorify(ctx, "pink", image)
+    @commands.slash_command(name="pinkify")
+    async def _pinkify(self, inter: disnake.AppCmdInter, image: str = None):
+        """Turn an image pink.
+
+        Parameters
+        ----------
+        image: Can be an image URL or a custom emoji.
+        """
+        await inter.response.defer()
+        await self.colorify(inter, "pink", image)
 
     @commands.command(description="Turn an image pink.", usage="<image|url|emoji>")
     async def pinkify(self, ctx, url=None):
         async with ctx.typing():
             await self.colorify(ctx, "pink", url)
 
-    @cog_ext.cog_slash(
-        name="rainbowfy",
-        description="Turn an image to a rainbow GIF.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="image",
-                description="Can be an image URL or a custom emoji.",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="saturation",
-                description="The rainbow saturation value between 0 and 100 (default: 50).",
-                option_type=4,
-                required=False,
-            ),
-            create_option(
-                name="lightness",
-                description="The rainbow lightness value between 0 and 100 (default: 60).",
-                option_type=4,
-                required=False,
-            ),
-        ],
-    )
+    @commands.slash_command(name="rainbowfy")
     async def _rainbowfy(
-        self, ctx: SlashContext, image=None, saturation=None, lightness=None
+        self, inter: disnake.AppCmdInter,
+        image: str = None,
+        saturation: int = None,
+        lightness: int = None,
     ):
-        await ctx.defer()
+        """
+        Turn an image to a rainbow GIF.
+
+        Parameters
+        ----------
+        image: Can be an image URL or a custom emoji.
+        saturation: he rainbow saturation value between 0 and 100 (default: 50).
+        lightness: The rainbow lightness value between 0 and 100 (default: 60).
+        """
+        await inter.response.defer()
         args = ()
         if image:
             args += (image,)
@@ -163,7 +136,7 @@ class Colorify(commands.Cog):
         if lightness:
             args += ("-lightness", str(lightness))
 
-        await self.rainbowfy(ctx, *args)
+        await self.rainbowfy(inter, *args)
 
     @commands.command(
         name="rainbowfy",
@@ -214,7 +187,7 @@ class Colorify(commands.Cog):
         rainbow_img = await self.client.loop.run_in_executor(
             None, rainbowfy, img, saturation, lightness
         )
-        file = discord.File(fp=rainbow_img, filename="rainbowfy.gif")
+        file = disnake.File(fp=rainbow_img, filename="rainbowfy.gif")
         await ctx.send(file=file)
 
 
@@ -310,5 +283,5 @@ def colorify(img: Image.Image, color: tuple) -> Image.Image:
     return blended_img
 
 
-def setup(client):
+def setup(client: commands.Bot):
     client.add_cog(Colorify(client))

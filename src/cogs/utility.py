@@ -1,20 +1,15 @@
 import os
-import discord
+import disnake
 import re
 import platform
-import discord_slash
 from datetime import datetime, timedelta, timezone
-from discord.ext import commands
+from disnake.ext import commands
 from dotenv import load_dotenv
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option, create_choice
-from discord_slash.utils.manage_components import create_button, create_actionrow
-from discord_slash.model import ButtonStyle
 
-from utils.setup import BOT_INVITE, SERVER_INVITE, db_servers, GUILD_IDS, VERSION
+from utils.setup import BOT_INVITE, SERVER_INVITE, db_servers, VERSION
 from utils.time_converter import str_to_td, td_format
 from utils.timezoneslib import get_timezone
-from utils.utils import get_content, ordinal
+from utils.utils import ordinal
 from utils.discord_utils import format_number, image_to_file
 from utils.table_to_image import table_to_image
 
@@ -22,39 +17,32 @@ from utils.table_to_image import table_to_image
 class Utility(commands.Cog):
     """Various utility commands"""
 
-    def __init__(self, client):
+    def __init__(self, client: commands.Bot):
         load_dotenv()
-        self.client = client
+        self.client: commands.Bot = client
 
-    @cog_ext.cog_slash(
-        name="ping", description="pong! (show the bot latency).", guild_ids=GUILD_IDS
-    )
-    async def _ping(self, ctx: SlashContext):
-        await self.ping(ctx)
+    @commands.slash_command(name="ping")
+    async def _ping(self, inter: disnake.AppCmdInter):
+        """pong! (show the bot latency)."""
+        await self.ping(inter)
 
     @commands.command(description="pong! (show the bot latency)")
     async def ping(self, ctx):
         await ctx.send(f"pong! (bot latency: `{round(self.client.latency*1000,2)}` ms)")
 
-    @cog_ext.cog_slash(
-        name="echo",
-        description="Repeat your text.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="text",
-                description="The text to repeat.",
-                option_type=3,
-                required=True,
-            )
-        ],
-    )
-    async def _echo(self, ctx: SlashContext, text: str):
-        await self.echo(ctx, text=text)
+    @commands.slash_command(name="echo")
+    async def _echo(self, inter: disnake.AppCmdInter, text: str):
+        """Repeat your text.
+
+        Parameters
+        ----------
+        text: The text to repeat."""
+
+        await self.echo(inter, text=text)
 
     @commands.command(usage="<text>", description="Repeat your text.")
     async def echo(self, ctx, *, text):
-        allowed_mentions = discord.AllowedMentions(everyone=False)
+        allowed_mentions = disnake.AllowedMentions(everyone=False)
         await ctx.send(text, allowed_mentions=allowed_mentions)
 
     @commands.command(usage="[prefix]", description="Change or display the bot prefix.")
@@ -67,61 +55,25 @@ class Utility(commands.Cog):
             await db_servers.update_prefix(prefix, ctx.guild.id)
             await ctx.send("✅ Prefix set to `" + prefix + "`")
 
-    @commands.command(
-        hidden=True,
-        usage="<amount> <currency>",
-        description="Convert currency between Euro and SA Rand.",
-        help="""- `<amount>`: a number to convert
-                  - `<currency>`: either: 'euros', 'euro', 'EUR', '€', 'e' or 'rand', 'ZAR', 'R' (not case-sensitive)""",
-    )
-    async def convert(self, ctx, amount, currency):
-        try:
-            amount = float(amount)
-        except ValueError:
-            return await ctx.send("❌ `amount` parameter must be a number.")
-        apikey = os.environ.get("CURRCONV_API_KEY")
-        url = f"https://free.currconv.com/api/v7/convert?q=EUR_ZAR,ZAR_EUR&compact=ultra&apiKey={apikey}"
-        json_response = await get_content(url, "json")
-        EUR_ZAR = json_response["EUR_ZAR"]
-        ZAR_EUR = json_response["ZAR_EUR"]
-
-        test_list_eur = ["euros", "euro", "eu", "eur", "€", "e"]
-        test_list_zar = ["rand", "zar", "r"]
-
-        if currency.lower() in test_list_eur:
-            return await ctx.send(f"{amount}€ = {round(amount*EUR_ZAR,2)} rand")
-        elif currency.lower() in test_list_zar:
-            return await ctx.send(f"{amount} rand = {round(amount*ZAR_EUR,2)}€")
-        else:
-            return await ctx.send("❌ Invalid `currency` parameter.")
-
     choices = ["years", "months", "weeks", "days", "hours", "minutes", "seconds"]
 
-    @cog_ext.cog_slash(
-        name="timeconvert",
-        description="Convert time formats.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="time",
-                description="A time duration in the format ?y?mo?w?d?h?m?s",
-                option_type=3,
-                required=True,
-            ),
-            create_option(
-                name="unit",
-                description="Convert the time to this unit.",
-                option_type=3,
-                required=False,
-                choices=[create_choice(name=c, value=c) for c in choices],
-            ),
-        ],
-    )
-    async def _timeconvert(self, ctx: SlashContext, time, unit=None):
+    @commands.slash_command(name="timeconvert")
+    async def _timeconvert(
+        self,
+        inter: disnake.AppCmdInter,
+        time: str,
+        unit: str = commands.Param(choices=choices, default=None),
+    ):
+        """Convert time formats.
+
+        Parameters
+        ----------
+        time: A time duration in the format ?y?mo?w?d?h?m?s
+        unit: Convert the time to this unit."""
         if unit:
-            await self.timeconvert(ctx, time, "-" + unit)
+            await self.timeconvert(inter, time, "-" + unit)
         else:
-            await self.timeconvert(ctx, time)
+            await self.timeconvert(inter, time)
 
     @commands.command(
         usage="<?y?mo?w?d?h?m?s> {-year|month|week|day|hour|minute|second}",
@@ -169,26 +121,6 @@ class Utility(commands.Cog):
 
         await ctx.send(f"{str_to_td(input,raw=True)} = {res}.")
 
-    @cog_ext.cog_slash(
-        name="rl",
-        description="Reload a bot extension (owner only).",
-        guild_ids=[389486136763875340],
-        options=[
-            create_option(
-                name="extension",
-                description="The extension to reload.",
-                option_type=3,
-                required=True,
-            )
-        ],
-    )
-    async def _rl(self, ctx: SlashContext, extension):
-        appinfo = await self.client.application_info()
-        if ctx.author != appinfo.owner:
-            raise commands.NotOwner()
-
-        await self.rl(ctx, extension)
-
     @commands.command(hidden=True)
     @commands.is_owner()
     async def rl(self, ctx, extension):
@@ -199,21 +131,14 @@ class Utility(commands.Cog):
 
         await ctx.send(f"✅ Extension `{extension}` has been reloaded")
 
-    @cog_ext.cog_slash(
-        name="time",
-        description="Show the current time in a timezone.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="timezone",
-                description="A timezone name (ex: 'UTC+8', US/Pacific, PST).",
-                option_type=3,
-                required=True,
-            )
-        ],
-    )
-    async def _time(self, ctx, timezone):
-        await self.time(ctx, timezone)
+    @commands.slash_command(name="time")
+    async def _time(self, inter: disnake.AppCmdInter, timezone: str):
+        """Show the current time in a timezone.
+
+        Parameters
+        ----------
+        timezone: A timezone name (ex: 'UTC+8', US/Pacific, PST)."""
+        await self.time(inter, timezone)
 
     @commands.command(
         name="time",
@@ -265,7 +190,7 @@ class Utility(commands.Cog):
 
     # Populate the command usage database with logs sent in the log channel
     # (This is meant to be used only once)
-    @commands.command(hidden=True)
+    @commands.command(hidden=True, enabled=False)
     @commands.is_owner()
     async def log2db(self, ctx):
         log_channel_id = os.environ.get("COMMAND_LOG_CHANNEL")
@@ -327,25 +252,22 @@ class Utility(commands.Cog):
                 )
             )
 
-    @cog_ext.cog_slash(
-        name="botinfo",
-        description="Show some stats and information about the bot.",
-        guild_ids=GUILD_IDS,
-    )
-    async def _botinfo(self, ctx: SlashContext):
-        await self.botinfo(ctx)
+    @commands.slash_command(name="botinfo")
+    async def _botinfo(self, inter: disnake.AppCmdInter):
+        """Show some stats and information about the bot."""
+        await self.botinfo(inter)
 
     @commands.command(description="Show some stats and information about the bot.")
     async def botinfo(self, ctx):
         app_info = await self.client.application_info()
         owner = app_info.owner
         me = ctx.me
-        bot_age = td_format(datetime.now() - me.created_at, hide_seconds=True)
+        bot_age = td_format(disnake.utils.utcnow() - me.created_at, hide_seconds=True)
         server_prefix = await db_servers.get_prefix(self.client, ctx)
         # get some bot stats
         guild_count = len(self.client.guilds)
         commands_count = len(self.client.commands)
-        slash_commands_count = len(self.client.slash.commands)
+        slash_commands_count = len(self.client.slash_commands)
         usage_count = await db_servers.db.sql_select(
             "SELECT COUNT(*) FROM command_usage"
         )
@@ -425,7 +347,7 @@ class Utility(commands.Cog):
             )
 
         # format and send the data in an embed
-        embed = discord.Embed(title="Bot Information", color=0x66C5CC)
+        embed = disnake.Embed(title="Bot Information", color=0x66C5CC)
         embed.description = f"Creator: {owner}\n"
         embed.description += f"Bot version: `{VERSION}` - Ping: `{round(self.client.latency*1000,2)} ms`\n"
         embed.description += f"Bot age: {bot_age}\n"
@@ -438,28 +360,21 @@ class Utility(commands.Cog):
         )
         embed.add_field(name=f"**Your stats** ({ctx.author})", value=user_info)
 
-        embed.set_thumbnail(url=ctx.me.avatar_url)
-        embed.set_author(name=me, icon_url=me.avatar_url)
-        versions = "This bot runs on Python {} using discord.py {} and discord-interactions {}".format(
-            platform.python_version(), discord.__version__, discord_slash.__version__
+        embed.set_thumbnail(url=ctx.me.display_avatar)
+        embed.set_author(name=me, icon_url=me.display_avatar)
+        versions = "This bot runs on Python {} using disnake {} 🐍".format(
+            platform.python_version(), disnake.__version__,
         )
         embed.set_footer(text=versions)
 
-        buttons = [
-            create_button(
-                style=ButtonStyle.URL,
-                label="Add the bot to your server",
-                url=BOT_INVITE,
-            ),
-            create_button(
-                style=ButtonStyle.URL,
-                label="Join the Clueless dev server",
-                url=SERVER_INVITE,
-            ),
-        ]
-        action_row = create_actionrow(*buttons)
-        await ctx.send(embed=embed, components=[action_row])
+        class Invites(disnake.ui.View):
+            def __init__(self, bot_invite, server_invite):
+                super().__init__()
+                self.add_item(disnake.ui.Button(label="Add the bot to your server", url=bot_invite))
+                self.add_item(disnake.ui.Button(label="Join the Clueless dev server", url=server_invite))
+        invites = Invites(BOT_INVITE, SERVER_INVITE)
+        await ctx.send(embed=embed, view=invites)
 
 
-def setup(client):
+def setup(client: commands.Bot):
     client.add_cog(Utility(client))

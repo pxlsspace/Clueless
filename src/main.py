@@ -1,29 +1,29 @@
 import os
 import sys
-import discord
+import disnake
 import traceback
 
-from discord.ext import commands
+from disnake.ext import commands
 from dotenv import load_dotenv
 from datetime import timezone
-from discord_slash import SlashCommand
-from discord_slash.context import SlashContext
+
 
 from utils.pxls.template_manager import TemplateManager
-from utils.setup import DEFAULT_PREFIX, db_stats, db_servers, db_users, db_templates
+from utils.setup import DEFAULT_PREFIX, db_stats, db_servers, db_users, db_templates, GUILD_IDS
 
 
 load_dotenv()
-intents = discord.Intents.all()
-activity = discord.Activity(type=discord.ActivityType.watching, name="you placing those pixels 👀")
+intents = disnake.Intents.all()
+activity = disnake.Activity(type=disnake.ActivityType.watching, name="you placing those pixels 👀")
 client = commands.Bot(
     command_prefix=db_servers.get_prefix,
     help_command=None,
     intents=intents,
     case_insensitive=True,
     activity=activity,
+    test_guilds=GUILD_IDS,
+    reload=bool(GUILD_IDS),
 )
-slash = SlashCommand(client, sync_commands=True, sync_on_cog_reload=True)
 
 tracked_templates = TemplateManager()
 
@@ -50,15 +50,15 @@ async def on_slash_command(ctx):
 @client.event
 async def on_command(ctx):
     """Save the command usage in the database and in a discord channel if set"""
-    slash_command = isinstance(ctx, SlashContext)
+    slash_command = isinstance(ctx, disnake.ApplicationCommandInteraction)
     if slash_command:
-        command_name = ctx.command
+        command_name = ctx.application_command.name
         if hasattr(ctx, "subcommand_name") and ctx.subcommand_name:
             command_name += " " + ctx.subcommand_name
     else:
         command_name = ctx.command.qualified_name
 
-    is_dm = isinstance(ctx.channel, discord.channel.DMChannel)
+    is_dm = ctx.guild is None
 
     if is_dm:
         server_name = None
@@ -83,21 +83,10 @@ async def on_command(ctx):
         message += f"```{args}```"
         message += f"[link to the message]({ctx.message.jump_url})\n"
     else:
-        options_data = ctx.data.get("options")
-        if options_data and len(options_data) > 0:
-            if options_data[0]["type"] != 1:
-                options = " ".join(
-                    [f'{o["name"]}:{o["value"]}' for o in options_data]
-                )
-            else:
-                options = ""
-                if "options" in options_data[0]:
-                    options += " ".join(
-                        [f'{o["name"]}:{o["value"]}' for o in options_data[0]["options"]]
-                    )
-        else:
-            options = ""
-        args = f"/{command_name}{' ' + options}"
+        options = ""
+        for key, value in ctx.filled_options.items():
+            options += f" {key}:{value}"
+        args = f"/{command_name}{options}"
         message += f"```{args}```"
 
     # save commands used in the database
@@ -118,10 +107,10 @@ async def on_command(ctx):
         log_channel = await client.fetch_channel(log_channel_id)
     except Exception:
         return
-    emb = discord.Embed(color=0x00BB00, title="Command '{}' used.".format(command_name))
+    emb = disnake.Embed(color=0x00BB00, title="Command '{}' used.".format(command_name))
     emb.add_field(name="Context:", value=context, inline=False)
     emb.add_field(name="Message:", value=message, inline=False)
-    emb.set_thumbnail(url=ctx.author.avatar_url)
+    emb.set_thumbnail(url=ctx.author.display_avatar)
     await log_channel.send(embed=emb)
 
 
@@ -132,11 +121,11 @@ async def on_slash_command_error(ctx, error):
 
 @client.event
 async def on_command_error(ctx, error):
-    if isinstance(error, commands.CommandNotFound):
+    if isinstance(error, commands.CommandNotFound) or isinstance(error, commands.DisabledCommand):
         return
-    slash_command = isinstance(ctx, SlashContext)
+    slash_command = isinstance(ctx, disnake.ApplicationCommandInteraction)
     if slash_command:
-        command_name = ctx.command
+        command_name = ctx.application_command.name
     else:
         command_name = ctx.command.qualified_name
     # handled errors
@@ -160,13 +149,13 @@ async def on_command_error(ctx, error):
 
     # unhandled errors
     if slash_command:
-        if not isinstance(error, discord.errors.NotFound):
-            embed = discord.Embed(
+        if not isinstance(error, disnake.errors.NotFound):
+            embed = disnake.Embed(
                 color=0xFF4747,
                 title="Unexpected error.",
                 description="<a:peepoLeaveNope:822571977390817340> An unexpected error occurred, please contact the bot developer if the problem persists.",
             )
-            await ctx.reply(embed=embed, hidden=True)
+            await ctx.send(embed=embed, ephemeral=True)
     else:
         await ctx.message.add_reaction(r"a:peepoLeaveNope:822571977390817340")
     print("Ignoring exception in command {}:".format(command_name), file=sys.stderr)
@@ -183,7 +172,7 @@ async def on_command_error(ctx, error):
         tb = tb[2:4]
         tb = "".join(tb)
 
-        if isinstance(ctx.channel, discord.channel.DMChannel):
+        if ctx.guild is None:
             context = "DM"
         else:
             context = f"• **Server**: {ctx.guild.name} ({ctx.guild.id})\n"
@@ -201,22 +190,12 @@ async def on_command_error(ctx, error):
                 message += f"```{ctx.message.content}```"
             message += f"[link to the message]({ctx.message.jump_url})\n"
         else:
-            options_data = ctx.data.get("options")
-            if options_data and len(options_data) > 0:
-                if options_data[0]["type"] != 1:
-                    options = " ".join(
-                        [f'{o["name"]}:{o["value"]}' for o in options_data]
-                    )
-                else:
-                    options = options_data[0]["name"] + " "
-                    if "options" in options_data[0]:
-                        options += " ".join(
-                            [f'{o["name"]}:{o["value"]}' for o in options_data[0]["options"]]
-                        )
-            else:
-                options = ""
-            message += f'```/{command_name}{" " + options}```'
-        emb = discord.Embed(
+            options = ""
+            for key, value in ctx.filled_options.items():
+                options += f" {key}:{value}"
+            args = f"/{command_name}{options}"
+            message += f"```{args}```"
+        emb = disnake.Embed(
             color=0xFF0000,
             title="Unexpected exception in command '{}'".format(command_name),
         )
@@ -289,7 +268,7 @@ async def on_guild_join(guild):
         return
 
     # make the embed and send it in the log channel
-    embed = discord.Embed(
+    embed = disnake.Embed(
         title="**Joined a new server!**",
         color=0x66C5CC,
         timestamp=guild.created_at,
@@ -316,7 +295,7 @@ async def on_guild_remove(guild):
         return
 
     # make the embed and send it in the log channel
-    embed = discord.Embed(
+    embed = disnake.Embed(
         title="**Left a server**",
         color=0xFF3621,
         timestamp=guild.created_at,

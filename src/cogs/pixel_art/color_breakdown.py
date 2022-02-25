@@ -1,41 +1,30 @@
-import discord
+import disnake
 import inspect
 import plotly.graph_objects as go
 import functools
-
 from PIL import Image
-from discord.ext import commands
+from disnake.ext import commands
 from io import BytesIO
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option
 
 from utils.discord_utils import format_number, get_image_from_message, image_to_file
 from utils.table_to_image import table_to_image
 from utils.image.image_utils import h_concatenate, rgb_to_hex, rgb_to_pxls, hex_str_to_int
 from utils.plot_utils import fig2img
-from utils.setup import GUILD_IDS
 
 
 class ColorBreakdown(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @cog_ext.cog_slash(
-        name="colors",
-        description="Get the amount of pixels for each color in an image.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="image",
-                description="The URL of the image you want to see the colors.",
-                option_type=3,
-                required=False,
-            )
-        ],
-    )
-    async def _colors(self, ctx: SlashContext, image=None):
-        await ctx.defer()
-        await self.colors(ctx, image)
+    @commands.slash_command(name="colors")
+    async def _colors(self, inter: disnake.AppCmdInter, image: str = None):
+        """Get the amount of pixels for each color in an image.
+
+        Parameters
+        ----------
+        image: The URL of the image you want to see the colors."""
+        await inter.response.defer()
+        await self.colors(inter, image)
 
     @commands.command(
         name="colors",
@@ -128,7 +117,7 @@ async def _colors(client, ctx, input_image, title="Color Breakdown"):
     )
 
     # send an embed with the color table, the pie chart
-    emb = discord.Embed(title=title, description=header, color=hex_str_to_int(colors[0]))
+    emb = disnake.Embed(title=title, description=header, color=hex_str_to_int(colors[0]))
     file = await client.loop.run_in_executor(
         None, image_to_file, res_img, "color_breakdown.png", emb
     )

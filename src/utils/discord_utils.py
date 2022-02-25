@@ -1,9 +1,11 @@
 from io import BytesIO
-import discord
+import disnake
 from PIL import Image
-from discord.ext import commands
+from disnake.ext import commands
 from utils.utils import get_content
 import re
+from utils.setup import stats, db_stats
+
 
 STATUS_EMOJIS = {
     "bot": "<a:status_bot:878677107042025552>",
@@ -99,9 +101,12 @@ async def get_image_from_message(ctx, url=None, search_last_messages=True, accep
     """Get an image from a discord Context or check on images among the 100
     last messages sent in the channel. Return a byte image and the image url"""
     message_limit = 100
+    initial_message = None
+    if isinstance(ctx, commands.Context):
+        initial_message = ctx.message
     try:
         # try to get the image from the initial message
-        return await get_image(ctx.message, url, accept_emojis)
+        return await get_image(initial_message, url, accept_emojis)
     except ImageNotFoundError as e:
         # if no image was found in the message we check for images in the last
         # 100 messages sent in the channel
@@ -119,7 +124,7 @@ async def get_image_from_message(ctx, url=None, search_last_messages=True, accep
         raise ValueError(e)
 
 
-async def get_image(message: discord.Message, url=None, accept_emojis=True):
+async def get_image(message: disnake.Message, url=None, accept_emojis=True):
     """Get an image from a discord message,
     raise ValueError if the URL isn't valid
     return a byte image and the image url"""
@@ -171,14 +176,14 @@ async def get_image(message: discord.Message, url=None, accept_emojis=True):
     return image_bytes, url
 
 
-def image_to_file(image: Image.Image, filename: str, embed: discord.Embed = None) -> discord.File:
+def image_to_file(image: Image.Image, filename: str, embed: disnake.Embed = None) -> disnake.File:
     """Convert a pillow Image to a discord File
     attach the file to a discord embed if one is given"""
 
     with BytesIO() as image_binary:
         image.save(image_binary, "PNG")
         image_binary.seek(0)
-        image = discord.File(image_binary, filename=filename)
+        image = disnake.File(image_binary, filename=filename)
         if embed:
             embed.set_image(url=f"attachment://{filename}")
         return image
@@ -221,7 +226,7 @@ class MemberConverter(commands.Converter):
                     or str(member.id) == argument
                 )
 
-            if found := discord.utils.find(check, ctx.guild.members):
+            if found := disnake.utils.find(check, ctx.guild.members):
                 return found
             raise commands.MemberNotFound(argument)
 
@@ -251,12 +256,12 @@ class UserConverter(commands.Converter):
                     or str(user.id) == argument
                 )
 
-            if found := discord.utils.find(check, ctx.bot.users):
+            if found := disnake.utils.find(check, ctx.bot.users):
                 return found
             raise commands.UserNotFound(argument)
 
 
-async def get_embed_author(ctx) -> discord.User:
+async def get_embed_author(ctx) -> disnake.User:
     """Get the author User from an embed if it has "Requested by name#0000" in the footer,
     return ``None`` if not found."""
     embeds = ctx.origin_message.embeds
@@ -269,7 +274,24 @@ async def get_embed_author(ctx) -> discord.User:
         name = found[0][0]
         discrim = found[0][1]
         predicate = lambda u: u.name == name and u.discriminator == discrim  # noqa: E731
-        result = discord.utils.find(predicate, ctx.bot.users)
+        result = disnake.utils.find(predicate, ctx.bot.users)
         return result
     except Exception:
         return None
+
+
+async def autocomplete_palette(inter: disnake.AppCmdInter, user_input: str):
+    palette = stats.get_palette()
+    color_names = [c["name"] for c in palette]
+    return [color for color in color_names if user_input.lower() in color.lower()][:25]
+
+
+async def autocomplete_palette_with_none(inter: disnake.AppCmdInter, user_input: str):
+    palette = stats.get_palette()
+    color_names = [c["name"] for c in palette] + ["none"]
+    return [color for color in color_names if user_input.lower() in color.lower()][:25]
+
+
+async def autocomplete_pxls_name(inter: disnake.AppCmdInter, user_input: str):
+    names = await db_stats.get_all_pxls_names()
+    return [name for name in names if user_input.lower() in name.lower()][:25]

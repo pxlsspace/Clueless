@@ -1,34 +1,24 @@
-import discord
+import disnake
 from PIL import Image
-from discord.ext import commands
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option
+from disnake.ext import commands
 
 from utils.discord_utils import format_number, image_to_file
 from utils.pxls.template_manager import get_template_from_url
-from utils.setup import GUILD_IDS
 
 
 class Detemplatize(commands.Cog):
     def __init__(self, client) -> None:
         self.client = client
 
-    @cog_ext.cog_slash(
-        name="detemplatize",
-        description="Get the image from a template URL.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="url",
-                description="The URL of the template you want to detemplatize.",
-                option_type=3,
-                required=True,
-            )
-        ],
-    )
-    async def _detemplatize(self, ctx: SlashContext, url):
-        await ctx.defer()
-        await self.detemplatize(ctx, url)
+    @commands.slash_command(name="detemplatize")
+    async def _detemplatize(self, inter: disnake.AppCmdInter, url: str):
+        """Get the image from a template URL.
+
+        Parameters
+        ----------
+        url: The URL of the template you want to detemplatize."""
+        await inter.response.defer()
+        await self.detemplatize(inter, url)
 
     @commands.command(
         name="detemplatize",
@@ -61,7 +51,7 @@ class Detemplatize(commands.Cog):
         correct_pixels = format_number(int(correct_pixels))
         total_pixels = format_number(int(total_pixels))
 
-        embed = discord.Embed(title="**Detemplatize**", color=0x66C5CC)
+        embed = disnake.Embed(title="**Detemplatize**", color=0x66C5CC)
         embed.description = f"**Title**: {title}\n"
         embed.description += f"**Size**: {total_pixels} pixels ({template.width}x{template.height})\n"
         embed.description += f"**Coordinates**: ({template.ox}, {template.oy})\n"

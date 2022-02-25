@@ -1,12 +1,10 @@
-import discord
-from discord.ext import commands
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option, create_choice
+import disnake
+from disnake.ext import commands
 from datetime import datetime
 
-from utils.discord_utils import UserConverter
+from utils.discord_utils import UserConverter, autocomplete_pxls_name
 from utils.image.image_utils import hex_str_to_int
-from utils.setup import db_users, GUILD_IDS
+from utils.setup import db_users
 from utils.plot_utils import get_theme, theme_list
 from utils.time_converter import format_timezone
 from utils.timezoneslib import get_timezone
@@ -16,21 +14,18 @@ class UserManager(commands.Cog):
     def __init__(self, client) -> None:
         self.client = client
 
-    @cog_ext.cog_slash(
-        name="setname",
-        description="Link your discord account to a pxls username.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="username",
-                description="A pxls username.",
-                option_type=3,
-                required=True,
-            )
-        ],
-    )
-    async def _setname(self, ctx: SlashContext, username: str):
-        await self.setname(ctx, username)
+    @commands.slash_command(name="setname")
+    async def _setname(
+        self,
+        inter: disnake.AppCmdInter,
+        username: str = commands.Param(autocomplete=autocomplete_pxls_name)
+    ):
+        """Link your discord account to a pxls username.
+
+        Parameters
+        ----------
+        username: A pxls username."""
+        await self.setname(inter, username)
 
     @commands.command(
         description="Link your discord account to a pxls username.",
@@ -43,13 +38,10 @@ class UserManager(commands.Cog):
         await db_users.set_pxls_user(ctx.author.id, pxls_user_id)
         await ctx.send(f"✅ Pxls username successfully set to **{username}**.")
 
-    @cog_ext.cog_slash(
-        name="unsetname",
-        description="Unlink your discord account from a pxls username.",
-        guild_ids=GUILD_IDS,
-    )
-    async def _unsetname(self, ctx: SlashContext):
-        await self.unsetname(ctx)
+    @commands.slash_command(name="unsetname")
+    async def _unsetname(self, inter: disnake.AppCmdInter):
+        """Unlink your discord account from a pxls username."""
+        await self.unsetname(inter)
 
     @commands.command(description="Unlink your discord account from a pxls username.")
     async def unsetname(self, ctx):
@@ -59,22 +51,14 @@ class UserManager(commands.Cog):
         await db_users.set_pxls_user(ctx.author.id, None)
         await ctx.send("✅ Pxls username successfully unset.")
 
-    @cog_ext.cog_slash(
-        name="theme",
-        description="Set your theme for the graphs.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="theme",
-                description="Theme",
-                option_type=3,
-                required=False,
-                choices=[create_choice(t.name, t.name) for t in theme_list],
-            )
-        ],
-    )
-    async def _theme(self, ctx: SlashContext, theme=None):
-        await self.theme(ctx, theme)
+    @commands.slash_command(name="theme")
+    async def _theme(
+        self,
+        inter: disnake.AppCmdInter,
+        theme: str = commands.Param(default=None, choices=[t.name for t in theme_list])
+    ):
+        """Set your theme for the graphs."""
+        await self.theme(inter, theme)
 
     @commands.command(
         description="Set your theme for the graphs",
@@ -107,36 +91,29 @@ class UserManager(commands.Cog):
         await db_users.set_user_theme(ctx.author.id, theme)
         await ctx.send(f"✅ Theme successfully set to **{theme}**.")
 
-    @cog_ext.cog_slash(
-        name="whoami",
-        description="Show your linked pxls username and theme.",
-        guild_ids=GUILD_IDS,
-    )
-    async def _whoami(self, ctx: SlashContext):
-        await self.whoami(ctx)
+    @commands.slash_command(name="whoami")
+    async def _whoami(self, inter: disnake.AppCmdInter):
+        """Show your linked pxls username, theme and timezone."""
+        await self.whoami(inter)
 
-    @cog_ext.cog_slash(
-        name="whois",
-        description="Show someone's linked pxls username and theme.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="user", description="A discord user.", option_type=6, required=True
-            )
-        ],
-    )
-    async def _whois(self, ctx: SlashContext, user):
-        if not isinstance(user, (discord.member.Member, discord.user.User)):
+    @commands.slash_command(name="whois")
+    async def _whois(self, inter: disnake.AppCmdInter, user: disnake.User):
+        """Show someone's linked pxls username, theme and timezone."
+
+        Parameters
+        ----------
+        user: A discord user."""
+        if not isinstance(user, (disnake.member.Member, disnake.user.User)):
             # the ID is passed if fetching the user object failed
             # so we fetch the user object from the ID "manually"
             user = await self.client.fetch_user(user)
-        await self.whoami(ctx, user)
+        await self.whoami(inter, user)
 
     @commands.command(
         name="whoami",
         usage="[discord name]",
         aliases=["whois"],
-        description="Show your or anyone's linked pxls username and theme.",
+        description="Show your or anyone's linked pxls username, theme and timezone.",
     )
     async def p_whoami(self, ctx, user=None):
         if user:
@@ -189,25 +166,18 @@ class UserManager(commands.Cog):
         text += f"• **Timezone:** {tz_str}\n"
         if current_time:
             text += f"• **Current time:** {current_time}"
-        embed = discord.Embed(title=title, description=text, color=color)
-        embed.set_thumbnail(url=user.avatar_url)
+        embed = disnake.Embed(title=title, description=text, color=color)
+        embed.set_thumbnail(url=user.display_avatar)
         await ctx.send(embed=embed)
 
-    @cog_ext.cog_slash(
-        name="settimezone",
-        description="Set your timezone for the graphs and time inputs.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="timezone",
-                description="Your timezone name (ex: 'UTC+8', US/Pacific, PST).",
-                option_type=3,
-                required=True,
-            )
-        ],
-    )
-    async def _settimezone(self, ctx, timezone):
-        await self.settimezone(ctx, timezone)
+    @commands.slash_command(name="settimezone")
+    async def _settimezone(self, inter: disnake.AppCmdInter, timezone: str):
+        """Set your timezone for the graphs and time inputs.
+
+        Parameters
+        ----------
+        timezone: Your timezone name (ex: 'UTC+8', US/Pacific, PST)."""
+        await self.settimezone(inter, timezone)
 
     @commands.command(
         name="settimezone",
@@ -228,11 +198,10 @@ class UserManager(commands.Cog):
             )
         )
 
-    @cog_ext.cog_slash(
-        name="unsettimezone", description="Unset your timezone.", guild_ids=GUILD_IDS
-    )
-    async def _unsettimezone(self, ctx: SlashContext):
-        await self.unsettimezone(ctx)
+    @commands.slash_command(name="unsettimezone")
+    async def _unsettimezone(self, inter: disnake.AppCmdInter):
+        """Unset your timezone."""
+        await self.unsettimezone(inter)
 
     @commands.command(description="Unset your timezone.", aliases=["unsettz"])
     async def unsettimezone(self, ctx):

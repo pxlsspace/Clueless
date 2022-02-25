@@ -1,89 +1,48 @@
-import discord
+import disnake
 import numpy as np
 import urllib.parse
 import time
 from PIL import Image
 from io import BytesIO
-from discord.ext import commands
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option, create_choice
+from disnake.ext import commands
 
 from utils.arguments_parser import MyParser
 from utils.discord_utils import format_number, get_image_from_message, image_to_file
 from utils.image.image_utils import remove_white_space
 from utils.pxls.template import STYLES, get_style, templatize, reduce, get_rgba_palette
-from utils.setup import stats, GUILD_IDS
+from utils.setup import stats
 
 
 class Template(commands.Cog):
     def __init__(self, client) -> None:
         self.client = client
 
-    @cog_ext.cog_slash(
-        name="template",
-        description="Generate a template link from an image.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="image",
-                description="The URL of the image you want to templatize.",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="style",
-                description="The template style you want. (default: custom)",
-                option_type=3,
-                required=False,
-                choices=[
-                    create_choice(name=s["name"], value=s["name"]) for s in STYLES
-                ],
-            ),
-            create_option(
-                name="glow",
-                description="To add glow to the template. (default: False)",
-                option_type=5,
-                required=False,
-            ),
-            create_option(
-                name="title",
-                description="The template title.",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="ox",
-                description="Template x-position.",
-                option_type=4,
-                required=False,
-            ),
-            create_option(
-                name="oy",
-                description="Template y-position.",
-                option_type=4,
-                required=False,
-            ),
-            create_option(
-                name="nocrop",
-                description="If you don't want the template to be automatically cropped. (default: False)",
-                option_type=5,
-                required=False,
-            ),
-        ],
-    )
-    async def _highlight(
+    @commands.slash_command(name="template")
+    async def _template(
         self,
-        ctx: SlashContext,
-        image=None,
-        style=None,
-        glow=None,
-        title=None,
-        ox=None,
-        oy=None,
-        nocrop=None,
+        inter: disnake.AppCmdInter,
+        image: str = None,
+        style: str = commands.Param(default=None, choices=[s["name"] for s in STYLES]),
+        glow: bool = False,
+        title: str = None,
+        ox: int = None,
+        oy: int = None,
+        nocrop: bool = False,
     ):
-        await ctx.defer()
-        await self.template(ctx, image, style, glow, title, ox, oy, nocrop)
+        """Generate a template link from an image.
+
+        Parameters
+        ----------
+        image: The URL of the image you want to templatize.
+        style: The template style. (default: custom)
+        glow: To add glow to the template. (default: False)
+        title: The template title.
+        ox: The template x-position.
+        oy: The template y-position.
+        nocrop: If you don't want the template to be automatically cropped. (default: False)
+        """
+        await inter.response.defer()
+        await self.template(inter, image, style, glow, title, ox, oy, nocrop)
 
     @commands.command(
         name="template",
@@ -175,21 +134,23 @@ class Template(commands.Cog):
         end = time.time()
 
         # create and send the image
-        embed = discord.Embed(title="**Template Image**", color=0x66C5CC)
+        embed = disnake.Embed(title="**Template Image**", color=0x66C5CC)
         embed.description = f"**Title**: {title if title else '`N/A`'}\n**Style**: {style_name}\n**Glow**: {'yes' if glow else 'no'}\n**Size**: {total_amount} pixels ({img.width}x{img.height})"
         embed.set_footer(
             text="Warning: if you delete this message the template might break."
         )
-        embed.set_author(name=ctx.author, icon_url=ctx.author.avatar_url)
+        embed.set_author(name=ctx.author, icon_url=ctx.author.display_avatar)
         reduced_image = Image.fromarray(stats.palettize_array(reduced_array))
         reduced_file = image_to_file(reduced_image, "reduced.png")
         embed.set_thumbnail(url="attachment://reduced.png")
-        file = image_to_file(template_image, "template.png")
+        file = image_to_file(template_image, "template.png", embed)
         m = await ctx.send(embed=embed, files=[file, reduced_file])
+        if isinstance(ctx, disnake.AppCmdInter):
+            m = await ctx.original_message()
 
         # create a template link with the sent image
         template_title = f"&title={urllib.parse.quote(title)}" if title else ""
-        template_image_url = m.attachments[0].url
+        template_image_url = m.embeds[0].image.url
         if ox or oy:
             t_ox = int(ox) if (ox and str(ox).isdigit()) else 0
             t_oy = int(oy) if (oy and str(oy).isdigit()) else 0
@@ -204,7 +165,7 @@ class Template(commands.Cog):
             t_ox = int(x - img.width / 2)
             t_oy = int(y - img.height / 2)
         template_url = f"https://pxls.space/#x={x}&y={y}&scale=5&template={urllib.parse.quote(template_image_url)}&ox={t_ox}&oy={t_oy}&tw={img.width}&oo=1{template_title}"
-        template_embed = discord.Embed(
+        template_embed = disnake.Embed(
             title="**Template Link**", description=template_url, color=0x66C5CC
         )
         template_embed.set_footer(text=f"Generated in {round((end-start),3)}s")

@@ -624,3 +624,11 @@ class DbStatsManager():
             last_canvas_records[-1]["canvas_end"], "%Y-%m-%d %H:%M:%S"
         )
         return (past_time, now_time, res)
+
+    async def get_all_pxls_names(self):
+        sql = "SELECT name from pxls_name ORDER BY pxls_name_id"
+        rows = await self.db.sql_select(sql)
+        if rows:
+            return [r["name"] for r in rows]
+        else:
+            return None

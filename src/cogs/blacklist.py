@@ -1,7 +1,7 @@
-import discord
-from discord.ext import commands
-from discord.ext.commands.converter import RoleConverter
-from discord.ext.commands.errors import RoleNotFound
+import disnake
+from disnake.ext import commands
+from disnake.ext.commands.converter import RoleConverter
+from disnake.ext.commands.errors import RoleNotFound
 
 from utils.setup import db_users, db_servers
 from utils.discord_utils import UserConverter
@@ -33,7 +33,7 @@ class Blacklist(commands.Cog):
             return await ctx.send("❌ You can't blacklist the bot owner.")
 
         # check that the user isn't already blacklisted
-        no_user_mention = discord.AllowedMentions(users=False)  # to avoid pinging user
+        no_user_mention = disnake.AllowedMentions(users=False)  # to avoid pinging user
         discord_db_user = await db_users.get_discord_user(user.id)
         if discord_db_user["is_blacklisted"]:
             return await ctx.send(
@@ -62,7 +62,7 @@ class Blacklist(commands.Cog):
             return await ctx.send(f"❌ {e}")
 
         # check that the user is actually blacklisted
-        no_user_mention = discord.AllowedMentions(users=False)  # to avoid pinging user
+        no_user_mention = disnake.AllowedMentions(users=False)  # to avoid pinging user
         discord_db_user = await db_users.get_discord_user(user.id)
         if not discord_db_user["is_blacklisted"]:
             return await ctx.send(
@@ -86,7 +86,7 @@ class Blacklist(commands.Cog):
             text = "**Blacklisted users:**\n"
             for user_id in blacklisted_users:
                 text += "\t• <@{}>\n".format(user_id)
-            no_user_mention = discord.AllowedMentions(users=False)  # to avoid pinging user
+            no_user_mention = disnake.AllowedMentions(users=False)  # to avoid pinging user
             await ctx.send(text, allowed_mentions=no_user_mention)
 
     @commands.group(
@@ -108,7 +108,7 @@ class Blacklist(commands.Cog):
                 f"The current blacklist role is invalid, use `{ctx.prefix}{ctx.command} <role>`"
             )
         else:
-            no_role_mention = discord.AllowedMentions(roles=False)  # to avoid pinging the role
+            no_role_mention = disnake.AllowedMentions(roles=False)  # to avoid pinging the role
             return await ctx.send(
                 f"Current blacklist role: <@&{current_role.id}>.",
                 allowed_mentions=no_role_mention,
@@ -125,7 +125,7 @@ class Blacklist(commands.Cog):
         except RoleNotFound as e:
             return await ctx.send(f"❌ {e}")
         await db_servers.update_blacklist_role(ctx.guild.id, role.id)
-        no_role_mention = discord.AllowedMentions(roles=False)  # to avoid pinging the role
+        no_role_mention = disnake.AllowedMentions(roles=False)  # to avoid pinging the role
         await ctx.send(
             f"✅ Blacklist role set to <@&{role.id}>.", allowed_mentions=no_role_mention
         )

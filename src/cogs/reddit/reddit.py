@@ -1,7 +1,7 @@
-import discord
+import disnake
 import time
 import random
-from discord.ext import commands
+from disnake.ext import commands
 from utils.utils import get_content
 
 
@@ -64,7 +64,7 @@ class Reddit(commands.Cog, name="Image"):
         :param submission: the submission to format
         :return embed: The embed containing the submission"""
 
-        e = discord.Embed(title=title, url=submission_link, color=0x66C5CC)
+        e = disnake.Embed(title=title, url=submission_link, color=0x66C5CC)
         e.set_image(url=image_link)
         e.set_footer(
             text="Image from r/{} - Found in {} second{}".format(

@@ -1,38 +1,29 @@
-import discord
+import disnake
 import numpy as np
 import time
-from discord.ext import commands
+from disnake.ext import commands
 from io import BytesIO
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option
 from PIL import Image
 
 from utils.image.image_utils import remove_white_space, get_image_scale
 from utils.pxls.template_manager import detemplatize
 from utils.discord_utils import get_image_from_message, image_to_file
-from utils.setup import GUILD_IDS
 
 
 class Scale(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @cog_ext.cog_slash(
-        name="downscale",
-        description="Downscale an upscaled pixel art.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="image",
-                description="The URL of the image.",
-                option_type=3,
-                required=False,
-            )
-        ],
-    )
-    async def _downscale(self, ctx: SlashContext, image=None):
-        await ctx.defer()
-        await self.downscale(ctx, image)
+    @commands.slash_command(name="downscale")
+    async def _downscale(self, inter: disnake.AppCmdInter, image: str = None):
+        """Downscale an upscaled pixel art.
+
+        Parameters
+        ----------
+        image: The URL of the image.
+        """
+        await inter.response.defer()
+        await self.downscale(inter, image)
 
     @commands.command(
         name="downscale",
@@ -63,7 +54,7 @@ class Scale(commands.Cog):
             msg = "Make sure that:\n"
             msg += "- The image doesn't have artificats (it needs to be a good quality image)\n"
             msg += "- The image isn't already at its smallest possible scale"
-            error_embed = discord.Embed(
+            error_embed = disnake.Embed(
                 title=":x: **Couldn't downscale that image**",
                 description=msg,
                 color=0xFF3621,
@@ -77,10 +68,10 @@ class Scale(commands.Cog):
         end = time.time()
         downscaled_image = Image.fromarray(downscaled_array)
 
-        embed = discord.Embed(title="Downscale", color=0x66C5CC)
+        embed = disnake.Embed(title="Downscale", color=0x66C5CC)
         embed.description = "Original pixel size: **{0}x{0}**\n".format(scale)
         embed.description += (
-            "`{0.shape[1]}x{0.shape[0]}` -> `{1.shape[1]}x{1.shape[0]}`".format(
+            "`{0.shape[1]}x{0.shape[0]}` → `{1.shape[1]}x{1.shape[0]}`".format(
                 input_image_array, downscaled_array
             )
         )
@@ -88,28 +79,17 @@ class Scale(commands.Cog):
         downscaled_file = image_to_file(downscaled_image, "downscaled.png", embed=embed)
         await ctx.send(embed=embed, file=downscaled_file)
 
-    @cog_ext.cog_slash(
-        name="upscale",
-        description="Upscale an image to the desired scale.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="scale",
-                description="The new scale for the image (ex: 2 means the image will be 2x bigger).",
-                option_type=4,
-                required=True,
-            ),
-            create_option(
-                name="image",
-                description="The URL of the image.",
-                option_type=3,
-                required=False,
-            ),
-        ],
-    )
-    async def _upscale(self, ctx: SlashContext, scale, image=None):
-        await ctx.defer()
-        await self.upscale(ctx, scale, image)
+    @commands.slash_command(name="upscale")
+    async def _upscale(self, inter: disnake.AppCmdInter, scale: int, image: str = None):
+        """Upscale an image to the desired scale.
+
+        Parameters
+        ----------
+        scale: The new scale for the image (ex: 2 means the image will be 2x bigger).
+        image: The URL of the image.
+        """
+        await inter.response.defer()
+        await self.upscale(inter, scale, image)
 
     @commands.command(
         name="upscale",
@@ -154,9 +134,9 @@ class Scale(commands.Cog):
 
         res_image = input_image.resize((final_width, final_height), Image.NEAREST)
 
-        embed = discord.Embed(title="Upscale", color=0x66C5CC)
+        embed = disnake.Embed(title="Upscale", color=0x66C5CC)
         embed.description = "Final pixel size: **{0}x{0}**\n".format(scale)
-        embed.description += "`{0.width}x{0.height}` -> `{1.width}x{1.height}`".format(
+        embed.description += "`{0.width}x{0.height}` → `{1.width}x{1.height}`".format(
             input_image, res_image
         )
         res_file = image_to_file(res_image, "upscaled.png", embed=embed)

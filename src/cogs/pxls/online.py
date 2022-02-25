@@ -1,9 +1,7 @@
-import discord
+import disnake
 from datetime import datetime
-from discord.ext import commands
+from disnake.ext import commands
 import plotly.graph_objects as go
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option, create_choice
 from datetime import timezone
 
 from utils.arguments_parser import MyParser
@@ -12,7 +10,7 @@ from utils.time_converter import format_datetime, str_to_td, format_timezone
 from utils.discord_utils import image_to_file
 from utils.pxls.cooldown import get_cd
 from utils.plot_utils import add_glow, get_theme, fig2img, hex_to_rgba_string
-from utils.setup import stats, db_stats, db_users, GUILD_IDS
+from utils.setup import stats, db_stats, db_users
 from utils.timezoneslib import get_timezone
 
 
@@ -20,45 +18,26 @@ class Online(commands.Cog):
     def __init__(self, client) -> None:
         self.client = client
 
-    @cog_ext.cog_slash(
-        name="online",
-        description="Show the online count history.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="cooldown",
-                description="To show the cooldown instead of the online count.",
-                option_type=5,
-                required=False,
-            ),
-            create_option(
-                name="last",
-                description="A time duration in the format ?y?mo?w?d?h?m?s.",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="canvas",
-                description="To show the count during the current canvas.",
-                option_type=5,
-                required=False,
-            ),
-            create_option(
-                name="groupby",
-                description="To show a bar graph with the average of each day or hour",
-                option_type=3,
-                required=False,
-                choices=[
-                    create_choice(name="day", value="day"),
-                    create_choice(name="hour", value="hour"),
-                ],
-            ),
-        ],
-    )
+    @commands.slash_command(name="online")
     async def _online(
-        self, ctx: SlashContext, cooldown=False, last=None, canvas=False, groupby=None
+        self,
+        inter: disnake.AppCmdInter,
+        cooldown: bool = False,
+        last: str = None,
+        canvas: bool = False,
+        groupby: str = commands.Param(default=None, choices=["day", "hour"]),
     ):
-        await ctx.defer()
+        """
+        Show the online count history.
+
+        Parameters
+        ----------
+        cooldown: To show the cooldown instead of the online count.
+        last: A time duration in the format ?y?mo?w?d?h?m?s.
+        canvas: To show the count during the whole current canvas.
+        groupby: To show a bar graph with the average of each day or hour.
+        """
+        await inter.response.defer()
         args = ()
         if cooldown:
             args += ("-cooldown",)
@@ -68,7 +47,7 @@ class Online(commands.Cog):
             args += ("-canvas",)
         if groupby:
             args += ("-groupby", groupby)
-        await self.online(ctx, *args)
+        await self.online(inter, *args)
 
     @commands.command(
         name="online",
@@ -197,7 +176,7 @@ class Online(commands.Cog):
             min(online_counts),
             max(online_counts),
         )
-        emb = discord.Embed(
+        emb = disnake.Embed(
             title=title,
             color=hex_str_to_int(theme.get_palette(1)[0]),
             description=description,
@@ -209,7 +188,7 @@ class Online(commands.Cog):
 
 def make_graph(dates, values, theme, user_timezone=None):
 
-    # get the timezone informations
+    # get the timezone information
     tz = get_timezone(user_timezone)
     if tz is None:
         tz = timezone.utc
@@ -253,7 +232,7 @@ def make_graph(dates, values, theme, user_timezone=None):
 
 def make_grouped_graph(dates, values, theme, user_timezone=None):
 
-    # get the timezone informations
+    # get the timezone information
     tz = get_timezone(user_timezone)
     if tz is None:
         tz = timezone.utc

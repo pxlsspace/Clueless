@@ -1,14 +1,13 @@
-import discord
+import disnake
 import numpy as np
 from datetime import datetime, timedelta, timezone
-from discord.ext import commands
+from disnake.ext import commands
 from PIL import Image, ImageEnhance
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option, create_choice
+
 
 from utils.pxls.cooldown import get_best_possible, get_cd
-from utils.discord_utils import format_number, image_to_file, STATUS_EMOJIS
-from utils.setup import stats, db_conn, db_users, db_stats, GUILD_IDS
+from utils.discord_utils import autocomplete_pxls_name, format_number, image_to_file, STATUS_EMOJIS
+from utils.setup import stats, db_conn, db_users, db_stats
 from utils.time_converter import format_datetime, round_minutes_down, td_format
 from utils.arguments_parser import MyParser
 from utils.plot_utils import matplotlib_to_plotly
@@ -21,14 +20,11 @@ class PxlsStats(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @cog_ext.cog_slash(
-        name="generalstats",
-        description="Show some general stats about the canvas.",
-        guild_ids=GUILD_IDS,
-    )
-    async def _generalstats(self, ctx: SlashContext):
-        await ctx.defer()
-        await self.generalstats(ctx)
+    @commands.slash_command(name="generalstats")
+    async def _generalstats(self, inter: disnake.AppCmdInter):
+        """Show some general stats about the canvas."""
+        await inter.response.defer()
+        await self.generalstats(inter)
 
     @commands.command(
         name="generalstats",
@@ -152,7 +148,7 @@ class PxlsStats(commands.Cog):
         )
 
         # create an embed with all the infos
-        emb = discord.Embed(title="Pxls.space Stats", color=0x66C5CC)
+        emb = disnake.Embed(title="Pxls.space Stats", color=0x66C5CC)
         emb.add_field(name="**General Stats**", value=general_stats_text, inline=False)
         emb.add_field(name="**Canvas Info**", value=info_text, inline=False)
         emb.add_field(name="**Canvas Stats**", value=canvas_stats_text, inline=False)
@@ -172,28 +168,25 @@ class PxlsStats(commands.Cog):
 
         await ctx.send(embed=emb, file=f)
 
-    @cog_ext.cog_slash(
-        name="userinfo",
-        description="Show some informations about a pxls user.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="username",
-                description="A pxls username.",
-                option_type=3,
-                required=False,
-            )
-        ],
-    )
-    async def _userinfo(self, ctx: SlashContext, username=None):
-        await ctx.defer()
-        await self.userinfo(ctx, username)
+    @commands.slash_command(name="userinfo")
+    async def _userinfo(
+        self,
+        inter: disnake.AppCmdInter,
+        username: str = commands.Param(default=None, autocomplete=autocomplete_pxls_name)
+    ):
+        """Show some information about a pxls user.
+
+        Parameters
+        ----------
+        username: A pxls username."""
+        await inter.response.defer()
+        await self.userinfo(inter, username)
 
     @commands.command(
         name="userinfo",
         aliases=["uinfo", "status"],
         usage="<username>",
-        description="Show some informations about a pxls user.",
+        description="Show some information about a pxls user.",
         help=f"""
         -`<username>`: a pxls username (will use your set username if set)\n
         **Status explanation:**
@@ -210,7 +203,7 @@ class PxlsStats(commands.Cog):
             await self.userinfo(ctx, username)
 
     async def userinfo(self, ctx, name=None):
-        "Show some informations about a pxls user."
+        "Show some information about a pxls user."
         if name is None:
             # select the discord user's pxls username if it has one linked
             discord_user = await db_users.get_discord_user(ctx.author.id)
@@ -394,7 +387,7 @@ class PxlsStats(commands.Cog):
         description += f"[Profile page]({profile_url})"
 
         # create and send the embed
-        emb = discord.Embed(
+        emb = disnake.Embed(
             title=f"User Info for `{name}`", color=embed_color, description=description
         )
         emb.add_field(name="**Canvas stats**", value=canvas_text, inline=True)
@@ -404,36 +397,28 @@ class PxlsStats(commands.Cog):
 
     choices = ["heatmap", "virginmap", "nonvirgin", "initial"]
 
-    @cog_ext.cog_slash(
-        name="board",
-        description="Get the current pxls board.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="display",
-                description="How to display the canvas.",
-                option_type=3,
-                required=False,
-                choices=[create_choice(name=c, value=c) for c in choices],
-            ),
-            create_option(
-                name="opacity",
-                description="The opacity of the background behind the heatmap between 0 and 100 (default: 20)",
-                option_type=4,
-                required=False,
-            ),
-        ],
-    )
-    async def _board(self, ctx: SlashContext, display=None, opacity=None):
-        await ctx.defer()
+    @commands.slash_command(name="board")
+    async def _board(
+        self,
+        inter: disnake.AppCmdInter,
+        display: str = commands.param(default=None, choices=choices),
+        opacity: int = commands.Param(default=None, ge=0, le=100),
+    ):
+        """Get the current pxls board.
+
+        Parameters
+        ----------
+        display: How to display the canvas.
+        opacity: The opacity of the background behind the heatmap between 0 and 100. (default: 20)"""
+        await inter.response.defer()
         args = ()
         if display == "heatmap":
             args += ("-heatmap",)
-            if opacity:
+            if opacity is not None:
                 args += (str(opacity),)
         elif display:
             args += ("-" + display,)
-        await self.board(ctx, *args)
+        await self.board(inter, *args)
 
     @commands.command(
         name="board",
@@ -527,27 +512,20 @@ class PxlsStats(commands.Cog):
             board_img.paste(heatmap_img, (0, 0), heatmap_img)
         else:
             board_img = Image.fromarray(array)
-        embed = discord.Embed(title=title, color=0x66C5CC)
+        embed = disnake.Embed(title=title, color=0x66C5CC)
         embed.timestamp = datetime.now(timezone.utc)
         file = image_to_file(board_img, "board.png", embed)
         await ctx.send(file=file, embed=embed)
 
-    @cog_ext.cog_slash(
-        name="canvascolors",
-        description="Show the amount for each color on the canvas.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="nonvirgin",
-                description="To show the amount on the 'non-virgin' pixels only.",
-                option_type=5,
-                required=False,
-            )
-        ],
-    )
-    async def _canvascolors(self, ctx: SlashContext, nonvirgin=False):
-        await ctx.defer()
-        await self.canvascolors(ctx, "-placed" if nonvirgin else None)
+    @commands.slash_command(name="canvascolors")
+    async def _canvascolors(self, inter: disnake.AppCmdInter, nonvirgin: bool = False):
+        """Show the amount for each color on the canvas.
+
+        Parameters
+        ----------
+        nonvirgin: To show the amount on the 'non-virgin' pixels only."""
+        await inter.response.defer()
+        await self.canvascolors(inter, "-placed" if nonvirgin else None)
 
     @commands.command(
         name="canvascolors",
@@ -578,39 +556,28 @@ class PxlsStats(commands.Cog):
 
         await _colors(self.client, ctx, img, title)
 
-    @cog_ext.cog_slash(
-        name="canvashighlight",
-        description="Highlight the selected colors on the canvas.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="colors",
-                description="List of pxls colors separated by a comma.",
-                option_type=3,
-                required=True,
-            ),
-            create_option(
-                name="bgcolor",
-                description="To display behind the selected colors (can be a color name, hex color, 'none', 'light' or 'dark')",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="placed",
-                description="To highlight the colors only on the non-virgin pixels.",
-                option_type=5,
-                required=False,
-            ),
-        ],
-    )
-    async def _canvashighlight(self, ctx: SlashContext, colors, bgcolor=None, placed=None):
-        await ctx.defer()
+    @commands.slash_command(name="canvashighlight")
+    async def _canvashighlight(
+        self,
+        inter: disnake.AppCmdInter,
+        colors: str,
+        bgcolor: str = None,
+        placed: bool = False
+    ):
+        """Highlight the selected colors on the canvas.
+
+        Parameters
+        ----------
+        colors: List of pxls colors separated by a comma.
+        bgcolor: To display behind the selected colors (can be a color name, hex color, 'none', 'light' or 'dark')
+        placed: To highlight the colors only on the non-virgin pixels."""
+        await inter.response.defer()
         args = (colors,)
         if bgcolor:
             args += ("-bgcolor", bgcolor)
         if placed:
             args += ("-placed",)
-        await self.canvashighlight(ctx, *args)
+        await self.canvashighlight(inter, *args)
 
     @commands.command(
         name="canvashighlight",

@@ -1,8 +1,8 @@
-import discord
+import disnake
 import traceback
 from PIL import Image
 from sys import stderr
-from discord.ext import commands, tasks
+from disnake.ext import commands, tasks
 from datetime import datetime, timedelta, timezone
 
 from utils.discord_utils import image_to_file
@@ -16,8 +16,8 @@ class Clock(commands.Cog):
 
     It is used to update the stats object periodically."""
 
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, client: commands.Bot):
+        self.client: commands.Bot = client
         self.update_stats.start()
         self.update_online_count.start()
 
@@ -79,7 +79,7 @@ class Clock(commands.Cog):
         # wait for the time to be a round value
         round_minute = datetime.now(timezone.utc) + timedelta(minutes=1)
         round_minute = round_minute.replace(second=0, microsecond=0)
-        await discord.utils.sleep_until(round_minute)
+        await disnake.utils.sleep_until(round_minute)
 
     async def _update_stats_data(self):
         # refreshing stats json
@@ -167,7 +167,7 @@ class Clock(commands.Cog):
             second=0,
             microsecond=0,
         ) + timedelta(minutes=time_interval)
-        await discord.utils.sleep_until(next_run)
+        await disnake.utils.sleep_until(next_run)
 
     async def check_milestones(self):
         """Send alerts in all the servers following a user if they hit a milestone."""
@@ -208,7 +208,7 @@ class Clock(commands.Cog):
         for channel_id in channels:
             try:
                 channel = self.client.get_channel(int(channel_id))
-                embed = discord.Embed(title="Canvas Snapshot", color=0x66C5CC)
+                embed = disnake.Embed(title="Canvas Snapshot", color=0x66C5CC)
                 embed.timestamp = datetime.now(timezone.utc)
                 file = image_to_file(board_img, filename, embed)
                 await channel.send(file=file, embed=embed)
@@ -307,5 +307,5 @@ class Clock(commands.Cog):
             print("Warning: combo stats could not saved.")
 
 
-def setup(client):
+def setup(client: commands.Bot):
     client.add_cog(Clock(client))

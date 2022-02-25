@@ -1,5 +1,5 @@
 from sqlite3 import IntegrityError
-from discord.ext import commands
+from disnake.ext import commands
 from utils.setup import db_servers, db_users
 
 
@@ -119,4 +119,5 @@ class PxlsMilestones(commands.Cog):
 
 
 def setup(client):
+    return  # this command is disabled
     client.add_cog(PxlsMilestones(client))

@@ -1,5 +1,5 @@
-import discord
-from discord.ext import commands
+import disnake
+from disnake.ext import commands
 import asyncio
 from utils.image.img_to_gif import img_to_animated_gif
 from PIL import Image
@@ -55,11 +55,11 @@ class Emote(commands.Cog):
             emoji = await asyncio.wait_for(
                 ctx.guild.create_custom_emoji(name=name, image=img_bytes), timeout=10.0
             )
-        except discord.InvalidArgument:
+        except disnake.InvalidArgument:
             return await ctx.send(
                 "❌ Invalid image type. Only PNG, JPEG and GIF are supported."
             )
-        except discord.HTTPException as e:
+        except disnake.HTTPException as e:
             if e.code == 30008:
                 return await ctx.send(
                     f"❌ Maximum number of emojis reached ({ctx.guild.emoji_limit})"

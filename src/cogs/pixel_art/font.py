@@ -1,13 +1,11 @@
+import disnake
 from PIL import ImageColor
-from discord.ext import commands
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option, create_choice
+from disnake.ext import commands
 
 from utils.arguments_parser import parse_pixelfont_args
 from utils.font.font_manager import get_all_fonts, PixelText
-from utils.discord_utils import image_to_file
+from utils.discord_utils import image_to_file, autocomplete_palette_with_none
 from utils.image.image_utils import get_pxls_color, is_hex_color
-from utils.setup import GUILD_IDS
 
 
 class Font(commands.Cog):
@@ -17,40 +15,25 @@ class Font(commands.Cog):
     fonts = get_all_fonts()
     fonts.insert(0, "all")
 
-    @cog_ext.cog_slash(
-        name="pixelfont",
-        description="Convert a text to pixel art.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="text",
-                description="The text to convert to pixel art.",
-                option_type=3,
-                required=True,
-            ),
-            create_option(
-                name="font",
-                description="The name of the font (default: all).",
-                option_type=3,
-                required=False,
-                choices=[create_choice(name=f, value=f) for f in fonts],
-            ),
-            create_option(
-                name="color",
-                description="The color you want the text to be (default: black).",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="bgcolor",
-                description="The color for the text background (none = transparent) (default: white).",
-                option_type=3,
-                required=False,
-            ),
-        ],
-    )
-    async def _pixelfont(self, ctx: SlashContext, text, font=None, color=None, bgcolor=None):
-        await ctx.defer()
+    @commands.slash_command(name="pixelfont")
+    async def _pixelfont(
+        self,
+        inter: disnake.AppCmdInter,
+        text: str,
+        font: str = commands.Param(choices=fonts, default=None),
+        color: str = commands.Param(autocomplete=autocomplete_palette_with_none, default=None),
+        bgcolor: str = commands.Param(autocomplete=autocomplete_palette_with_none, default=None),
+    ):
+        """Convert a text to pixel art.
+
+        Parameters
+        ----------
+        text: The text to convert to pixel art.
+        font: The name of the font (default: all).
+        color: The color you want the text to be (default: black).
+        bgcolor: The color for the text background (none = transparent) (default: white).
+        """
+        await inter.response.defer()
         args = (text,)
         if font:
             if font == "all":
@@ -60,7 +43,7 @@ class Font(commands.Cog):
             args += ("-color", color)
         if bgcolor:
             args += ("-bgcolor", bgcolor)
-        await self.pixelfont(ctx, *args)
+        await self.pixelfont(inter, *args)
 
     @commands.command(
         name="pixelfont",

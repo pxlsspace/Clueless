@@ -1,12 +1,11 @@
-import discord
+import disnake
 import numpy as np
 import re
 from io import BytesIO
 from datetime import datetime, timezone
-from discord.ext import commands
+from disnake.ext import commands
 from PIL import Image, ImageColor
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option
+
 
 from utils.image.image_utils import (
     get_pxls_color,
@@ -23,46 +22,35 @@ from utils.discord_utils import (
 )
 from utils.arguments_parser import MyParser
 from utils.table_to_image import table_to_image
-from utils.setup import GUILD_IDS
 
 
 class Highlight(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @cog_ext.cog_slash(
-        name="highlight",
-        description="Highlight the selected colors in an image.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="colors",
-                description="List of pxls colors separated by a comma.",
-                option_type=3,
-                required=True,
-            ),
-            create_option(
-                name="image",
-                description="The URL of the image you want to see the colors.",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="bgcolor",
-                description="To display behind the selected colors (can be a color name, hex color, 'none', 'light' or 'dark')",
-                option_type=3,
-                required=False,
-            ),
-        ],
-    )
-    async def _highlight(self, ctx: SlashContext, colors, image=None, bgcolor=None):
-        await ctx.defer()
+    @commands.slash_command(name="highlight")
+    async def _highlight(
+        self,
+        inter: disnake.AppCmdInter,
+        colors: str,
+        image: str = None,
+        bgcolor: str = None
+    ):
+        """Highlight the selected colors in an image.
+
+        Parameters
+        ----------
+        colors: List of pxls colors or hex colors separated by a comma.
+        image: The URL of the image you want to highlight.
+        bgcolor: To display behind the selected colors (can be a color name, hex color, 'none', 'light' or 'dark').
+        """
+        await inter.response.defer()
         args = (colors,)
         if image:
             args += (image,)
         if bgcolor:
             args += ("-bgcolor", bgcolor)
-        await self.highlight(ctx, *args)
+        await self.highlight(inter, *args)
 
     @commands.command(
         name="highlight",
@@ -213,7 +201,7 @@ async def _highlight(ctx, image_array: np.ndarray, parsed_args):
 
     # set embed color to the top 1 color in colors
     selected_color_int = hex_str_to_int(hex_colors[0])
-    emb = discord.Embed(
+    emb = disnake.Embed(
         title="Color highlight",
         color=selected_color_int,
         timestamp=datetime.now(timezone.utc),

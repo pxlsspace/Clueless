@@ -1,12 +1,10 @@
-import discord
-from discord.ext import commands
+import disnake
+from disnake.ext import commands
 from datetime import datetime, timedelta, timezone
 import plotly.graph_objects as go
 from utils.image.image_utils import hex_str_to_int
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option
 
-from utils.setup import db_stats, db_users, GUILD_IDS
+from utils.setup import db_stats, db_users
 from utils.time_converter import (
     str_to_td,
     round_minutes_down,
@@ -26,88 +24,37 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
     def __init__(self, client):
         self.client = client
 
-    @cog_ext.cog_slash(
-        name="leaderboard",
-        description="Show the all-time or canvas leaderboard.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="username",
-                description="Center the leaderboard on this user ('!' = your set username).",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="canvas",
-                description="To get the canvas leaderboard.",
-                option_type=5,
-                required=False,
-            ),
-            create_option(
-                name="lines",
-                description="The number of lines to show (between 1 and 40).",
-                option_type=4,
-                required=False,
-            ),
-            create_option(
-                name="graph",
-                description="To show a progress graph for each user in the leaderboard.",
-                option_type=5,
-                required=False,
-            ),
-            create_option(
-                name="bars",
-                description="To show a bar graph of the current leaderboard.",
-                option_type=5,
-                required=False,
-            ),
-            create_option(
-                name="ranks",
-                description="Show the leaderboard between 2 ranks (format: ?-?).",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="eta",
-                description="Add an ETA column showing the estimated time to pass the user above.",
-                option_type=5,
-                required=False,
-            ),
-            create_option(
-                name="last",
-                description="Show the leaderboard in the last x year/month/week/day/hour/minute/second. (format: ?y?mo?w?d?h?m?s)",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="before",
-                description="To show the leaderboard before a specific date. (format: YYYY-mm-dd HH:MM)",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="after",
-                description="To show the leaderboard after a specific date. (format: YYYY-mm-dd HH:MM)",
-                option_type=3,
-                required=False,
-            ),
-        ],
-    )
+    @commands.slash_command(name="leaderboard")
     async def _leaderboard(
         self,
-        ctx: SlashContext,
-        username=None,
-        canvas=False,
-        lines=None,
-        graph=None,
-        bars=False,
-        ranks=None,
-        eta=None,
-        last=None,
-        before=None,
-        after=None,
+        inter: disnake.AppCmdInter,
+        username: str = None,
+        last: str = None,
+        canvas: bool = False,
+        lines: int = commands.Param(default=None, ge=1, le=40),
+        graph: bool = None,
+        bars: bool = False,
+        ranks: str = None,
+        eta: bool = None,
+        before: str = None,
+        after: str = None,
     ):
-        await ctx.defer()
+        """Show the all-time or canvas leaderboard.
+
+        Parameters
+        ----------
+        username: Center the leaderboard on this user. ('!' = your set username)
+        last: Show the leaderboard in the last x year/month/week/day/hour/minute/second. (format: ?y?mo?w?d?h?m?s)
+        canvas: To get the canvas leaderboard.
+        lines: The number of lines to show. (default: 15)
+        graph: To show a progress graph for each user in the leaderboard.
+        bars: To show a bar graph of the current leaderboard.
+        ranks: Show the leaderboard between 2 ranks. (format: <rank 1>-<rank 2>)
+        eta: Add an ETA column showing the estimated time to pass the user above.
+        before: To show the leaderboard before a specific date. (format: YYYY-mm-dd HH:MM)
+        after: To show the leaderboard after a specific date. (format: YYYY-mm-dd HH:MM)
+        """
+        await inter.response.defer()
         args = ()
         if username:
             args += tuple(username.split(" "))
@@ -129,7 +76,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             args += ("-before",) + tuple(before.split(" "))
         if after:
             args += ("-after",) + tuple(after.split(" "))
-        await self.leaderboard(ctx, *args)
+        await self.leaderboard(inter, *args)
 
     @commands.command(
         name="leaderboard",
@@ -487,7 +434,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             bars_file = image_to_file(bars_img, "bar_chart.png")
 
         # create a discord embed
-        emb = discord.Embed(
+        emb = disnake.Embed(
             color=hex_str_to_int(theme.get_palette(1)[0]), title=title, description=text
         )
         file = image_to_file(img, "leaderboard.png", emb)

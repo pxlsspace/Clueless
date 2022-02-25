@@ -1,12 +1,10 @@
 import plotly.graph_objects as go
-import discord
+import disnake
 from datetime import datetime, timedelta, timezone
-from discord.ext import commands
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option, create_choice
+from disnake.ext import commands
 
 from utils.discord_utils import image_to_file, format_number
-from utils.setup import db_stats, db_users, GUILD_IDS
+from utils.setup import db_stats, db_users
 from utils.arguments_parser import parse_speed_args
 from utils.table_to_image import table_to_image
 from utils.time_converter import (
@@ -26,74 +24,31 @@ class PxlsSpeed(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @cog_ext.cog_slash(
-        name="speed",
-        description="Show the speed of a pxls user with a graph.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="usernames",
-                description="A pxls user name or several ones separated by a space ('!' = your set username.).",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="last",
-                description="Show the speed in the last x year/month/week/day/hour/minute/second. (format: ?y?mo?w?d?h?m?s)",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="canvas",
-                description="To show the speed during the whole canvas.",
-                option_type=5,
-                required=False,
-            ),
-            create_option(
-                name="groupby",
-                description="Show a bar chart for each day or hour.",
-                option_type=3,
-                required=False,
-                choices=[
-                    create_choice(name="canvas", value="canvas"),
-                    create_choice(name="month", value="month"),
-                    create_choice(name="week", value="week"),
-                    create_choice(name="day", value="day"),
-                    create_choice(name="hour", value="hour"),
-                ],
-            ),
-            create_option(
-                name="progress",
-                description="To compare the progress.",
-                option_type=5,
-                required=False,
-            ),
-            create_option(
-                name="before",
-                description="To show the speed before a specific date (format: YYYY-mm-dd HH:MM)",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="after",
-                description="To show the speed after a specific date (format: YYYY-mm-dd HH:MM)",
-                option_type=3,
-                required=False,
-            ),
-        ],
-    )
+    @commands.slash_command(name="speed")
     async def _speed(
         self,
-        ctx: SlashContext,
-        usernames=None,
-        last=None,
-        canvas=False,
-        groupby=None,
-        progress=False,
-        before=None,
-        after=None,
+        inter: disnake.AppCmdInter,
+        usernames: str = None,
+        last: str = None,
+        canvas: bool = False,
+        groupby: str = commands.Param(default=None, choices=["hour", "day", "week", "month", "canvas"]),
+        progress: bool = False,
+        before: str = None,
+        after: str = None,
     ):
-        await ctx.defer()
+        """Show the speed of a pxls user with a graph.
+
+        Parameters
+        ----------
+        usernames: A list pxls user name separated by a space. ('!' = your set username.)
+        last: Show the speed in the last x year/month/week/day/hour/minute/second. (format: ?y?mo?w?d?h?m?s)
+        canvas: To show the speed during the whole current canvas.
+        groupby: Show a bar chart for each hour/day/week/month/canvas/.
+        progress: To compare the progress instead of alltime/canvas stats.
+        before: To show the speed before a specific date (format: YYYY-mm-dd HH:MM)
+        after: To show the speed after a specific date (format: YYYY-mm-dd HH:MM)
+        """
+        await inter.response.defer()
         args = ()
         if usernames:
             args += tuple(usernames.split(" "))
@@ -109,7 +64,7 @@ class PxlsSpeed(commands.Cog):
             args += ("-before",) + tuple(before.split(" "))
         if after:
             args += ("-after",) + tuple(after.split(" "))
-        await self.speed(ctx, *args)
+        await self.speed(inter, *args)
 
     @commands.command(
         name="speed",
@@ -390,7 +345,7 @@ class PxlsSpeed(commands.Cog):
         description += f"• Time: `{diff_time_str}`\n"
         description += f"• Average cooldown: `{round(average_cooldown,2)}` seconds\n"
         description += f"• Best possible (without stack): ~`{format_number(best_possible)}` pixels."
-        emb = discord.Embed(color=hex_str_to_int(theme.get_palette(1)[0]))
+        emb = disnake.Embed(color=hex_str_to_int(theme.get_palette(1)[0]))
         emb.add_field(name=title, value=description)
 
         # send the embed with the graph image
@@ -404,7 +359,7 @@ def setup(client):
 
 def get_stats_graph(stats_list: list, title, theme, user_timezone=None):
 
-    # get the timezone informations
+    # get the timezone information
     tz = get_timezone(user_timezone)
     if tz is None:
         tz = timezone.utc
@@ -478,7 +433,7 @@ def get_stats_graph(stats_list: list, title, theme, user_timezone=None):
 
 def get_grouped_graph(stats_list: list, title, theme, user_timezone=None):
 
-    # get the timezone informations
+    # get the timezone information
     tz = get_timezone(user_timezone)
     if tz is None:
         tz = timezone.utc

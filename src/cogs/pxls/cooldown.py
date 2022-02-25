@@ -1,33 +1,29 @@
-from discord.ext import commands
+from disnake.ext import commands
 from datetime import datetime
-import discord
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option
+import disnake
 
 from utils.pxls.cooldown import get_cds, time_convert
 from utils.discord_utils import format_table
-from utils.setup import stats, GUILD_IDS
+from utils.setup import stats
 
 
 class PxlsCooldown(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @cog_ext.cog_slash(
-        name="cooldown",
-        description="Show the current pxls cooldown.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="users",
-                description="The number of users to see the cooldown for.",
-                option_type=3,
-                required=False,
-            )
-        ],
-    )
-    async def _cooldown(self, ctx: SlashContext, users=None):
-        await self.cooldown(ctx, users)
+    @commands.slash_command(name="cooldown")
+    async def _cooldown(
+        self,
+        inter: disnake.AppCmdInter,
+        users: int = commands.Param(ge=0, default=None)
+    ):
+        """Show the current pxls cooldown.
+
+        Parameters
+        ----------
+        users: The number of users to see the cooldown for.
+        """
+        await self.cooldown(inter, users)
 
     @commands.command(
         usage="[nb user]",
@@ -60,7 +56,7 @@ class PxlsCooldown(commands.Cog):
         desc += format_table(cd_table, ["Stack", "Cooldown", "Total"], ["^", "^", "^"])
         desc += "```"
 
-        embed = discord.Embed(
+        embed = disnake.Embed(
             color=0x66C5CC,
             title=f"Pxls cooldown for `{online}` user{'s' if online != 1 else ''}",
             description=desc,

@@ -1,18 +1,14 @@
-import discord
+import disnake
 import pandas as pd
 from PIL import Image
 from datetime import datetime, timedelta, timezone
 from copy import deepcopy
-from discord.ext import commands
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option, create_choice
-from discord_slash.utils.manage_components import create_button, create_actionrow
-from discord_slash.model import ButtonStyle
+from disnake.ext import commands
 
 from main import tracked_templates
 from utils.discord_utils import format_number, image_to_file, UserConverter
 from utils.pxls.template_manager import Combo, get_template_from_url, make_before_after_gif, parse_template
-from utils.setup import GUILD_IDS, db_templates, db_users
+from utils.setup import db_templates, db_users
 from utils.timezoneslib import get_timezone
 from utils.utils import make_progress_bar
 from utils.time_converter import round_minutes_down, str_to_td, td_format, format_datetime
@@ -23,9 +19,37 @@ from cogs.pxls.speed import get_grouped_graph, get_stats_graph
 from utils.image.image_utils import v_concatenate
 
 
+class TemplateURL(disnake.ui.View):
+    def __init__(self, template_url: str):
+        super().__init__()
+        self.add_item(disnake.ui.Button(label="Open Template", url=template_url))
+
+
+async def autocomplete_templates(inter: disnake.AppCmdInter, user_input: str):
+    """Get all the public template names."""
+    template_names = [t.name for t in tracked_templates.get_all_public_templates()]
+    template_names.append("@combo")
+    return [temp_name for temp_name in template_names if user_input.lower() in temp_name.lower()][:25]
+
+
+async def autocomplete_user_templates(inter: disnake.AppCmdInter, user_input: str):
+    """Get all the user-owned template names."""
+    author_id = inter.author.id
+    if author_id == tracked_templates.bot_owner_id:
+        return await autocomplete_templates(inter, user_input)
+    else:
+        template_names = [t.name for t in tracked_templates.get_all_public_templates() if t.owner_id == inter.author.id]
+        return [temp_name for temp_name in template_names if user_input.lower() in temp_name.lower()][:25]
+
+
 class Progress(commands.Cog):
     def __init__(self, client) -> None:
         self.client = client
+
+    @commands.slash_command(name="progress")
+    async def _progress(self, inter):
+        """Track a template over time."""
+        pass
 
     @commands.group(
         name="progress",
@@ -40,23 +64,19 @@ class Progress(commands.Cog):
         else:
             await ctx.send("Usage: `>progress [check|list|add|remove|update]`")
 
-    @cog_ext.cog_subcommand(
-        base="progress",
-        name="check",
-        description="Check the progress of a template.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="template",
-                description="The name or URL of the template you want to check.",
-                option_type=3,
-                required=True,
-            ),
-        ],
-    )
-    async def _check(self, ctx: SlashContext, template):
-        await ctx.defer()
-        await self.check(ctx, template)
+    @_progress.sub_command(name="check")
+    async def _check(
+        self,
+        inter: disnake.AppCmdInter,
+        template: str = commands.Param(autocomplete=autocomplete_templates),
+    ):
+        """Check the progress of a template.
+
+        Parameters
+        ----------
+        template: The name or URL of the template you want to check."""
+        await inter.response.defer()
+        await self.check(inter, template)
 
     @progress.command(
         name="check", description="Check the progress of a template.", usage="<url|name>"
@@ -113,7 +133,7 @@ class Progress(commands.Cog):
             nb_virgin_abuse = 0
             virgin_abuse_percentage = 0
 
-        embed = discord.Embed(title="**Progress Check**", color=0x66C5CC)
+        embed = disnake.Embed(title="**Progress Check**", color=0x66C5CC)
         embed.set_thumbnail(url="attachment://template_image.png")
 
         info_text = f"• Title: `{title}`\n"
@@ -151,45 +171,29 @@ class Progress(commands.Cog):
             # send the template image first and edit the embed with the URL button
             # using the sent image
             m = await ctx.send(files=[template_file, detemp_file], embed=embed)
+            if isinstance(ctx, disnake.AppCmdInter):
+                m = await ctx.original_message()
             template_image_url = m.embeds[0].thumbnail.url
             template_url = template.generate_url(template_image_url, default_scale=1)
-            buttons = [
-                create_button(
-                    style=ButtonStyle.URL,
-                    label="Open Template",
-                    url=template_url,
-                ),
-            ]
-            action_row = create_actionrow(*buttons)
-            await m.edit(components=[action_row])
+            view = TemplateURL(template_url)
+            await m.edit(view=view)
         else:
-            buttons = [
-                create_button(
-                    style=ButtonStyle.URL,
-                    label="Open Template",
-                    url=template.generate_url(open_on_togo=True),
-                ),
-            ]
-            action_row = create_actionrow(*buttons)
-            await ctx.send(files=[template_file, detemp_file], embed=embed, components=[action_row])
+            view = TemplateURL(template.generate_url(open_on_togo=True))
+            await ctx.send(files=[template_file, detemp_file], embed=embed, view=view)
 
-    @cog_ext.cog_subcommand(
-        base="progress",
-        name="info",
-        description="Get some information about a template.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="template",
-                description="The name of the template.",
-                option_type=3,
-                required=True,
-            ),
-        ],
-    )
-    async def _info(self, ctx: SlashContext, template):
-        await ctx.defer()
-        await self.info(ctx, template)
+    @_progress.sub_command(name="info")
+    async def _info(
+        self,
+        inter: disnake.AppCmdInter,
+        template: str = commands.Param(autocomplete=autocomplete_templates),
+    ):
+        """Get some information about a template.
+
+        Parameters
+        ----------
+        template: The name of the template."""
+        await inter.response.defer()
+        await self.info(inter, template)
 
     @progress.command(
         name="info", description="Get some information about a template.", usage="<template>"
@@ -284,7 +288,7 @@ class Progress(commands.Cog):
             last_updated = "-"
         activity_text += f"\nLast Updated: {last_updated}"
 
-        embed = discord.Embed(title=f"Template info for `{template.name}`", color=0x66C5CC)
+        embed = disnake.Embed(title=f"Template info for `{template.name}`", color=0x66C5CC)
         embed.add_field(name="**Information**", value=info_text, inline=False)
         embed.add_field(name="**Progress**", value=progress_text, inline=False)
         embed.add_field(name="**Recent Activity**", value=activity_text, inline=False)
@@ -292,52 +296,27 @@ class Progress(commands.Cog):
         embed.set_thumbnail(url="attachment://template_image.png")
 
         if template.url and not isinstance(template, Combo):
-            buttons = [
-                create_button(
-                    style=ButtonStyle.URL,
-                    label="Open Template",
-                    url=template.generate_url(open_on_togo=True),
-                ),
-            ]
-            components = [create_actionrow(*buttons)]
-            await ctx.send(embed=embed, components=components, file=template_file)
+            view = TemplateURL(template.generate_url(open_on_togo=True))
+            await ctx.send(embed=embed, view=view, file=template_file)
         else:
             m = await ctx.send(file=template_file, embed=embed)
+            if isinstance(ctx, disnake.AppCmdInter):
+                m = await ctx.original_message()
             template_image_url = m.embeds[0].thumbnail.url
             template_url = template.generate_url(template_image_url, default_scale=1)
-            buttons = [
-                create_button(
-                    style=ButtonStyle.URL,
-                    label="Open Template",
-                    url=template_url,
-                ),
-            ]
-            action_row = create_actionrow(*buttons)
-            await m.edit(components=[action_row])
+            view = TemplateURL(template_url)
+            await m.edit(view=view)
 
-    @cog_ext.cog_subcommand(
-        base="progress",
-        name="add",
-        description="Add a template to the tracker.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="name",
-                description="The name of the template.",
-                option_type=3,
-                required=True,
-            ),
-            create_option(
-                name="url",
-                description="The URL of the template.",
-                option_type=3,
-                required=True,
-            ),
-        ]
-    )
-    async def _add(self, ctx: SlashContext, name: str, url: str):
-        await ctx.defer()
-        await self.add(ctx, name, url)
+    @_progress.sub_command(name="add")
+    async def _add(self, inter: disnake.AppCmdInter, name: str, url: str):
+        """Add a template to the tracker.
+
+        Parameters
+        ----------
+        name: The name of the template.
+        url: The URL of the template."""
+        await inter.response.defer()
+        await self.add(inter, name, url)
 
     @progress.command(
         name="add", description="Add a template to the tracker.", usage="<name> <URL>"
@@ -369,7 +348,7 @@ class Progress(commands.Cog):
         correct_pixels = format_number(int(correct_pixels))
         total_pixels = format_number(int(template.total_size))
 
-        embed = discord.Embed(title=f"✅ Template `{name}` added to the tracker.", color=0x66C5CC)
+        embed = disnake.Embed(title=f"✅ Template `{name}` added to the tracker.", color=0x66C5CC)
         embed.description = f"**Title**: {template.title or '`N/A`'}\n"
         embed.description += f"[Template link]({template.url})\n"
         embed.description += f"**Size**: {total_pixels} pixels ({template.width}x{template.height})\n"
@@ -379,28 +358,22 @@ class Progress(commands.Cog):
         detemp_file = image_to_file(Image.fromarray(template.get_array()), "detemplatize.png", embed)
         await ctx.send(file=detemp_file, embed=embed)
 
-    sort_options = ["Name", "Size", "Correct", "To Go", "%", "px/h (last 1h)", "px/h (last 6h)", "px/h (last 1d)", "px/h (last 7d)", "ETA"]
+    sort_options = ["Name", "Size", "Correct", "To Go", "Percentage", "px/h (last 1h)", "px/h (last 6h)", "px/h (last 1d)", "px/h (last 7d)", "ETA"]
+    Sort = commands.option_enum({option: i for i, option in enumerate(sort_options)})
 
-    @cog_ext.cog_subcommand(
-        base="progress",
-        name="list",
-        description="Show all the public tracked templates.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="sort",
-                description="Sort the table by the chosen column. (default: px/h (last 1h))",
-                option_type=3,
-                required=False,
-                choices=[create_choice(name=c, value=str(i)) for i, c in enumerate(sort_options)],
-            )
-        ]
-    )
-    async def _list(self, ctx: SlashContext, sort=None):
-        await ctx.defer()
-        if sort:
-            sort = int(sort)
-        await self.list(ctx, sort)
+    @_progress.sub_command(name="list")
+    async def _list(
+        self,
+        inter: disnake.AppCmdInter,
+        sort: Sort = None
+    ):
+        """Show all the public tracked templates.
+
+        Parameters
+        ----------
+        sort: Sort the table by the chosen column. (default: px/h (last 1h))"""
+        await inter.response.defer()
+        await self.list(inter, sort)
 
     @progress.command(
         name="list",
@@ -447,7 +420,7 @@ class Progress(commands.Cog):
         if sort is None:
             sort = 5
         # make the embed base
-        embed = discord.Embed(title="Tracked Templates", color=0x66C5CC)
+        embed = disnake.Embed(title="Tracked Templates", color=0x66C5CC)
         embed.description = "Sorted By: `{}`\nTotal Templates: `{}`".format(
             titles[sort],
             len(public_tracked_templates),
@@ -568,45 +541,29 @@ class Progress(commands.Cog):
         table_file = image_to_file(table_image, "progress.png", embed=embed)
         await ctx.send(embed=embed, file=table_file)
 
-    @cog_ext.cog_subcommand(
-        base="progress",
-        name="update",
-        description="Update a template in the tracker.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="name",
-                description="The name of the template you want to update.",
-                option_type=3,
-                required=True,
-            ),
-            create_option(
-                name="new_url",
-                description="The new URL of the template.",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="new_name",
-                description="The new name of the template.",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="new_owner",
-                description="The new owner of the template.",
-                option_type=6,
-                required=False,
-            ),
-        ]
-    )
-    async def _update(self, ctx: SlashContext, name, new_url=None, new_name=None, new_owner=None):
-        await ctx.defer()
+    @_progress.sub_command(name="update")
+    async def _update(
+        self,
+        inter: disnake.AppCmdInter,
+        template: str = commands.Param(autocomplete=autocomplete_user_templates),
+        new_url: str = commands.Param(name="new-url", default=None),
+        new_name: str = commands.Param(name="new-name", default=None),
+        new_owner: disnake.User = commands.Param(name="new-owner", default=None),
+    ):
+        """Update a template in the tracker.
+
+        Parameters
+        ----------
+        template: The current name of the template you want to update.
+        new_url: The new URL of the template.
+        new_name: The new name of the template.
+        new_owner: The new owner of the template."""
+        await inter.response.defer()
         if new_owner:
             new_owner_id = new_owner.id
         else:
             new_owner_id = None
-        await self.update(ctx, name, new_url, new_name, new_owner_id)
+        await self.update(inter, template, new_url, new_name, new_owner_id)
 
     @progress.command(name="update", description="Update the template URL.", usage="<current name> <new url>")
     async def p_update_url(self, ctx, current_name, new_url):
@@ -636,9 +593,9 @@ class Progress(commands.Cog):
                 new_url, new_name,
                 new_owner_id,
             )
-        except Exception as e:
+        except ValueError as e:
             return await ctx.send(f":x: {e}")
-        embed = discord.Embed(title=f"**✅ Template {old_temp.name} Updated**", color=0x66C5CC)
+        embed = disnake.Embed(title=f"**✅ Template {old_temp.name} Updated**", color=0x66C5CC)
 
         # Show name update
         if new_name is not None:
@@ -734,37 +691,34 @@ class Progress(commands.Cog):
                     None, make_before_after_gif, old_temp, new_temp
                 )
                 filename = "diff.gif"
-                file = discord.File(fp=diff_gif, filename=filename)
+                files = [disnake.File(fp=diff_gif, filename=filename)]
                 embed.set_image(url=f"attachment://{filename}")
             except Exception:
                 progress += "**[An error occured while generating the diff GIF image.]**\n"
-                file = None
+                files = []
             embed.add_field(name="URL Changed", value=info + progress)
         else:
-            file = None
-        return await ctx.send(embed=embed, file=file)
+            files = []
 
-    @cog_ext.cog_subcommand(
-        base="progress",
-        name="delete",
-        description="Remove a template from the tracker.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="template",
-                description="The name the template you want to delete.",
-                option_type=3,
-                required=True,
-            ),
-        ],
-    )
-    async def _delete(self, ctx: SlashContext, template):
-        await ctx.defer()
-        await self.delete(ctx, template)
+        return await ctx.send(embed=embed, files=files)
+
+    @_progress.sub_command(name="delete")
+    async def _delete(
+        self,
+        inter: disnake.AppCmdInter,
+        template: str = commands.Param(autocomplete=autocomplete_user_templates),
+    ):
+        """Delete a template and all its stats from the tracker.
+
+        Parameters
+        ----------
+        template: The name of the template you want to delete."""
+        await inter.response.defer()
+        await self.delete(inter, template)
 
     @progress.command(
         name="delete",
-        description="Delete a template from the tracker.",
+        description="Delete a template and all its stats from the tracker.",
         usage="<template>",
         aliases=["remove", "del"],
     )
@@ -783,46 +737,28 @@ class Progress(commands.Cog):
             return await ctx.send(f":x: {e}")
         return await ctx.send(f"✅ Template `{deleted_temp.name}` successfully deleted.")
 
-    @cog_ext.cog_subcommand(
-        base="progress",
-        name="speed",
-        description="Check the speed graph of a tracked template.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="template",
-                description="The name the template you want to check.",
-                option_type=3,
-                required=True,
-            ),
-            create_option(
-                name="last",
-                description="Show the progress in the last x year/month/week/day/hour/minute/second. (format: ?y?mo?w?d?h?m?s)",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="groupby",
-                description="Show a bar chart for each 5 min interval, hour or day.",
-                option_type=3,
-                required=False,
-                choices=[
-                    create_choice(name="5min", value="5min"),
-                    create_choice(name="hour", value="hour"),
-                    create_choice(name="day", value="day"),
+    @_progress.sub_command(name="speed")
+    async def _speed(
+        self,
+        inter: disnake.AppCmdInter,
+        template: str = commands.Param(autocomplete=autocomplete_templates),
+        last: str = None,
+        groupby: str = commands.Param(default=None, choices=["5min", "hour", "day"])
+    ):
+        """Check the speed graph of a tracked template.
 
-                ],
-            ),
-        ],
-    )
-    async def _speed(self, ctx: SlashContext, template, last=None, groupby=None):
-        await ctx.defer()
-        await self.speed(ctx, template, last, groupby)
+        Parameters
+        ----------
+        template: The name of the template you want to check.
+        last: Show the progress in the last x week/day/hour/minute. (format: ?w?d?h?m)
+        groupby: Show a bar chart for each 5 min interval, hour or day."""
+        await inter.response.defer()
+        await self.speed(inter, template, last, groupby)
 
     @progress.command(
         name="speed",
         description="Check the speed graph of a tracked template.",
-        usage="<template> [-last ?y?mo?w?d?h?m?s] [-groupby 5min]",
+        usage="<template> [-last ?w?d?h?m] [-groupby 5min]",
     )
     async def p_speed(self, ctx, *args):
         # parse the arguemnts
@@ -962,7 +898,7 @@ class Progress(commands.Cog):
         table_image = table_to_image(table_data, titles, alignments, colors, theme)
 
         # make the embed
-        embed = discord.Embed(title="**Template Speed**", color=0x66C5CC)
+        embed = disnake.Embed(title="**Template Speed**", color=0x66C5CC)
         embed.description = "• Between {} and {}\n".format(
             format_datetime(oldest_time),
             format_datetime(latest_time),

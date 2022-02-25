@@ -1,8 +1,7 @@
-from discord.ext import commands
+import disnake
+from disnake.ext import commands
 import plotly.graph_objects as go
 from datetime import datetime, timedelta, timezone
-from discord_slash import cog_ext, SlashContext
-from discord_slash.utils.manage_commands import create_option
 
 from utils.arguments_parser import MyParser
 from utils.discord_utils import format_number, image_to_file
@@ -15,7 +14,7 @@ from utils.image.image_utils import (
     lighten_color,
 )
 from utils.table_to_image import table_to_image
-from utils.setup import stats, db_stats, db_users, GUILD_IDS
+from utils.setup import stats, db_stats, db_users
 from utils.plot_utils import fig2img, add_glow, get_theme
 from utils.time_converter import format_timezone, str_to_td, round_minutes_down
 from utils.timezoneslib import get_timezone
@@ -25,35 +24,23 @@ class ColorsGraph(commands.Cog):
     def __init__(self, client):
         self.client = client
 
-    @cog_ext.cog_slash(
-        name="colorsgraph",
-        description="Show a graph of the canvas colors.",
-        guild_ids=GUILD_IDS,
-        options=[
-            create_option(
-                name="placed",
-                description="To show the graph for the non-virgin pixels only.",
-                option_type=5,
-                required=False,
-            ),
-            create_option(
-                name="last",
-                description="Show the progress in the last x year/month/week/day/hour/minute/second. (format: ?y?mo?w?d?h?m?s)",
-                option_type=3,
-                required=False,
-            ),
-            create_option(
-                name="colors",
-                description="List of pxls colors separated by a comma.",
-                option_type=3,
-                required=False,
-            ),
-        ],
-    )
+    @commands.slash_command(name="colorsgraph")
     async def _colorsgraph(
-        self, ctx: SlashContext, colors=None, placed=False, last=None
+        self,
+        inter: disnake.AppCmdInter,
+        colors: str = None,
+        placed: bool = False,
+        last: str = None
     ):
-        await ctx.defer()
+        """Show a graph of the canvas colors.
+
+        Parameters
+        ----------
+        colors: List of pxls colors separated by a comma.
+        placed: To show the graph for the non-virgin pixels only.
+        last: Show the progress in the last x year/month/week/day/hour/minute/second. (format: ?y?mo?w?d?h?m?s)
+        """
+        await inter.response.defer()
         args = ()
         if colors:
             args += (colors,)
@@ -61,7 +48,7 @@ class ColorsGraph(commands.Cog):
             args += ("-placed",)
         if last:
             args += ("-last", last)
-        await self.colorsgraph(ctx, *args)
+        await self.colorsgraph(inter, *args)
 
     @commands.command(
         name="colorsgraph",
@@ -208,7 +195,7 @@ class ColorsGraph(commands.Cog):
 
 def make_color_graph(data_list, colors, user_timezone=None):
 
-    # get the timezone informations
+    # get the timezone information
     tz = get_timezone(user_timezone)
     if tz is None:
         tz = timezone.utc

@@ -2,11 +2,12 @@ import os
 import disnake
 import re
 import platform
+import time
 from datetime import datetime, timedelta, timezone
 from disnake.ext import commands
 from dotenv import load_dotenv
 
-from utils.setup import BOT_INVITE, SERVER_INVITE, db_servers, VERSION
+from utils.setup import BOT_INVITE, SERVER_INVITE, VERSION, db_servers, db_users
 from utils.time_converter import str_to_td, td_format
 from utils.timezoneslib import get_timezone
 from utils.utils import ordinal
@@ -132,7 +133,7 @@ class Utility(commands.Cog):
         await ctx.send(f"✅ Extension `{extension}` has been reloaded")
 
     @commands.slash_command(name="time")
-    async def _time(self, inter: disnake.AppCmdInter, timezone: str):
+    async def _time(self, inter: disnake.AppCmdInter, timezone: str = None):
         """Show the current time in a timezone.
 
         Parameters
@@ -145,7 +146,10 @@ class Utility(commands.Cog):
         description="Show the current time in a timezone.",
         usage="<timezone>",
     )
-    async def time(self, ctx, timezone: str):
+    async def time(self, ctx, timezone: str = None):
+        if timezone is None:
+            discord_user = await db_users.get_discord_user(ctx.author.id)
+            timezone = discord_user["timezone"] or "UTC"
         tz = get_timezone(timezone)
         if tz is None:
             return await ctx.send("❌ Timezone not found.")
@@ -163,10 +167,12 @@ class Utility(commands.Cog):
     @commands.is_owner()
     async def sql(self, ctx, *, sql_expression):
         async with ctx.typing():
+            start = time.time()
             try:
                 rows = await db_servers.db.sql_select(sql_expression)
             except Exception as e:
                 return await ctx.send(f"❌ SQL error: ```{e}```")
+        end = time.time()
         if len(rows) == 0:
             return await ctx.send("No match found.")
         elif len(rows) > 100:
@@ -176,7 +182,8 @@ class Utility(commands.Cog):
         rows = [list(row) for row in rows]
         img = table_to_image(rows, titles)
         file = image_to_file(img, "table.png")
-        await ctx.send(file=file)
+        content = f"Nb lines: {len(rows)}\nTime: {round(end-start,3)}s"
+        await ctx.send(file=file, content=content)
 
     @commands.command(hidden=True, usage="<sql expression>")
     @commands.is_owner()

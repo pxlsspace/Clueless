@@ -261,10 +261,10 @@ class UserConverter(commands.Converter):
             raise commands.UserNotFound(argument)
 
 
-async def get_embed_author(ctx) -> disnake.User:
+async def get_embed_author(inter: disnake.MessageInteraction) -> disnake.User:
     """Get the author User from an embed if it has "Requested by name#0000" in the footer,
     return ``None`` if not found."""
-    embeds = ctx.origin_message.embeds
+    embeds = inter.message.embeds
     if not embeds:
         return None
     try:
@@ -274,7 +274,7 @@ async def get_embed_author(ctx) -> disnake.User:
         name = found[0][0]
         discrim = found[0][1]
         predicate = lambda u: u.name == name and u.discriminator == discrim  # noqa: E731
-        result = disnake.utils.find(predicate, ctx.bot.users)
+        result = disnake.utils.find(predicate, inter.bot.users)
         return result
     except Exception:
         return None

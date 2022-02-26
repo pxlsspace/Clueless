@@ -53,6 +53,7 @@ class Progress(commands.Cog):
 
     @commands.group(
         name="progress",
+        usage="<check|info|add|list|update|delete|speed>",
         description="Track a template over time.",
         aliases=["prog"],
         invoke_without_command=True,
@@ -62,7 +63,7 @@ class Progress(commands.Cog):
             async with ctx.typing():
                 await self.check(ctx, template)
         else:
-            await ctx.send("Usage: `>progress [check|list|add|remove|update]`")
+            await ctx.send("Usage: `>progress <check|info|add|list|update|delete|speed>`")
 
     @_progress.sub_command(name="check")
     async def _check(

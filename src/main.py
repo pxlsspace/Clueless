@@ -1,15 +1,13 @@
 import os
-import sys
 import disnake
 import traceback
-
 from disnake.ext import commands
 from dotenv import load_dotenv
 from datetime import timezone
 
-
 from utils.pxls.template_manager import TemplateManager
 from utils.setup import DEFAULT_PREFIX, db_stats, db_servers, db_users, db_templates, GUILD_IDS
+from utils.log import get_logger, setup_loggers, close_loggers
 
 
 load_dotenv()
@@ -39,7 +37,7 @@ async def on_connect():
 
 @client.event
 async def on_ready():
-    print("We have logged in as {0.user}".format(client))
+    logger.info("We have logged in as {0.user}".format(client))
 
 
 @client.event
@@ -52,9 +50,7 @@ async def on_command(ctx):
     """Save the command usage in the database and in a discord channel if set"""
     slash_command = isinstance(ctx, disnake.ApplicationCommandInteraction)
     if slash_command:
-        command_name = ctx.application_command.name
-        if hasattr(ctx, "subcommand_name") and ctx.subcommand_name:
-            command_name += " " + ctx.subcommand_name
+        command_name = ctx.application_command.qualified_name
     else:
         command_name = ctx.command.qualified_name
 
@@ -158,8 +154,11 @@ async def on_command_error(ctx, error):
             await ctx.send(embed=embed, ephemeral=True)
     else:
         await ctx.message.add_reaction(r"a:peepoLeaveNope:822571977390817340")
-    print("Ignoring exception in command {}:".format(command_name), file=sys.stderr)
-    traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
+
+    logger.exception(
+        f"Unexpected exception in command {command_name} by {ctx.author}:",
+        exc_info=error,
+    )
 
     # send message in log error channel
     log_channel_id = os.environ.get("ERROR_LOG_CHANNEL")
@@ -233,7 +232,7 @@ async def on_message(message):
         server = await db_servers.get_server(message.guild.id)
         if server is None:
             await db_servers.create_server(message.guild.id, DEFAULT_PREFIX)
-            print("joined a new server: {0.name} (id: {0.id})".format(message.guild))
+            logger.info("joined a new server: {0.name} (id: {0.id})".format(message.guild))
 
         # check if user has a blacklisted role
         blacklist_role_id = await db_servers.get_blacklist_role(message.guild.id)
@@ -257,7 +256,7 @@ async def on_message(message):
 @client.event
 async def on_guild_join(guild):
     await db_servers.create_server(guild.id, DEFAULT_PREFIX)
-    print("joined a new server: {0.name} (id: {0.id})".format(guild))
+    logger.info("joined a new server: {0.name} (id: {0.id})".format(guild))
 
     # get the log channel
     log_channel_id = os.environ.get("ERROR_LOG_CHANNEL")
@@ -284,7 +283,7 @@ async def on_guild_join(guild):
 @client.event
 async def on_guild_remove(guild):
     await db_servers.delete_server(guild.id)
-    print("left server: {0.name} (id: {0.id})".format(guild))
+    logger.info("left server: {0.name} (id: {0.id})".format(guild))
 
     # get the log channel
     log_channel_id = os.environ.get("ERROR_LOG_CHANNEL")
@@ -310,7 +309,12 @@ async def on_guild_remove(guild):
 
 if __name__ == "__main__":
 
+    # setting up loggers
+    setup_loggers()
+    logger = get_logger("main")
+
     # loading cogs
+    logger.debug("Loading cogs")
     commands_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cogs")
     for path, subdirs, files in os.walk(commands_dir):
         parent_dir = path
@@ -323,12 +327,13 @@ if __name__ == "__main__":
                         )
                         extension = ".".join(os.path.split(relpath))
                     client.load_extension("cogs." + extension[:-3])
-                except Exception as e:
-                    print(
-                        "Failed to load extension {}\n{}: {}".format(
-                            extension, type(e).__name__, e
-                        )
-                    )
-
-    # run the bot
-    client.run(os.environ.get("DISCORD_TOKEN"))
+                except Exception:
+                    logger.exception(f"Failed to load extension {extension}")
+    try:
+        # __start__
+        logger.debug("Starting bot ...")
+        client.run(os.environ.get("DISCORD_TOKEN"))
+    finally:
+        # __exit__
+        logger.critical("Bot shut down.")
+        close_loggers()

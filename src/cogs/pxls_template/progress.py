@@ -338,7 +338,7 @@ class Progress(commands.Cog):
             )
         correct_pixels = template.update_progress()
         try:
-            await tracked_templates.save(template, name, ctx.author.id)
+            await tracked_templates.save(template, name, ctx.author)
         except ValueError as e:
             return await ctx.send(f":x: {e}")
 
@@ -560,11 +560,7 @@ class Progress(commands.Cog):
         new_name: The new name of the template.
         new_owner: The new owner of the template."""
         await inter.response.defer()
-        if new_owner:
-            new_owner_id = new_owner.id
-        else:
-            new_owner_id = None
-        await self.update(inter, template, new_url, new_name, new_owner_id)
+        await self.update(inter, template, new_url, new_name, new_owner)
 
     @progress.command(name="update", description="Update the template URL.", usage="<current name> <new url>")
     async def p_update_url(self, ctx, current_name, new_url):
@@ -584,15 +580,15 @@ class Progress(commands.Cog):
             return await ctx.send(f"❌ {e}")
 
         async with ctx.typing():
-            await self.update(ctx, current_name, new_owner_id=new_user.id)
+            await self.update(ctx, current_name, new_owner=new_user)
 
-    async def update(self, ctx, current_name, new_url=None, new_name=None, new_owner_id=None):
+    async def update(self, ctx, current_name, new_url=None, new_name=None, new_owner=None):
         try:
             old_temp, new_temp = await tracked_templates.update_template(
                 current_name,
-                ctx.author.id,
+                ctx.author,
                 new_url, new_name,
-                new_owner_id,
+                new_owner,
             )
         except ValueError as e:
             return await ctx.send(f":x: {e}")
@@ -603,7 +599,7 @@ class Progress(commands.Cog):
             embed.add_field(name="Name Changed", value=f"`{old_temp.name}` → `{new_temp.name}`", inline=False)
 
         # Show owner update
-        if new_owner_id is not None:
+        if new_owner is not None:
             embed.add_field(name="Ownership transfered", value=f"<@{old_temp.owner_id}> → <@{new_temp.owner_id}>", inline=False)
 
         # Show all the template info updated
@@ -763,7 +759,7 @@ class Progress(commands.Cog):
             try:
                 deleted_temp = await tracked_templates.delete_template(
                     template_name,
-                    ctx.author.id,
+                    ctx.author,
                     False,
                 )
             except Exception as e:

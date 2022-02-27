@@ -5,6 +5,7 @@ import re
 import copy
 import time
 import urllib.parse
+import disnake
 from datetime import datetime, timedelta
 from PIL import Image
 from numba import jit
@@ -18,6 +19,10 @@ from utils.time_converter import round_minutes_down, td_format
 from utils.utils import get_content
 from utils.setup import stats, db_templates
 from utils.pxls.template import get_rgba_palette, reduce
+from utils.log import get_logger
+
+logger = get_logger("template_manager")
+tracker_logger = get_logger("template_tracker", file="templates.log", in_console=False)
 
 
 class Template():
@@ -319,7 +324,7 @@ class TemplateManager():
             raise ValueError("This name is reserved for the @combo template.")
         return name
 
-    async def save(self, template: Template, name: str, owner_id: int, hidden: bool = False):
+    async def save(self, template: Template, name: str, owner: disnake.User, hidden: bool = False):
         """Save the template:
         - as a template object in the tracked_templates list
         - as a database entry in the database
@@ -329,7 +334,7 @@ class TemplateManager():
         - if there is a template with the same image"""
 
         template.name = name
-        template.owner_id = owner_id
+        template.owner_id = owner.id
         template.hidden = hidden
 
         # check on the name
@@ -351,6 +356,8 @@ class TemplateManager():
         self.list.append(template)
         # update the @combo
         self.update_combo()
+        # log
+        tracker_logger.info(f"Template added: '{template.name}' by {owner} ({owner.id})")
 
     def get_template(self, name, owner_id=None, hidden=False):
         """Get a template from its name, get the owner's hidden Template if hidden is True,
@@ -367,7 +374,8 @@ class TemplateManager():
                         return temp
         return None
 
-    async def delete_template(self, name, command_user_id, hidden):
+    async def delete_template(self, name, command_user, hidden):
+        command_user_id = command_user.id
         temp = self.get_template(name, command_user_id, hidden)
         if not temp:
             raise ValueError(f"No template named `{name}` found.")
@@ -379,9 +387,11 @@ class TemplateManager():
         await db_templates.delete_template(temp)
         self.list.remove(temp)
         self.update_combo()
+        tracker_logger.info(f"Template deleted: '{temp.name}' by {command_user} ({command_user.id})")
         return temp
 
-    async def update_template(self, current_name, command_user_id, new_url=None, new_name=None, new_owner_id=None):
+    async def update_template(self, current_name, command_user, new_url=None, new_name=None, new_owner=None):
+        command_user_id = command_user.id
         old_temp = self.get_template(current_name, command_user_id, False)
         if not old_temp:
             raise ValueError(f"No template named `{current_name}` found.")
@@ -411,7 +421,8 @@ class TemplateManager():
             if temp_with_same_name and temp_with_same_name != old_temp:
                 raise ValueError(f"There is already a template with the name `{new_name}`.")
             new_temp.name = new_name
-        if new_owner_id:
+        if new_owner:
+            new_owner_id = new_owner.id
             new_temp.owner_id = new_owner_id
         new_temp.hidden = False
         try:
@@ -428,6 +439,16 @@ class TemplateManager():
         self.list.remove(old_temp)
         self.list.insert(old_temp_index, new_temp)
         self.update_combo()
+        tracker_logger.info(
+            "Template updated: '{}' by {} ({}):{}{}{}".format(
+                old_temp.name,
+                command_user,
+                command_user.id,
+                " URL changed" if new_url else "",
+                f" name changed (new name: {new_temp.name})" if new_name else "",
+                f" owner changed (new owner: {new_owner} ({new_owner.id}))" if new_owner else "",
+            )
+        )
         return old_temp, new_temp
 
     def get_all_public_templates(self):
@@ -438,6 +459,7 @@ class TemplateManager():
 
     async def load_all_templates(self, canvas_code):
         """Load all the templates from the database in self.list"""
+        logger.info("Loading templates...")
         start = time.time()
         db_list = await db_templates.get_all_templates(canvas_code)
         count = 0
@@ -456,13 +478,14 @@ class TemplateManager():
                     temp.canvas_code = canvas_code
                     self.list.append(temp)
                     count += 1
+                    logger.debug(f"template {temp.name} loaded ({count}/{len(db_list)-1})")
                 except Exception as e:
-                    print("Failed to load template {}: {}".format(name, e))
+                    logger.warn("Failed to load template {}: {}".format(name, e))
             else:
                 has_combo = True
         end = time.time()
         nb_templates = len(db_list) - (1 if has_combo else 0)
-        print(f"{count}/{nb_templates} Templates loaded (time: {round(end-start, 2)}s)")
+        logger.info(f"{count}/{nb_templates} Templates loaded (time: {round(end-start, 2)}s)")
 
     def make_combo_image(self) -> np.ndarray:
         """Make an index array combining all the template arrays in self.list"""

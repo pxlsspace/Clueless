@@ -2,6 +2,9 @@ import asyncio
 import json
 import threading
 import websockets
+from utils.log import get_logger
+
+logger = get_logger("pxls_websocket")
 
 
 class WebsocketClient:
@@ -34,7 +37,7 @@ class WebsocketClient:
         while True:
             try:
                 async with websockets.connect(self.uri) as websocket:
-                    print("Websocket connected")
+                    logger.info("Websocket connected")
                     async for message in websocket:
                         while self._paused:
                             pass
@@ -50,9 +53,9 @@ class WebsocketClient:
                                 count = message_json["count"]
                                 self.stats.online_count = count
 
-                        except Exception as error:
-                            print(f"Websocket client raised {error}")
+                        except Exception:
+                            logger.exception("Websocket client raised")
             except Exception as error:
-                print(f"Websocket disconnected: {error}")
-                print("Attempting reconnect...")
+                logger.debug(f"Websocket disconnected: {error}")
+                logger.debug("Attempting reconnect...")
                 await asyncio.sleep(1)

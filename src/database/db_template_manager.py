@@ -4,6 +4,9 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from utils.pxls.template_manager import Template, Combo
+from utils.log import get_logger
+
+logger = get_logger(__name__)
 
 
 class DbTemplateManager():
@@ -155,5 +158,5 @@ class DbTemplateManager():
         database if it's not found"""
         if not await self.get_template_id(combo):
             await self.create_template(combo)
-            print("New combo created in the database")
+            logger.info("New combo created in the database")
         return await self.create_template_stat(combo, datetime, progress)

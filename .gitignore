@@ -12,3 +12,5 @@ test.db
 ecosystem.config.js
 *.mp4
 env/
+logs/
+*.log

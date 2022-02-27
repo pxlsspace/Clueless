@@ -51,7 +51,3 @@ async def get_best_possible(datetime1, datetime2):
     nb_seconds = (datetime2 - datetime1) / timedelta(seconds=1)
     best_possible = round(nb_seconds / average_cooldown)
     return (best_possible, average_cooldown)
-
-
-if __name__ == "__main__":
-    print(get_cds(1))

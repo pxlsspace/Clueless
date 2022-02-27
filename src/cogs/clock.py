@@ -1,7 +1,5 @@
 import disnake
-import traceback
 from PIL import Image
-from sys import stderr
 from disnake.ext import commands, tasks
 from datetime import datetime, timedelta, timezone
 
@@ -9,6 +7,9 @@ from utils.discord_utils import image_to_file
 from utils.setup import stats, db_stats, db_servers, db_users, ws_client, db_templates
 from utils.time_converter import local_to_utc
 from main import tracked_templates
+from utils.log import get_logger
+
+logger = get_logger("clock")
 
 
 class Clock(commands.Cog):
@@ -32,20 +33,12 @@ class Clock(commands.Cog):
         if min in ["01", "16", "31", "46"]:
             try:
                 await self._update_stats_data()
-            except Exception as error:
-                formatted = "".join(
-                    traceback.format_exception(type(error), error, error.__traceback__)
-                )
-                print("Unexpected exception in task 'update_stats':")
-                print(formatted, file=stderr)
+            except Exception:
+                logger.exception("Unexpected exception in task 'update_stats'")
 
     @update_stats.error
     async def update_stats_error(self, error):
-        formatted = "".join(
-            traceback.format_exception(type(error), error, error.__traceback__)
-        )
-        print("Unexpected exception in task 'update_stats':")
-        print(formatted, file=stderr)
+        logger.exception("Unexpected exception in task 'update_stats'", exc_info=error)
 
     # wait for the bot to be ready before starting the task
     @update_stats.before_loop
@@ -65,13 +58,10 @@ class Clock(commands.Cog):
             # initialise the combo
             bot_id = app_info.id
             tracked_templates.update_combo(bot_id, canvas_code)
+            logger.debug("Combo initialized.")
 
-        except Exception as error:
-            formatted = "".join(
-                traceback.format_exception(type(error), error, error.__traceback__)
-            )
-            print("Unexpected error before starting task 'update_stats':")
-            print(formatted, file=stderr)
+        except Exception:
+            logger.exception("Unexpected error before starting task 'update_stats'")
 
         # start the websocket to update the board
         ws_client.start()
@@ -85,43 +75,49 @@ class Clock(commands.Cog):
         # refreshing stats json
         await stats.refresh()
         if stats.stats_json is None:
-            now = datetime.now().strftime("[%H:%M:%S]")
-            print(now + ": stats page unreachable")
+            logger.warning("Stats page unreachable.")
+
             return
+        logger.debug("Stats refreshed.")
 
         # create a record for the current time and canvas
         record_id = await self.create_record()
         if record_id is None:
             # there is already a record saved for the current time
             await self.update_boards()
+            logger.debug("Board updated.")
             return
 
         # save the new stats data in the database
         await self.save_stats(record_id)
+        logger.debug("Stats saved.")
 
         # check on update for the palette
         palette = stats.get_palette()
         canvas_code = await stats.get_canvas_code()
         await db_stats.save_palette(palette, canvas_code)
+        logger.debug("Palette saved.")
 
         ws_client.pause()
 
         # update the board
         await self.update_boards()
+        logger.debug("Boards updated.")
 
         # save the color stats
         await self.save_color_stats(record_id)
+        logger.debug("Color stats saved.")
 
         ws_client.resume()
 
         # check milestones
-        await self.check_milestones()
+        # await self.check_milestones()
 
         # send snapshots
         await self.send_snapshots()
+        logger.debug("Snapshot sent.")
 
-        now = datetime.now().strftime("[%H:%M:%S]")
-        print(now + ": stats updated")
+        logger.info("All stats updated.")
 
     @commands.command(hidden=True)
     @commands.is_owner()
@@ -139,21 +135,18 @@ class Clock(commands.Cog):
         # save online count
         try:
             await self.save_online_count()
-        except Exception as error:
-            formatted = "".join(
-                traceback.format_exception(type(error), error, error.__traceback__)
-            )
-            print("Unexpected exception in task 'save_online_count':")
-            print(formatted, file=stderr)
+            logger.debug("Online count saved.")
+
+        except Exception:
+            logger.exception("Unexpected exception in task 'save_online_count'")
+
         # update template stats
         try:
             await self.update_template_stats()
-        except Exception as error:
-            formatted = "".join(
-                traceback.format_exception(type(error), error, error.__traceback__)
-            )
-            print("Unexpected exception in task 'update_template_stats':")
-            print(formatted, file=stderr)
+            logger.debug("Template stats saved.")
+
+        except Exception:
+            logger.exception("Unexpected exception in task 'update_template_stats'")
 
     @update_online_count.before_loop
     async def before_update_online_count(self):
@@ -296,7 +289,7 @@ class Clock(commands.Cog):
                 name = temp.name
                 # await db_templates.delete_template(temp)
                 tracked_templates.list.remove(temp)
-                print(f"template '{name}' deleted")
+                logger.info(f"Template '{name}' deleted. Reason: new canvas code")
                 continue
             progress = temp.update_progress()
             await db_templates.create_template_stat(temp, dt, progress)
@@ -304,7 +297,7 @@ class Clock(commands.Cog):
         tracked_templates.update_combo(self.client.user.id, canvas_code)
         combo_progress = tracked_templates.combo.update_progress()
         if await db_templates.create_combo_stat(tracked_templates.combo, dt, combo_progress) is None:
-            print("Warning: combo stats could not saved.")
+            logger.warning("Combo stats could not saved.")
 
 
 def setup(client: commands.Bot):

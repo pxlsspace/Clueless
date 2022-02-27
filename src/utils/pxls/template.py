@@ -3,9 +3,13 @@
 import os
 import numpy as np
 from PIL import Image
+from numba import jit
+
 from utils.setup import stats
 from utils.image.image_utils import hex_to_rgb
-from numba import jit
+from utils.log import get_logger
+
+logger = get_logger(__name__)
 
 
 class InvalidStyleException(Exception):
@@ -85,7 +89,7 @@ for s in custom_styles:
     try:
         STYLES.append(get_style_from_image(s))
     except InvalidStyleException as e:
-        print(f"Warning: failed to load '{s}' style: {e}")
+        logger.warning(f"failed to load '{s}' style: {e}")
 
 
 def get_style(style_name: str):

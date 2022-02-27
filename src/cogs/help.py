@@ -68,7 +68,10 @@ class HelpButton(disnake.ui.Button):
             category_infos = CATEGORIES[self.category]
             emoji = category_infos["emoji"]
 
-        custom_id = ("slash_" if self.is_slash else "") + self.category
+        custom_id = "help:{}:{}".format(
+            self.category,
+            "slash" if self.is_slash else "",
+        )
         super().__init__(
             style=style, emoji=emoji, label=label, custom_id=custom_id
         )
@@ -355,16 +358,15 @@ class Help(commands.Cog):
     async def on_button_click(self, inter: disnake.MessageInteraction):
         """Handle what to do when a button a pressed on the help command."""
         custom_id = inter.component.custom_id
-        if not custom_id.startswith("help:"):
-            pass
+        parsed_id = custom_id.split(":")
+
+        # check that the button was a help button
+        if not parsed_id or parsed_id[0] != "help":
+            return
 
         # check if the help command was a slash or prefix
-        if custom_id.startswith("slash_"):
-            category_name = custom_id[6:]
-            is_slash = True
-        else:
-            category_name = custom_id
-            is_slash = False
+        is_slash = parsed_id[-1] == "slash"
+        category_name = parsed_id[1]
 
         # check on the author
         command_author = await get_embed_author(inter)

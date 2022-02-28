@@ -14,8 +14,8 @@ from utils.arguments_parser import MyParser
 
 
 class Colorify(commands.Cog):
-    def __init__(self, client: commands.Bot) -> None:
-        self.client: commands.Bot = client
+    def __init__(self, bot: commands.Bot) -> None:
+        self.bot: commands.Bot = bot
 
     @commands.slash_command(name="colorify")
     async def _colorify(
@@ -82,7 +82,7 @@ class Colorify(commands.Cog):
 
             # combine the frames back to a gif
             animated_img = BytesIO()
-            await self.client.loop.run_in_executor(
+            await self.bot.loop.run_in_executor(
                 None, save_transparent_gif, res_frames, durations, animated_img
             )
             animated_img.seek(0)
@@ -184,7 +184,7 @@ class Colorify(commands.Cog):
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
         img = Image.open(BytesIO(img))
-        rainbow_img = await self.client.loop.run_in_executor(
+        rainbow_img = await self.bot.loop.run_in_executor(
             None, rainbowfy, img, saturation, lightness
         )
         file = disnake.File(fp=rainbow_img, filename="rainbowfy.gif")
@@ -283,5 +283,5 @@ def colorify(img: Image.Image, color: tuple) -> Image.Image:
     return blended_img
 
 
-def setup(client: commands.Bot):
-    client.add_cog(Colorify(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(Colorify(bot))

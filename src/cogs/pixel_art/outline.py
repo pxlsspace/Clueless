@@ -15,8 +15,8 @@ from utils.image.image_utils import (
 
 
 class Outline(commands.Cog):
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
 
     @commands.slash_command(name="outline")
     async def _outline(
@@ -93,8 +93,8 @@ class Outline(commands.Cog):
 
         input_image = Image.open(BytesIO(img_bytes))
         func = functools.partial(add_outline, input_image, rgba, not (sparse), width)
-        image_with_outline = await self.client.loop.run_in_executor(None, func)
-        file = await self.client.loop.run_in_executor(
+        image_with_outline = await self.bot.loop.run_in_executor(None, func)
+        file = await self.bot.loop.run_in_executor(
             None, image_to_file, image_with_outline, "outline.png"
         )
 
@@ -129,7 +129,7 @@ class Outline(commands.Cog):
             return await ctx.send(f"❌ {e}")
 
         input_image = Image.open(BytesIO(img_bytes))
-        image_cropped = await self.client.loop.run_in_executor(
+        image_cropped = await self.bot.loop.run_in_executor(
             None, remove_white_space, input_image
         )
         ratio = (image_cropped.width * image_cropped.height) / (input_image.width * input_image.height)
@@ -141,12 +141,12 @@ class Outline(commands.Cog):
             embed.description += "`{0.width}x{0.height}` → `{1.width}x{1.height}`".format(
                 input_image, image_cropped
             )
-        file = await self.client.loop.run_in_executor(
+        file = await self.bot.loop.run_in_executor(
             None, image_to_file, image_cropped, "cropped.png", embed
         )
 
         await ctx.send(file=file, embed=embed)
 
 
-def setup(client):
-    client.add_cog(Outline(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(Outline(bot))

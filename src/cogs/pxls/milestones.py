@@ -4,8 +4,8 @@ from utils.setup import db_servers, db_users
 
 
 class PxlsMilestones(commands.Cog):
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
 
     @commands.group(
         hidden=True,
@@ -105,7 +105,7 @@ class PxlsMilestones(commands.Cog):
             channel_id = ctx.message.channel_mentions[0].id
 
         # checks if the bot has write perms in the alert channel
-        channel = self.client.get_channel(channel_id)
+        channel = self.bot.get_channel(channel_id)
         if not ctx.message.guild.me.permissions_in(channel).send_messages:
             await ctx.send(
                 f"❌ I do not have permissions to send mesages in <#{channel_id}>"
@@ -118,6 +118,6 @@ class PxlsMilestones(commands.Cog):
             )
 
 
-def setup(client):
+def setup(bot: commands.Bot):
     return  # this command is disabled
-    client.add_cog(PxlsMilestones(client))
+    bot.add_cog(PxlsMilestones(bot))

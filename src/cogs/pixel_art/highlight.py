@@ -25,8 +25,8 @@ from utils.table_to_image import table_to_image
 
 
 class Highlight(commands.Cog):
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
 
     @commands.slash_command(name="highlight")
     async def _highlight(
@@ -243,5 +243,5 @@ def highlight_image(
     return black_background_img
 
 
-def setup(client):
-    client.add_cog(Highlight(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(Highlight(bot))

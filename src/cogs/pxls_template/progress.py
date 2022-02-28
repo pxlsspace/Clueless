@@ -43,8 +43,8 @@ async def autocomplete_user_templates(inter: disnake.AppCmdInter, user_input: st
 
 
 class Progress(commands.Cog):
-    def __init__(self, client) -> None:
-        self.client = client
+    def __init__(self, bot: commands.Bot) -> None:
+        self.bot: commands.Bot = bot
 
     @commands.slash_command(name="progress")
     async def _progress(self, inter):
@@ -158,7 +158,7 @@ class Progress(commands.Cog):
             else:
                 # if there is no data for this template in the db, the starting tracking time is now
                 oldest_record_time = datetime.now(timezone.utc)
-            owner = self.client.get_user(template.owner_id)
+            owner = self.bot.get_user(template.owner_id)
             embed.set_footer(text=f"Owner • {owner}\nTracking Since")
             embed.timestamp = oldest_record_time
         else:
@@ -684,7 +684,7 @@ class Progress(commands.Cog):
             progress += "\n__**Image Difference**__\n"
             # make the image
             try:
-                diff_gif = await self.client.loop.run_in_executor(
+                diff_gif = await self.bot.loop.run_in_executor(
                     None, make_before_after_gif, old_temp, new_temp
                 )
                 filename = "diff.gif"
@@ -978,5 +978,5 @@ def get_eta_color(eta_hours, max_days=40):
     return percentage_palette[eta_idx]
 
 
-def setup(client):
-    client.add_cog(Progress(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(Progress(bot))

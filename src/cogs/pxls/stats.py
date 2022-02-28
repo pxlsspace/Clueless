@@ -17,8 +17,8 @@ from cogs.pixel_art.highlight import _highlight
 
 
 class PxlsStats(commands.Cog):
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
 
     @commands.slash_command(name="generalstats")
     async def _generalstats(self, inter: disnake.AppCmdInter):
@@ -554,7 +554,7 @@ class PxlsStats(commands.Cog):
             img = Image.fromarray(stats.palettize_array(placeable_board))
             title = "Canvas color breakdown"
 
-        await _colors(self.client, ctx, img, title)
+        await _colors(self.bot, ctx, img, title)
 
     @commands.slash_command(name="canvashighlight")
     async def _canvashighlight(
@@ -624,5 +624,5 @@ class PxlsStats(commands.Cog):
         await _highlight(ctx, array, parsed_args)
 
 
-def setup(client):
-    client.add_cog(PxlsStats(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(PxlsStats(bot))

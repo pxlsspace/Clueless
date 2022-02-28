@@ -21,8 +21,8 @@ from utils.timezoneslib import get_timezone
 
 
 class ColorsGraph(commands.Cog):
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
 
     @commands.slash_command(name="colorsgraph")
     async def _colorsgraph(
@@ -143,7 +143,7 @@ class ColorsGraph(commands.Cog):
             for d in data_list:
                 d["values"] = [v - d["values"][0] for v in d["values"]]
         # create the graph and style
-        fig = await self.client.loop.run_in_executor(
+        fig = await self.bot.loop.run_in_executor(
             None, make_color_graph, data_list, colors, discord_user["timezone"]
         )
         if fig is None:
@@ -187,7 +187,7 @@ class ColorsGraph(commands.Cog):
             table_colors,
         )
 
-        files = await self.client.loop.run_in_executor(
+        files = await self.bot.loop.run_in_executor(
             None, fig2file, fig, "colors_graph.png", table_img
         )
         await ctx.send(files=files)
@@ -282,5 +282,5 @@ def fig2file(fig, title, table_img):
         return [table_file, graph_file]
 
 
-def setup(client):
-    client.add_cog(ColorsGraph(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(ColorsGraph(bot))

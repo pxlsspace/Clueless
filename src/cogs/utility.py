@@ -18,9 +18,9 @@ from utils.table_to_image import table_to_image
 class Utility(commands.Cog):
     """Various utility commands"""
 
-    def __init__(self, client: commands.Bot):
+    def __init__(self, bot: commands.Bot):
         load_dotenv()
-        self.client: commands.Bot = client
+        self.bot: commands.Bot = bot
 
     @commands.slash_command(name="ping")
     async def _ping(self, inter: disnake.AppCmdInter):
@@ -29,7 +29,7 @@ class Utility(commands.Cog):
 
     @commands.command(description="pong! (show the bot latency)")
     async def ping(self, ctx):
-        await ctx.send(f"pong! (bot latency: `{round(self.client.latency*1000,2)}` ms)")
+        await ctx.send(f"pong! (bot latency: `{round(self.bot.latency*1000,2)}` ms)")
 
     @commands.slash_command(name="echo")
     async def _echo(self, inter: disnake.AppCmdInter, text: str):
@@ -126,7 +126,7 @@ class Utility(commands.Cog):
     @commands.is_owner()
     async def rl(self, ctx, extension):
         try:
-            self.client.reload_extension("cogs." + extension)
+            self.bot.reload_extension("cogs." + extension)
         except Exception as e:
             return await ctx.send("```❌ {}: {} ```".format(type(e).__name__, e))
 
@@ -202,7 +202,7 @@ class Utility(commands.Cog):
     async def log2db(self, ctx):
         log_channel_id = os.environ.get("COMMAND_LOG_CHANNEL")
         try:
-            log_channel = await self.client.fetch_channel(log_channel_id)
+            log_channel = await self.bot.fetch_channel(log_channel_id)
         except Exception:
             return await ctx.send(":x: log channel not set.")
         await ctx.send("parsing log messages ...")
@@ -266,15 +266,15 @@ class Utility(commands.Cog):
 
     @commands.command(description="Show some stats and information about the bot.")
     async def botinfo(self, ctx):
-        app_info = await self.client.application_info()
+        app_info = await self.bot.application_info()
         owner = app_info.owner
         me = ctx.me
         bot_age = td_format(disnake.utils.utcnow() - me.created_at, hide_seconds=True)
-        server_prefix = await db_servers.get_prefix(self.client, ctx)
+        server_prefix = await db_servers.get_prefix(self.bot, ctx)
         # get some bot stats
-        guild_count = len(self.client.guilds)
-        commands_count = len(self.client.commands)
-        slash_commands_count = len(self.client.slash_commands)
+        guild_count = len(self.bot.guilds)
+        commands_count = len(self.bot.commands)
+        slash_commands_count = len(self.bot.slash_commands)
         usage_count = await db_servers.db.sql_select(
             "SELECT COUNT(*) FROM command_usage"
         )
@@ -356,7 +356,7 @@ class Utility(commands.Cog):
         # format and send the data in an embed
         embed = disnake.Embed(title="Bot Information", color=0x66C5CC)
         embed.description = f"Creator: {owner}\n"
-        embed.description += f"Bot version: `{VERSION}` - Ping: `{round(self.client.latency*1000,2)} ms`\n"
+        embed.description += f"Bot version: `{VERSION}` - Ping: `{round(self.bot.latency*1000,2)} ms`\n"
         embed.description += f"Bot age: {bot_age}\n"
         embed.description += f"Server prefix: `{server_prefix}`"
         embed.add_field(name="**Bot Stats**", value=stats, inline=False)
@@ -383,5 +383,5 @@ class Utility(commands.Cog):
         await ctx.send(embed=embed, view=invites)
 
 
-def setup(client: commands.Bot):
-    client.add_cog(Utility(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(Utility(bot))

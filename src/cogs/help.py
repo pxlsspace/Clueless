@@ -103,17 +103,17 @@ class HelpView(disnake.ui.View):
 class Help(commands.Cog):
     """A cog with all the help commands to get information about the other commands."""
 
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
 
     async def send_home_help(self, ctx, author, is_slash):
         """Called when >help or /help is used."""
         if is_slash:
-            categories = get_slash_mapping(self.client)
+            categories = get_slash_mapping(self.bot)
             prefix = "/"
         else:
-            categories = get_bot_mapping(self.client)
-            prefix = await db_servers.get_prefix(self.client, ctx)
+            categories = get_bot_mapping(self.bot)
+            prefix = await db_servers.get_prefix(self.bot, ctx)
 
         # create the embed header
         home_emoji = HOME_EMOJI
@@ -168,11 +168,11 @@ class Help(commands.Cog):
             return await self.send_home_help(ctx, author, is_slash)
 
         if is_slash:
-            categories = get_slash_mapping(self.client)
+            categories = get_slash_mapping(self.bot)
             prefix = "/"
         else:
-            categories = get_bot_mapping(self.client)
-            prefix = await db_servers.get_prefix(self.client, ctx)
+            categories = get_bot_mapping(self.bot)
+            prefix = await db_servers.get_prefix(self.bot, ctx)
 
         category_infos = CATEGORIES[category_name]
         commands = categories[category_name]
@@ -313,8 +313,8 @@ class Help(commands.Cog):
             return await self.send_home_help(ctx, ctx.author, is_slash)
         # check if it's a category
         elif (
-            (is_slash and command_name.title() in get_slash_mapping(self.client))
-            or (not(is_slash) and command_name.title() in get_bot_mapping(self.client))
+            (is_slash and command_name.title() in get_slash_mapping(self.bot))
+            or (not(is_slash) and command_name.title() in get_bot_mapping(self.bot))
         ):
             return await self.send_category_help(
                 ctx, command_name.title(), ctx.author, is_slash, send_buttons=False
@@ -324,9 +324,9 @@ class Help(commands.Cog):
             command_name = command_name.lower()
             keys = command_name.split(" ")
             if is_slash:
-                cmd = self.client.all_slash_commands.get(keys[0])
+                cmd = self.bot.all_slash_commands.get(keys[0])
             else:
-                cmd = self.client.all_commands.get(keys[0])
+                cmd = self.bot.all_commands.get(keys[0])
             if cmd is None:
                 return await ctx.send(
                     f":x: No command or category named `{command_name}` found."
@@ -383,41 +383,14 @@ class Help(commands.Cog):
             await self.send_category_help(inter, category_name, command_author, is_slash)
 
 
-def setup(client):
-    client.add_cog(Help(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(Help(bot))
 
 
-def get_client_mapping(client: commands.Bot):
+def get_bot_mapping(bot: commands.Bot):
     """Get all the prefix commands groupped by category."""
     categories = {}
-    mapping = {cog: cog.get_commands() for cog in client.cogs.values()}
-    mapping[None] = [c for c in client.commands if c.cog is None]
-
-    for cog in mapping:
-        if cog is None:
-            commands = mapping[cog]
-            category_name = "Other"
-        else:
-            if len(cog.get_commands()) == 0:
-                continue
-            commands = cog.get_commands()
-            # get the directory of the cog
-            category_name = get_cog_category(cog)
-
-        for command in commands:
-            if not command.hidden:
-                # categories are organized by cog folders
-                try:
-                    categories[category_name].append(command)
-                except KeyError:
-                    categories[category_name] = [command]
-    return categories
-
-
-def get_bot_mapping(client: commands.Bot):
-    """Get all the prefix commands groupped by category."""
-    categories = {}
-    for command in client.commands:
+    for command in bot.commands:
         if command and not command.hidden and command.enabled:
             category_name = get_cog_category(command.cog)
             # categories are organized by cog folders
@@ -428,10 +401,10 @@ def get_bot_mapping(client: commands.Bot):
     return categories
 
 
-def get_slash_mapping(client: commands.Bot):
+def get_slash_mapping(bot: commands.Bot):
     """Get all the prefix commands groupped by category."""
     categories = {}
-    for command in client.slash_commands:
+    for command in bot.slash_commands:
         if command:
             category_name = get_cog_category(command.cog)
             # categories are organized by cog folders

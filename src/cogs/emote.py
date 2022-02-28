@@ -9,8 +9,8 @@ from utils.discord_utils import get_image_from_message, number_emoji, format_emo
 
 
 class Emote(commands.Cog):
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
 
     @commands.group(
         usage="[add|remove|list|number]",
@@ -127,5 +127,5 @@ class Emote(commands.Cog):
         )
 
 
-def setup(client):
-    client.add_cog(Emote(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(Emote(bot))

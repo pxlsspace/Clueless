@@ -7,8 +7,8 @@ from utils.pxls.template_manager import get_template_from_url
 
 
 class Detemplatize(commands.Cog):
-    def __init__(self, client) -> None:
-        self.client = client
+    def __init__(self, bot: commands.Bot) -> None:
+        self.bot: commands.Bot = bot
 
     @commands.slash_command(name="detemplatize")
     async def _detemplatize(self, inter: disnake.AppCmdInter, url: str):
@@ -65,5 +65,5 @@ class Detemplatize(commands.Cog):
         await ctx.send(file=detemp_file, embed=embed)
 
 
-def setup(client):
-    client.add_cog(Detemplatize(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(Detemplatize(bot))

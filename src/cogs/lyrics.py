@@ -8,8 +8,8 @@ from utils import azlyrics
 
 
 class Lyrics(commands.Cog):
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
 
     # slash command
     @commands.slash_command(name="lyrics")
@@ -140,5 +140,5 @@ def is_similar(string1, string2):
     return SequenceMatcher(None, string1, string2).ratio() > 0.8
 
 
-def setup(client):
-    client.add_cog(Lyrics(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(Lyrics(bot))

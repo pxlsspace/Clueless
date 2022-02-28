@@ -8,8 +8,8 @@ from utils.setup import stats
 
 
 class PxlsCooldown(commands.Cog):
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
 
     @commands.slash_command(name="cooldown")
     async def _cooldown(
@@ -65,5 +65,5 @@ class PxlsCooldown(commands.Cog):
         await ctx.send(embed=embed)
 
 
-def setup(client):
-    client.add_cog(PxlsCooldown(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(PxlsCooldown(bot))

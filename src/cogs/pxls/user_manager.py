@@ -11,8 +11,8 @@ from utils.timezoneslib import get_timezone
 
 
 class UserManager(commands.Cog):
-    def __init__(self, client) -> None:
-        self.client = client
+    def __init__(self, bot: commands.Bot) -> None:
+        self.bot: commands.Bot = bot
 
     @commands.slash_command(name="setname")
     async def _setname(
@@ -106,7 +106,7 @@ class UserManager(commands.Cog):
         if not isinstance(user, (disnake.member.Member, disnake.user.User)):
             # the ID is passed if fetching the user object failed
             # so we fetch the user object from the ID "manually"
-            user = await self.client.fetch_user(user)
+            user = await self.bot.fetch_user(user)
         await self.whoami(inter, user)
 
     @commands.command(
@@ -212,5 +212,5 @@ class UserManager(commands.Cog):
         await ctx.send("✅ Timezone successfully unset.")
 
 
-def setup(client):
-    client.add_cog(UserManager(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(UserManager(bot))

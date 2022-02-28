@@ -11,8 +11,8 @@ from utils.discord_utils import get_image_from_message, image_to_file
 
 
 class Scale(commands.Cog):
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
 
     @commands.slash_command(name="downscale")
     async def _downscale(self, inter: disnake.AppCmdInter, image: str = None):
@@ -47,7 +47,7 @@ class Scale(commands.Cog):
         input_image = remove_white_space(input_image)  # Remove extra space
         input_image_array = np.array(input_image)
         start = time.time()
-        scale = await self.client.loop.run_in_executor(
+        scale = await self.bot.loop.run_in_executor(
             None, get_image_scale, input_image_array
         )
         if not scale or scale == 1:
@@ -62,7 +62,7 @@ class Scale(commands.Cog):
             return await ctx.send(embed=error_embed)
 
         true_width = input_image.width // scale
-        downscaled_array = await self.client.loop.run_in_executor(
+        downscaled_array = await self.bot.loop.run_in_executor(
             None, detemplatize, input_image_array, true_width
         )
         end = time.time()
@@ -143,5 +143,5 @@ class Scale(commands.Cog):
         await ctx.send(embed=embed, file=res_file)
 
 
-def setup(client):
-    client.add_cog(Scale(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(Scale(bot))

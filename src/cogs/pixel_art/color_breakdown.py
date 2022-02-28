@@ -13,8 +13,8 @@ from utils.plot_utils import fig2img
 
 
 class ColorBreakdown(commands.Cog):
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
 
     @commands.slash_command(name="colors")
     async def _colors(self, inter: disnake.AppCmdInter, image: str = None):
@@ -45,15 +45,15 @@ class ColorBreakdown(commands.Cog):
 
         input_image = Image.open(BytesIO(img_bytes))
         input_image = input_image.convert("RGBA")
-        await _colors(self.client, ctx, input_image)
+        await _colors(self.bot, ctx, input_image)
 
 
-async def _colors(client, ctx, input_image, title="Color Breakdown"):
+async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
 
     nb_pixels = input_image.size[0] * input_image.size[1]
 
     # get the colors table
-    image_colors = await client.loop.run_in_executor(
+    image_colors = await bot.loop.run_in_executor(
         None, input_image.getcolors, nb_pixels
     )
     if len(image_colors) > 5000:
@@ -97,11 +97,11 @@ async def _colors(client, ctx, input_image, title="Color Breakdown"):
         ["center", "right", "right"],
         colors_cropped,
     )
-    table_img = await client.loop.run_in_executor(None, func)
+    table_img = await bot.loop.run_in_executor(None, func)
 
     # make the pie chart image
     piechart = get_piechart(labels, values, colors)
-    piechart_img = await client.loop.run_in_executor(
+    piechart_img = await bot.loop.run_in_executor(
         None, fig2img, piechart, 600, 600, 1.5
     )
 
@@ -112,13 +112,13 @@ async def _colors(client, ctx, input_image, title="Color Breakdown"):
     header = inspect.cleandoc(header) + "\n"
 
     # concatenate the pie chart and table image
-    res_img = await client.loop.run_in_executor(
+    res_img = await bot.loop.run_in_executor(
         None, h_concatenate, table_img, piechart_img
     )
 
     # send an embed with the color table, the pie chart
     emb = disnake.Embed(title=title, description=header, color=hex_str_to_int(colors[0]))
-    file = await client.loop.run_in_executor(
+    file = await bot.loop.run_in_executor(
         None, image_to_file, res_img, "color_breakdown.png", emb
     )
     # set the input image as thumbnail
@@ -163,5 +163,5 @@ def get_piechart(labels, values, colors):
     return fig
 
 
-def setup(client):
-    client.add_cog(ColorBreakdown(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(ColorBreakdown(bot))

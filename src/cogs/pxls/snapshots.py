@@ -3,8 +3,8 @@ from utils.setup import db_servers
 
 
 class Snapshots(commands.Cog):
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
 
     @commands.group(
         hidden=True,
@@ -62,7 +62,7 @@ class Snapshots(commands.Cog):
             channel_id = ctx.message.channel_mentions[0].id
 
         # checks if the bot has write perms in the snapshots channel
-        channel = self.client.get_channel(channel_id)
+        channel = self.bot.get_channel(channel_id)
         if not ctx.message.guild.me.permissions_in(channel).send_messages:
             await ctx.send(
                 f"❌ I don't have permissions to send messages in <#{channel_id}>"
@@ -79,5 +79,5 @@ class Snapshots(commands.Cog):
         await ctx.send("✅ Snapshots won't be sent anymore.")
 
 
-def setup(client):
-    client.add_cog(Snapshots(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(Snapshots(bot))

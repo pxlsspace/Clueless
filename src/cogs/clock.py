@@ -17,8 +17,8 @@ class Clock(commands.Cog):
 
     It is used to update the stats object periodically."""
 
-    def __init__(self, client: commands.Bot):
-        self.client: commands.Bot = client
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
         self.update_stats.start()
         self.update_online_count.start()
 
@@ -43,14 +43,14 @@ class Clock(commands.Cog):
     # wait for the bot to be ready before starting the task
     @update_stats.before_loop
     async def before_update_stats(self):
-        await self.client.wait_until_ready()
+        await self.bot.wait_until_ready()
         try:
             # update the data on startup
             await self._update_stats_data()
 
             # load the templates from the database
             canvas_code = await stats.get_canvas_code()
-            app_info = await self.client.application_info()
+            app_info = await self.bot.application_info()
             await tracked_templates.load_all_templates(canvas_code)
             bot_owner_id = app_info.owner.id
             tracked_templates.bot_owner_id = bot_owner_id
@@ -152,7 +152,7 @@ class Clock(commands.Cog):
     async def before_update_online_count(self):
         time_interval = 5  # minutes
         # wait for the bot to be ready
-        await self.client.wait_until_ready()
+        await self.bot.wait_until_ready()
         # wait that the time is a round value
         now = datetime.now(timezone.utc)
         next_run = now.replace(
@@ -180,7 +180,7 @@ class Clock(commands.Cog):
                 for server_id in servers:
                     channel_id = await db_servers.get_alert_channel(server_id)
                     try:
-                        channel = self.client.get_channel(int(channel_id))
+                        channel = self.bot.get_channel(int(channel_id))
                         await channel.send(
                             "New milestone for **"
                             + username
@@ -200,7 +200,7 @@ class Clock(commands.Cog):
 
         for channel_id in channels:
             try:
-                channel = self.client.get_channel(int(channel_id))
+                channel = self.bot.get_channel(int(channel_id))
                 embed = disnake.Embed(title="Canvas Snapshot", color=0x66C5CC)
                 embed.timestamp = datetime.now(timezone.utc)
                 file = image_to_file(board_img, filename, embed)
@@ -294,11 +294,11 @@ class Clock(commands.Cog):
             progress = temp.update_progress()
             await db_templates.create_template_stat(temp, dt, progress)
         # update the combo and save its progress
-        tracked_templates.update_combo(self.client.user.id, canvas_code)
+        tracked_templates.update_combo(self.bot.user.id, canvas_code)
         combo_progress = tracked_templates.combo.update_progress()
         if await db_templates.create_combo_stat(tracked_templates.combo, dt, combo_progress) is None:
             logger.warning("Combo stats could not saved.")
 
 
-def setup(client: commands.Bot):
-    client.add_cog(Clock(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(Clock(bot))

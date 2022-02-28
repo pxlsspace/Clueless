@@ -64,7 +64,7 @@ class DbServersManager():
                 WHERE server_id = ?"""
         await self.db.sql_update(sql, (prefix, server_id))
 
-    async def get_prefix(self, client, message):
+    async def get_prefix(self, bot, message):
         """get the prefix of the context of a discord message"""
         if message.guild is None:
             return ">"

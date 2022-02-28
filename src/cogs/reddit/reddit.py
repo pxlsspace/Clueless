@@ -8,8 +8,8 @@ from utils.utils import get_content
 class Reddit(commands.Cog, name="Image"):
     """Class to get images from reddit"""
 
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
 
     def get_image_url(self, subm):
         """Get the image URL from the json of a reddit submission,
@@ -126,5 +126,5 @@ class Reddit(commands.Cog, name="Image"):
         await self.send_random_image(ctx, subreddit, "Here, have a doggo!")
 
 
-def setup(client):
-    client.add_cog(Reddit(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(Reddit(bot))

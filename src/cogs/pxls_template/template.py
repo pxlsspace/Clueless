@@ -14,8 +14,8 @@ from utils.setup import stats
 
 
 class Template(commands.Cog):
-    def __init__(self, client) -> None:
-        self.client = client
+    def __init__(self, bot: commands.Bot) -> None:
+        self.bot: commands.Bot = bot
 
     @commands.slash_command(name="template")
     async def _template(
@@ -120,12 +120,12 @@ class Template(commands.Cog):
         # reduce the image to the pxls palette
         img_array = np.array(img)
         palette = get_rgba_palette()
-        reduced_array = await self.client.loop.run_in_executor(
+        reduced_array = await self.bot.loop.run_in_executor(
             None, reduce, img_array, palette
         )
 
         # convert the image to a template style
-        template_array = await self.client.loop.run_in_executor(
+        template_array = await self.bot.loop.run_in_executor(
             None, templatize, style, reduced_array, glow_opacity
         )
         template_image = Image.fromarray(template_array)
@@ -183,5 +183,5 @@ class Template(commands.Cog):
         return await ctx.send(styles_available)
 
 
-def setup(client):
-    client.add_cog(Template(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(Template(bot))

@@ -21,8 +21,8 @@ from utils.timezoneslib import get_timezone
 
 
 class PxlsSpeed(commands.Cog):
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
 
     @commands.slash_command(name="speed")
     async def _speed(
@@ -324,11 +324,11 @@ class PxlsSpeed(commands.Cog):
         # create the graph
         graph_data = [[d[0], d[-2], d[-1]] for d in formatted_data]
         if groupby_opt:
-            graph_image = await self.client.loop.run_in_executor(
+            graph_image = await self.bot.loop.run_in_executor(
                 None, get_grouped_graph, graph_data, title, theme, user_timezone
             )
         else:
-            graph_image = await self.client.loop.run_in_executor(
+            graph_image = await self.bot.loop.run_in_executor(
                 None, get_stats_graph, graph_data, title, theme, user_timezone
             )
 
@@ -353,8 +353,8 @@ class PxlsSpeed(commands.Cog):
         await ctx.send(file=file, embed=emb)
 
 
-def setup(client):
-    client.add_cog(PxlsSpeed(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(PxlsSpeed(bot))
 
 
 def get_stats_graph(stats_list: list, title, theme, user_timezone=None):

@@ -21,8 +21,8 @@ from utils.timezoneslib import get_timezone
 
 
 class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
 
     @commands.slash_command(name="leaderboard")
     async def _leaderboard(
@@ -335,7 +335,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         # format the numbers correctly
         res_ldb = [[format_number(line) for line in r] for r in res_ldb]
 
-        img = await self.client.loop.run_in_executor(
+        img = await self.bot.loop.run_in_executor(
             None, table_to_image, res_ldb, column_names, alignments2, colors, theme
         )
 
@@ -396,7 +396,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                     data_pixels = [stat["pixels"] for stat in data]
                 stats.append([name, data_dates, data_pixels])
             stats.sort(key=lambda x: x[2][-1], reverse=True)
-            graph_img = await self.client.loop.run_in_executor(
+            graph_img = await self.bot.loop.run_in_executor(
                 None, get_stats_graph, stats, "", theme, user_timezone
             )
             graph_file = image_to_file(graph_img, "graph.png")
@@ -525,5 +525,5 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         return fig
 
 
-def setup(client):
-    client.add_cog(PxlsLeaderboard(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(PxlsLeaderboard(bot))

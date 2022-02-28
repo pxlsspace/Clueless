@@ -9,8 +9,8 @@ from utils.image.image_utils import get_pxls_color, is_hex_color
 
 
 class Font(commands.Cog):
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, bot: commands.Bot):
+        self.bot: commands.Bot = bot
 
     fonts = get_all_fonts()
     fonts.insert(0, "all")
@@ -158,5 +158,5 @@ class Font(commands.Cog):
         return await ctx.send(msg)
 
 
-def setup(client):
-    client.add_cog(Font(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(Font(bot))

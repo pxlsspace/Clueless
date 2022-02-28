@@ -8,8 +8,8 @@ from utils.discord_utils import UserConverter
 
 
 class Blacklist(commands.Cog):
-    def __init__(self, client) -> None:
-        self.client = client
+    def __init__(self, bot: commands.Bot) -> None:
+        self.bot: commands.Bot = bot
 
     @commands.group(hidden=True, description="Ban a user from using the bot.")
     @commands.is_owner()
@@ -27,7 +27,7 @@ class Blacklist(commands.Cog):
             return await ctx.send(f"❌ {e}")
 
         # check that the user isn't the bot owner
-        app_info = await self.client.application_info()
+        app_info = await self.bot.application_info()
         owner = app_info.owner
         if user == owner:
             return await ctx.send("❌ You can't blacklist the bot owner.")
@@ -136,5 +136,5 @@ class Blacklist(commands.Cog):
         await ctx.send("✅ Blacklist role removed.")
 
 
-def setup(client):
-    client.add_cog(Blacklist(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(Blacklist(bot))

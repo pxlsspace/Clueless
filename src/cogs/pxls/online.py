@@ -15,8 +15,8 @@ from utils.timezoneslib import get_timezone
 
 
 class Online(commands.Cog):
-    def __init__(self, client) -> None:
-        self.client = client
+    def __init__(self, bot: commands.Bot) -> None:
+        self.bot: commands.Bot = bot
 
     @commands.slash_command(name="online")
     async def _online(
@@ -151,11 +151,11 @@ class Online(commands.Cog):
 
         # make graph
         if parsed_args.groupby:
-            fig = await self.client.loop.run_in_executor(
+            fig = await self.bot.loop.run_in_executor(
                 None, make_grouped_graph, dates, online_counts, theme, user_timezone
             )
         else:
-            fig = await self.client.loop.run_in_executor(
+            fig = await self.bot.loop.run_in_executor(
                 None, make_graph, dates, online_counts, theme, user_timezone
             )
         fig.update_layout(
@@ -166,7 +166,7 @@ class Online(commands.Cog):
         )
 
         # make embed
-        img = await self.client.loop.run_in_executor(None, fig2img, fig)
+        img = await self.bot.loop.run_in_executor(None, fig2img, fig)
         description = "• Between {} and {}\n• Current {}: `{}`\n• Average: `{}`\n• Min: `{}` • Max: `{}`".format(
             format_datetime(dates[-1]),
             format_datetime(dates[0]),
@@ -296,5 +296,5 @@ def make_grouped_graph(dates, values, theme, user_timezone=None):
     return fig
 
 
-def setup(client):
-    client.add_cog(Online(client))
+def setup(bot: commands.Bot):
+    bot.add_cog(Online(bot))

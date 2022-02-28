@@ -13,7 +13,7 @@ from utils.log import get_logger, setup_loggers, close_loggers
 load_dotenv()
 intents = disnake.Intents.all()
 activity = disnake.Activity(type=disnake.ActivityType.watching, name="you placing those pixels 👀")
-client = commands.Bot(
+bot = commands.Bot(
     command_prefix=db_servers.get_prefix,
     help_command=None,
     intents=intents,
@@ -26,7 +26,7 @@ client = commands.Bot(
 tracked_templates = TemplateManager()
 
 
-@client.event
+@bot.event
 async def on_connect():
     # create db tables if they dont exist
     await db_servers.create_tables()
@@ -35,17 +35,17 @@ async def on_connect():
     await db_templates.create_tables()
 
 
-@client.event
+@bot.event
 async def on_ready():
-    logger.info("We have logged in as {0.user}".format(client))
+    logger.info("We have logged in as {0.user}".format(bot))
 
 
-@client.event
+@bot.event
 async def on_slash_command(ctx):
     await on_command(ctx)
 
 
-@client.event
+@bot.event
 async def on_command(ctx):
     """Save the command usage in the database and in a discord channel if set"""
     slash_command = isinstance(ctx, disnake.ApplicationCommandInteraction)
@@ -100,7 +100,7 @@ async def on_command(ctx):
     # log commands used in a channel if a log channel is set
     log_channel_id = os.environ.get("COMMAND_LOG_CHANNEL")
     try:
-        log_channel = await client.fetch_channel(log_channel_id)
+        log_channel = await bot.fetch_channel(log_channel_id)
     except Exception:
         return
     emb = disnake.Embed(color=0x00BB00, title="Command '{}' used.".format(command_name))
@@ -110,12 +110,12 @@ async def on_command(ctx):
     await log_channel.send(embed=emb)
 
 
-@client.event
+@bot.event
 async def on_slash_command_error(ctx, error):
     await on_command_error(ctx, error)
 
 
-@client.event
+@bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound) or isinstance(error, commands.DisabledCommand):
         return
@@ -163,7 +163,7 @@ async def on_command_error(ctx, error):
     # send message in log error channel
     log_channel_id = os.environ.get("ERROR_LOG_CHANNEL")
     try:
-        log_channel = await client.fetch_channel(log_channel_id)
+        log_channel = await bot.fetch_channel(log_channel_id)
     except Exception:
         return
     if log_channel is not None:
@@ -210,12 +210,12 @@ async def on_command_error(ctx, error):
         await log_channel.send(embed=emb)
 
 
-@client.event
+@bot.event
 async def on_message(message):
-    await client.wait_until_ready()
+    await bot.wait_until_ready()
 
     # check that the user isn't the bot itself
-    if message.author == client.user:
+    if message.author == bot.user:
         return
 
     # check that the user isn't an other bot
@@ -248,12 +248,12 @@ async def on_message(message):
     if message.content == "aa":
         await message.channel.send("<:watermelonDEATH:856212273718886400>")
 
-    if client.user in message.mentions:
+    if bot.user in message.mentions:
         await message.add_reaction("<:peepopinged:867331826442960926>")
-    await client.process_commands(message)
+    await bot.process_commands(message)
 
 
-@client.event
+@bot.event
 async def on_guild_join(guild):
     await db_servers.create_server(guild.id, DEFAULT_PREFIX)
     logger.info("joined a new server: {0.name} (id: {0.id})".format(guild))
@@ -261,7 +261,7 @@ async def on_guild_join(guild):
     # get the log channel
     log_channel_id = os.environ.get("ERROR_LOG_CHANNEL")
     try:
-        log_channel = await client.fetch_channel(log_channel_id)
+        log_channel = await bot.fetch_channel(log_channel_id)
     except Exception:
         # don't log if no log channel is set
         return
@@ -280,7 +280,7 @@ async def on_guild_join(guild):
     await log_channel.send(embed=embed)
 
 
-@client.event
+@bot.event
 async def on_guild_remove(guild):
     await db_servers.delete_server(guild.id)
     logger.info("left server: {0.name} (id: {0.id})".format(guild))
@@ -288,7 +288,7 @@ async def on_guild_remove(guild):
     # get the log channel
     log_channel_id = os.environ.get("ERROR_LOG_CHANNEL")
     try:
-        log_channel = await client.fetch_channel(log_channel_id)
+        log_channel = await bot.fetch_channel(log_channel_id)
     except Exception:
         # don't log if no log channel is set
         return
@@ -326,13 +326,13 @@ if __name__ == "__main__":
                             os.path.join(parent_dir, extension), commands_dir
                         )
                         extension = ".".join(os.path.split(relpath))
-                    client.load_extension("cogs." + extension[:-3])
+                    bot.load_extension("cogs." + extension[:-3])
                 except Exception:
                     logger.exception(f"Failed to load extension {extension}")
     try:
         # __start__
         logger.debug("Starting bot ...")
-        client.run(os.environ.get("DISCORD_TOKEN"))
+        bot.run(os.environ.get("DISCORD_TOKEN"))
     finally:
         # __exit__
         logger.critical("Bot shut down.")

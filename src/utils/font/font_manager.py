@@ -7,7 +7,7 @@ import numpy as np
 
 basepath = os.path.dirname(__file__)
 fonts_folder = os.path.abspath(
-    os.path.join(basepath, "..", "..", "..", "ressources", "fonts")
+    os.path.join(basepath, "..", "..", "..", "resources", "fonts")
 )
 
 SPACE_WIDTH = 4

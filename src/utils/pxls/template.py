@@ -21,7 +21,7 @@ def get_style_from_image(style_name):
     try:
         basepath = os.path.dirname(__file__)
         styles_folder = os.path.abspath(
-            os.path.join(basepath, "..", "..", "..", "ressources", "styles")
+            os.path.join(basepath, "..", "..", "..", "resources", "styles")
         )
         filename = os.path.join(styles_folder, style_name + ".png")
         img = Image.open(filename)

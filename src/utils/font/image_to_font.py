@@ -190,7 +190,7 @@ if __name__ == "__main__":
 
     basepath = path.dirname(__file__)
     fonts_folder = path.abspath(
-        path.join(basepath, "..", "..", "..", "ressources", "fonts", font_name)
+        path.join(basepath, "..", "..", "..", "resources", "fonts", font_name)
     )
     font_img_file = path.join(fonts_folder, font_name + ".png")
     print(font_img_file)

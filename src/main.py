@@ -12,7 +12,16 @@ from utils.log import get_logger, setup_loggers, close_loggers
 
 load_dotenv()
 intents = disnake.Intents.all()
-activity = disnake.Activity(type=disnake.ActivityType.watching, name="you placing those pixels 👀")
+activity = disnake.Activity(
+    type=disnake.ActivityType.watching,
+    name="you placing those pixels 👀"
+)
+allowed_mentions = disnake.AllowedMentions(
+    everyone=False,
+    users=False,
+    roles=False,
+    replied_user=False,
+)
 bot = commands.Bot(
     command_prefix=db_servers.get_prefix,
     help_command=None,
@@ -21,6 +30,7 @@ bot = commands.Bot(
     activity=activity,
     test_guilds=GUILD_IDS,
     reload=bool(GUILD_IDS),
+    allowed_mentions=allowed_mentions,
 )
 
 tracked_templates = TemplateManager()

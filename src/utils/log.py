@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -39,12 +40,22 @@ def get_logger(name, level="DEBUG", file="clueless.log", in_console=True):
         logger.addHandler(file_handler)
 
     if in_console:
+        # formatter
         console_format = "[%(asctime)s] [%(levelname)s] %(name)s: %(message)s"
         console_formatter = logging.Formatter(console_format, '%H:%M:%S')
-        console_handler = logging.StreamHandler()
+
+        # stdout
+        console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setFormatter(console_formatter)
         console_handler.setLevel(default_log_level)
+        console_handler.addFilter(lambda record: record.levelno <= default_log_level)
         logger.addHandler(console_handler)
+
+        # stderr
+        console_handler_err = logging.StreamHandler()
+        console_handler_err.setFormatter(console_formatter)
+        console_handler_err.setLevel(logging.WARNING)
+        logger.addHandler(console_handler_err)
 
     return logger
 

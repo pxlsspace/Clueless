@@ -131,7 +131,7 @@ async def on_command_error(ctx, error):
         return
     slash_command = isinstance(ctx, disnake.ApplicationCommandInteraction)
     if slash_command:
-        command_name = ctx.application_command.name
+        command_name = ctx.application_command.qualified_name
     else:
         command_name = ctx.command.qualified_name
     # handled errors

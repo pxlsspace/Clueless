@@ -164,6 +164,8 @@ class Template():
         if diff_time == timedelta(0):
             return None
         speed = diff_pixels / (diff_time / timedelta(hours=1))
+        if speed == 0:
+            return "Never" if as_string else None
         eta = togo / speed
         if eta <= 0:
             eta = now_progress / speed

@@ -272,16 +272,19 @@ class Progress(commands.Cog):
                     format_number(delta_progress),
                 )
             else:
-                delta_time = last_progress_dt - tf_datetime
-                if delta_time != timedelta(0):
-                    speed_px_d = delta_progress / (delta_time / timedelta(days=1))
-                    speed_px_h = delta_progress / (delta_time / timedelta(hours=1))
-                    activity_text += "**Average speed**:\n• `{}` px/day\n• `{}` px/hour\n".format(
-                        format_number(speed_px_d),
-                        format_number(speed_px_h),
-                    )
-                else:
+                if tf_progress is None or last_progress is None:
                     activity_text += "• Average speed: `N/A`\n"
+                else:
+                    delta_time = last_progress_dt - tf_datetime
+                    if delta_time != timedelta(0):
+                        speed_px_d = delta_progress / (delta_time / timedelta(days=1))
+                        speed_px_h = delta_progress / (delta_time / timedelta(hours=1))
+                        activity_text += "**Average speed**:\n• `{}` px/day\n• `{}` px/hour\n".format(
+                            format_number(speed_px_d),
+                            format_number(speed_px_h),
+                        )
+                    else:
+                        activity_text += "• Average speed: `N/A`\n"
 
         if last_progress:
             last_updated = format_datetime(last_progress_dt, "R")

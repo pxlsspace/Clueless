@@ -285,7 +285,7 @@ async def on_guild_join(guild):
     embed.add_field(name="**Server Name**", value=guild.name)
     embed.add_field(name="**Owner**", value=guild.owner)
     embed.add_field(name="**Members**", value=guild.member_count)
-    embed.set_thumbnail(url=guild.icon_url)
+    embed.set_thumbnail(url=guild.icon.url)
     embed.set_footer(text=f"ID • {guild.id} | Server Created")
     await log_channel.send(embed=embed)
 
@@ -312,7 +312,7 @@ async def on_guild_remove(guild):
     embed.add_field(name="**Server Name**", value=guild.name)
     embed.add_field(name="**Owner**", value=guild.owner)
     embed.add_field(name="**Members**", value=guild.member_count)
-    embed.set_thumbnail(url=guild.icon_url)
+    embed.set_thumbnail(url=guild.icon.url)
     embed.set_footer(text=f"ID • {guild.id} | Server Created")
     await log_channel.send(embed=embed)
 

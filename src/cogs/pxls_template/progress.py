@@ -6,7 +6,7 @@ from copy import deepcopy
 from disnake.ext import commands
 
 from main import tracked_templates
-from utils.discord_utils import Confirm, format_number, image_to_file, UserConverter
+from utils.discord_utils import Confirm, format_number, image_to_file, UserConverter, DropdownView
 from utils.pxls.template_manager import Combo, get_template_from_url, make_before_after_gif, parse_template
 from utils.setup import db_templates, db_users
 from utils.timezoneslib import get_timezone
@@ -517,78 +517,118 @@ class Progress(commands.Cog):
         if len(table) == 0:
             return await ctx.send(":x: No template matches with your filter.")
 
-        # sort the table
-        if sort == 0:
-            # sorting by name: keep normal order and ignore case
-            reverse = False
-            key = lambda x: (x[sort] is None or isinstance(x[sort], str), x[sort].lower())  # noqa: E731
-
-        elif sort == len(titles) - 1:
-            # sorting by ETA: keep normal order
-            reverse = False
-            key = lambda x: (x[sort] is None or isinstance(x[sort], str), x[sort])  # noqa: E731
-        else:
-            # sorting by a number: reverse the order and ignore strings
-            reverse = True
-            key = lambda x: (x[sort] is not None and not(isinstance(x[sort], str)), x[sort])  # noqa: E731
-        table.sort(key=key, reverse=reverse)
-        table_data = [line[:-1] for line in table]
-        table_colors = [line[-1] for line in table]
-        # format the data
-        for i, row in enumerate(table_data):
-            if row[-1] is not None and row[-1] != "N/A":
-                if row[-1] >= 999999:
-                    row[-1] = "Never."
-                elif row[-1] <= 0:
-                    row[-1] = "-Done-"
-                else:
-                    row[-1] = td_format(
-                        timedelta(hours=row[-1]),
-                        hide_seconds=True,
-                        max_unit="day",
-                        short_format=True,
-                    )
-            table_data[i] = [format_number(c) for c in row]
-        # make the table image
         discord_user = await db_users.get_discord_user(ctx.author.id)
         current_user_theme = discord_user["color"] or "default"
         theme = deepcopy(get_theme(current_user_theme))
-        bg_colors = None
-        if theme.name == "light":
-            bg_colors = table_colors
-            table_colors = None
-        theme.outline_dark = False
-        table_image = table_to_image(
-            table_data,
-            titles,
-            colors=table_colors,
-            bg_colors=bg_colors,
-            theme=theme,
-            alternate_bg=True,
-            scale=3,
-        )
-
-        # make the embed base
-        embed = disnake.Embed(title="Tracked Templates", color=0x66C5CC)
-        embed.description = f"Sorted By: `{titles[sort]}`\n"
-        if filters:
-            filter_str_list = []
-            for filter in filters:
-                if filter == "notdone":
-                    filter_str_list.append("`Not Done`")
-                elif filter == "done":
-                    filter_str_list.append("`Done`")
-                elif filter == "mine":
-                    filter_str_list.append(f"<@{ctx.author.id}>'s templates")
-            embed.description += f"Filter: {' + '.join(filter_str_list)}\n"
-        embed.description += f"Total Templates: `{len(table)}`"
         last_updated = await db_templates.get_last_update_time()
-        if last_updated:
-            embed.set_footer(text="Last Updated")
-            embed.timestamp = last_updated
 
-        table_file = image_to_file(table_image, "progress.png", embed=embed)
-        await ctx.send(embed=embed, file=table_file)
+        def make_embed(table, sort):
+            # sort the table
+            if sort == 0:
+                # sorting by name: keep normal order and ignore case
+                reverse = False
+                key = lambda x: (x[sort] is None or isinstance(x[sort], str), x[sort].lower())  # noqa: E731
+
+            elif sort == len(titles) - 1:
+                # sorting by ETA: keep normal order
+                reverse = False
+                key = lambda x: (x[sort] is None or isinstance(x[sort], str), x[sort])  # noqa: E731
+            else:
+                # sorting by a number: reverse the order and ignore strings
+                reverse = True
+                key = lambda x: (x[sort] is not None and not(isinstance(x[sort], str)), x[sort])  # noqa: E731
+            table.sort(key=key, reverse=reverse)
+            table_data = [line[:-1] for line in table]
+            table_colors = [line[-1] for line in table]
+            # format the data
+            for i, row in enumerate(table_data):
+                if row[-1] is not None and row[-1] != "N/A":
+                    if row[-1] >= 999999:
+                        row[-1] = "Never."
+                    elif row[-1] <= 0:
+                        row[-1] = "-Done-"
+                    else:
+                        row[-1] = td_format(
+                            timedelta(hours=row[-1]),
+                            hide_seconds=True,
+                            max_unit="day",
+                            short_format=True,
+                        )
+                table_data[i] = [format_number(c) for c in row]
+            # make the table image
+            bg_colors = None
+            if theme.name == "light":
+                bg_colors = table_colors
+                table_colors = None
+            theme.outline_dark = False
+            table_image = table_to_image(
+                table_data,
+                titles,
+                colors=table_colors,
+                bg_colors=bg_colors,
+                theme=theme,
+                alternate_bg=True,
+                scale=2,
+            )
+
+            # make the embed base
+            embed = disnake.Embed(title="Tracked Templates", color=0x66C5CC)
+            embed.description = f"Sorted By: `{titles[sort]}`\n"
+            if filters:
+                filter_str_list = []
+                for filter in filters:
+                    if filter == "notdone":
+                        filter_str_list.append("`Not Done`")
+                    elif filter == "done":
+                        filter_str_list.append("`Done`")
+                    elif filter == "mine":
+                        filter_str_list.append(f"<@{ctx.author.id}>'s templates")
+                embed.description += f"Filter: {' + '.join(filter_str_list)}\n"
+            embed.description += f"Total Templates: `{len(table)}`"
+            if last_updated:
+                embed.set_footer(text="Last Updated")
+                embed.timestamp = last_updated
+
+            table_file = image_to_file(table_image, "progress.png", embed=embed)
+            return embed, table_file
+
+        class SortDropdown(disnake.ui.Select):
+            def __init__(self):
+                options = []
+                for i, title in enumerate(titles):
+                    options.append(
+                        disnake.SelectOption(label=title, value=i, default=i == sort)
+                    )
+
+                super().__init__(
+                    placeholder="Sort the progress list ...",
+                    min_values=1,
+                    max_values=1,
+                    options=options,
+                )
+
+            async def callback(self, inter: disnake.MessageInteraction):
+                sort_index = int(self.values[0])
+                for option in self.options:
+                    if int(option.value) == sort_index:
+                        option.default = True
+                    else:
+                        option.default = False
+                await inter.response.defer()
+                embed, file = await inter.bot.loop.run_in_executor(
+                    None, make_embed, table, sort_index
+                )
+                await inter.message.edit(embed=embed, file=file, view=self.view)
+
+        dropdown = SortDropdown()
+        dropdown_view = DropdownView(ctx.author, dropdown)
+        embed, file = await self.bot.loop.run_in_executor(
+            None, make_embed, table, sort
+        )
+        m = await ctx.send(embed=embed, file=file, view=dropdown_view)
+        if isinstance(ctx, disnake.AppCmdInter):
+            m = await ctx.original_message()
+        dropdown_view.message = m
 
     @_progress.sub_command(name="update")
     async def _update(

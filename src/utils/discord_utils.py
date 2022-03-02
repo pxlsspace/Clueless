@@ -280,6 +280,7 @@ async def get_embed_author(inter: disnake.MessageInteraction) -> disnake.User:
         return None
 
 
+# --- Autocompletes --- #
 async def autocomplete_palette(inter: disnake.AppCmdInter, user_input: str):
     palette = stats.get_palette()
     color_names = [c["name"] for c in palette]
@@ -297,6 +298,7 @@ async def autocomplete_pxls_name(inter: disnake.AppCmdInter, user_input: str):
     return [name for name in names if user_input.lower() in name.lower()][:25]
 
 
+# --- Views --- #
 class Confirm(disnake.ui.View):
     """Simple View that gives a confirmation menu."""
 
@@ -338,3 +340,43 @@ class Confirm(disnake.ui.View):
         self.value = False
         await interaction.response.edit_message(view=None)
         self.stop()
+
+
+class DropdownView(disnake.ui.View):
+    """A view for a dropdown with a cooldown and user check"""
+    message: disnake.Message
+
+    def __init__(self, author, dropdown):
+        self.author = author
+        super().__init__()
+        self.add_item(dropdown)
+        self.cd = commands.CooldownMapping.from_cooldown(1, 3, lambda inter: inter.user)
+
+    async def interaction_check(self, inter: disnake.MessageInteraction) -> bool:
+        # check that the command author is the user who interracted
+        if inter.author != self.author:
+            embed = disnake.Embed(
+                title="This isn't your command!",
+                description="You cannot interact with a command you did not call.",
+                color=0xFF3621,
+            )
+            await inter.send(ephemeral=True, embed=embed)
+            return False
+        # check the command cooldown
+        retry_after = self.cd.update_rate_limit(inter)
+        if retry_after:
+            # rate limited
+            embed = disnake.Embed(
+                title="You're doing this too quick!",
+                description=f"You're on cooldown for this interaction, try again in {round(retry_after,2)}s.",
+                color=0xFF3621,
+            )
+            await inter.send(ephemeral=True, embed=embed)
+            return False
+        return True
+
+    async def on_timeout(self):
+        # remove the dropdown on timeout
+        for c in self.children[:]:
+            self.remove_item(c)
+        await self.message.edit(view=self)

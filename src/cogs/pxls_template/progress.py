@@ -364,39 +364,49 @@ class Progress(commands.Cog):
 
     sort_options = ["Name", "Size", "Correct", "To Go", "Percentage", "px/h (last 1h)", "px/h (last 6h)", "px/h (last 1d)", "px/h (last 7d)", "ETA"]
     Sort = commands.option_enum({option: i for i, option in enumerate(sort_options)})
+    filter_options = {"Not Done": "notdone", "Done": "done", "Mine": "mine"}
+
+    def autocomplete_filter(inter: disnake.AppCmdInter, user_input: str):
+        user_input = user_input.split("+")
+        to_search = user_input[-1]
+        rest = user_input[:-1]
+        filters = ["notdone", "done", "mine"]
+        for r in rest:
+            if r not in filters:
+                return []
+        rest = "+".join(rest)
+        best_matches = [filter for filter in filters if to_search.lower() in filter.lower()][:25]
+        return [rest + ("+" if rest else "") + best_match for best_match in best_matches]
 
     @_progress.sub_command(name="list")
     async def _list(
         self,
         inter: disnake.AppCmdInter,
-        sort: Sort = None
+        sort: Sort = None,
+        filter: str = commands.Param(default=None, autocomplete=autocomplete_filter),
     ):
         """Show all the public tracked templates.
 
         Parameters
         ----------
-        sort: Sort the table by the chosen column. (default: px/h (last 1h))"""
+        sort: Sort the table by the chosen column. (default: px/h (last 1h))
+        filter: Apply a filter to only display the chosen templates. (format: filter1+filter2+ ...)"""
         await inter.response.defer()
-        await self.list(inter, sort)
+        await self.list(inter, sort, filter)
 
     @progress.command(
         name="list",
         description="Show all the public tracked templates.",
         aliases=["ls"],
-        usage="[-sort <column>]",
+        usage="[-sort <column>] [-filter <filter1+filter2+...>]",
         help="""
-        `[-sort <column>]`: Sort the table by the chosen column
-        The choices are :
-            - `name`: the template name
-            - `size`: the total placeable pixels
-            - `correct`: the number of correct pixels
-            - `togo`: the number of pixels left to place
-            - `%`: the completion percentage
-            - `last1h`: the speed in the last hour
-            - `last6h`: the speed in the last 6 hours
-            - `last1d`: the speed in the last day
-            - `last7d`: the speed in the last week
-        (default: `last1h`)
+        `[-sort <column>]`: Sort the table by the chosen column.
+        `[-filter <filter1+filter2+...>]`: Apply a filter to only display the chosen templates.
+        The available filters are:
+        - `notdone`: to only show the templates not done
+        - `done`: to only show the templates done
+        - `mine`: to only show templates that you own
+        e.g. `>progress list -filter mine+notdone` will show all your templates that are not done.
         """,
     )
     async def p_list(self, ctx, *args):
@@ -404,6 +414,8 @@ class Progress(commands.Cog):
         sort_options = ["name", "size", "correct", "togo", "%", "last1h", "last6h", "last1d", "last7d", "eta"]
 
         parser.add_argument("-sort", "-s", choices=sort_options, required=False)
+        parser.add_argument("-filter", "-f", type=str, required=False)
+
         try:
             parsed_args = parser.parse_args(args)
         except Exception as error:
@@ -413,9 +425,9 @@ class Progress(commands.Cog):
         else:
             sort = None
         async with ctx.typing():
-            await self.list(ctx, sort)
+            await self.list(ctx, sort, parsed_args.filter)
 
-    async def list(self, ctx, sort=None):
+    async def list(self, ctx, sort: int = None, filters: str = None):
         public_tracked_templates = tracked_templates.get_all_public_templates()
         if len(public_tracked_templates) == 0:
             return await ctx.send("No templates tracked :'(")
@@ -423,16 +435,17 @@ class Progress(commands.Cog):
         titles = ["Name", "Size", "Correct", "To Go", "%", "px/h (last 1h)", "px/h (last 6h)", "px/h (last 1d)", "px/h (last 7d)", "ETA"]
         if sort is None:
             sort = 5
-        # make the embed base
-        embed = disnake.Embed(title="Tracked Templates", color=0x66C5CC)
-        embed.description = "Sorted By: `{}`\nTotal Templates: `{}`".format(
-            titles[sort],
-            len(public_tracked_templates),
-        )
-        last_updated = await db_templates.get_last_update_time()
-        if last_updated:
-            embed.set_footer(text="Last Updated")
-            embed.timestamp = last_updated
+
+        # check that the filters are all valid
+        if filters:
+            filters = filters.lower().split("+")
+            for filter in filters:
+                if filter not in self.filter_options.values():
+                    msg = ":x: Invalid filter choice '{}' (choose from {}).".format(
+                        filter,
+                        ", ".join([f"`{f}`" for f in self.filter_options.values()])
+                    )
+                    return await ctx.send(msg)
 
         # gather the templates data
         table = []
@@ -490,7 +503,19 @@ class Progress(commands.Cog):
                 eta = "N/A"
                 line_colors.append(None)
 
+            # Filters
+            if filters:
+                if "notdone" in filters and togo == 0:
+                    continue
+                if "done" in filters and togo != 0:
+                    continue
+                if "mine" in filters and template.owner_id != ctx.author.id:
+                    continue
+
             table.append([name, total, current_progress, togo, percentage] + values + [eta] + [line_colors])
+
+        if len(table) == 0:
+            return await ctx.send(":x: No template matches with your filter.")
 
         # sort the table
         if sort == 0:
@@ -542,6 +567,26 @@ class Progress(commands.Cog):
             alternate_bg=True,
             scale=3,
         )
+
+        # make the embed base
+        embed = disnake.Embed(title="Tracked Templates", color=0x66C5CC)
+        embed.description = f"Sorted By: `{titles[sort]}`\n"
+        if filters:
+            filter_str_list = []
+            for filter in filters:
+                if filter == "notdone":
+                    filter_str_list.append("`Not Done`")
+                elif filter == "done":
+                    filter_str_list.append("`Done`")
+                elif filter == "mine":
+                    filter_str_list.append(f"<@{ctx.author.id}>'s templates")
+            embed.description += f"Filter: {' + '.join(filter_str_list)}\n"
+        embed.description += f"Total Templates: `{len(table)}`"
+        last_updated = await db_templates.get_last_update_time()
+        if last_updated:
+            embed.set_footer(text="Last Updated")
+            embed.timestamp = last_updated
+
         table_file = image_to_file(table_image, "progress.png", embed=embed)
         await ctx.send(embed=embed, file=table_file)
 

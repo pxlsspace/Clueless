@@ -165,11 +165,9 @@ def add_outline(array, color):
 
 def replace(array, value_to_replace, new_value):
     """replace a value by an other in a numpy array"""
-    for y in range(array.shape[0]):
-        for x in range(array.shape[1]):
-            if tuple(array[y, x]) == value_to_replace:
-                array[y, x] = np.array(new_value)
-    return array
+    value_to_replace = np.array(value_to_replace)
+    new_value = np.array(new_value)
+    return np.where(array == value_to_replace, new_value, array).astype(np.uint8)
 
 
 def make_styled_corner(array, color, width):

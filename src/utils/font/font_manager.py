@@ -3,8 +3,11 @@ import os
 from PIL import Image
 import numpy as np
 
+from utils.log import get_logger
+
 """ This file contains classes and functions to manage fonts and make pixel art texts"""
 
+logger = get_logger(__name__)
 basepath = os.path.dirname(__file__)
 fonts_folder = os.path.abspath(
     os.path.join(basepath, "..", "..", "..", "resources", "fonts")
@@ -32,6 +35,40 @@ letter_bases = {
 }
 
 test_string = 'abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789 ./-+*&~#’()|_^@[]{}%!?$€:,\\`><;"'
+
+
+def load_font_images():
+    """Load all the files needed for the fonts"""
+    font_files = {}
+    nb_fonts = len(os.listdir(fonts_folder))
+    nb_loaded_fonts = 0
+    for font_name in os.listdir(fonts_folder):
+        # load the font image
+        font_img_path = os.path.join(fonts_folder, font_name, font_name + ".png")
+        try:
+            font_img = Image.open(font_img_path)
+            if font_img.mode != "RGB":
+                raise ValueError("Unsupported image mode: " + font_img.mode)
+        except FileNotFoundError:
+            logger.warning(f"Couldn't load font '{font_name}': {font_name}.png not found.")
+            continue
+
+        # load the font json
+        font_json_path = os.path.join(fonts_folder, font_name, font_name + ".json")
+        try:
+            with open(font_json_path, "r") as json_file:
+                font_json = json.load(json_file)
+        except FileNotFoundError:
+            logger.warning(f"Couldn't load font '{font_name}': {font_name}.json not found.")
+            continue
+        nb_loaded_fonts += 1
+        font_files[font_name] = {"image": font_img, "json": font_json}
+
+    logger.debug(f"{nb_loaded_fonts}/{nb_fonts} Fonts loaded.")
+    return font_files
+
+
+font_files = load_font_images()
 
 
 class FontNotFound(Exception):
@@ -83,27 +120,22 @@ class FontManager:
         self.background_color = background_color
 
     def get_image(self):
-        font_img_path = os.path.join(
-            fonts_folder, self.font_name, self.font_name + ".png"
-        )
-        try:
-            font_img = Image.open(font_img_path)
-            if font_img.mode != "RGB":
-                raise ValueError("Unsupported image mode: " + font_img.mode)
-            return font_img
-        except FileNotFoundError as e:
-            raise FontNotFound(f"Font '{self.font_name}' was not found.") from e
+        files = font_files.get(self.font_name)
+        if files is None:
+            raise FontNotFound(f"Font '{self.font_name}' was not found.")
+        image = files.get("image")
+        if image is None:
+            raise FontNotFound(f"Font '{self.font_name}' was not found.")
+        return image
 
     def get_json(self):
-        font_json_path = os.path.join(
-            fonts_folder, self.font_name, self.font_name + ".json"
-        )
-        try:
-            with open(font_json_path, "r") as json_file:
-                font_json = json.load(json_file)
-            return font_json
-        except FileNotFoundError as e:
-            raise FontNotFound(f"Font '{self.font_name}' was not found.") from e
+        files = font_files.get(self.font_name)
+        if files is None:
+            raise FontNotFound(f"Font '{self.font_name}' was not found.")
+        json = files.get("json")
+        if json is None:
+            raise FontNotFound(f"Font '{self.font_name}' was not found.")
+        return json
 
     def char_exists(self, char):
         try:

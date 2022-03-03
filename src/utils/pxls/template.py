@@ -3,10 +3,11 @@
 import os
 import numpy as np
 from PIL import Image
-from numba import jit
+from numba import jit, prange
 
 from utils.setup import stats
 from utils.image.image_utils import hex_to_rgb
+from utils.image.ciede2000 import ciede2000, rgb2lab
 from utils.log import get_logger
 
 logger = get_logger(__name__)
@@ -124,7 +125,7 @@ def stylize(style, stylesize, palette, glow_opacity=0):
     return res
 
 
-def reduce(array: np.array, palette: np.array) -> np.array:
+def reduce(array: np.array, palette: np.array, matching="fast") -> np.array:
     """Convert an image array of RGBA colors to an array of palette index
     matching the nearest color in the given palette
 
@@ -132,7 +133,13 @@ def reduce(array: np.array, palette: np.array) -> np.array:
     ----------
     array: a numpy array of RGBA colors (shape (h, w, 4))
     palette: a numpy array (shape (h, w, 1))
+    matching: the algorithm to use to match the colors
+    (fast = Euclidean distance, accurate = CIEDE2000)
     """
+    matchings = ["fast", "accurate"]
+    msg = f"Unkown matching '{matching}', choose from: {', '.join(matchings)}"
+    assert matching in matchings, msg
+
     # convert to array just in case
     palette = np.array(palette)
     array = np.array(array)
@@ -154,8 +161,12 @@ def reduce(array: np.array, palette: np.array) -> np.array:
 
     # if some colors do not match: we complete the color map finding the nearest color
     if not np.all(np.isin(array_colors, palette_int)):
-        # using the Euclidean distance
-        color_map = get_color_map(array_colors, palette, color_map)
+        if matching == "fast":
+            # using the Euclidean distance
+            color_map = get_color_map(array_colors, palette, color_map)
+        elif matching == "accurate":
+            # using CIEDE2000 formula
+            color_map = get_color_map_ciede2000(array_colors, palette, color_map)
 
     # we apply the color map to the image array so we get an array of palette indexes
     res_array = color_map[array_int]
@@ -183,6 +194,39 @@ def get_color_map(array_colors, palette, color_map):
     for color in array_colors:
         if color_map[color] == 255:
             color_map[color] = nearest_color(color, palette)
+    return color_map
+
+
+@jit(nopython=True)
+def nearest_color_ciede2000(color, palette):
+    """Find the nearest color to `color` in `palette` using CIEDE2000."""
+    red = (color >> 16) & 255
+    green = (color >> 8) & 255
+    blue = color & 255
+    rgb = np.array([red, green, blue], dtype=np.uint8)
+    lab = rgb2lab(rgb)
+
+    min_distance = 1e6
+    nearest_color_idx = -1
+    for i, palette_color in enumerate(palette):
+        palette_rgb = palette_color[:3]
+        palette_lab = rgb2lab(palette_rgb)
+        distance = ciede2000(lab, palette_lab)
+        if distance < min_distance:
+            min_distance = distance
+            nearest_color_idx = i
+    return nearest_color_idx
+
+
+@jit(nopython=True, parallel=True)
+def get_color_map_ciede2000(array_colors, palette, color_map):
+    """Get a color map with the index of the nearest color in the palette
+using CIEDE2000"""
+
+    for i in prange(len(array_colors)):
+        color = array_colors[i]
+        if color_map[color] == 255:
+            color_map[color] = nearest_color_ciede2000(color, palette)
     return color_map
 
 

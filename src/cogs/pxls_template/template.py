@@ -28,6 +28,9 @@ class Template(commands.Cog):
         ox: int = None,
         oy: int = None,
         nocrop: bool = False,
+        matching: str = commands.Param(
+            default=None, choices={"Fast (default)": "fast", "Accurate (slower)": "accurate"}
+        ),
     ):
         """Generate a template link from an image.
 
@@ -40,21 +43,23 @@ class Template(commands.Cog):
         ox: The template x-position.
         oy: The template y-position.
         nocrop: If you don't want the template to be automatically cropped. (default: False)
+        matching: The color matching algorithm to use.
         """
         await inter.response.defer()
-        await self.template(inter, image, style, glow, title, ox, oy, nocrop)
+        await self.template(inter, image, style, glow, title, ox, oy, nocrop, matching)
 
     @commands.command(
         name="template",
         description="Generate a template link from an image.",
-        usage="<image|url> [-style <style>] [-glow] [-title <title>] [-ox <ox>] [-oy <oy>]",
+        usage="<image|url> [-style <style>] [-glow] [-title <title>] [-ox <ox>] [-oy <oy>] [-nocrop] [-matching fast|accurate]",
         help="""- `<image|url>`: an image URL or an attached file
               - `[-style <style>]`: the template style you want (use `>styles` to see the list)
               - `[-glow]`: add glow to the template
               - `[-title <title>]`: the template title
               - `[-ox <ox>]`: template x-position
               - `[-oy <oy>]`: template y-position
-              - `[-nocrop]`: if you don't want the template to be automatically cropped""",
+              - `[-nocrop]`: if you don't want the template to be automatically cropped
+              - `[-matching fast|accurate]`: the color matching algorithm to use""",
         aliases=["templatize", "temp"],
     )
     async def p_template(self, ctx, *args):
@@ -67,6 +72,7 @@ class Template(commands.Cog):
         parser.add_argument("-ox", action="store", required=False)
         parser.add_argument("-oy", action="store", required=False)
         parser.add_argument("-nocrop", action="store_true", default=False)
+        parser.add_argument("-matching", choices=["fast", "accurate"], required=False)
 
         try:
             parsed_args = parser.parse_args(args)
@@ -83,9 +89,10 @@ class Template(commands.Cog):
                 parsed_args.ox,
                 parsed_args.oy,
                 parsed_args.nocrop,
+                parsed_args.matching,
             )
 
-    async def template(self, ctx, image_url, style_name, glow, title, ox, oy, nocrop):
+    async def template(self, ctx, image_url, style_name, glow, title, ox, oy, nocrop, matching):
         # get the image from the message
         try:
             img, url = await get_image_from_message(ctx, image_url, accept_emojis=False)
@@ -113,6 +120,10 @@ class Template(commands.Cog):
         else:
             glow_opacity = 0
 
+        # check on the matching
+        if matching is None:
+            matching = "fast"  # default = 'fast'
+
         # crop the white space around the image
         if not (nocrop):
             img = remove_white_space(img)
@@ -121,7 +132,7 @@ class Template(commands.Cog):
         img_array = np.array(img)
         palette = get_rgba_palette()
         reduced_array = await self.bot.loop.run_in_executor(
-            None, reduce, img_array, palette
+            None, reduce, img_array, palette, matching
         )
 
         # convert the image to a template style

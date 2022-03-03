@@ -124,21 +124,66 @@ def stylize(style, stylesize, palette, glow_opacity=0):
     return res
 
 
-# from https://github.com/Seon82/pyCharity/blob/master/src/handlers/pxls/template.py#L91
-def reduce(rendered_array, palette):
-    best_match_idx = np.zeros(rendered_array.shape[:2], dtype=np.uint8)
-    best_match_dist = np.full(rendered_array.shape[:2], 500)  # 500>sqrt(3*255^2)
+def reduce(array: np.array, palette: np.array) -> np.array:
+    """Convert an image array of RGBA colors to an array of palette index
+    matching the nearest color in the given palette
 
-    for idx, color in enumerate(palette):
-        color_distance = np.linalg.norm(rendered_array - color, axis=-1)
-        closer_mask = color_distance < best_match_dist
-        best_match_dist[closer_mask] = color_distance[closer_mask]
-        best_match_idx[closer_mask] = idx
+    Parameters
+    ----------
+    array: a numpy array of RGBA colors (shape (h, w, 4))
+    palette: a numpy array (shape (h, w, 1))
+    """
+    # convert to array just in case
+    palette = np.array(palette)
+    array = np.array(array)
 
-    alpha_values = rendered_array[:, :, 3]
-    best_match_idx[alpha_values < 128] = 255  # alpha index
+    # convert the colors to integers so it's easier to manipulate
+    # e.g. rgba(32, 64, 128, 255) -> 32*2^16 + 64*2^8 + 128*2^0 + 255*0 = 2113664
+    # note: we ignore the alpha values because we will apply a filter to them later
+    array_int = array.dot(np.array([65536, 256, 1, 0], dtype=np.int32))
+    # remove duplicates to have a list of all the unique colors
+    array_colors = np.unique(array_int)
 
-    return best_match_idx
+    # we want to make a color map for each unique color
+    # where the key is the color integer and the value is the palette index
+    # first: we populate the color map with the palette colors
+    palette_int = palette.dot(np.array([65536, 256, 1, 0], dtype=np.int32))
+    color_map = np.full(shape=(256 * 256 * 256), fill_value=255, dtype=np.int32)
+    for i, color in enumerate(palette_int):
+        color_map[color] = i
+
+    # if some colors do not match: we complete the color map finding the nearest color
+    if not np.all(np.isin(array_colors, palette_int)):
+        # using the Euclidean distance
+        color_map = get_color_map(array_colors, palette, color_map)
+
+    # we apply the color map to the image array so we get an array of palette indexes
+    res_array = color_map[array_int]
+
+    # filter out all the pixels with an alpha value inferior to 128
+    res_array[array[:, :, 3] < 128] = 255  # 255 is the index for transparent pixels
+    return res_array
+
+
+@jit(nopython=True)
+def nearest_color(color: int , palette):
+    """Find the nearest color to `color` in `palette` using the Euclidean distance"""
+    red = (color >> 16) & 255
+    green = (color >> 8) & 255
+    blue = color & 255
+    rgb = np.array([red, green, blue], dtype=np.uint8)
+
+    distances = np.sqrt(np.sum((palette[:, :3] - rgb)**2, axis=1))
+    return np.argmin(distances)
+
+
+@jit(nopython=True)
+def get_color_map(array_colors, palette, color_map):
+    """Get a color map with the index of the nearest color in the palette"""
+    for color in array_colors:
+        if color_map[color] == 255:
+            color_map[color] = nearest_color(color, palette)
+    return color_map
 
 
 @jit(nopython=True)

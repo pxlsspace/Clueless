@@ -147,7 +147,7 @@ def get_pxls_color(input):
 
 def is_hex_color(input_string):
     """Check if a string has the format of a hex color (#fff or #ffffff)"""
-    hex_color_regex = r"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
+    hex_color_regex = r"^#?([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$"
     regexp = re.compile(hex_color_regex)
     if regexp.search(input_string):
         return True
@@ -279,3 +279,155 @@ def get_image_scale(image_array: np.ndarray) -> int:
         return pixel_size
     else:
         return None
+
+
+# --- Palettes --- #
+
+PXLS_COLORS = [
+    '000000',
+    '222222',
+    '555555',
+    '888888',
+    'CDCDCD',
+    'FFFFFF',
+    'FFD5BC',
+    'FFB783',
+    'B66D3D',
+    '77431F',
+    'FC7510',
+    'FCA80E',
+    'FDE817',
+    'FFF491',
+    'BEFF40',
+    '70DD13',
+    '31A117',
+    '0B5F35',
+    '277E6C',
+    '32B69F',
+    '88FFF3',
+    '24B5FE',
+    '125CC7',
+    '262960',
+    '8B2FA8',
+    'D24CE9',
+    'FF59EF',
+    'FFA9D9',
+    'FF6474',
+    'F02523',
+    'B11206',
+    '740C00',
+]
+
+PALETTES = [
+    {
+        "names": ["pxls", "default"],
+        "colors": PXLS_COLORS,
+    },
+    {
+        "names": ["grayscale", "greyscale", "gs", "grays", "greys"],
+        "colors": PXLS_COLORS[:6],
+    },
+    {
+        "names": ["browns", "beiges"],
+        "colors": PXLS_COLORS[6:10],
+    },
+    {
+        "names": ["oranges", "yellows"],
+        "colors": PXLS_COLORS[10:14],
+    },
+    {
+        "names": ["greens"],
+        "colors": PXLS_COLORS[14:18],
+    },
+    {
+        "names": ["teals"],
+        "colors": PXLS_COLORS[18:21],
+    },
+    {
+        "names": ["blues"],
+        "colors": PXLS_COLORS[20:24],
+    },
+    {
+        "names": ["pinks", "purples", "mauves"],
+        "colors": PXLS_COLORS[24:28],
+    },
+    {
+        "names": ["reds"],
+        "colors": PXLS_COLORS[28:],
+    },
+    {
+        "names": ["pxls old", "pxls_old", "pxls-old"],
+        "colors": [
+            "ffffff",
+            "cdcdcd",
+            "888888",
+            "555555",
+            "222222",
+            "000000",
+            "ffa7d1",
+            "fd4659",
+            "e50000",
+            "800000",
+            "ffddca",
+            "f6b389",
+            "e59500",
+            "ff5b00",
+            "604028",
+            "a06a42",
+            "ffff00",
+            "94e044",
+            "02be01",
+            "005f00",
+            "43EBC2",
+            "FDFD96",
+            "00d3dd",
+            "0083c7",
+            "0000ea",
+            "030764",
+            "ff00ff",
+            "cf6ee4",
+            "820080",
+        ],
+    },
+    {
+        "names": ["canvas1", "c1"],
+        "colors": [
+            'FFFFFF',
+            'CDCDCD',
+            '888888',
+            '222222',
+            "FFA7D1",
+            "E50000",
+            "E59500",
+            "A06A42",
+            "E5D900",
+            "94E044",
+            "02BE01",
+            "00D3DD",
+            "0083C7",
+            "0000EA",
+            "CF6EE4",
+            "820080",
+        ],
+    },
+    {
+        "names": ["CGA"],
+        "colors": [
+            "000000",
+            "FFFFFF",
+            "FF00FF",
+            "00FFFF",
+        ],
+
+    },
+]
+
+
+def get_builtin_palette(palette_name: str, as_rgba=True):
+    for palette in PALETTES:
+        if palette_name.lower() in [name.lower() for name in palette["names"]]:
+            if as_rgba:
+                return [hex_to_rgb(c, "RGBA") for c in palette["colors"]]
+            else:
+                return palette["colors"]
+    return None

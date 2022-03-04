@@ -1,11 +1,12 @@
-from io import BytesIO
 import disnake
+import re
+from io import BytesIO
 from PIL import Image
 from disnake.ext import commands
-from utils.utils import get_content
-import re
-from utils.setup import stats, db_stats
 
+from utils.utils import get_content
+from utils.setup import stats, db_stats
+from utils.image import PALETTES
 
 STATUS_EMOJIS = {
     "bot": "<a:status_bot:878677107042025552>",
@@ -282,20 +283,32 @@ async def get_embed_author(inter: disnake.MessageInteraction) -> disnake.User:
 
 # --- Autocompletes --- #
 async def autocomplete_palette(inter: disnake.AppCmdInter, user_input: str):
+    """Auto-complete with all the colors of the current palette"""
     palette = stats.get_palette()
     color_names = [c["name"] for c in palette]
     return [color for color in color_names if user_input.lower() in color.lower()][:25]
 
 
 async def autocomplete_palette_with_none(inter: disnake.AppCmdInter, user_input: str):
+    """Like autocomplete_palette() but with "none" as option."""
     palette = stats.get_palette()
     color_names = [c["name"] for c in palette] + ["none"]
     return [color for color in color_names if user_input.lower() in color.lower()][:25]
 
 
 async def autocomplete_pxls_name(inter: disnake.AppCmdInter, user_input: str):
+    """Auto-complete with all the pxls names in the database."""
     names = await db_stats.get_all_pxls_names()
     return [name for name in names if user_input.lower() in name.lower()][:25]
+
+
+async def autocomplete_builtin_palettes(inter: disnake.AppCmdInter, user_input: str):
+    """Auto-complete with all the built-in palettes and pxls colors."""
+    palette = stats.get_palette()
+    color_names = [c["name"] for c in palette] + ["none"]
+    palette_names = [name.title() for name in [p["names"][0] for p in PALETTES]]
+    res_list = palette_names + color_names
+    return [color for color in res_list if user_input.lower() in color.lower()][:25]
 
 
 # --- Views --- #

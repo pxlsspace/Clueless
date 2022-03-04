@@ -8,8 +8,9 @@ from io import BytesIO
 
 from utils.discord_utils import format_number, get_image_from_message, image_to_file
 from utils.table_to_image import table_to_image
-from utils.image.image_utils import h_concatenate, rgb_to_hex, rgb_to_pxls, hex_str_to_int
+from utils.image.image_utils import h_concatenate, hex_to_rgb, rgb_to_hex, hex_str_to_int
 from utils.plot_utils import fig2img
+from utils.setup import stats
 
 
 class ColorBreakdown(commands.Cog):
@@ -50,64 +51,98 @@ class ColorBreakdown(commands.Cog):
 
 async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
 
+    pie_chart_limit = 256
+    table_limit = 40
     nb_pixels = input_image.size[0] * input_image.size[1]
 
     # get the colors table
     image_colors = await bot.loop.run_in_executor(
         None, input_image.getcolors, nb_pixels
     )
-    if len(image_colors) > 5000:
-        return await ctx.send(
-            "❌ This image has too many colors ({})".format(len(image_colors))
-        )
-    if image_colors:
-        pxls_colors = rgb_to_pxlscolor(image_colors)
-        pxls_colors.sort(key=lambda x: x[1], reverse=True)
-    else:
+    if image_colors is None:
         return await ctx.send("❌ Unsupported format or image mode.")
+
+    # remove transparent pixels (alpha < 128)
+    image_colors = [c for c in image_colors if (len(c[1]) != 4 or c[1][3] >= 128)]
+    nb_colors = len(image_colors)
+    if nb_colors > 1e6:
+        return await ctx.send(
+            embed=disnake.Embed(
+                title="❌ Too many colors.",
+                description=f"This image has way too many colors! (**{format_number(nb_colors)}**)",
+                color=disnake.Color.red()
+            )
+        )
+    # group by rgb color and get the colors names
+    pxls_colors = rgb_to_pxlscolor(image_colors)
+    # sort by amount
+    pxls_colors.sort(key=lambda x: x[1], reverse=True)
 
     labels = [pxls_color[0] for pxls_color in pxls_colors]
     values = [pxls_color[1] for pxls_color in pxls_colors]
+    total_amount = sum(values)
     colors = [pxls_color[2] for pxls_color in pxls_colors]
+    percentages = [format_number((pxls_color[1] / total_amount) * 100) + " %" for pxls_color in pxls_colors]
 
-    data = []
-    for i in range(len(labels)):
-        color_name = labels[i]
-        amount = values[i]
-        percentage = round(amount / sum(values) * 100, 2)
+    data = [[labels[i], values[i], percentages[i]] for i in range(len(pxls_colors))]
 
-        amount = format_number(amount)
-        percentage = str(percentage) + " %"
-        data.append([color_name, amount, percentage])
+    def crop_data(nb_line):
+        """keep the `nb_line` first values of data/colors
+        and add "other" at the end with the right values"""
+        data_cropped = data[:nb_line - 1]
+        colors_cropped = colors[:nb_line - 1]
+
+        rest = data[nb_line - 1:]
+        rest_amount = sum([c[1] for c in rest])
+        rest_percentage = format_number((rest_amount / total_amount) * 100) + " %"
+
+        data_cropped.append(["Other", rest_amount, rest_percentage])
+        colors_cropped.append(None)
+
+        return data_cropped, colors_cropped
 
     # make the table image
-    if len(data) > 40:
+    if len(data) > table_limit:
         # crop the table if it has too many values
-        data_cropped = data[:40]
-        colors_cropped = colors[:40]
-        data_cropped.append(["...", "...", "..."])
-        colors_cropped.append(None)
+        data_cropped, colors_cropped = crop_data(table_limit)
     else:
         data_cropped = data
         colors_cropped = colors
+
+    data_cropped = [[format_number(c) for c in row] for row in data_cropped]
     func = functools.partial(
         table_to_image,
         data_cropped,
         ["Color", "Qty", "%"],
         ["center", "right", "right"],
         colors_cropped,
+        None,
+        None,
+        False,
+        3,
     )
     table_img = await bot.loop.run_in_executor(None, func)
 
     # make the pie chart image
-    piechart = get_piechart(labels, values, colors)
+    if len(data) > pie_chart_limit:
+        # crop the data if it has too many values
+        data_chart, colors_chart = crop_data(pie_chart_limit)
+        # remove the "other" value
+        data_chart.pop(-1)
+        colors_chart.pop(-1)
+    else:
+        data_chart = data
+        colors_chart = colors
+    labels_chart = [d[2] for d in data_chart]  # show the correct percentages as labels
+    values_chart = [d[1] for d in data_chart]
+    piechart = get_piechart(labels_chart, values_chart, colors_chart)
     piechart_img = await bot.loop.run_in_executor(
         None, fig2img, piechart, 600, 600, 1.5
     )
 
     # create the message with a header
-    header = f"""• Number of colors: `{len(colors)}`
-                • Visible pixels: `{format_number(sum(values))}`
+    header = f"""• Number of colors: `{format_number(nb_colors)}`
+                • Visible pixels: `{format_number(total_amount)}`
                 • Image size: `{input_image.width} x {input_image.height}` (`{format_number(nb_pixels)}` pixels)"""
     header = inspect.cleandoc(header) + "\n"
 
@@ -118,6 +153,8 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
 
     # send an embed with the color table, the pie chart
     emb = disnake.Embed(title=title, description=header, color=hex_str_to_int(colors[0]))
+    if len(data) > pie_chart_limit:
+        emb.set_footer(text=f"Too many colors - Showing the top {pie_chart_limit} colors in the chart.")
     file = await bot.loop.run_in_executor(
         None, image_to_file, res_img, "color_breakdown.png", emb
     )
@@ -132,17 +169,23 @@ def rgb_to_pxlscolor(img_colors):
 
     color_name is a pxls.space color name, if the RGB doesn't match,
     the color_name will be the hex code"""
+
+    # make a dictionary of the palette where the key is the rgb value and value is the name
+    pxls_palette = stats.get_palette()
+    palette_names = [c["name"] for c in pxls_palette]
+    palette_rgbs = [hex_to_rgb(hex) for hex in [c["value"] for c in pxls_palette]]
+    palette_dict = {palette_rgbs[i]: palette_names[i] for i in range(len(palette_rgbs))}
+
     res_dict = {}
     for color in img_colors:
         amount = color[0]
-        rgb = color[1]
-        if len(rgb) != 4 or rgb[3] != 0:
-            rgb = rgb[:3]
-            color_name = rgb_to_pxls(rgb) or rgb_to_hex(rgb)
-            if color_name in res_dict:
-                res_dict[color_name]["amount"] += amount
-            else:
-                res_dict[color_name] = dict(amount=amount, hex=rgb_to_hex(rgb))
+        rgb = tuple(color[1][:3])
+        color_name = palette_dict.get(rgb) or rgb_to_hex(rgb)
+
+        if color_name in res_dict:
+            res_dict[color_name]["amount"] += amount
+        else:
+            res_dict[color_name] = dict(amount=amount, hex=rgb_to_hex(rgb))
     res_list = [(k, res_dict[k]["amount"], res_dict[k]["hex"]) for k in res_dict.keys()]
     return res_list
 
@@ -151,9 +194,9 @@ def get_piechart(labels, values, colors):
     layout = go.Layout(
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="white"
     )
-    fig = go.Figure(data=[go.Pie(labels=labels, values=values)], layout=layout)
+    fig = go.Figure(data=[go.Pie(text=labels, values=values, sort=False)], layout=layout)
     fig.update_traces(
-        textinfo="percent",
+        textinfo="text",
         textfont_size=20,
         marker=dict(colors=colors, line=dict(color="#000000", width=1)),
     )

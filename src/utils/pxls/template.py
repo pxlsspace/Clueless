@@ -176,7 +176,7 @@ def reduce(array: np.array, palette: np.array, matching="fast") -> np.array:
     return res_array
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def nearest_color(color: int , palette):
     """Find the nearest color to `color` in `palette` using the Euclidean distance"""
     red = (color >> 16) & 255
@@ -188,7 +188,7 @@ def nearest_color(color: int , palette):
     return np.argmin(distances)
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def get_color_map(array_colors, palette, color_map):
     """Get a color map with the index of the nearest color in the palette"""
     for color in array_colors:
@@ -230,7 +230,7 @@ using CIEDE2000"""
     return color_map
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def fast_templatize(n, m, st, red, style_size):
     res = np.zeros((style_size * n, style_size * m, 4), dtype=np.uint8)
     for i in range(n):

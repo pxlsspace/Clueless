@@ -521,7 +521,7 @@ class TemplateManager():
         return self.combo
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def fast_detemplatize(array, true_height, true_width, block_size):
 
     result = np.zeros((true_height, true_width, 4), dtype=np.uint8)
@@ -719,7 +719,7 @@ def make_before_after_gif(old_temp: Template, new_temp: Template, extra_padding=
     return diff_gif
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def fast_max_chunk(chunked_mask):
     """find the index of the chunk with the most pixels to place in a chunk list"""
     max_index = -1

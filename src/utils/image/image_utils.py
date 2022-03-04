@@ -228,7 +228,7 @@ def lighten_color(color, amount=0.5):
 
 
 # this is mostly copied from PxlsFiddle code
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def get_image_scale(image_array: np.ndarray) -> int:
     """return the scale for an upscaled image or None if not found"""
     min_pixel_width = 99999999

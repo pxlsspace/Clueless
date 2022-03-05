@@ -5,16 +5,14 @@ from numba import jit
 @jit(nopython=True)
 def rgb2xyz(rgb):
     """Converts RGB pixel array to XYZ format."""
-
-    def format(c):
+    for i in range(3):
+        c = rgb[i]
         c = c / 255.0
         if c > 0.04045:
             c = ((c + 0.055) / 1.055) ** 2.4
         else:
             c = c / 12.92
-        return c * 100
-
-    rgb = list(map(format, rgb))
+        rgb[i] = c*100
     xyz = np.zeros((3), dtype=np.float64)
     xyz[0] = rgb[0] * 0.4124 + rgb[1] * 0.3576 + rgb[2] * 0.1805
     xyz[1] = rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722
@@ -25,18 +23,17 @@ def rgb2xyz(rgb):
 @jit(nopython=True)
 def xyz2lab(xyz):
     """Converts XYZ pixel array to LAB format."""
-
-    def format(c):
+    
+    xyz[0] = xyz[0] / 95.047
+    xyz[1] = xyz[1] / 100.00
+    xyz[2] = xyz[2] / 108.883
+    for i in range(3):
+        c = xyz[i]
         if c > 0.008856:
             c = c ** (1.0 / 3.0)
         else:
             c = (7.787 * c) + (16.0 / 116.0)
-        return c
-
-    xyz[0] = xyz[0] / 95.047
-    xyz[1] = xyz[1] / 100.00
-    xyz[2] = xyz[2] / 108.883
-    xyz = list(map(format, xyz))
+        xyz[i] = c
     lab = np.zeros((3), dtype=np.float64)
     lab[0] = (116.0 * xyz[1]) - 16.0
     lab[1] = 500.0 * (xyz[0] - xyz[1])

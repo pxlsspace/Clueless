@@ -12,7 +12,7 @@ def rgb2xyz(rgb):
             c = ((c + 0.055) / 1.055) ** 2.4
         else:
             c = c / 12.92
-        rgb[i] = c*100
+        rgb[i] = c * 100
     xyz = np.zeros((3), dtype=np.float64)
     xyz[0] = rgb[0] * 0.4124 + rgb[1] * 0.3576 + rgb[2] * 0.1805
     xyz[1] = rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722
@@ -23,7 +23,6 @@ def rgb2xyz(rgb):
 @jit(nopython=True)
 def xyz2lab(xyz):
     """Converts XYZ pixel array to LAB format."""
-    
     xyz[0] = xyz[0] / 95.047
     xyz[1] = xyz[1] / 100.00
     xyz[2] = xyz[2] / 108.883

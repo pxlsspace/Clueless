@@ -126,22 +126,22 @@ def stylize(style, stylesize, palette, glow_opacity=0):
         res[i] = cstyle
     return res
 
+
 @jit(nopython=True, locals={"color_bit": types.uint64, "mapped_color_idx": types.uint8})
 def _fast_reduce(array, palette, dist_func):
     cache = Dict.empty(
-    key_type=types.uint64,
-    value_type=types.uint8
+        key_type=types.uint64,
+        value_type=types.uint8
     )
-    
     res = np.empty(array.shape[:2], dtype=np.uint8)
     width = array.shape[1]
-    for idx in range(array.shape[0]*array.shape[1]): 
-        i = idx//width
-        j = idx%width
-        alpha = array[i,j,3]
-        if alpha>128:
-            color = array[i,j,:3]
-            color_bit = (color[0]<<16)+(color[1]<<8)+color[2]
+    for idx in range(array.shape[0] * array.shape[1]):
+        i = idx // width
+        j = idx % width
+        alpha = array[i, j, 3]
+        if alpha > 128:
+            color = array[i , j, :3]
+            color_bit = (color[0] << 16) + (color[1] << 8) + color[2]
             if color_bit in cache:
                 mapped_color_idx = cache[color_bit]
             else:
@@ -151,6 +151,7 @@ def _fast_reduce(array, palette, dist_func):
             mapped_color_idx = 255
         res[i, j] = mapped_color_idx
     return res
+
 
 def reduce(array: np.array, palette: np.array, matching="fast") -> np.array:
     """Convert an image array of RGBA colors to an array of palette index
@@ -170,11 +171,11 @@ def reduce(array: np.array, palette: np.array, matching="fast") -> np.array:
     # convert to array just in case
     palette = np.asarray(palette, dtype=np.uint8)
     array = np.asarray(array, dtype=np.uint8)
-    
+
     # Get rid of the alpha component
-    palette = palette[:,:3]
-    
-    if matching=="fast":
+    palette = palette[:, :3]
+
+    if matching == "fast":
         dist_func = nearest_color_idx_euclidean
     else:
         dist_func = nearest_color_idx_ciede2000
@@ -183,11 +184,12 @@ def reduce(array: np.array, palette: np.array, matching="fast") -> np.array:
     res = _fast_reduce(array, palette, dist_func)
     return res
 
+
 @jit(nopython=True)
 def nearest_color_idx_ciede2000(color, palette) -> int:
     """
     Find the nearest color to `color` in `palette` using CIEDE2000.
-    
+
     Parameters
     ----------
     color: a rgb ndarray of uint8 of shape (3,)
@@ -209,12 +211,12 @@ def nearest_color_idx_ciede2000(color, palette) -> int:
 def nearest_color_idx_euclidean(color, palette) -> int:
     """
     Find the nearest color to `color` in `palette` using the Euclidean distance
-    
+
         Parameters
     ----------
     color: a rgb ndarray of uint8 of shape (3,)
     palette: a rgb ndarray of uint8 of shape (palette_size,3)
-    
+
     """
     distances = np.sum((palette - color)**2, axis=1)
     return np.argmin(distances)
@@ -231,6 +233,7 @@ def fast_templatize(n, m, st, red, style_size):
                     style_size * j : style_size * j + style_size,
                 ] = st[red[i][j]]
     return res
+
 
 def templatize(style: dict, image: Image.Image, glow_opacity=0) -> np.ndarray:
     style_array = style["array"]

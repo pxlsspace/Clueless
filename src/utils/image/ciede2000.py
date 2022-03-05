@@ -2,7 +2,7 @@ import numpy as np
 from numba import jit
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def rgb2xyz(rgb):
     """Converts RGB pixel array to XYZ format."""
     for i in range(3):
@@ -20,7 +20,7 @@ def rgb2xyz(rgb):
     return xyz
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def xyz2lab(xyz):
     """Converts XYZ pixel array to LAB format."""
     xyz[0] = xyz[0] / 95.047
@@ -40,14 +40,14 @@ def xyz2lab(xyz):
     return lab
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def rgb2lab(rgb):
     """Convert RGB pixel array into LAB format."""
     return xyz2lab(rgb2xyz(rgb))
 
 
 # from https://github.com/nschloe/colorio/blob/main/src/colorio/diff/_ciede2000.py
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def ciede2000(
     lab1, lab2, k_L: float = 1.0, k_C: float = 1.0, k_H: float = 1.0
 ) -> np.ndarray:

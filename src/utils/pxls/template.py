@@ -127,7 +127,7 @@ def stylize(style, stylesize, palette, glow_opacity=0):
     return res
 
 
-@jit(nopython=True, locals={"color_bit": types.uint64, "mapped_color_idx": types.uint8})
+@jit(nopython=True, cache=True, locals={"color_bit": types.uint64, "mapped_color_idx": types.uint8})
 def _fast_reduce(array, palette, dist_func):
     cache = Dict.empty(
         key_type=types.uint64,
@@ -140,7 +140,7 @@ def _fast_reduce(array, palette, dist_func):
         j = idx % width
         alpha = array[i, j, 3]
         if alpha > 128:
-            color = array[i , j, :3]
+            color = array[i, j, :3]
             color_bit = (color[0] << 16) + (color[1] << 8) + color[2]
             if color_bit in cache:
                 mapped_color_idx = cache[color_bit]
@@ -185,7 +185,7 @@ def reduce(array: np.array, palette: np.array, matching="fast") -> np.array:
     return res
 
 
-@jit(nopython=True)
+@jit(nopython=True, cache=True)
 def nearest_color_idx_ciede2000(color, palette) -> int:
     """
     Find the nearest color to `color` in `palette` using CIEDE2000.

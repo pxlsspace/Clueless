@@ -1,14 +1,10 @@
 __pycache__/
 *.pyc
-.vscode/
 .env
 *.db
 *.db-shm
 *.db-wal
 *.db-journal
-venv/
-src/test2.py
-test.db
 ecosystem.config.js
 *.mp4
 env/

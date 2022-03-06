@@ -3,14 +3,6 @@
         90
     ],
     "python.linting.flake8Enabled": true,
-    "python.linting.flake8Args": [
-        "--max-line-length=90",
-        "--select=C,E,F,W,B,B950",
-        "--ignore=E203,E501,W503,E731",
-    ],
     "python.formatting.provider": "black",
     "editor.formatOnSave": true,
-    "python.formatting.blackArgs": [
-        "--line-length=90",
-    ],
 }

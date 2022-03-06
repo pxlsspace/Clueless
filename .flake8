@@ -1,0 +1,5 @@
+# For some reason, flake8 doesn't yet support the pyproject.toml config file
+[flake8]
+max-line-length=90
+select=C,E,F,W,B,B950
+ignore=E203,E501,W503,E731

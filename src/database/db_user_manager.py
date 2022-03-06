@@ -2,7 +2,7 @@ import sqlite3
 from database.db_connection import DbConnection
 
 
-class DbUserManager():
+class DbUserManager:
     """A class to manage a discord and pxls user in the database"""
 
     def __init__(self, db_conn: DbConnection) -> None:
@@ -52,14 +52,12 @@ class DbUserManager():
         await self.db.sql_update(create_server_pxls_users_table)
 
     async def create_pxls_user(self, name):
-        """create a 'pxls_user' and its associated 'pxls_name' """
+        """create a 'pxls_user' and its associated 'pxls_name'"""
         # check if there is already a pxls_name with the given name
         sql = """SELECT * FROM pxls_name WHERE name = ? """
         db_pxls_name = await self.db.sql_select(sql, name)
         if len(db_pxls_name) != 0:
-            raise ValueError(
-                "There is already a pxls_name with the name {}".format(name)
-            )
+            raise ValueError("There is already a pxls_name with the name {}".format(name))
 
         # create the pxls_user
         sql = """INSERT INTO pxls_user (pxls_user_id) VALUES (NULL)"""

@@ -2,7 +2,7 @@ from database.db_connection import DbConnection
 from sqlite3 import OperationalError, IntegrityError
 
 
-class DbServersManager():
+class DbServersManager:
     """A class to manage a discord server/guild in the database"""
 
     def __init__(self, db_conn: DbConnection, default_prefix) -> None:
@@ -170,8 +170,17 @@ class DbServersManager():
         else:
             return rows[0][0]
 
-    async def create_command_usage(self, command_name, is_dm, server_name,
-                                   channel_id, author_id, datetime, args, is_slash):
+    async def create_command_usage(
+        self,
+        command_name,
+        is_dm,
+        server_name,
+        channel_id,
+        author_id,
+        datetime,
+        args,
+        is_slash,
+    ):
         sql = """
             INSERT INTO command_usage(
                 command_name,

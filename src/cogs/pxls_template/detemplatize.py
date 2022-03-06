@@ -53,7 +53,9 @@ class Detemplatize(commands.Cog):
 
         embed = disnake.Embed(title="**Detemplatize**", color=0x66C5CC)
         embed.description = f"**Title**: {title}\n"
-        embed.description += f"**Size**: {total_pixels} pixels ({template.width}x{template.height})\n"
+        embed.description += (
+            f"**Size**: {total_pixels} pixels ({template.width}x{template.height})\n"
+        )
         embed.description += f"**Coordinates**: ({template.ox}, {template.oy})\n"
         embed.description += (
             f"**Templatized Image**: [[click to open]]({template.stylized_url})\n"
@@ -61,7 +63,9 @@ class Detemplatize(commands.Cog):
         embed.description += f"**Progress**: {correct_percentage}% done ({correct_pixels}/{total_placeable})\n"
         embed.description += f"[Template link]({template.url})"
 
-        detemp_file = image_to_file(Image.fromarray(template.get_array()), "detemplatize.png", embed)
+        detemp_file = image_to_file(
+            Image.fromarray(template.get_array()), "detemplatize.png", embed
+        )
         await ctx.send(file=detemp_file, embed=embed)
 
 

@@ -72,13 +72,10 @@ class HelpButton(disnake.ui.Button):
             self.category,
             "slash" if self.is_slash else "",
         )
-        super().__init__(
-            style=style, emoji=emoji, label=label, custom_id=custom_id
-        )
+        super().__init__(style=style, emoji=emoji, label=label, custom_id=custom_id)
 
 
 class HelpView(disnake.ui.View):
-
     def __init__(self, categories, current_category, is_slash):
         super().__init__(timeout=None)
         self.categories = categories
@@ -162,7 +159,9 @@ class Help(commands.Cog):
         else:
             await ctx.send(embed=emb, view=view)
 
-    async def send_category_help(self, ctx, category_name, author, is_slash, send_buttons=True):
+    async def send_category_help(
+        self, ctx, category_name, author, is_slash, send_buttons=True
+    ):
         """called when >help <category> or /help <category> is used."""
         if category_name == "Home":
             return await self.send_home_help(ctx, author, is_slash)
@@ -189,7 +188,7 @@ class Help(commands.Cog):
         emb = disnake.Embed(
             title=f"{category_emoji} {category_name} Category",
             color=EMBED_COLOR,
-            description=f"Use `{prefix}help [command]` to see more information about a command.\n"
+            description=f"Use `{prefix}help [command]` to see more information about a command.\n",
         )
         if category_description:
             emb.add_field(
@@ -209,7 +208,7 @@ class Help(commands.Cog):
         if isinstance(ctx, disnake.MessageInteraction):
             await ctx.edit_original_message(embed=emb, view=view)
         else:
-            await ctx.send(embed=emb, view=view,)
+            await ctx.send(embed=emb, view=view)
 
     async def send_command_help(self, ctx, command, is_slash):
         """called when >help <command> or /help <command> is used."""
@@ -233,9 +232,7 @@ class Help(commands.Cog):
             value=f"`{prefix}{command_name}{(' ' + command_usage) if command_usage else ''}`",
             inline=False,
         )
-        emb.add_field(
-            name="Description:", value=description or "N/A", inline=False
-        )
+        emb.add_field(name="Description:", value=description or "N/A", inline=False)
         emb.set_footer(
             text="<> is a required argument. [] is an optional argument. | means 'or'"
         )
@@ -283,8 +280,8 @@ class Help(commands.Cog):
                 commands_value += "• `{}{} {}`: {}\n".format(
                     prefix,
                     command.qualified_name,
-                    command.usage or '',
-                    command.description or 'N/A',
+                    command.usage or "",
+                    command.description or "N/A",
                 )
             emb.add_field(name="Sub-commands: ", value=commands_value, inline=False)
 
@@ -298,7 +295,9 @@ class Help(commands.Cog):
     async def _help(
         self,
         inter: disnake.AppCmdInter,
-        command_name: str = commands.Param(default=None, name="command-or-category", autocomplete=autocomplete_commands)
+        command_name: str = commands.Param(
+            default=None, name="command-or-category", autocomplete=autocomplete_commands
+        ),
     ):
         """Show all the slash commands.
 
@@ -312,9 +311,8 @@ class Help(commands.Cog):
         if command_name is None:
             return await self.send_home_help(ctx, ctx.author, is_slash)
         # check if it's a category
-        elif (
-            (is_slash and command_name.title() in get_slash_mapping(self.bot))
-            or (not(is_slash) and command_name.title() in get_bot_mapping(self.bot))
+        elif (is_slash and command_name.title() in get_slash_mapping(self.bot)) or (
+            not (is_slash) and command_name.title() in get_bot_mapping(self.bot)
         ):
             return await self.send_category_help(
                 ctx, command_name.title(), ctx.author, is_slash, send_buttons=False
@@ -372,7 +370,9 @@ class Help(commands.Cog):
         command_author = await get_embed_author(inter)
         if command_author != inter.author or command_author is None:
             emb = disnake.Embed(title="This isn't your command!", color=0xFF3621)
-            emb.description = "Use the help command yourself to interact with the buttons."
+            emb.description = (
+                "Use the help command yourself to interact with the buttons."
+            )
             return await inter.send(embed=emb, ephemeral=True)
 
         # handle the button

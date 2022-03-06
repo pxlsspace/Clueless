@@ -13,9 +13,7 @@ class PxlsCooldown(commands.Cog):
 
     @commands.slash_command(name="cooldown")
     async def _cooldown(
-        self,
-        inter: disnake.AppCmdInter,
-        users: int = commands.Param(ge=0, default=None)
+        self, inter: disnake.AppCmdInter, users: int = commands.Param(ge=0, default=None)
     ):
         """Show the current pxls cooldown.
 

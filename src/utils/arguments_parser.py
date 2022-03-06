@@ -25,7 +25,9 @@ def parse_leaderboard_args(args, user_timezone: timezone = None):
     parser = MyParser(add_help=False)
     parser.add_argument("names", type=str, nargs="*", default=[])
     parser.add_argument("-canvas", "-c", action="store_true", default=False)
-    parser.add_argument("-lines", metavar="<number>", action="store", type=check_lines, default=15)
+    parser.add_argument(
+        "-lines", metavar="<number>", action="store", type=check_lines, default=15
+    )
     parser.add_argument("-graph", "-g", action="store_true", default=False)
     parser.add_argument("-bars", "-b", action="store_true", default=False)
     parser.add_argument("-last", "-l", action="store", default=None)
@@ -57,7 +59,12 @@ def parse_speed_args(args, user_timezone: timezone = None):
     parser = MyParser(add_help=False)
     parser.add_argument("names", type=str, nargs="*", default=[])
     parser.add_argument("-canvas", "-c", action="store_true", default=False)
-    parser.add_argument("-groupby", "-g", choices=["canvas", "month", "week", "day", "hour"], required=False)
+    parser.add_argument(
+        "-groupby",
+        "-g",
+        choices=["canvas", "month", "week", "day", "hour"],
+        required=False,
+    )
     parser.add_argument("-progress", "-p", action="store_true", default=False)
 
     parser.add_argument("-last", "-l", action="store", default=None)
@@ -96,7 +103,9 @@ def parse_pixelfont_args(args):
 
     parser.add_argument("-font", type=str, action="store", required=False, default="*")
     parser.add_argument("-color", type=str, nargs="*", action="store", required=False)
-    parser.add_argument("-bgcolor", "-bg", nargs="*", type=str, action="store", required=False)
+    parser.add_argument(
+        "-bgcolor", "-bg", nargs="*", type=str, action="store", required=False
+    )
 
     return parser.parse_args(args)
 
@@ -153,7 +162,9 @@ def check_ranks(value):
     if rank_low < 1 or rank_high < 1 or rank_low > 1000 or rank_high > 1000:
         raise argparse.ArgumentTypeError("The ranks must be between 1 and 1000.")
     if rank_low > rank_high:
-        raise argparse.ArgumentTypeError("The first rank must be smaller than the second one.")
+        raise argparse.ArgumentTypeError(
+            "The first rank must be smaller than the second one."
+        )
 
     if rank_high - rank_low > 40:
         raise argparse.ArgumentTypeError("The rank range must be less than 40.")

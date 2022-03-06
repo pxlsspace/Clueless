@@ -35,7 +35,9 @@ class Reddit(commands.Cog, name="Image"):
 
         return a tuple with 2 items: (image_url,reddit_post_url)"""
 
-        request_url = f"https://www.reddit.com/r/{subreddit_name}/top.json?limit=100&t=week"
+        request_url = (
+            f"https://www.reddit.com/r/{subreddit_name}/top.json?limit=100&t=week"
+        )
         submissions_json = await get_content(request_url, "json")
         submissions = submissions_json["data"]["children"]
 

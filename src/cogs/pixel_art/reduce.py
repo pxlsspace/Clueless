@@ -7,9 +7,19 @@ from io import BytesIO
 from disnake.ext import commands
 
 from utils.arguments_parser import MyParser
-from utils.discord_utils import IMAGE_URL_REGEX, autocomplete_builtin_palettes, format_number, get_image_from_message, image_to_file
+from utils.discord_utils import (
+    IMAGE_URL_REGEX,
+    autocomplete_builtin_palettes,
+    format_number,
+    get_image_from_message,
+    image_to_file,
+)
 from utils.image.image_utils import (
-    get_pxls_color, is_hex_color, rgb_to_hex, hex_to_rgb, get_builtin_palette
+    get_pxls_color,
+    is_hex_color,
+    rgb_to_hex,
+    hex_to_rgb,
+    get_builtin_palette,
 )
 from utils.pxls.template import reduce, get_rgba_palette
 from utils.setup import stats
@@ -28,7 +38,8 @@ class Reduce(commands.Cog):
             default=None, autocomplete=autocomplete_builtin_palettes
         ),
         matching: str = commands.Param(
-            default=None, choices={"Accurate (default)": "accurate", "Fast (faster)": "fast"}
+            default=None,
+            choices={"Accurate (default)": "accurate", "Fast (faster)": "fast"},
         ),
     ):
         """Reduce an image to a palette.
@@ -131,7 +142,9 @@ class Reduce(commands.Cog):
                 except ValueError:
                     if is_hex_color(color):
                         rgba = hex_to_rgb(color, "RGBA")
-                        palette_names.append("#" if color[0] != "#" else "" + color.upper())
+                        palette_names.append(
+                            "#" if color[0] != "#" else "" + color.upper()
+                        )
                     else:
                         return await ctx.send(f"❌ The color `{color}` is invalid.")
                 rgba_list.append(rgba)

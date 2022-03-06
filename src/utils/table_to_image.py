@@ -15,7 +15,8 @@ def make_table_array(data, alignments, colors, bg_colors, theme: Theme):
     line_width = 1  # grid width
     vertical_margin = 2
     horizontal_margin = 4  # margin inside each cell
-    title_gap_height = theme.table_outline_width  # space between the title and the content
+    # space between the title and the content
+    title_gap_height = theme.table_outline_width
 
     # colors
     outer_outline_color = hex_to_rgba(theme.table_outline_color)
@@ -83,18 +84,24 @@ def make_table_array(data, alignments, colors, bg_colors, theme: Theme):
             else:
                 align = alignments[j]
             if align == "right":
-                padding = np.zeros((element.shape[0], diff_with_longest, 4), dtype=np.uint8)
+                padding = np.zeros(
+                    (element.shape[0], diff_with_longest, 4), dtype=np.uint8
+                )
                 padding[:, :] = bg_color
                 element = np.append(padding, element, axis=1)
             if align == "left":
-                padding = np.zeros((element.shape[0], diff_with_longest, 4), dtype=np.uint8)
+                padding = np.zeros(
+                    (element.shape[0], diff_with_longest, 4), dtype=np.uint8
+                )
                 padding[:, :] = bg_color
                 element = np.append(element, padding, axis=1)
             if align == "center":
                 half, rest = divmod(diff_with_longest, 2)
                 padding_left = np.zeros((element.shape[0], half, 4), dtype=np.uint8)
                 padding_left[:, :] = bg_color
-                padding_right = np.zeros((element.shape[0], half + rest, 4), dtype=np.uint8)
+                padding_right = np.zeros(
+                    (element.shape[0], half + rest, 4), dtype=np.uint8
+                )
                 padding_right[:, :] = bg_color
 
                 element = np.append(padding_left, element, axis=1)
@@ -114,7 +121,9 @@ def make_table_array(data, alignments, colors, bg_colors, theme: Theme):
 
             # add a gap under the title
             if i == 0:
-                title_gap = np.zeros((title_gap_height, element.shape[1], 4), dtype=np.uint8)
+                title_gap = np.zeros(
+                    (title_gap_height, element.shape[1], 4), dtype=np.uint8
+                )
                 title_gap[:, :] = outer_outline_color
                 element = np.concatenate((element, title_gap), axis=0)
 
@@ -186,7 +195,16 @@ def make_styled_corner(array, color, width):
     array[-width:, -(width * 2) - 1] = color
 
 
-def table_to_image(data, titles, alignments=None, colors=None, theme: Theme = None, bg_colors=None, alternate_bg=False, scale=4):
+def table_to_image(
+    data,
+    titles,
+    alignments=None,
+    colors=None,
+    theme: Theme = None,
+    bg_colors=None,
+    alternate_bg=False,
+    scale=4,
+):
     """
     Create an image from a 2D array.
 
@@ -210,12 +228,16 @@ def table_to_image(data, titles, alignments=None, colors=None, theme: Theme = No
     if colors:
         if not isinstance(colors[0], list) and len(colors) != len(data):
             raise ValueError("Incorrect shape for the colors list.")
-        elif isinstance(colors[0], list) and (len(colors[0]) != len(data[0]) or len(colors) != len(data)):
+        elif isinstance(colors[0], list) and (
+            len(colors[0]) != len(data[0]) or len(colors) != len(data)
+        ):
             raise ValueError("Incorrect shape for the colors list.")
     if bg_colors:
         if not isinstance(bg_colors[0], list) and len(bg_colors) != len(data):
             raise ValueError("Incorrect shape for the bg_colors list.")
-        elif isinstance(bg_colors[0], list) and (len(bg_colors[0]) != len(data[0]) or len(bg_colors) != len(data)):
+        elif isinstance(bg_colors[0], list) and (
+            len(bg_colors[0]) != len(data[0]) or len(bg_colors) != len(data)
+        ):
             raise ValueError("Incorrect shape for the bg_colors list.")
 
     # use the theme default theme if None is given
@@ -263,8 +285,12 @@ def table_to_image(data, titles, alignments=None, colors=None, theme: Theme = No
     table_array = make_table_array(data, alignments, colors, bg_colors, theme)
 
     # add style
-    table_array = add_border(table_array, theme.table_outline_width, hex_to_rgba(theme.table_outline_color))
-    make_styled_corner(table_array, hex_to_rgba(theme.grid_color), theme.table_outline_width)
+    table_array = add_border(
+        table_array, theme.table_outline_width, hex_to_rgba(theme.table_outline_color)
+    )
+    make_styled_corner(
+        table_array, hex_to_rgba(theme.grid_color), theme.table_outline_width
+    )
     table_array = add_border(table_array, 1, hex_to_rgba(theme.grid_color))
 
     # convert to image

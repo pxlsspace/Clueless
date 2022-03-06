@@ -5,7 +5,7 @@ from database.db_connection import DbConnection
 from utils.pxls.pxls_stats_manager import PxlsStatsManager
 
 
-class DbStatsManager():
+class DbStatsManager:
     """A class to manage the pxls stats in the database"""
 
     def __init__(self, db_conn: DbConnection, stats: PxlsStatsManager) -> None:
@@ -131,7 +131,7 @@ class DbStatsManager():
         await self.db.close_connection()
 
     async def create_pxls_user(self, username, cur):
-        """create a 'pxls_user' and its associated 'pxls_name' """
+        """create a 'pxls_user' and its associated 'pxls_name'"""
         sql = """ INSERT INTO pxls_user (pxls_user_id) VALUES (NULL)"""
         await cur.execute(sql)
         pxls_user_id = cur.get_cursor().lastrowid
@@ -218,7 +218,9 @@ class DbStatsManager():
         users_list = list(users_dict.items())
         return (record1["datetime"], record2["datetime"], users_list)
 
-    async def get_grouped_stats_history(self, user_list, dt1, dt2, groupby_opt, canvas_opt):
+    async def get_grouped_stats_history(
+        self, user_list, dt1, dt2, groupby_opt, canvas_opt
+    ):
         """get the stats between 2 dates grouped by day or hour"""
 
         # check on the groupby param
@@ -330,7 +332,9 @@ class DbStatsManager():
             canvas = True
 
         order_dict = {
-            "speed": "b.{0}_count - a.{0}_count".format("canvas" if canvas else "alltime"),
+            "speed": "b.{0}_count - a.{0}_count".format(
+                "canvas" if canvas else "alltime"
+            ),
             "canvas": "last.canvas_count",
             "alltime": "last.alltime_count",
         }
@@ -366,7 +370,9 @@ class DbStatsManager():
             ),
         )
 
-    async def get_pixels_at(self, datetime: datetime, user_name: str, canvas: bool = False):
+    async def get_pixels_at(
+        self, datetime: datetime, user_name: str, canvas: bool = False
+    ):
         """get the record of a specific user at a given time"""
 
         current_canvas_code = await self.stats_manager.get_canvas_code()

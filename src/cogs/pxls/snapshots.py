@@ -73,7 +73,9 @@ class Snapshots(commands.Cog):
             await ctx.send("✅ Snapshots successfully set to <#" + str(channel_id) + ">")
 
     @snapshots.command(description="Disable snapshots.", aliases=["unset"])
-    @commands.check_any(commands.is_owner(), commands.has_permissions(manage_channels=True))
+    @commands.check_any(
+        commands.is_owner(), commands.has_permissions(manage_channels=True)
+    )
     async def disable(self, ctx):
         await db_servers.update_snapshots_channel(ctx.guild.id, None)
         await ctx.send("✅ Snapshots won't be sent anymore.")

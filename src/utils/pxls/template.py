@@ -127,12 +127,13 @@ def stylize(style, stylesize, palette, glow_opacity=0):
     return res
 
 
-@jit(nopython=True, cache=True, locals={"color_bit": types.uint64, "mapped_color_idx": types.uint8})
+@jit(
+    nopython=True,
+    cache=True,
+    locals={"color_bit": types.uint64, "mapped_color_idx": types.uint8},
+)
 def _fast_reduce(array, palette, dist_func):
-    cache = Dict.empty(
-        key_type=types.uint64,
-        value_type=types.uint8
-    )
+    cache = Dict.empty(key_type=types.uint64, value_type=types.uint8)
     res = np.empty(array.shape[:2], dtype=np.uint8)
     width = array.shape[1]
     for idx in range(array.shape[0] * array.shape[1]):
@@ -218,7 +219,7 @@ def nearest_color_idx_euclidean(color, palette) -> int:
     palette: a rgb ndarray of uint8 of shape (palette_size,3)
 
     """
-    distances = np.sum((palette - color)**2, axis=1)
+    distances = np.sum((palette - color) ** 2, axis=1)
     return np.argmin(distances)
 
 

@@ -81,7 +81,9 @@ def format_datetime(dt: datetime, style=None):
         return f"<t:{ts}>"
 
 
-def td_format(td_object: timedelta, hide_seconds=False, max_unit="year", short_format=False):
+def td_format(
+    td_object: timedelta, hide_seconds=False, max_unit="year", short_format=False
+):
     """Convert a `timedelta` object to a string in the format:
 
     `x years, x months, x days, x min, x sec`."""

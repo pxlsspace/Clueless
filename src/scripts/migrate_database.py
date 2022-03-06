@@ -13,9 +13,7 @@ from database.db_user_manager import DbUserManager  # noqa: E402
 
 """ Script used to move the old database data to the new format """
 
-OLD_DB_FILE = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)), "database_old.db"
-)
+OLD_DB_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "database_old.db")
 db_conn = DbConnection()
 db_serv = DbServersManager(db_conn, ">")
 db_user = DbUserManager(db_conn)
@@ -23,7 +21,7 @@ db_stat = DbStatsManager(db_conn)
 
 
 async def create_pxls_user(username, cur: sqlite3.Cursor):
-    """create a 'pxls_user' and its associated 'pxls_name' """
+    """create a 'pxls_user' and its associated 'pxls_name'"""
     sql = """ INSERT INTO pxls_user (pxls_user_id) VALUES (NULL)"""
     await cur.execute(sql)
     pxls_user_id = cur.get_cursor().lastrowid

@@ -29,7 +29,8 @@ class Template(commands.Cog):
         oy: int = None,
         nocrop: bool = False,
         matching: str = commands.Param(
-            default=None, choices={"Fast (default)": "fast", "Accurate (slower)": "accurate"}
+            default=None,
+            choices={"Fast (default)": "fast", "Accurate (slower)": "accurate"},
         ),
     ):
         """Generate a template link from an image.
@@ -92,7 +93,9 @@ class Template(commands.Cog):
                 parsed_args.matching,
             )
 
-    async def template(self, ctx, image_url, style_name, glow, title, ox, oy, nocrop, matching):
+    async def template(
+        self, ctx, image_url, style_name, glow, title, ox, oy, nocrop, matching
+    ):
         # get the image from the message
         try:
             img, url = await get_image_from_message(ctx, image_url, accept_emojis=False)
@@ -110,9 +113,7 @@ class Template(commands.Cog):
             styles_available = "**Available Styles:**\n"
             for s in STYLES:
                 styles_available += ("\t• {0} ({1}x{1})\n").format(s["name"], s["size"])
-            return await ctx.send(
-                f"❌ Unknown style '{style_name}'.\n{styles_available}"
-            )
+            return await ctx.send(f"❌ Unknown style '{style_name}'.\n{styles_available}")
 
         # check on the size
         output_size = img.width * img.height * style["size"]
@@ -125,7 +126,7 @@ class Template(commands.Cog):
                 embed=disnake.Embed(
                     title=":x: Size limit exceeded",
                     description=msg,
-                    color=disnake.Color.red()
+                    color=disnake.Color.red(),
                 )
             )
         # check on the glow

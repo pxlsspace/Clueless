@@ -5,7 +5,12 @@ from disnake.ext import commands
 from io import BytesIO
 
 from utils.arguments_parser import parse_outline_args
-from utils.discord_utils import autocomplete_palette, format_number, get_image_from_message, image_to_file
+from utils.discord_utils import (
+    autocomplete_palette,
+    format_number,
+    get_image_from_message,
+    image_to_file,
+)
 from utils.image.image_utils import (
     add_outline,
     remove_white_space,
@@ -20,12 +25,12 @@ class Outline(commands.Cog):
 
     @commands.slash_command(name="outline")
     async def _outline(
-            self,
-            inter: disnake.AppCmdInter,
-            color: str = commands.Param(autocomplete=autocomplete_palette),
-            image: str = None,
-            sparse: bool = False,
-            width: int = commands.Param(default=None, gt=0, le=32),
+        self,
+        inter: disnake.AppCmdInter,
+        color: str = commands.Param(autocomplete=autocomplete_palette),
+        image: str = None,
+        sparse: bool = False,
+        width: int = commands.Param(default=None, gt=0, le=32),
     ):
         """Add an outline to an image.
 
@@ -83,7 +88,9 @@ class Outline(commands.Cog):
             if is_hex_color(color):
                 rgba = ImageColor.getcolor(color, "RGBA")
             else:
-                return await ctx.send(f"❌ The color `{color}` is invalid.\n(use quotes if the color has 2 or more words)")
+                return await ctx.send(
+                    f"❌ The color `{color}` is invalid.\n(use quotes if the color has 2 or more words)"
+                )
 
         # get the input image
         try:
@@ -132,12 +139,18 @@ class Outline(commands.Cog):
         image_cropped = await self.bot.loop.run_in_executor(
             None, remove_white_space, input_image
         )
-        ratio = (image_cropped.width * image_cropped.height) / (input_image.width * input_image.height)
+        ratio = (image_cropped.width * image_cropped.height) / (
+            input_image.width * input_image.height
+        )
         embed = disnake.Embed(title="Crop", color=0x66C5CC)
         if ratio == 1:
-            embed.description = "There was nothing to crop here. <a:bruhkitty:880829401359589446>"
+            embed.description = (
+                "There was nothing to crop here. <a:bruhkitty:880829401359589446>"
+            )
         else:
-            embed.description = f"The cropped image is **{format_number((1-ratio)*100)}%** smaller.\n"
+            embed.description = (
+                f"The cropped image is **{format_number((1-ratio)*100)}%** smaller.\n"
+            )
             embed.description += "`{0.width}x{0.height}` → `{1.width}x{1.height}`".format(
                 input_image, image_cropped
             )

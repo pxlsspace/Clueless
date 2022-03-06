@@ -12,7 +12,10 @@ headers = {
 async def search_song(query: str = None, title=None, artist=None, engine="google"):
     """return an azlyrics song url from the query or None"""
 
-    assert engine in ["google", "azlyrics"], "The user engine must be 'google' or 'azlyrics"
+    assert engine in [
+        "google",
+        "azlyrics",
+    ], "The user engine must be 'google' or 'azlyrics"
     assert query or title or artist, "No query, title or artist specified"
 
     if query:

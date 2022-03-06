@@ -6,8 +6,19 @@ from copy import deepcopy
 from disnake.ext import commands
 
 from main import tracked_templates
-from utils.discord_utils import Confirm, format_number, image_to_file, UserConverter, DropdownView
-from utils.pxls.template_manager import Combo, get_template_from_url, make_before_after_gif, parse_template
+from utils.discord_utils import (
+    Confirm,
+    format_number,
+    image_to_file,
+    UserConverter,
+    DropdownView,
+)
+from utils.pxls.template_manager import (
+    Combo,
+    get_template_from_url,
+    make_before_after_gif,
+    parse_template,
+)
 from utils.setup import db_templates, db_users
 from utils.timezoneslib import get_timezone
 from utils.utils import make_progress_bar
@@ -29,7 +40,11 @@ async def autocomplete_templates(inter: disnake.AppCmdInter, user_input: str):
     """Get all the public template names."""
     template_names = [t.name for t in tracked_templates.get_all_public_templates()]
     template_names.append("@combo")
-    return [temp_name for temp_name in template_names if user_input.lower() in temp_name.lower()][:25]
+    return [
+        temp_name
+        for temp_name in template_names
+        if user_input.lower() in temp_name.lower()
+    ][:25]
 
 
 async def autocomplete_user_templates(inter: disnake.AppCmdInter, user_input: str):
@@ -38,8 +53,16 @@ async def autocomplete_user_templates(inter: disnake.AppCmdInter, user_input: st
     if author_id == tracked_templates.bot_owner_id:
         return await autocomplete_templates(inter, user_input)
     else:
-        template_names = [t.name for t in tracked_templates.get_all_public_templates() if t.owner_id == inter.author.id]
-        return [temp_name for temp_name in template_names if user_input.lower() in temp_name.lower()][:25]
+        template_names = [
+            t.name
+            for t in tracked_templates.get_all_public_templates()
+            if t.owner_id == inter.author.id
+        ]
+        return [
+            temp_name
+            for temp_name in template_names
+            if user_input.lower() in temp_name.lower()
+        ][:25]
 
 
 class Progress(commands.Cog):
@@ -95,7 +118,9 @@ class Progress(commands.Cog):
             except ValueError as e:
                 return await ctx.send(f":x: {e}")
             # check if we have a tracked template with the same image and coords
-            template_with_same_image = tracked_templates.check_duplicate_template(template)
+            template_with_same_image = tracked_templates.check_duplicate_template(
+                template
+            )
             if template_with_same_image:
                 template = template_with_same_image
                 is_tracked = True
@@ -104,7 +129,9 @@ class Progress(commands.Cog):
         else:
             template = tracked_templates.get_template(template_input, None, False)
             if template is None:
-                return await ctx.send(f":x: There is no template with the name `{template_input}` in the tracker.")
+                return await ctx.send(
+                    f":x: There is no template with the name `{template_input}` in the tracker."
+                )
             is_tracked = True
 
         # get the current template progress stats
@@ -154,7 +181,7 @@ class Progress(commands.Cog):
         if is_tracked:
             oldest_record = await db_templates.get_template_oldest_progress(template)
             if oldest_record and oldest_record["datetime"]:
-                oldest_record_time = oldest_record['datetime']
+                oldest_record_time = oldest_record["datetime"]
             else:
                 # if there is no data for this template in the db, the starting tracking time is now
                 oldest_record_time = datetime.now(timezone.utc)
@@ -163,10 +190,14 @@ class Progress(commands.Cog):
             embed.timestamp = oldest_record_time
         else:
             prefix = ctx.prefix if isinstance(ctx, commands.Context) else "/"
-            embed.set_footer(text=f"[Not Tracked]\nUse {prefix}progress add <name> <url> to start tracking.")
+            embed.set_footer(
+                text=f"[Not Tracked]\nUse {prefix}progress add <name> <url> to start tracking."
+            )
         embed.add_field(name="**Current Progress**", value=progress_text, inline=False)
         detemp_file = image_to_file(progress_image, "progress.png", embed)
-        template_file = image_to_file(Image.fromarray(template.get_array()), "template_image.png")
+        template_file = image_to_file(
+            Image.fromarray(template.get_array()), "template_image.png"
+        )
 
         if isinstance(template, Combo):
             # send the template image first and edit the embed with the URL button
@@ -197,7 +228,9 @@ class Progress(commands.Cog):
         await self.info(inter, template)
 
     @progress.command(
-        name="info", description="Get some information about a template.", usage="<template>"
+        name="info",
+        description="Get some information about a template.",
+        usage="<template>",
     )
     async def p_info(self, ctx, template: str):
         async with ctx.typing():
@@ -215,7 +248,7 @@ class Progress(commands.Cog):
         # INFO #
         oldest_record = await db_templates.get_template_oldest_progress(template)
         if oldest_record and oldest_record["datetime"]:
-            oldest_record_time = oldest_record['datetime'].replace(tzinfo=timezone.utc)
+            oldest_record_time = oldest_record["datetime"].replace(tzinfo=timezone.utc)
             oldest_record_time_str = format_datetime(oldest_record_time, "R")
         else:
             oldest_record_time_str = "`< 5 minutes ago`"
@@ -254,7 +287,14 @@ class Progress(commands.Cog):
         progress_text += f"• ETA: `{eta or 'N/A'}`\n"
 
         # ACTIVITY #
-        timeframes = [{"minutes": 5}, {"hours": 1}, {"hours": 6}, {"days": 1}, {"days": 7}, {"days": 9999}]
+        timeframes = [
+            {"minutes": 5},
+            {"hours": 1},
+            {"hours": 6},
+            {"days": 1},
+            {"days": 7},
+            {"days": 9999},
+        ]
         timeframe_names = ["5 minutes", "hour", "6 hours", "day", "week"]
         now = round_minutes_down(datetime.utcnow(), 5)
         last_progress_dt, last_progress = await template.get_progress_at(now)
@@ -279,9 +319,11 @@ class Progress(commands.Cog):
                     if delta_time != timedelta(0):
                         speed_px_d = delta_progress / (delta_time / timedelta(days=1))
                         speed_px_h = delta_progress / (delta_time / timedelta(hours=1))
-                        activity_text += "**Average speed**:\n• `{}` px/day\n• `{}` px/hour\n".format(
-                            format_number(speed_px_d),
-                            format_number(speed_px_h),
+                        activity_text += (
+                            "**Average speed**:\n• `{}` px/day\n• `{}` px/hour\n".format(
+                                format_number(speed_px_d),
+                                format_number(speed_px_h),
+                            )
                         )
                     else:
                         activity_text += "• Average speed: `N/A`\n"
@@ -292,11 +334,15 @@ class Progress(commands.Cog):
             last_updated = "-"
         activity_text += f"\nLast Updated: {last_updated}"
 
-        embed = disnake.Embed(title=f"Template info for `{template.name}`", color=0x66C5CC)
+        embed = disnake.Embed(
+            title=f"Template info for `{template.name}`", color=0x66C5CC
+        )
         embed.add_field(name="**Information**", value=info_text, inline=False)
         embed.add_field(name="**Progress**", value=progress_text, inline=False)
         embed.add_field(name="**Recent Activity**", value=activity_text, inline=False)
-        template_file = image_to_file(Image.fromarray(template.get_array()), "template_image.png")
+        template_file = image_to_file(
+            Image.fromarray(template.get_array()), "template_image.png"
+        )
         embed.set_thumbnail(url="attachment://template_image.png")
 
         if template.url and not isinstance(template, Combo):
@@ -347,23 +393,42 @@ class Progress(commands.Cog):
 
         # Send template infos
 
-        correct_percentage = format_number((correct_pixels / template.total_placeable) * 100)
+        correct_percentage = format_number(
+            (correct_pixels / template.total_placeable) * 100
+        )
         total_placeable = format_number(int(template.total_placeable))
         correct_pixels = format_number(int(correct_pixels))
         total_pixels = format_number(int(template.total_size))
 
-        embed = disnake.Embed(title=f"✅ Template `{name}` added to the tracker.", color=0x66C5CC)
+        embed = disnake.Embed(
+            title=f"✅ Template `{name}` added to the tracker.", color=0x66C5CC
+        )
         embed.description = f"**Title**: {template.title or '`N/A`'}\n"
         embed.description += f"[Template link]({template.url})\n"
-        embed.description += f"**Size**: {total_pixels} pixels ({template.width}x{template.height})\n"
+        embed.description += (
+            f"**Size**: {total_pixels} pixels ({template.width}x{template.height})\n"
+        )
         embed.description += f"**Coordinates**: ({template.ox}, {template.oy})\n"
         embed.description += f"**Progress**: {correct_percentage}% done ({correct_pixels}/{total_placeable})\n"
 
-        detemp_file = image_to_file(Image.fromarray(template.get_array()), "detemplatize.png", embed)
+        detemp_file = image_to_file(
+            Image.fromarray(template.get_array()), "detemplatize.png", embed
+        )
         await ctx.send(file=detemp_file, embed=embed)
 
-    sort_options = ["Name", "Size", "Correct", "To Go", "Percentage", "px/h (last 1h)", "px/h (last 6h)", "px/h (last 1d)", "px/h (last 7d)", "ETA"]
-    Sort = commands.option_enum({option: i for i, option in enumerate(sort_options)})
+    sort_options = [
+        ("Name", "name"),
+        ("Size", "size"),
+        ("Correct", "correct"),
+        ("To Go", "togo"),
+        ("%", "%"),
+        ("px/h (last 1h)", "last1h"),
+        ("px/h (last 6h)", "last6h"),
+        ("px/h (last 1d)", "last1d"),
+        ("px/h (last 7d)", "last7d"),
+        ("ETA", "eta"),
+    ]
+    Sort = commands.option_enum({option[0]: i for i, option in enumerate(sort_options)})
     filter_options = {"Not Done": "notdone", "Done": "done", "Mine": "mine"}
 
     def autocomplete_filter(inter: disnake.AppCmdInter, user_input: str):
@@ -375,7 +440,9 @@ class Progress(commands.Cog):
             if r not in filters:
                 return []
         rest = "+".join(rest)
-        best_matches = [filter for filter in filters if to_search.lower() in filter.lower()][:25]
+        best_matches = [
+            filter for filter in filters if to_search.lower() in filter.lower()
+        ][:25]
         return [rest + ("+" if rest else "") + best_match for best_match in best_matches]
 
     @_progress.sub_command(name="list")
@@ -411,9 +478,10 @@ class Progress(commands.Cog):
     )
     async def p_list(self, ctx, *args):
         parser = MyParser(add_help=False)
-        sort_options = ["name", "size", "correct", "togo", "%", "last1h", "last6h", "last1d", "last7d", "eta"]
-
-        parser.add_argument("-sort", "-s", choices=sort_options, required=False)
+        options_dict = {option[1]: i for i, option in enumerate(self.sort_options)}
+        parser.add_argument(
+            "-sort", "-s", choices=list(options_dict.keys()), required=False
+        )
         parser.add_argument("-filter", "-f", type=str, required=False)
 
         try:
@@ -421,7 +489,7 @@ class Progress(commands.Cog):
         except Exception as error:
             return await ctx.send(f"❌ {error}")
         if parsed_args.sort:
-            sort = sort_options.index(parsed_args.sort)
+            sort = options_dict.get(parsed_args.sort)
         else:
             sort = None
         async with ctx.typing():
@@ -432,7 +500,7 @@ class Progress(commands.Cog):
         if len(public_tracked_templates) == 0:
             return await ctx.send("No templates tracked :'(")
 
-        titles = ["Name", "Size", "Correct", "To Go", "%", "px/h (last 1h)", "px/h (last 6h)", "px/h (last 1d)", "px/h (last 7d)", "ETA"]
+        titles = [t[0] for t in self.sort_options]
         if sort is None:
             sort = 5
 
@@ -443,7 +511,7 @@ class Progress(commands.Cog):
                 if filter not in self.filter_options.values():
                     msg = ":x: Invalid filter choice '{}' (choose from {}).".format(
                         filter,
-                        ", ".join([f"`{f}`" for f in self.filter_options.values()])
+                        ", ".join([f"`{f}`" for f in self.filter_options.values()]),
                     )
                     return await ctx.send(msg)
 
@@ -512,7 +580,12 @@ class Progress(commands.Cog):
                 if "mine" in filters and template.owner_id != ctx.author.id:
                     continue
 
-            table.append([name, total, current_progress, togo, percentage] + values + [eta] + [line_colors])
+            table.append(
+                [name, total, current_progress, togo, percentage]
+                + values
+                + [eta]
+                + [line_colors]
+            )
 
         if len(table) == 0:
             return await ctx.send(":x: No template matches with your filter.")
@@ -527,16 +600,25 @@ class Progress(commands.Cog):
             if sort == 0:
                 # sorting by name: keep normal order and ignore case
                 reverse = False
-                key = lambda x: (x[sort] is None or isinstance(x[sort], str), x[sort].lower())  # noqa: E731
+                key = lambda x: (
+                    x[sort] is None or isinstance(x[sort], str),
+                    x[sort].lower(),
+                )  # noqa: E731
 
             elif sort == len(titles) - 1:
                 # sorting by ETA: keep normal order
                 reverse = False
-                key = lambda x: (x[sort] is None or isinstance(x[sort], str), x[sort])  # noqa: E731
+                key = lambda x: (
+                    x[sort] is None or isinstance(x[sort], str),
+                    x[sort],
+                )  # noqa: E731
             else:
                 # sorting by a number: reverse the order and ignore strings
                 reverse = True
-                key = lambda x: (x[sort] is not None and not(isinstance(x[sort], str)), x[sort])  # noqa: E731
+                key = lambda x: (
+                    x[sort] is not None and not (isinstance(x[sort], str)),
+                    x[sort],
+                )  # noqa: E731
             table.sort(key=key, reverse=reverse)
             table_data = [line[:-1] for line in table]
             table_colors = [line[-1] for line in table]
@@ -622,9 +704,7 @@ class Progress(commands.Cog):
 
         dropdown = SortDropdown()
         dropdown_view = DropdownView(ctx.author, dropdown)
-        embed, file = await self.bot.loop.run_in_executor(
-            None, make_embed, table, sort
-        )
+        embed, file = await self.bot.loop.run_in_executor(None, make_embed, table, sort)
         m = await ctx.send(embed=embed, file=file, view=dropdown_view)
         if isinstance(ctx, disnake.AppCmdInter):
             m = await ctx.original_message()
@@ -650,17 +730,29 @@ class Progress(commands.Cog):
         await inter.response.defer()
         await self.update(inter, template, new_url, new_name, new_owner)
 
-    @progress.command(name="update", description="Update the template URL.", usage="<current name> <new url>")
+    @progress.command(
+        name="update",
+        description="Update the template URL.",
+        usage="<current name> <new url>",
+    )
     async def p_update_url(self, ctx, current_name, new_url):
         async with ctx.typing():
             await self.update(ctx, current_name, new_url=new_url)
 
-    @progress.command(name="rename", description="Update the template name.", usage="<current name> <new name>")
+    @progress.command(
+        name="rename",
+        description="Update the template name.",
+        usage="<current name> <new name>",
+    )
     async def p_update_name(self, ctx, current_name, new_name):
         async with ctx.typing():
             await self.update(ctx, current_name, new_name=new_name)
 
-    @progress.command(name="transfer", description="Transfer the template ownernership.", usage="<current name> <new owner>")
+    @progress.command(
+        name="transfer",
+        description="Transfer the template ownernership.",
+        usage="<current name> <new owner>",
+    )
     async def p_update_owner(self, ctx, current_name, new_owner):
         try:
             new_user = await UserConverter().convert(ctx, new_owner)
@@ -670,25 +762,38 @@ class Progress(commands.Cog):
         async with ctx.typing():
             await self.update(ctx, current_name, new_owner=new_user)
 
-    async def update(self, ctx, current_name, new_url=None, new_name=None, new_owner=None):
+    async def update(
+        self, ctx, current_name, new_url=None, new_name=None, new_owner=None
+    ):
         try:
             old_temp, new_temp = await tracked_templates.update_template(
                 current_name,
                 ctx.author,
-                new_url, new_name,
+                new_url,
+                new_name,
                 new_owner,
             )
         except ValueError as e:
             return await ctx.send(f":x: {e}")
-        embed = disnake.Embed(title=f"**✅ Template {old_temp.name} Updated**", color=0x66C5CC)
+        embed = disnake.Embed(
+            title=f"**✅ Template {old_temp.name} Updated**", color=0x66C5CC
+        )
 
         # Show name update
         if new_name is not None:
-            embed.add_field(name="Name Changed", value=f"`{old_temp.name}` → `{new_temp.name}`", inline=False)
+            embed.add_field(
+                name="Name Changed",
+                value=f"`{old_temp.name}` → `{new_temp.name}`",
+                inline=False,
+            )
 
         # Show owner update
         if new_owner is not None:
-            embed.add_field(name="Ownership transfered", value=f"<@{old_temp.owner_id}> → <@{new_temp.owner_id}>", inline=False)
+            embed.add_field(
+                name="Ownership transfered",
+                value=f"<@{old_temp.owner_id}> → <@{new_temp.owner_id}>",
+                inline=False,
+            )
 
         # Show all the template info updated
         if new_url is not None:
@@ -741,7 +846,9 @@ class Progress(commands.Cog):
                     format_number(diff_prog),
                 )
             else:
-                progress += f"• **Correct Pixels**: {format_number(new_prog)} *(unchanged)*\n"
+                progress += (
+                    f"• **Correct Pixels**: {format_number(new_prog)} *(unchanged)*\n"
+                )
             old_togo = old_temp.total_placeable - old_prog
             new_togo = new_temp.total_placeable - new_prog
             # to go
@@ -752,10 +859,11 @@ class Progress(commands.Cog):
                     format_number(new_togo),
                     "+" if diff_togo > 0 else "",
                     format_number(diff_togo),
-
                 )
             else:
-                progress += f"• **Pixels to go**: {format_number(new_togo)} *(unchanged)*\n"
+                progress += (
+                    f"• **Pixels to go**: {format_number(new_togo)} *(unchanged)*\n"
+                )
             # percentage
             old_percentage = old_prog / old_temp.total_placeable
             new_percentage = new_prog / new_temp.total_placeable
@@ -768,7 +876,9 @@ class Progress(commands.Cog):
                     format_number(diff_percentage * 100),
                 )
             else:
-                progress += f"• **Percentage**: {format_number(new_percentage)}% *(unchanged)*\n"
+                progress += (
+                    f"• **Percentage**: {format_number(new_percentage)}% *(unchanged)*\n"
+                )
             progress += "\n__**Image Difference**__\n"
             # make the image
             try:
@@ -779,7 +889,9 @@ class Progress(commands.Cog):
                 files = [disnake.File(fp=diff_gif, filename=filename)]
                 embed.set_image(url=f"attachment://{filename}")
             except Exception:
-                progress += "**[An error occured while generating the diff GIF image.]**\n"
+                progress += (
+                    "**[An error occured while generating the diff GIF image.]**\n"
+                )
                 files = []
             embed.add_field(name="URL Changed", value=info + progress)
         else:
@@ -816,16 +928,23 @@ class Progress(commands.Cog):
             temp = tracked_templates.get_template(template_name, ctx.author.id, False)
             if not temp:
                 raise ValueError(f"No template named `{template_name}` found.")
-            if temp.owner_id != ctx.author.id and ctx.author.id != tracked_templates.bot_owner_id:
+            if (
+                temp.owner_id != ctx.author.id
+                and ctx.author.id != tracked_templates.bot_owner_id
+            ):
                 raise ValueError("You cannot delete a template that you don't own.")
             if isinstance(temp, Combo):
                 raise ValueError("You cannot delete the combo.")
         except Exception as e:
             return await ctx.send(f":x: {e}")
 
-        confirm_title = f"⚠️ Are you sure you want to DELETE `{temp.name}` from the tracker?"
+        confirm_title = (
+            f"⚠️ Are you sure you want to DELETE `{temp.name}` from the tracker?"
+        )
         confirm_text = "This is **IRREVERSIBLE**!\nThis template and all its stats will be **FOREVER LOST** if you proceed."
-        confirm_embed = disnake.Embed(title=confirm_title, description=confirm_text, color=0xffcc00)
+        confirm_embed = disnake.Embed(
+            title=confirm_title, description=confirm_text, color=0xFFCC00
+        )
         confirm_view = Confirm(ctx.author)
         confirm_view.message = await ctx.send(embed=confirm_embed, view=confirm_view)
         if isinstance(ctx, disnake.AppCmdInter):
@@ -855,7 +974,7 @@ class Progress(commands.Cog):
             embed = disnake.Embed(
                 title="✅ Template Deleted",
                 description=f"The template `{deleted_temp.name}` and all its stats were successfully deleted.",
-                color=0x3ba55d,
+                color=0x3BA55D,
             )
 
         return await confirm_view.message.edit(embed=embed)
@@ -866,7 +985,7 @@ class Progress(commands.Cog):
         inter: disnake.AppCmdInter,
         template: str = commands.Param(autocomplete=autocomplete_templates),
         last: str = None,
-        groupby: str = commands.Param(default=None, choices=["5min", "hour", "day"])
+        groupby: str = commands.Param(default=None, choices=["5min", "hour", "day"]),
     ):
         """Check the speed graph of a tracked template.
 
@@ -888,7 +1007,9 @@ class Progress(commands.Cog):
         parser = MyParser(add_help=False)
         parser.add_argument("template", action="store")
         parser.add_argument("-last", "-l", action="store", default=None)
-        parser.add_argument("-groupby", "-g", choices=["5min", "hour", "day"], required=False)
+        parser.add_argument(
+            "-groupby", "-g", choices=["5min", "hour", "day"], required=False
+        )
 
         try:
             parsed_args = parser.parse_args(args)
@@ -896,7 +1017,9 @@ class Progress(commands.Cog):
             return await ctx.send(f"❌ {e}")
 
         async with ctx.typing():
-            await self.speed(ctx, parsed_args.template, parsed_args.last, parsed_args.groupby)
+            await self.speed(
+                ctx, parsed_args.template, parsed_args.last, parsed_args.groupby
+            )
 
     async def speed(self, ctx, template_name, last: str = None, groupby: str = None):
         # get the template
@@ -936,7 +1059,7 @@ class Progress(commands.Cog):
         df = df.set_index("datetime")
 
         dates = [d.to_pydatetime() for d in df.index.tolist()]
-        values = df['progress'].tolist()
+        values = df["progress"].tolist()
 
         oldest_progress = values[0]
         oldest_time = dates[0]
@@ -950,7 +1073,7 @@ class Progress(commands.Cog):
 
             if groupby == "5min":
                 dates = [d.to_pydatetime() for d in df.index.tolist()]
-                values = df['progress'].tolist()
+                values = df["progress"].tolist()
                 values.pop(0)
                 oldest_time = dates.pop(0).astimezone(timezone.utc).replace(tzinfo=None)
             else:
@@ -988,8 +1111,8 @@ class Progress(commands.Cog):
             if delta_time == timedelta(0):
                 return await ctx.send(":x: The time frame given is too short.")
             else:
-                speed_px_h = (delta_progress / (delta_time / timedelta(hours=1)))
-                speed_px_d = (delta_progress / (delta_time / timedelta(days=1)))
+                speed_px_h = delta_progress / (delta_time / timedelta(hours=1))
+                speed_px_d = delta_progress / (delta_time / timedelta(days=1))
 
         # make the graph
         if not groupby:
@@ -1009,11 +1132,28 @@ class Progress(commands.Cog):
 
         # make the table
         if groupby:
-            table_data = [[template.name, template.total_placeable, delta_progress, average_speed, min_value, max_value]]
+            table_data = [
+                [
+                    template.name,
+                    template.total_placeable,
+                    delta_progress,
+                    average_speed,
+                    min_value,
+                    max_value,
+                ]
+            ]
             titles = ["Name", "Size", "Progress", f"px/{groupby}", "min", "max"]
             alignments = ["center", "right", "right", "right", "right", "right"]
         else:
-            table_data = [[template.name, template.total_placeable, delta_progress, speed_px_h, speed_px_d]]
+            table_data = [
+                [
+                    template.name,
+                    template.total_placeable,
+                    delta_progress,
+                    speed_px_h,
+                    speed_px_d,
+                ]
+            ]
             titles = ["Name", "Size", "Progress", "px/h", "px/d"]
             alignments = ["center", "right", "right", "right", "right"]
         table_data = [[format_number(c) for c in row] for row in table_data]
@@ -1026,7 +1166,9 @@ class Progress(commands.Cog):
             format_datetime(oldest_time),
             format_datetime(latest_time),
         )
-        embed.description += "• Time: `{}`".format(td_format(delta_time, hide_seconds=True))
+        embed.description += "• Time: `{}`".format(
+            td_format(delta_time, hide_seconds=True)
+        )
 
         # merge the table image and graph image
         res_image = v_concatenate(table_image, graph_image, gap_height=20)
@@ -1037,7 +1179,9 @@ class Progress(commands.Cog):
 
 pos_speed_palette = get_gradient_palette(["#ffffff", "#70dd13", "#31a117"], 101)
 neg_speed_palette = get_gradient_palette(["#ff6474", "#ff0000", "#991107"], 101)
-percentage_palette = get_gradient_palette(["#e21000", "#fca80e", "#fff491", "#beff40", "#31a117"], 101)
+percentage_palette = get_gradient_palette(
+    ["#e21000", "#fca80e", "#fff491", "#beff40", "#31a117"], 101
+)
 
 
 def get_speed_color(speed, max_speed=600, min_speed=-400):

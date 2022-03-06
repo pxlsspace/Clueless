@@ -66,7 +66,9 @@ def format_table(table, column_names, alignments=None, name=None):
     # format the body
     for row in table[1:]:
         if name:
-            str_table += (("+ " if row[1] == name else "  ") + row_format.format(*row) + "\n")
+            str_table += (
+                ("+ " if row[1] == name else "  ") + row_format.format(*row) + "\n"
+            )
         else:
             str_table += " " + row_format.format(*row) + "\n"
 
@@ -78,7 +80,7 @@ def format_number(num):
     >>> format_number(1234567) -> '1 234 567'
     >>> format_number(1234.56789) -> '1 234.56' # round with 2 decimals
     >>> format_number(None) -> '???'
-    >>> format_number('not a number') -> 'not a number' """
+    >>> format_number('not a number') -> 'not a number'"""
     if isinstance(num, int):
         return f"{int(num):,}".replace(",", " ")  # convert to string
     elif isinstance(num, float):
@@ -98,7 +100,9 @@ class ImageNotFoundError(Exception):
         super().__init__(*args)
 
 
-async def get_image_from_message(ctx, url=None, search_last_messages=True, accept_emojis=True):
+async def get_image_from_message(
+    ctx, url=None, search_last_messages=True, accept_emojis=True
+):
     """Get an image from a discord Context or check on images among the 100
     last messages sent in the channel. Return a byte image and the image url"""
     message_limit = 100
@@ -177,7 +181,9 @@ async def get_image(message: disnake.Message, url=None, accept_emojis=True):
     return image_bytes, url
 
 
-def image_to_file(image: Image.Image, filename: str, embed: disnake.Embed = None) -> disnake.File:
+def image_to_file(
+    image: Image.Image, filename: str, embed: disnake.Embed = None
+) -> disnake.File:
     """Convert a pillow Image to a discord File
     attach the file to a discord embed if one is given"""
 
@@ -342,14 +348,18 @@ class Confirm(disnake.ui.View):
     # When the confirm button is pressed, set the inner value to `True`,
     # remove the buttons and stop the View from listening to more input.
     @disnake.ui.button(label="Confirm", style=disnake.ButtonStyle.green)
-    async def confirm(self, button: disnake.ui.Button, interaction: disnake.MessageInteraction):
+    async def confirm(
+        self, button: disnake.ui.Button, interaction: disnake.MessageInteraction
+    ):
         self.value = True
         await interaction.response.edit_message(view=None)
         self.stop()
 
     # This one is similar to the confirmation button except sets the inner value to `False`
     @disnake.ui.button(label="Cancel", style=disnake.ButtonStyle.red)
-    async def cancel(self, button: disnake.ui.Button, interaction: disnake.MessageInteraction):
+    async def cancel(
+        self, button: disnake.ui.Button, interaction: disnake.MessageInteraction
+    ):
         self.value = False
         await interaction.response.edit_message(view=None)
         self.stop()
@@ -357,6 +367,7 @@ class Confirm(disnake.ui.View):
 
 class DropdownView(disnake.ui.View):
     """A view for a dropdown with a cooldown and user check"""
+
     message: disnake.Message
 
     def __init__(self, author, dropdown):

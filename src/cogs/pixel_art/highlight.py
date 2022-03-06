@@ -34,7 +34,7 @@ class Highlight(commands.Cog):
         inter: disnake.AppCmdInter,
         colors: str,
         image: str = None,
-        bgcolor: str = None
+        bgcolor: str = None,
     ):
         """Highlight the selected colors in an image.
 
@@ -135,9 +135,7 @@ async def _highlight(ctx, image_array: np.ndarray, parsed_args):
             elif is_hex_color(bg_color):
                 bg_rgba = ImageColor.getcolor(bg_color, "RGBA")
             else:
-                return await ctx.send(
-                    f"❌ The background color `{bg_color}` is invalid."
-                )
+                return await ctx.send(f"❌ The background color `{bg_color}` is invalid.")
 
     # find the number of pixels non-transparent
     alpha_values = image_array[:, :, 3]
@@ -195,9 +193,7 @@ async def _highlight(ctx, image_array: np.ndarray, parsed_args):
     hex_colors = [d[-1] for d in data]
     data = [d[:-1] for d in data]
     data = [[format_number(c) for c in row] for row in data]
-    table_img = table_to_image(
-        data, ["Color", "Amount", "Percentage"], colors=hex_colors
-    )
+    table_img = table_to_image(data, ["Color", "Amount", "Percentage"], colors=hex_colors)
 
     # set embed color to the top 1 color in colors
     selected_color_int = hex_str_to_int(hex_colors[0])

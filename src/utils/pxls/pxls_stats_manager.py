@@ -6,7 +6,7 @@ import numpy as np
 from utils.utils import get_content
 
 
-class PxlsStatsManager():
+class PxlsStatsManager:
     """A helper to get data from pxls.space/stats"""
 
     def __init__(self, db_conn):

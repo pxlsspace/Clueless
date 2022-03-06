@@ -6,7 +6,11 @@ from io import BytesIO
 from disnake.ext import commands
 from blend_modes import hard_light
 
-from utils.discord_utils import image_to_file, get_image_from_message, autocomplete_palette
+from utils.discord_utils import (
+    image_to_file,
+    get_image_from_message,
+    autocomplete_palette,
+)
 from utils.image.gif_saver import save_transparent_gif
 from utils.image.image_utils import get_pxls_color, is_hex_color
 from utils.image.img_to_gif import img_to_animated_gif
@@ -52,7 +56,9 @@ class Colorify(commands.Cog):
             if is_hex_color(color):
                 rgba = ImageColor.getcolor(color, "RGBA")
             else:
-                return await ctx.send(f"❌ The color `{color}` is invalid.\n(use quotes if the color has 2 or more words)")
+                return await ctx.send(
+                    f"❌ The color `{color}` is invalid.\n(use quotes if the color has 2 or more words)"
+                )
         rgb = rgba[:-1]
 
         # get the image from the message
@@ -113,7 +119,8 @@ class Colorify(commands.Cog):
 
     @commands.slash_command(name="rainbowfy")
     async def _rainbowfy(
-        self, inter: disnake.AppCmdInter,
+        self,
+        inter: disnake.AppCmdInter,
         image: str = None,
         saturation: int = None,
         lightness: int = None,
@@ -216,7 +223,8 @@ def rainbowfy(img: Image.Image, saturation=50, lightness=60) -> Image.Image:
     durations = []
     for i, color in enumerate(palette):
         if is_animated:
-            img.seek(i % img.n_frames)  # to loop in the gif if we exceed the number of frames
+            # loop in the gif if we exceed the number of frames
+            img.seek(i % img.n_frames)
             _img = img.copy()
             durations.append(img.info["duration"])
         else:
@@ -232,7 +240,9 @@ def rainbowfy(img: Image.Image, saturation=50, lightness=60) -> Image.Image:
     return animated_img
 
 
-def get_rainbow_palette(nb_colors: int, saturation: float = 1, lightness: float = 1) -> list:
+def get_rainbow_palette(
+    nb_colors: int, saturation: float = 1, lightness: float = 1
+) -> list:
     """Get a list of rgb colors with a linear hue (saturation and lightness
     values should be between 0 and 1)"""
     palette = []
@@ -246,7 +256,7 @@ def get_rainbow_palette(nb_colors: int, saturation: float = 1, lightness: float 
 
 def colorify(img: Image.Image, color: tuple) -> Image.Image:
     """Blend the image with a solid color image with the given color image.
-    The blend mode used is 'hard light' """
+    The blend mode used is 'hard light'"""
 
     # background image
     img = img.convert("RGBA")

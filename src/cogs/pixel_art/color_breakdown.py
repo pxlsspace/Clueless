@@ -56,9 +56,7 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
     nb_pixels = input_image.size[0] * input_image.size[1]
 
     # get the colors table
-    image_colors = await bot.loop.run_in_executor(
-        None, input_image.getcolors, nb_pixels
-    )
+    image_colors = await bot.loop.run_in_executor(None, input_image.getcolors, nb_pixels)
     if image_colors is None:
         return await ctx.send("❌ Unsupported format or image mode.")
 
@@ -70,7 +68,7 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
             embed=disnake.Embed(
                 title="❌ Too many colors.",
                 description=f"This image has way too many colors! (**{format_number(nb_colors)}**)",
-                color=disnake.Color.red()
+                color=disnake.Color.red(),
             )
         )
     # group by rgb color and get the colors names
@@ -82,17 +80,20 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
     values = [pxls_color[1] for pxls_color in pxls_colors]
     total_amount = sum(values)
     colors = [pxls_color[2] for pxls_color in pxls_colors]
-    percentages = [format_number((pxls_color[1] / total_amount) * 100) + " %" for pxls_color in pxls_colors]
+    percentages = [
+        format_number((pxls_color[1] / total_amount) * 100) + " %"
+        for pxls_color in pxls_colors
+    ]
 
     data = [[labels[i], values[i], percentages[i]] for i in range(len(pxls_colors))]
 
     def crop_data(nb_line):
         """keep the `nb_line` first values of data/colors
         and add "other" at the end with the right values"""
-        data_cropped = data[:nb_line - 1]
-        colors_cropped = colors[:nb_line - 1]
+        data_cropped = data[: nb_line - 1]
+        colors_cropped = colors[: nb_line - 1]
 
-        rest = data[nb_line - 1:]
+        rest = data[nb_line - 1 :]
         rest_amount = sum([c[1] for c in rest])
         rest_percentage = format_number((rest_amount / total_amount) * 100) + " %"
 
@@ -136,9 +137,7 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
     labels_chart = [d[2] for d in data_chart]  # show the correct percentages as labels
     values_chart = [d[1] for d in data_chart]
     piechart = get_piechart(labels_chart, values_chart, colors_chart)
-    piechart_img = await bot.loop.run_in_executor(
-        None, fig2img, piechart, 600, 600, 1.5
-    )
+    piechart_img = await bot.loop.run_in_executor(None, fig2img, piechart, 600, 600, 1.5)
 
     # create the message with a header
     header = f"""• Number of colors: `{format_number(nb_colors)}`
@@ -147,14 +146,14 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
     header = inspect.cleandoc(header) + "\n"
 
     # concatenate the pie chart and table image
-    res_img = await bot.loop.run_in_executor(
-        None, h_concatenate, table_img, piechart_img
-    )
+    res_img = await bot.loop.run_in_executor(None, h_concatenate, table_img, piechart_img)
 
     # send an embed with the color table, the pie chart
     emb = disnake.Embed(title=title, description=header, color=hex_str_to_int(colors[0]))
     if len(data) > pie_chart_limit:
-        emb.set_footer(text=f"Too many colors - Showing the top {pie_chart_limit} colors in the chart.")
+        emb.set_footer(
+            text=f"Too many colors - Showing the top {pie_chart_limit} colors in the chart."
+        )
     file = await bot.loop.run_in_executor(
         None, image_to_file, res_img, "color_breakdown.png", emb
     )

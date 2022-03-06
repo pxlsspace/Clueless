@@ -6,7 +6,12 @@ from PIL import Image, ImageEnhance
 
 
 from utils.pxls.cooldown import get_best_possible, get_cd
-from utils.discord_utils import autocomplete_pxls_name, format_number, image_to_file, STATUS_EMOJIS
+from utils.discord_utils import (
+    autocomplete_pxls_name,
+    format_number,
+    image_to_file,
+    STATUS_EMOJIS,
+)
 from utils.setup import stats, db_conn, db_users, db_stats
 from utils.time_converter import format_datetime, round_minutes_down, td_format
 from utils.arguments_parser import MyParser
@@ -72,7 +77,7 @@ class PxlsStats(commands.Cog):
         average_cd = sum(cooldowns) / len(cooldowns)
 
         # calculate the filling speed
-        canvas_time = (datetime.utcnow() - start_date) / timedelta(days=1)  # canvas uptime in days
+        canvas_time = (datetime.utcnow() - start_date) / timedelta(days=1)
         canvas_fill_speed = total_non_virgin / canvas_time  # in px/day
 
         # calculate the ETA with the filling speed in the last 2 days
@@ -83,9 +88,11 @@ class PxlsStats(commands.Cog):
         )
         record = await db_stats.find_record(time_to_search, canvas_code)
         record_time = round_minutes_down(record["datetime"].replace(tzinfo=timezone.utc))
-        sql = "SELECT SUM(amount_placed) AS non_virgin FROM color_stat WHERE record_id = ?"
+        sql = (
+            "SELECT SUM(amount_placed) AS non_virgin FROM color_stat WHERE record_id = ?"
+        )
         non_virgin_interval = await db_stats.db.sql_select(sql, record["record_id"])
-        time_diff = (round_minutes_down(last_updated) - record_time)
+        time_diff = round_minutes_down(last_updated) - record_time
         filling_progress = total_non_virgin - non_virgin_interval[0]["non_virgin"]
         canvas_fill_speed_interval = filling_progress / (time_diff / timedelta(days=1))
         pixels_until_goal = (total_placeable * goal / 100) - total_non_virgin
@@ -112,9 +119,7 @@ class PxlsStats(commands.Cog):
         info_text = "• Canvas Code: `{}`\n• Start Date: {}\n• Time Elapsed: {}\n• Dimensions: `{} x {}`\n• Total Pixels: `{}`/`{}` (`{}%` placeable)\n".format(
             canvas_code,
             format_datetime(start_date),
-            td_format(
-                datetime.utcnow() - start_date, hide_seconds=True, max_unit="day"
-            ),
+            td_format(datetime.utcnow() - start_date, hide_seconds=True, max_unit="day"),
             board.shape[1],
             board.shape[0],
             format_number(int(total_placeable)),
@@ -172,7 +177,7 @@ class PxlsStats(commands.Cog):
     async def _userinfo(
         self,
         inter: disnake.AppCmdInter,
-        username: str = commands.Param(default=None, autocomplete=autocomplete_pxls_name)
+        username: str = commands.Param(default=None, autocomplete=autocomplete_pxls_name),
     ):
         """Show some information about a pxls user.
 
@@ -392,7 +397,9 @@ class PxlsStats(commands.Cog):
         )
         emb.add_field(name="**Canvas stats**", value=canvas_text, inline=True)
         emb.add_field(name="**All-time stats**", value=alltime_text, inline=True)
-        emb.add_field(name="**Recent activity**", value=recent_activity_text, inline=False)
+        emb.add_field(
+            name="**Recent activity**", value=recent_activity_text, inline=False
+        )
         await ctx.send(embed=emb)
 
     choices = ["heatmap", "virginmap", "nonvirgin", "initial"]
@@ -438,10 +445,18 @@ class PxlsStats(commands.Cog):
     async def board(self, ctx, *args):
         # parse the args
         parser = MyParser(add_help=False)
-        parser.add_argument("-heatmap", action="store", default=None, nargs="*", required=False)
-        parser.add_argument("-nonvirgin", action="store_true", default=False, required=False)
-        parser.add_argument("-virginmap", action="store_true", default=False, required=False)
-        parser.add_argument("-initial", action="store_true", default=False, required=False)
+        parser.add_argument(
+            "-heatmap", action="store", default=None, nargs="*", required=False
+        )
+        parser.add_argument(
+            "-nonvirgin", action="store_true", default=False, required=False
+        )
+        parser.add_argument(
+            "-virginmap", action="store_true", default=False, required=False
+        )
+        parser.add_argument(
+            "-initial", action="store_true", default=False, required=False
+        )
 
         try:
             parsed_args = parser.parse_args(args)
@@ -562,7 +577,7 @@ class PxlsStats(commands.Cog):
         inter: disnake.AppCmdInter,
         colors: str,
         bgcolor: str = None,
-        placed: bool = False
+        placed: bool = False,
     ):
         """Highlight the selected colors on the canvas.
 

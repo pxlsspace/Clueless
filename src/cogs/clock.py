@@ -296,7 +296,12 @@ class Clock(commands.Cog):
         # update the combo and save its progress
         tracked_templates.update_combo(self.bot.user.id, canvas_code)
         combo_progress = tracked_templates.combo.update_progress()
-        if await db_templates.create_combo_stat(tracked_templates.combo, dt, combo_progress) is None:
+        if (
+            await db_templates.create_combo_stat(
+                tracked_templates.combo, dt, combo_progress
+            )
+            is None
+        ):
             logger.warning("Combo stats could not saved.")
 
 

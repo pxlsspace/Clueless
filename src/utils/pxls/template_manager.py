@@ -25,8 +25,17 @@ logger = get_logger("template_manager")
 tracker_logger = get_logger("template_tracker", file="templates.log", in_console=False)
 
 
-class Template():
-    def __init__(self, url: str, stylized_url: str, title: str, image_array: np.ndarray, ox: int, oy: int, canvas_code) -> None:
+class Template:
+    def __init__(
+        self,
+        url: str,
+        stylized_url: str,
+        title: str,
+        image_array: np.ndarray,
+        ox: int,
+        oy: int,
+        canvas_code,
+    ) -> None:
         # template metadata
         self.url = url
         self.stylized_url = stylized_url
@@ -40,7 +49,9 @@ class Template():
         self.name = None
 
         # template image and array
-        self.palettized_array: np.ndarray = reduce(image_array, get_rgba_palette())  # array of palette indexes
+        self.palettized_array: np.ndarray = reduce(
+            image_array, get_rgba_palette()
+        )  # array of palette indexes
 
         # template size and dimensions
         self.width = self.palettized_array.shape[1]
@@ -96,7 +107,9 @@ class Template():
         x1 = max(0, min(array.shape[1], self.ox + self.width))
         _cropped_array = array[y0:y1, x0:x1].copy()
         cropped_array = np.full_like(self.palettized_array, 255)
-        cropped_array[y0 - self.oy : y1 - self.oy, x0 - self.ox : x1 - self.ox] = _cropped_array
+        cropped_array[
+            y0 - self.oy : y1 - self.oy, x0 - self.ox : x1 - self.ox
+        ] = _cropped_array
 
         return cropped_array
 
@@ -113,10 +126,14 @@ class Template():
         if self.placed_mask is None:
             self.update_progress()
         progress_array = np.zeros((self.height, self.width, 4), dtype=np.uint8)
-        progress_array[self.placed_mask] = [0, 255, 0, 255 * opacity]  # correct pixels = green
-        progress_array[~self.placed_mask] = [255, 0, 0, 255 * opacity]  # incorrect pixels = red
-        progress_array[~self.placeable_mask] = [0, 0, 255, 255]  # not placeable = blue
-        progress_array[self.palettized_array == 255] = [0, 0, 0, 0]  # outside of the template = transparent
+        # correct pixels = green
+        progress_array[self.placed_mask] = [0, 255, 0, 255 * opacity]
+        # incorrect pixels = red
+        progress_array[~self.placed_mask] = [255, 0, 0, 255 * opacity]
+        # not placeable = blue
+        progress_array[~self.placeable_mask] = [0, 0, 255, 255]
+        # outside of the template = transparent
+        progress_array[self.palettized_array == 255] = [0, 0, 0, 0]
         progress_image = Image.fromarray(progress_array)
 
         # layer the board under the progress image if the progress opacity is less than 1
@@ -170,11 +187,18 @@ class Template():
         if eta <= 0:
             eta = now_progress / speed
             if as_string:
-                return "-" + td_format(timedelta(hours=-eta), short_format=True, hide_seconds=True, max_unit="day")
+                return "-" + td_format(
+                    timedelta(hours=-eta),
+                    short_format=True,
+                    hide_seconds=True,
+                    max_unit="day",
+                )
             else:
                 return timedelta(hours=eta)
         if as_string:
-            return td_format(timedelta(hours=eta), short_format=True, hide_seconds=True, max_unit="day")
+            return td_format(
+                timedelta(hours=eta), short_format=True, hide_seconds=True, max_unit="day"
+            )
         else:
             return timedelta(hours=eta)
 
@@ -218,21 +242,24 @@ class Template():
         """Find the coordinates at which there are the most pixels to placed
 
         chunk_size: the size of the chunks we're dividing the template into"""
+
         def to_chunks(arr, nrows, ncols):
             """divide arr into chunks of size nrows x ncols"""
             h, w = arr.shape
             assert h % nrows == 0, f"{h} rows is not evenly divisible by {nrows}"
             assert w % ncols == 0, f"{w} cols is not evenly divisible by {ncols}"
-            return (arr.reshape(h // nrows, nrows, -1, ncols)
-                    .swapaxes(1, 2)
-                    .reshape(-1, nrows, ncols))
+            return (
+                arr.reshape(h // nrows, nrows, -1, ncols)
+                .swapaxes(1, 2)
+                .reshape(-1, nrows, ncols)
+            )
 
         # mask with all the pixels to place
         togo_mask = np.logical_and(~self.placed_mask, self.placeable_mask)
 
         # pad the mask to be dividable by the block size
-        right_pad = (chunk_size - togo_mask.shape[1] % chunk_size)
-        bottom_pad = (chunk_size - togo_mask.shape[0] % chunk_size)
+        right_pad = chunk_size - togo_mask.shape[1] % chunk_size
+        bottom_pad = chunk_size - togo_mask.shape[0] % chunk_size
         togo_mask = np.pad(togo_mask, [(0, bottom_pad), (0, right_pad)])
 
         # convert to a list of chunk size sub-arrays
@@ -245,19 +272,36 @@ class Template():
             return (None, None)
 
         # convert the chunk index to coords in the the template
-        highest_chunk_coords = np.unravel_index(max_index, [c // chunk_size for c in togo_mask.shape])
+        highest_chunk_coords = np.unravel_index(
+            max_index, [c // chunk_size for c in togo_mask.shape]
+        )
 
         # get the coordinate at the center of the block
-        coords_in_template = [(c * chunk_size) + chunk_size // 2 for c in highest_chunk_coords]
+        coords_in_template = [
+            (c * chunk_size) + chunk_size // 2 for c in highest_chunk_coords
+        ]
 
         # add the template ox and oy to get the final coords in the canvas
-        coords_in_canvas = (coords_in_template[1] + self.ox, coords_in_template[0] + self.oy)
+        coords_in_canvas = (
+            coords_in_template[1] + self.ox,
+            coords_in_template[0] + self.oy,
+        )
         return coords_in_canvas
 
 
 class Combo(Template):
     """Extension of template to contain a combo template"""
-    def __init__(self, title: str, palettized_array: np.ndarray, ox: int, oy: int, name, bot_id, canvas_code) -> None:
+
+    def __init__(
+        self,
+        title: str,
+        palettized_array: np.ndarray,
+        ox: int,
+        oy: int,
+        name,
+        bot_id,
+        canvas_code,
+    ) -> None:
         # template metadata
         self.title = title
         self.ox = ox
@@ -285,8 +329,9 @@ class Combo(Template):
         self.current_progress = None
 
 
-class TemplateManager():
+class TemplateManager:
     """A low level object with a list of tracked templates"""
+
     def __init__(self) -> None:
         self.list: list[Template] = []
         self.bot_owner_id: int = None
@@ -319,14 +364,18 @@ class TemplateManager():
 
         Raise ValueError if invalid name or return the name"""
         if not re.match(r"^[A-Za-z0-9_-]*$", name):
-            raise ValueError("The template name can only contain letters, numbers, hyphens (`-`) and underscores (`_`).")
+            raise ValueError(
+                "The template name can only contain letters, numbers, hyphens (`-`) and underscores (`_`)."
+            )
         if len(name) < 2 or len(name) > 40:
             raise ValueError("The template name must be between 2 and 40 characters.")
         if name == "@combo":
             raise ValueError("This name is reserved for the @combo template.")
         return name
 
-    async def save(self, template: Template, name: str, owner: disnake.User, hidden: bool = False):
+    async def save(
+        self, template: Template, name: str, owner: disnake.User, hidden: bool = False
+    ):
         """Save the template:
         - as a template object in the tracked_templates list
         - as a database entry in the database
@@ -343,14 +392,20 @@ class TemplateManager():
         template.name = self.check_valid_name(template.name)
 
         # check duplicate template names
-        same_name_template = self.get_template(template.name, template.owner_id, template.hidden)
+        same_name_template = self.get_template(
+            template.name, template.owner_id, template.hidden
+        )
         if same_name_template:
-            raise ValueError(f"There is already a template with the name `{template.name}`.")
+            raise ValueError(
+                f"There is already a template with the name `{template.name}`."
+            )
 
         # check duplicate images/coords
         same_image_template = self.check_duplicate_template(template)
         if same_image_template:
-            raise ValueError(f"There is already a template with the same image and coords named `{same_image_template.name}`.")
+            raise ValueError(
+                f"There is already a template with the same image and coords named `{same_image_template.name}`."
+            )
 
         # save in db
         await db_templates.create_template(template)
@@ -389,10 +444,14 @@ class TemplateManager():
         await db_templates.delete_template(temp)
         self.list.remove(temp)
         self.update_combo()
-        tracker_logger.info(f"Template deleted: '{temp.name}' by {command_user} ({command_user.id})")
+        tracker_logger.info(
+            f"Template deleted: '{temp.name}' by {command_user} ({command_user.id})"
+        )
         return temp
 
-    async def update_template(self, current_name, command_user, new_url=None, new_name=None, new_owner=None):
+    async def update_template(
+        self, current_name, command_user, new_url=None, new_name=None, new_owner=None
+    ):
         command_user_id = command_user.id
         old_temp = self.get_template(current_name, command_user_id, False)
         if not old_temp:
@@ -405,10 +464,14 @@ class TemplateManager():
         if new_url:
             new_temp = await get_template_from_url(new_url)
             if new_temp.total_placeable == 0:
-                raise ValueError("The template seems to be outside the canvas, make sure it's correctly positioned.")
+                raise ValueError(
+                    "The template seems to be outside the canvas, make sure it's correctly positioned."
+                )
             temp_same_image = self.check_duplicate_template(new_temp)
             if temp_same_image:
-                raise ValueError(f"There is already a template with the same image and coords named `{temp_same_image.name}`.")
+                raise ValueError(
+                    f"There is already a template with the same image and coords named `{temp_same_image.name}`."
+                )
             new_temp.name = old_temp.name
             new_temp.owner_id = old_temp.owner_id
             new_temp.hidden = old_temp.hidden
@@ -421,7 +484,9 @@ class TemplateManager():
             # check duplicate name
             temp_with_same_name = self.get_template(new_name)
             if temp_with_same_name and temp_with_same_name != old_temp:
-                raise ValueError(f"There is already a template with the name `{new_name}`.")
+                raise ValueError(
+                    f"There is already a template with the name `{new_name}`."
+                )
             new_temp.name = new_name
         if new_owner:
             new_owner_id = new_owner.id
@@ -448,7 +513,9 @@ class TemplateManager():
                 command_user.id,
                 " URL changed" if new_url else "",
                 f" name changed (new name: {new_temp.name})" if new_name else "",
-                f" owner changed (new owner: {new_owner} ({new_owner.id}))" if new_owner else "",
+                f" owner changed (new owner: {new_owner} ({new_owner.id}))"
+                if new_owner
+                else "",
             )
         )
         return old_temp, new_temp
@@ -480,25 +547,32 @@ class TemplateManager():
                     temp.canvas_code = canvas_code
                     self.list.append(temp)
                     count += 1
-                    logger.debug(f"template {temp.name} loaded ({count}/{len(db_list)-1})")
+                    logger.debug(
+                        f"template {temp.name} loaded ({count}/{len(db_list)-1})"
+                    )
                 except Exception as e:
                     logger.warn("Failed to load template {}: {}".format(name, e))
             else:
                 has_combo = True
         end = time.time()
         nb_templates = len(db_list) - (1 if has_combo else 0)
-        logger.info(f"{count}/{nb_templates} Templates loaded (time: {round(end-start, 2)}s)")
+        logger.info(
+            f"{count}/{nb_templates} Templates loaded (time: {round(end-start, 2)}s)"
+        )
 
     def make_combo_image(self) -> np.ndarray:
         """Make an index array combining all the template arrays in self.list"""
         combo = np.full((stats.board_array.shape[0], stats.board_array.shape[1]), 255)
-        for template in self.list[::-1]:  # reverse order to put the new templates at the bottom
+        # reverse order to put the new templates at the bottom
+        for template in self.list[::-1]:
             ox = template.ox
             oy = template.oy
             # paste the template on the combo image but exclude transparent pixels
             current_combo_at_temp_coords = template.crop_array_to_template(combo)
             template_mask = template.palettized_array != 255
-            current_combo_at_temp_coords[template_mask] = template.palettized_array[template_mask]
+            current_combo_at_temp_coords[template_mask] = template.palettized_array[
+                template_mask
+            ]
             paste(combo, current_combo_at_temp_coords, (oy, ox))
         return combo
 
@@ -507,7 +581,15 @@ class TemplateManager():
         palettized_array = self.make_combo_image()
         if self.combo is None:
             if bot_id and canvas_code:
-                self.combo = Combo("@clueless-combo", palettized_array, 0, 0, "@combo", bot_id, canvas_code)
+                self.combo = Combo(
+                    "@clueless-combo",
+                    palettized_array,
+                    0,
+                    0,
+                    "@combo",
+                    bot_id,
+                    canvas_code,
+                )
             else:
                 raise Exception("Cannot init the combo with empty bot_id or canvas_code")
         else:
@@ -598,7 +680,15 @@ async def get_template_from_url(template_url: str) -> Template:
         detemp_array = detemplatize(template_array, true_width)
         ox = int(params["ox"])
         oy = int(params["oy"])
-        return Template(template_url, image_url, params.get("title"), detemp_array, ox, oy, canvas_code)
+        return Template(
+            template_url,
+            image_url,
+            params.get("title"),
+            detemp_array,
+            ox,
+            oy,
+            canvas_code,
+        )
 
     loop = asyncio.get_running_loop()
     # run this part of the code in executor to make it not blocking
@@ -633,7 +723,9 @@ def crop_array_to_shape(array1, height, width, oy, ox):
     return cropped_array
 
 
-def make_before_after_gif(old_temp: Template, new_temp: Template, extra_padding=5, with_text=True) -> Image.Image:
+def make_before_after_gif(
+    old_temp: Template, new_temp: Template, extra_padding=5, with_text=True
+) -> Image.Image:
     """
     Make a before/after GIF comparing 2 templates images layered over the canvas
 
@@ -673,7 +765,9 @@ def make_before_after_gif(old_temp: Template, new_temp: Template, extra_padding=
     max_width = max_x1 - min_x0
 
     # crop the current canvas to the result images size
-    background_before = crop_array_to_shape(stats.board_array, max_height, max_width, min_y0, min_x0)
+    background_before = crop_array_to_shape(
+        stats.board_array, max_height, max_width, min_y0, min_x0
+    )
     background_before = stats.palettize_array(background_before)
     background_after = background_before.copy()
 
@@ -686,7 +780,9 @@ def make_before_after_gif(old_temp: Template, new_temp: Template, extra_padding=
         (old_y0_offset, old_y1_offset),
         (old_x0_offset, old_x1_offset),
     ]
-    array_before = np.pad(old_temp.palettized_array, old_temp_padding, constant_values=255)
+    array_before = np.pad(
+        old_temp.palettized_array, old_temp_padding, constant_values=255
+    )
     array_before = stats.palettize_array(array_before)
 
     new_y0_offset = new_temp_y0 - min_y0

@@ -4,7 +4,7 @@ import os
 DB_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "database.db")
 
 
-class DbConnection():
+class DbConnection:
     def __init__(self) -> None:
         self.db_file: str = DB_FILE
         self.conn = None

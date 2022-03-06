@@ -161,8 +161,13 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             # canvas_opt = "canvas" # only get the canvas stats when sorting by speed
 
         # fetch the leaderboard from the database
-        (canvas, last_date, datetime1, datetime2, ldb) = await db_stats.get_leaderboard_between(
-            date1, date2, canvas_opt, sort)
+        (
+            canvas,
+            last_date,
+            datetime1,
+            datetime2,
+            ldb,
+        ) = await db_stats.get_leaderboard_between(date1, date2, canvas_opt, sort)
         # change the canvas opt if sort by speed on time frame on the current canvas
         canvas_opt = canvas
 
@@ -175,7 +180,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             (rank_low, rank_high) = ranks_opt
             username = []
             try:
-                ldb = ldb[rank_low - 1:rank_high]
+                ldb = ldb[rank_low - 1 : rank_high]
             except IndexError:
                 return await ctx.send(
                     "❌ Can't find values between these ranks in the leaderboard."
@@ -360,7 +365,9 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                     td_format(diff_time),
                 )
             # calculate the best possbile amount in the time frame
-            best_possible, average_cooldown = await get_best_possible(datetime1, datetime2)
+            best_possible, average_cooldown = await get_best_possible(
+                datetime1, datetime2
+            )
             text += f"• Average cooldown: `{round(average_cooldown,2)}` seconds\n"
             text += f"• Best possible (without stack): ~`{format_number(best_possible)}` pixels.\n"
 

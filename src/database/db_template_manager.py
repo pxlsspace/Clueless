@@ -1,7 +1,9 @@
 from database.db_connection import DbConnection
 from datetime import datetime, timezone
+
 # This import is only necessary for type hints
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from utils.pxls.template_manager import Template, Combo
 from utils.log import get_logger
@@ -9,7 +11,7 @@ from utils.log import get_logger
 logger = get_logger(__name__)
 
 
-class DbTemplateManager():
+class DbTemplateManager:
     """A class to manage templates in the database"""
 
     def __init__(self, db_conn: DbConnection) -> None:
@@ -44,7 +46,9 @@ class DbTemplateManager():
     async def get_template_id(self, t: "Template"):
         """Return the template ID matching with the args from the database, Return None if it doesn't exist"""
         sql = """SELECT id FROM template WHERE name = ? AND canvas_code = ? and owner_id = ? and hidden = ?"""
-        rows = await self.db.sql_select(sql, (t.name, t.canvas_code, t.owner_id, t.hidden))
+        rows = await self.db.sql_select(
+            sql, (t.name, t.canvas_code, t.owner_id, t.hidden)
+        )
         if not rows:
             return None
         else:
@@ -56,7 +60,9 @@ class DbTemplateManager():
         if template_id:
             return None
         sql = "INSERT INTO template(name, url, canvas_code, owner_id, hidden) VALUES (?, ?, ?, ?, ?)"
-        return await self.db.sql_insert(sql, (t.name, t.url, t.canvas_code, t.owner_id, t.hidden))
+        return await self.db.sql_insert(
+            sql, (t.name, t.url, t.canvas_code, t.owner_id, t.hidden)
+        )
 
     async def create_template_stat(self, template: "Template", datetime, progress):
         """Add a template stat in the database"""
@@ -94,7 +100,7 @@ class DbTemplateManager():
         return await self.db.sql_select(sql, canvas_code)
 
     async def get_template_progress(self, template: "Template", datetime):
-        """ Get the progress of a template at a given datetime"""
+        """Get the progress of a template at a given datetime"""
         sql = """
             SELECT *, min(abs(JulianDay(datetime) - JulianDay(?)))*24*3600 as diff_with_time
             FROM template_stat
@@ -104,14 +110,23 @@ class DbTemplateManager():
                 WHERE name = ? AND canvas_code = ? and owner_id = ? and hidden = ?
             )
         """
-        res = await self.db.sql_select(sql, (datetime, template.name, template.canvas_code, template.owner_id, template.hidden))
+        res = await self.db.sql_select(
+            sql,
+            (
+                datetime,
+                template.name,
+                template.canvas_code,
+                template.owner_id,
+                template.hidden,
+            ),
+        )
         if not res or all([r is None for r in list(res[0])]):
             return None
         else:
             return res[0]
 
     async def get_template_oldest_progress(self, template: "Template"):
-        """ Get the progress of a template at a given datetime"""
+        """Get the progress of a template at a given datetime"""
         template_id = await self.get_template_id(template)
         sql = """
             SELECT *, min(abs(JulianDay(datetime) - JulianDay(?)))*24*3600 as diff_with_time

@@ -31,7 +31,9 @@ class PxlsSpeed(commands.Cog):
         usernames: str = None,
         last: str = None,
         canvas: bool = False,
-        groupby: str = commands.Param(default=None, choices=["hour", "day", "week", "month", "canvas"]),
+        groupby: str = commands.Param(
+            default=None, choices=["hour", "day", "week", "month", "canvas"]
+        ),
         progress: bool = False,
         before: str = None,
         after: str = None,
@@ -147,12 +149,14 @@ class PxlsSpeed(commands.Cog):
         # get the data we need
         if groupby_opt and groupby_opt != "canvas":
             (past_time, now_time, stats) = await db_stats.get_grouped_stats_history(
-                names, old_time, recent_time, groupby_opt, canvas_opt)
+                names, old_time, recent_time, groupby_opt, canvas_opt
+            )
         elif groupby_opt == "canvas":
             (past_time, now_time, stats) = await db_stats.get_stats_per_canvas(names)
         else:
             (past_time, now_time, stats) = await db_stats.get_stats_history(
-                names, old_time, recent_time, canvas_opt)
+                names, old_time, recent_time, canvas_opt
+            )
 
         # check that we found data
         if len(stats) == 0:
@@ -223,7 +227,9 @@ class PxlsSpeed(commands.Cog):
                             stat["first_datetime"], "%Y-%m-%d %H:%M:%S"
                         )
                         last_dt = first_dt + timedelta(days=6)
-                        week_dates = f"{first_dt.strftime('%d-%b')} - {last_dt.strftime('%d-%b')}"
+                        week_dates = (
+                            f"{first_dt.strftime('%d-%b')} - {last_dt.strftime('%d-%b')}"
+                        )
                         dates.append(week_dates)
                     user_timezone = None
 
@@ -344,7 +350,9 @@ class PxlsSpeed(commands.Cog):
         )
         description += f"• Time: `{diff_time_str}`\n"
         description += f"• Average cooldown: `{round(average_cooldown,2)}` seconds\n"
-        description += f"• Best possible (without stack): ~`{format_number(best_possible)}` pixels."
+        description += (
+            f"• Best possible (without stack): ~`{format_number(best_possible)}` pixels."
+        )
         emb = disnake.Embed(color=hex_str_to_int(theme.get_palette(1)[0]))
         emb.add_field(name=title, value=description)
 
@@ -447,9 +455,7 @@ def get_grouped_graph(stats_list: list, title, theme, user_timezone=None):
     fig.update_yaxes(rangemode="tozero")
 
     # the title displays the user if there is only 1 in the user_list
-    fig.update_layout(
-        title="<span style='color:{};'>{}</span>".format(colors[0], title)
-    )
+    fig.update_layout(title="<span style='color:{};'>{}</span>".format(colors[0], title))
 
     for i, user in enumerate(stats_list):
         # get the data

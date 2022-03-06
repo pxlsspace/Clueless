@@ -86,8 +86,7 @@ class Blacklist(commands.Cog):
             text = "**Blacklisted users:**\n"
             for user_id in blacklisted_users:
                 text += "\t• <@{}>\n".format(user_id)
-            no_user_mention = disnake.AllowedMentions(users=False)  # to avoid pinging user
-            await ctx.send(text, allowed_mentions=no_user_mention)
+            await ctx.send(text)
 
     @commands.group(
         hidden=True,
@@ -108,11 +107,7 @@ class Blacklist(commands.Cog):
                 f"The current blacklist role is invalid, use `{ctx.prefix}{ctx.command} <role>`"
             )
         else:
-            no_role_mention = disnake.AllowedMentions(roles=False)  # to avoid pinging the role
-            return await ctx.send(
-                f"Current blacklist role: <@&{current_role.id}>.",
-                allowed_mentions=no_role_mention,
-            )
+            return await ctx.send(f"Current blacklist role: <@&{current_role.id}>.")
 
     @roleblacklist.command(
         description="Add a blacklist role, any user with this role won't be able to use the bot.",
@@ -125,10 +120,7 @@ class Blacklist(commands.Cog):
         except RoleNotFound as e:
             return await ctx.send(f"❌ {e}")
         await db_servers.update_blacklist_role(ctx.guild.id, role.id)
-        no_role_mention = disnake.AllowedMentions(roles=False)  # to avoid pinging the role
-        await ctx.send(
-            f"✅ Blacklist role set to <@&{role.id}>.", allowed_mentions=no_role_mention
-        )
+        await ctx.send(f"✅ Blacklist role set to <@&{role.id}>.")
 
     @roleblacklist.command(description="Remove the current blacklist role.")
     async def remove(self, ctx):

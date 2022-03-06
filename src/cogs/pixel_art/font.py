@@ -21,8 +21,12 @@ class Font(commands.Cog):
         inter: disnake.AppCmdInter,
         text: str,
         font: str = commands.Param(choices=fonts, default=None),
-        color: str = commands.Param(autocomplete=autocomplete_palette_with_none, default=None),
-        bgcolor: str = commands.Param(autocomplete=autocomplete_palette_with_none, default=None),
+        color: str = commands.Param(
+            autocomplete=autocomplete_palette_with_none, default=None
+        ),
+        bgcolor: str = commands.Param(
+            autocomplete=autocomplete_palette_with_none, default=None
+        ),
     ):
         """Convert a text to pixel art.
 

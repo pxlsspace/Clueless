@@ -6,15 +6,21 @@ from dotenv import load_dotenv
 from datetime import timezone
 
 from utils.pxls.template_manager import TemplateManager
-from utils.setup import DEFAULT_PREFIX, db_stats, db_servers, db_users, db_templates, GUILD_IDS
+from utils.setup import (
+    DEFAULT_PREFIX,
+    db_stats,
+    db_servers,
+    db_users,
+    db_templates,
+    GUILD_IDS,
+)
 from utils.log import get_logger, setup_loggers, close_loggers
 
 
 load_dotenv()
 intents = disnake.Intents.all()
 activity = disnake.Activity(
-    type=disnake.ActivityType.watching,
-    name="you placing those pixels 👀"
+    type=disnake.ActivityType.watching, name="you placing those pixels 👀"
 )
 allowed_mentions = disnake.AllowedMentions(
     everyone=False,
@@ -127,7 +133,9 @@ async def on_slash_command_error(ctx, error):
 
 @bot.event
 async def on_command_error(ctx, error):
-    if isinstance(error, commands.CommandNotFound) or isinstance(error, commands.DisabledCommand):
+    if isinstance(error, commands.CommandNotFound) or isinstance(
+        error, commands.DisabledCommand
+    ):
         return
     slash_command = isinstance(ctx, disnake.ApplicationCommandInteraction)
     if slash_command:
@@ -242,7 +250,9 @@ async def on_message(message):
         server = await db_servers.get_server(message.guild.id)
         if server is None:
             await db_servers.create_server(message.guild.id, DEFAULT_PREFIX)
-            logger.info("joined a new server: {0.name} (id: {0.id})".format(message.guild))
+            logger.info(
+                "joined a new server: {0.name} (id: {0.id})".format(message.guild)
+            )
 
         # check if user has a blacklisted role
         blacklist_role_id = await db_servers.get_blacklist_role(message.guild.id)

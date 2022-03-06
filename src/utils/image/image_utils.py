@@ -71,7 +71,10 @@ def add_outline(original_image, color, full=True, outline_width=1, crop=True):
     original_image = original_image.convert("RGBA")
     background = Image.new(
         "RGBA",
-        (original_image.size[0] + outline_width * 2, original_image.size[1] + outline_width * 2),
+        (
+            original_image.size[0] + outline_width * 2,
+            original_image.size[1] + outline_width * 2,
+        ),
         (0, 0, 0, 0),
     )
     if len(color) == 3:
@@ -102,8 +105,8 @@ def add_outline(original_image, color, full=True, outline_width=1, crop=True):
     image = Image.fromarray(image_array)
     outline_mask = np.full((background.height, background.width), False)
     outline_mask[
-        outline_width:outline_width + image_array.shape[0],
-        outline_width:outline_width + image_array.shape[1]
+        outline_width : outline_width + image_array.shape[0],
+        outline_width : outline_width + image_array.shape[1],
     ] = mask
     bg_array = np.array(background)
     bg_array[outline_mask] = [0, 0, 0, 0]
@@ -126,7 +129,9 @@ def remove_white_space(original_image):
     if r.any():
         m, n = mask.shape
         c = mask.any(0)
-        out = image_array[r.argmax() : m - r[::-1].argmax(), c.argmax() : n - c[::-1].argmax()]
+        out = image_array[
+            r.argmax() : m - r[::-1].argmax(), c.argmax() : n - c[::-1].argmax()
+        ]
     else:
         out = np.empty((0, 0), dtype=bool)
 
@@ -136,7 +141,7 @@ def remove_white_space(original_image):
 def get_pxls_color(input):
     """Get the RGBA value of a pxls color by its name. Return `(color_name, rgba)`"""
     color_name = input.lower().replace("gray", "grey")
-    color_name = color_name.replace('"', '')
+    color_name = color_name.replace('"', "")
     color_name = color_name.replace("_", " ")
     for color in stats.get_palette():
         if color["name"].lower().replace(" ", "") == color_name.lower().replace(" ", ""):
@@ -245,8 +250,8 @@ def get_image_scale(image_array: np.ndarray) -> int:
                 previous_color = color.copy()
             # find the next pixel with a different color
             elif (color != previous_color).any() and not (
-                color[-1] == 0 and previous_color[-1] == 0  # to exclude transparent pixels
-            ):
+                color[-1] == 0 and previous_color[-1] == 0
+            ):  # to exclude transparent pixels
                 # check if the diff is smaller than the min
                 if (x - prev_x) < min_pixel_width:
                     # print(f"x: {x} y: {y}, prev_x: {prev_x} run: {x - prev_x} vs {min_pixel_width}")
@@ -284,38 +289,38 @@ def get_image_scale(image_array: np.ndarray) -> int:
 # --- Palettes --- #
 
 PXLS_COLORS = [
-    '000000',
-    '222222',
-    '555555',
-    '888888',
-    'CDCDCD',
-    'FFFFFF',
-    'FFD5BC',
-    'FFB783',
-    'B66D3D',
-    '77431F',
-    'FC7510',
-    'FCA80E',
-    'FDE817',
-    'FFF491',
-    'BEFF40',
-    '70DD13',
-    '31A117',
-    '0B5F35',
-    '277E6C',
-    '32B69F',
-    '88FFF3',
-    '24B5FE',
-    '125CC7',
-    '262960',
-    '8B2FA8',
-    'D24CE9',
-    'FF59EF',
-    'FFA9D9',
-    'FF6474',
-    'F02523',
-    'B11206',
-    '740C00',
+    "000000",
+    "222222",
+    "555555",
+    "888888",
+    "CDCDCD",
+    "FFFFFF",
+    "FFD5BC",
+    "FFB783",
+    "B66D3D",
+    "77431F",
+    "FC7510",
+    "FCA80E",
+    "FDE817",
+    "FFF491",
+    "BEFF40",
+    "70DD13",
+    "31A117",
+    "0B5F35",
+    "277E6C",
+    "32B69F",
+    "88FFF3",
+    "24B5FE",
+    "125CC7",
+    "262960",
+    "8B2FA8",
+    "D24CE9",
+    "FF59EF",
+    "FFA9D9",
+    "FF6474",
+    "F02523",
+    "B11206",
+    "740C00",
 ]
 
 PALETTES = [
@@ -392,10 +397,10 @@ PALETTES = [
     {
         "names": ["canvas1", "c1"],
         "colors": [
-            'FFFFFF',
-            'CDCDCD',
-            '888888',
-            '222222',
+            "FFFFFF",
+            "CDCDCD",
+            "888888",
+            "222222",
             "FFA7D1",
             "E50000",
             "E59500",
@@ -418,7 +423,6 @@ PALETTES = [
             "FF00FF",
             "00FFFF",
         ],
-
     },
 ]
 

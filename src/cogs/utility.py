@@ -157,9 +157,7 @@ class Utility(commands.Cog):
         await ctx.send(
             "Current `{}` time: {}".format(
                 timezone,
-                datetime.astimezone(datetime.now(), tz).strftime(
-                    "**%H:%M** (%Y-%m-%d)"
-                ),
+                datetime.astimezone(datetime.now(), tz).strftime("**%H:%M** (%Y-%m-%d)"),
             )
         )
 
@@ -228,10 +226,15 @@ class Utility(commands.Cog):
                 channel_id = context_match["channel_id"]
 
                 content = log.embeds[0].fields[1].value
-                content = content.replace("\n", " ")  # remove new lines to make it easier for regex
+                # remove new lines to make it easier for regex
+                content = content.replace("\n", " ")
                 # author and date
-                author_and_date_regex = r"By <@(?P<user_id>\d*)> on <t:(?P<timestamp>\d*)>"
-                author_and_date_match = re.search(author_and_date_regex, content).groupdict()
+                author_and_date_regex = (
+                    r"By <@(?P<user_id>\d*)> on <t:(?P<timestamp>\d*)>"
+                )
+                author_and_date_match = re.search(
+                    author_and_date_regex, content
+                ).groupdict()
                 user_id = author_and_date_match["user_id"]
                 timestamp = author_and_date_match["timestamp"]
                 dt = datetime.fromtimestamp(int(timestamp), tz=timezone.utc)
@@ -275,9 +278,7 @@ class Utility(commands.Cog):
         guild_count = len(self.bot.guilds)
         commands_count = len(self.bot.commands)
         slash_commands_count = len(self.bot.slash_commands)
-        usage_count = await db_servers.db.sql_select(
-            "SELECT COUNT(*) FROM command_usage"
-        )
+        usage_count = await db_servers.db.sql_select("SELECT COUNT(*) FROM command_usage")
         usage_count = usage_count[0][0]
         user_count = await db_servers.db.sql_select(
             "SELECT COUNT(DISTINCT author_id) FROM command_usage"
@@ -350,13 +351,17 @@ class Utility(commands.Cog):
             user_info += "\n• Your most used command is `>{}` with **{}** uses, that's **{}%** of your total uses.".format(
                 most_used_command[0]["command_name"],
                 most_used_command[0]["usage"],
-                format_number((int(most_used_command[0]["usage"]) / user_usage_count) * 100),
+                format_number(
+                    (int(most_used_command[0]["usage"]) / user_usage_count) * 100
+                ),
             )
 
         # format and send the data in an embed
         embed = disnake.Embed(title="Bot Information", color=0x66C5CC)
         embed.description = f"Creator: {owner}\n"
-        embed.description += f"Bot version: `{VERSION}` - Ping: `{round(self.bot.latency*1000,2)} ms`\n"
+        embed.description += (
+            f"Bot version: `{VERSION}` - Ping: `{round(self.bot.latency*1000,2)} ms`\n"
+        )
         embed.description += f"Bot age: {bot_age}\n"
         embed.description += f"Server prefix: `{server_prefix}`"
         embed.add_field(name="**Bot Stats**", value=stats, inline=False)
@@ -370,15 +375,22 @@ class Utility(commands.Cog):
         embed.set_thumbnail(url=ctx.me.display_avatar)
         embed.set_author(name=me, icon_url=me.display_avatar)
         versions = "This bot runs on Python {} using disnake {} 🐍".format(
-            platform.python_version(), disnake.__version__,
+            platform.python_version(), disnake.__version__
         )
         embed.set_footer(text=versions)
 
         class Invites(disnake.ui.View):
             def __init__(self, bot_invite, server_invite):
                 super().__init__()
-                self.add_item(disnake.ui.Button(label="Add the bot to your server", url=bot_invite))
-                self.add_item(disnake.ui.Button(label="Join the Clueless dev server", url=server_invite))
+                self.add_item(
+                    disnake.ui.Button(label="Add the bot to your server", url=bot_invite)
+                )
+                self.add_item(
+                    disnake.ui.Button(
+                        label="Join the Clueless dev server", url=server_invite
+                    )
+                )
+
         invites = Invites(BOT_INVITE, SERVER_INVITE)
         await ctx.send(embed=embed, view=invites)
 

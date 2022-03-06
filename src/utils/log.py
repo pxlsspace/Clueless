@@ -27,13 +27,13 @@ def get_logger(name, level="DEBUG", file="clueless.log", in_console=True):
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
-    datetime_format = '%Y-%m-%d %H:%M:%S'
+    datetime_format = "%Y-%m-%d %H:%M:%S"
     log_format = "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
     formatter = logging.Formatter(log_format, datetime_format)
 
     if file is not None:
         file_handler = logging.FileHandler(
-            filename="logs/" + file, encoding='utf-8', mode='a'
+            filename="logs/" + file, encoding="utf-8", mode="a"
         )
         file_handler.setFormatter(formatter)
         file_handler.setLevel(logging.DEBUG)
@@ -42,7 +42,7 @@ def get_logger(name, level="DEBUG", file="clueless.log", in_console=True):
     if in_console:
         # formatter
         console_format = "[%(asctime)s] [%(levelname)s] %(name)s: %(message)s"
-        console_formatter = logging.Formatter(console_format, '%H:%M:%S')
+        console_formatter = logging.Formatter(console_format, "%H:%M:%S")
 
         # stdout
         console_handler = logging.StreamHandler(sys.stdout)

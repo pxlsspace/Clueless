@@ -18,7 +18,7 @@ class UserManager(commands.Cog):
     async def _setname(
         self,
         inter: disnake.AppCmdInter,
-        username: str = commands.Param(autocomplete=autocomplete_pxls_name)
+        username: str = commands.Param(autocomplete=autocomplete_pxls_name),
     ):
         """Link your discord account to a pxls username.
 
@@ -55,7 +55,7 @@ class UserManager(commands.Cog):
     async def _theme(
         self,
         inter: disnake.AppCmdInter,
-        theme: str = commands.Param(default=None, choices=[t.name for t in theme_list])
+        theme: str = commands.Param(default=None, choices=[t.name for t in theme_list]),
     ):
         """Set your theme for the graphs."""
         await self.theme(inter, theme)
@@ -77,10 +77,8 @@ class UserManager(commands.Cog):
             )
 
         if theme is None:
-            set_theme_text = (
-                "*Use `{0}theme [theme name]` to change your theme.*".format(
-                    ctx.prefix if isinstance(ctx, commands.Context) else "/"
-                )
+            set_theme_text = "*Use `{0}theme [theme name]` to change your theme.*".format(
+                ctx.prefix if isinstance(ctx, commands.Context) else "/"
             )
             return await ctx.send(available_themes_text + set_theme_text)
 
@@ -139,7 +137,9 @@ class UserManager(commands.Cog):
                 ctx.prefix if isinstance(ctx, commands.Context) else "/"
             )
         else:
-            pxls_username = await db_users.get_pxls_user_name(discord_user["pxls_user_id"])
+            pxls_username = await db_users.get_pxls_user_name(
+                discord_user["pxls_user_id"]
+            )
 
         # get the user theme
         user_theme = discord_user["color"] or "default"
@@ -194,7 +194,9 @@ class UserManager(commands.Cog):
         await ctx.send(
             "✅ Timezone successfully set to `{}`.\nCurrent time: {}".format(
                 timezone,
-                datetime.astimezone(datetime.now(), tz).strftime("**%H:%M** %Z (%Y-%m-%d)"),
+                datetime.astimezone(datetime.now(), tz).strftime(
+                    "**%H:%M** %Z (%Y-%m-%d)"
+                ),
             )
         )
 

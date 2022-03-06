@@ -24,9 +24,8 @@ class TransparentAnimatedGifConverter(object):
     def _process_pixels(self):
         """Set the transparent pixels to the color 0."""
         self._transparent_pixels = set(
-            idx for idx, alpha in enumerate(
-                self._img_rgba.getchannel(channel="A").getdata()
-            )
+            idx
+            for idx, alpha in enumerate(self._img_rgba.getchannel(channel="A").getdata())
             if alpha <= self._alpha_threshold
         )
 
@@ -34,7 +33,8 @@ class TransparentAnimatedGifConverter(object):
         """Parse the RGB palette color `tuple`s from the palette."""
         palette = self._img_p.getpalette()
         self._img_p_used_palette_idxs = set(
-            idx for pal_idx, idx in enumerate(self._img_p_data)
+            idx
+            for pal_idx, idx in enumerate(self._img_p_data)
             if pal_idx not in self._transparent_pixels
         )
         self._img_p_parsedpalette = dict(

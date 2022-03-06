@@ -20,18 +20,18 @@ all_special_chars = './-+*&~#’()|_^@[]{}%!?$€:,\\`><;"='
 letter_bases = {
     "áàâäãå": "a",
     "ÁÀÂÄÃÅ": "A",
-    "éèêë"  : "e",
-    "ÉÈÊË"  : "E",
-    "iíìîï" : "ı",
-    "İÍÌÎÏ" : "I",
-    "óòôöõ" : "o",
-    "ÓÒÔÖÕ" : "O",
-    "úùûü"  : "u",
-    "ÚÙÛÜ"  : "U",
-    "ÿ"     : "y",
-    "Ÿ"     : "Y",
-    "ñ"     : "n",
-    "Ñ"     : "N",
+    "éèêë": "e",
+    "ÉÈÊË": "E",
+    "iíìîï": "ı",
+    "İÍÌÎÏ": "I",
+    "óòôöõ": "o",
+    "ÓÒÔÖÕ": "O",
+    "úùûü": "u",
+    "ÚÙÛÜ": "U",
+    "ÿ": "y",
+    "Ÿ": "Y",
+    "ñ": "n",
+    "Ñ": "N",
 }
 
 test_string = 'abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789 ./-+*&~#’()|_^@[]{}%!?$€:,\\`><;"'
@@ -50,7 +50,9 @@ def load_font_images():
             if font_img.mode != "RGB":
                 raise ValueError("Unsupported image mode: " + font_img.mode)
         except FileNotFoundError:
-            logger.warning(f"Couldn't load font '{font_name}': {font_name}.png not found.")
+            logger.warning(
+                f"Couldn't load font '{font_name}': {font_name}.png not found."
+            )
             continue
 
         # load the font json
@@ -59,7 +61,9 @@ def load_font_images():
             with open(font_json_path, "r") as json_file:
                 font_json = json.load(json_file)
         except FileNotFoundError:
-            logger.warning(f"Couldn't load font '{font_name}': {font_name}.json not found.")
+            logger.warning(
+                f"Couldn't load font '{font_name}': {font_name}.json not found."
+            )
             continue
         nb_loaded_fonts += 1
         font_files[font_name] = {"image": font_img, "json": font_json}
@@ -97,9 +101,7 @@ class FontManager:
 
         if self.font_color:
             if self.font_color == self.background_color:
-                raise ValueError(
-                    "The font color and background color can't be the same."
-                )
+                raise ValueError("The font color and background color can't be the same.")
 
     def set_font_color(self, font_color):
         if not font_color:
@@ -173,7 +175,7 @@ class FontManager:
         return array
 
 
-class PixelText():
+class PixelText:
     """Class to make a pixel text"""
 
     def __init__(self, text, font_name, font_color=None, background_color=None) -> None:
@@ -196,9 +198,7 @@ class PixelText():
             if font_char is not None:
                 empty = False
                 char_array = self.font.get_char_array(font_char)
-                self.image_array = np.concatenate(
-                    (self.image_array, char_array), axis=1
-                )
+                self.image_array = np.concatenate((self.image_array, char_array), axis=1)
                 self.add_space()
 
             elif char == " ":

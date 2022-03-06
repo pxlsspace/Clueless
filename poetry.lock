@@ -565,7 +565,7 @@ python-versions = "*"
 
 [[package]]
 name = "rapptz-asqlite"
-version = "0.0.2"
+version = "1.0.0"
 description = "A simple async wrapper for sqlite3"
 category = "main"
 optional = false
@@ -761,7 +761,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = "3.9"
-content-hash = "0e995c68e0e027bffe5c6c2d40da2c0295833527113ca0cdfa9dba84c2af0146"
+content-hash = "497ee93e2e8845f5913bee0db303c31bc7eface140b4b2afbfdc62aeaa6e561f"
 
 [metadata.files]
 about-time = [
@@ -1449,8 +1449,8 @@ pytz = [
     {file = "pytz-2021.3.tar.gz", hash = "sha256:acad2d8b20a1af07d4e4c9d2e9285c5ed9104354062f275f3fcd88dcef4f1326"},
 ]
 rapptz-asqlite = [
-    {file = "rapptz-asqlite-0.0.2.tar.gz", hash = "sha256:ebb4069413be8d5189fe599c4ce13050b229ecc56080d5ace2adc31583141931"},
-    {file = "rapptz_asqlite-0.0.2-py3-none-any.whl", hash = "sha256:9e181e98fbcb698d1bf5a69fe00557b90c4ed73e2d50b49c43789409183610d0"},
+    {file = "rapptz-asqlite-1.0.0.tar.gz", hash = "sha256:159ce5346c0dda0be95ae32adf59e0669633d6e9f516eb562be0c57a3e6f9f4d"},
+    {file = "rapptz_asqlite-1.0.0-py3-none-any.whl", hash = "sha256:e00e66489b8e94cc92872f8501fc72d0b0a9db59437d70eff406d827de3b453c"},
 ]
 requests = [
     {file = "requests-2.27.1-py2.py3-none-any.whl", hash = "sha256:f22fa1e554c9ddfd16e6e41ac79759e17be9e492b3587efa038054674760e72d"},

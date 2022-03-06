@@ -52,7 +52,7 @@ I would prefer that you do not run an instance of this bot. If you wish to use i
 ## Requirements
 
 - python3 [(version 3.9.5 recommended)](https://www.python.org/downloads/release/python-395/)
-
+- [poetry](https://python-poetry.org/docs/master/#installing-with-the-official-installer)
 ## 1) Register your bot on discord
 
 - See the [discord.py documentation](https://discordpy.readthedocs.io/en/stable/discord.html) on how to create an application and a bot.
@@ -67,7 +67,7 @@ I would prefer that you do not run an instance of this bot. If you wish to use i
 
 ## 3) Install the required dependencies
 
-    $ pip install -r requirements.txt
+    $ poetry install
 
 
 ## 4) Start the bot

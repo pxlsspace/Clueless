@@ -144,7 +144,9 @@ def get_pxls_color(input):
     color_name = color_name.replace('"', "")
     color_name = color_name.replace("_", " ")
     for color in stats.get_palette():
-        if color["name"].lower().replace(" ", "") == color_name.lower().replace(" ", ""):
+        if color["name"].lower().replace(" ", "") == color_name.lower().replace(
+            " ", ""
+        ):
             rgb = ImageColor.getcolor(f'#{color["value"]}', "RGBA")
             return color["name"], rgb
     raise ValueError("The color `{}` was not found in the pxls palette. ".format(input))

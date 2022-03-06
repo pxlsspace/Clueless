@@ -17,7 +17,9 @@ HEADERS = {"Authorization": "Bearer " + TOKEN}
 class Song:
     """object used to store the informations about a song"""
 
-    def __init__(self, title, full_title, artists, genius_url, image_url, lyrics) -> None:
+    def __init__(
+        self, title, full_title, artists, genius_url, image_url, lyrics
+    ) -> None:
         self.title = title
         self.full_title = full_title
         self.artists = artists

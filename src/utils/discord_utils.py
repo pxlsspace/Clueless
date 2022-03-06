@@ -280,7 +280,9 @@ async def get_embed_author(inter: disnake.MessageInteraction) -> disnake.User:
             return None
         name = found[0][0]
         discrim = found[0][1]
-        predicate = lambda u: u.name == name and u.discriminator == discrim  # noqa: E731
+        predicate = (
+            lambda u: u.name == name and u.discriminator == discrim
+        )  # noqa: E731
         result = disnake.utils.find(predicate, inter.bot.users)
         return result
     except Exception:

@@ -13,7 +13,9 @@ from database.db_user_manager import DbUserManager  # noqa: E402
 
 """ Script used to move the old database data to the new format """
 
-OLD_DB_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "database_old.db")
+OLD_DB_FILE = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)), "database_old.db"
+)
 db_conn = DbConnection()
 db_serv = DbServersManager(db_conn, ">")
 db_user = DbUserManager(db_conn)

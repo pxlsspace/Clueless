@@ -22,7 +22,12 @@ from utils.pxls.template_manager import (
 from utils.setup import db_templates, db_users
 from utils.timezoneslib import get_timezone
 from utils.utils import make_progress_bar
-from utils.time_converter import round_minutes_down, str_to_td, td_format, format_datetime
+from utils.time_converter import (
+    round_minutes_down,
+    str_to_td,
+    td_format,
+    format_datetime,
+)
 from utils.table_to_image import table_to_image
 from utils.arguments_parser import MyParser
 from utils.plot_utils import get_theme, get_gradient_palette
@@ -86,7 +91,9 @@ class Progress(commands.Cog):
             async with ctx.typing():
                 await self.check(ctx, template)
         else:
-            await ctx.send("Usage: `>progress <check|info|add|list|update|delete|speed>`")
+            await ctx.send(
+                "Usage: `>progress <check|info|add|list|update|delete|speed>`"
+            )
 
     @_progress.sub_command(name="check")
     async def _check(
@@ -103,7 +110,9 @@ class Progress(commands.Cog):
         await self.check(inter, template)
 
     @progress.command(
-        name="check", description="Check the progress of a template.", usage="<url|name>"
+        name="check",
+        description="Check the progress of a template.",
+        usage="<url|name>",
     )
     async def p_check(self, ctx, template: str):
 
@@ -319,11 +328,9 @@ class Progress(commands.Cog):
                     if delta_time != timedelta(0):
                         speed_px_d = delta_progress / (delta_time / timedelta(days=1))
                         speed_px_h = delta_progress / (delta_time / timedelta(hours=1))
-                        activity_text += (
-                            "**Average speed**:\n• `{}` px/day\n• `{}` px/hour\n".format(
-                                format_number(speed_px_d),
-                                format_number(speed_px_h),
-                            )
+                        activity_text += "**Average speed**:\n• `{}` px/day\n• `{}` px/hour\n".format(
+                            format_number(speed_px_d),
+                            format_number(speed_px_h),
                         )
                     else:
                         activity_text += "• Average speed: `N/A`\n"
@@ -443,7 +450,9 @@ class Progress(commands.Cog):
         best_matches = [
             filter for filter in filters if to_search.lower() in filter.lower()
         ][:25]
-        return [rest + ("+" if rest else "") + best_match for best_match in best_matches]
+        return [
+            rest + ("+" if rest else "") + best_match for best_match in best_matches
+        ]
 
     @_progress.sub_command(name="list")
     async def _list(
@@ -540,7 +549,9 @@ class Progress(commands.Cog):
             values = []
             for tf in timeframes:
                 td = timedelta(**tf)
-                tf_progress = await db_templates.get_template_progress(template, now - td)
+                tf_progress = await db_templates.get_template_progress(
+                    template, now - td
+                )
                 if not tf_progress or not last_progress:
                     values.append("N/A")
                     line_colors.append(None)
@@ -876,9 +887,7 @@ class Progress(commands.Cog):
                     format_number(diff_percentage * 100),
                 )
             else:
-                progress += (
-                    f"• **Percentage**: {format_number(new_percentage)}% *(unchanged)*\n"
-                )
+                progress += f"• **Percentage**: {format_number(new_percentage)}% *(unchanged)*\n"
             progress += "\n__**Image Difference**__\n"
             # make the image
             try:

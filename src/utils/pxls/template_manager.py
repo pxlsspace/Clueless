@@ -197,12 +197,17 @@ class Template:
                 return timedelta(hours=eta)
         if as_string:
             return td_format(
-                timedelta(hours=eta), short_format=True, hide_seconds=True, max_unit="day"
+                timedelta(hours=eta),
+                short_format=True,
+                hide_seconds=True,
+                max_unit="day",
             )
         else:
             return timedelta(hours=eta)
 
-    def generate_url(self, template_image_url=None, default_scale=4, open_on_togo=False):
+    def generate_url(
+        self, template_image_url=None, default_scale=4, open_on_togo=False
+    ):
         """Generate the template URL
 
         Parameters
@@ -211,7 +216,9 @@ class Template:
         scale: the scale at which to display the template (if open_on_togo is False)
         open_on_togo: open the template zoomed on an inccorect pixel"""
         template_image_url = template_image_url or self.stylized_url
-        template_title = f"&title={urllib.parse.quote(self.title)}" if self.title else ""
+        template_title = (
+            f"&title={urllib.parse.quote(self.title)}" if self.title else ""
+        )
 
         # coords
         x = y = None
@@ -414,7 +421,9 @@ class TemplateManager:
         # update the @combo
         self.update_combo()
         # log
-        tracker_logger.info(f"Template added: '{template.name}' by {owner} ({owner.id})")
+        tracker_logger.info(
+            f"Template added: '{template.name}' by {owner} ({owner.id})"
+        )
 
     def get_template(self, name, owner_id=None, hidden=False):
         """Get a template from its name, get the owner's hidden Template if hidden is True,
@@ -456,7 +465,10 @@ class TemplateManager:
         old_temp = self.get_template(current_name, command_user_id, False)
         if not old_temp:
             raise ValueError(f"No template named `{current_name}` found.")
-        if old_temp.owner_id != command_user_id and command_user_id != self.bot_owner_id:
+        if (
+            old_temp.owner_id != command_user_id
+            and command_user_id != self.bot_owner_id
+        ):
             raise ValueError("You cannot edit a template that you don't own.")
         if isinstance(old_temp, Combo):
             raise ValueError("You cannot edit the combo.")
@@ -591,7 +603,9 @@ class TemplateManager:
                     canvas_code,
                 )
             else:
-                raise Exception("Cannot init the combo with empty bot_id or canvas_code")
+                raise Exception(
+                    "Cannot init the combo with empty bot_id or canvas_code"
+                )
         else:
             self.combo.palettized_array = palettized_array
 
@@ -793,7 +807,9 @@ def make_before_after_gif(
         (new_y0_offset, new_y1_offset),
         (new_x0_offset, new_x1_offset),
     ]
-    array_after = np.pad(new_temp.palettized_array, new_temp_padding, constant_values=255)
+    array_after = np.pad(
+        new_temp.palettized_array, new_temp_padding, constant_values=255
+    )
     array_after = stats.palettize_array(array_after)
 
     # paste the template images on the canvas and darken the canvas

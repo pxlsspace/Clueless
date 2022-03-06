@@ -77,8 +77,10 @@ class UserManager(commands.Cog):
             )
 
         if theme is None:
-            set_theme_text = "*Use `{0}theme [theme name]` to change your theme.*".format(
-                ctx.prefix if isinstance(ctx, commands.Context) else "/"
+            set_theme_text = (
+                "*Use `{0}theme [theme name]` to change your theme.*".format(
+                    ctx.prefix if isinstance(ctx, commands.Context) else "/"
+                )
             )
             return await ctx.send(available_themes_text + set_theme_text)
 

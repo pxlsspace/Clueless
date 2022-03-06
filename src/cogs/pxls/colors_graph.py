@@ -71,7 +71,9 @@ class ColorsGraph(commands.Cog):
         # parse the arguemnts
         parser = MyParser(add_help=False)
         parser.add_argument("colors", type=str, nargs="*")
-        parser.add_argument("-placed", action="store_true", default=False, required=False)
+        parser.add_argument(
+            "-placed", action="store_true", default=False, required=False
+        )
         parser.add_argument("-last", action="store", default=None)
         try:
             parsed_args = parser.parse_args(args)
@@ -146,7 +148,9 @@ class ColorsGraph(commands.Cog):
         )
         if fig is None:
             return await ctx.send("❌ Invalid color name.")
-        fig.update_layout(title="Colors Graph" + (" (non-virgin)" if placed_opt else ""))
+        fig.update_layout(
+            title="Colors Graph" + (" (non-virgin)" if placed_opt else "")
+        )
 
         # format the table data
         table_rows = []

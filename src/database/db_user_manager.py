@@ -57,7 +57,9 @@ class DbUserManager:
         sql = """SELECT * FROM pxls_name WHERE name = ? """
         db_pxls_name = await self.db.sql_select(sql, name)
         if len(db_pxls_name) != 0:
-            raise ValueError("There is already a pxls_name with the name {}".format(name))
+            raise ValueError(
+                "There is already a pxls_name with the name {}".format(name)
+            )
 
         # create the pxls_user
         sql = """INSERT INTO pxls_user (pxls_user_id) VALUES (NULL)"""

@@ -85,7 +85,9 @@ class Lyrics(commands.Cog):
         else:
             song = await search_song(title_to_search)
         # check that we found a song and that it's the correct song
-        if song is None or (spotify_title and not is_similar(spotify_title, song.title)):
+        if song is None or (
+            spotify_title and not is_similar(spotify_title, song.title)
+        ):
             return await ctx.send(
                 f"❌ Can't find any lyrics for **{title_to_search}**"
                 + ((f" by **{artists_to_search}**") if artists_to_search else "")

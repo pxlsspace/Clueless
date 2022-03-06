@@ -101,7 +101,9 @@ class FontManager:
 
         if self.font_color:
             if self.font_color == self.background_color:
-                raise ValueError("The font color and background color can't be the same.")
+                raise ValueError(
+                    "The font color and background color can't be the same."
+                )
 
     def set_font_color(self, font_color):
         if not font_color:
@@ -198,7 +200,9 @@ class PixelText:
             if font_char is not None:
                 empty = False
                 char_array = self.font.get_char_array(font_char)
-                self.image_array = np.concatenate((self.image_array, char_array), axis=1)
+                self.image_array = np.concatenate(
+                    (self.image_array, char_array), axis=1
+                )
                 self.add_space()
 
             elif char == " ":

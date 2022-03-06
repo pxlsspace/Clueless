@@ -113,14 +113,18 @@ class Template(commands.Cog):
             styles_available = "**Available Styles:**\n"
             for s in STYLES:
                 styles_available += ("\t• {0} ({1}x{1})\n").format(s["name"], s["size"])
-            return await ctx.send(f"❌ Unknown style '{style_name}'.\n{styles_available}")
+            return await ctx.send(
+                f"❌ Unknown style '{style_name}'.\n{styles_available}"
+            )
 
         # check on the size
         output_size = img.width * img.height * style["size"]
         limit = int(7e6)
         if output_size > limit:
             msg = f"You're trying to generate a **{format_number(output_size)}** pixels image.\n"
-            msg += f"This exceeds the bot's limit of **{format_number(limit)}** pixels.\n"
+            msg += (
+                f"This exceeds the bot's limit of **{format_number(limit)}** pixels.\n"
+            )
             msg += "\n*Try using a style with a smaller size or a smaller image.*"
             return await ctx.send(
                 embed=disnake.Embed(

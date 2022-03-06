@@ -91,7 +91,9 @@ def parse_outline_args(args):
     parser.add_argument("color", type=str, nargs=1)
     parser.add_argument("url", type=str, nargs="?")
     parser.add_argument("-sparse", "-thin", action="store_true", default=False)
-    parser.add_argument("-width", metavar="<number>", action="store", type=int, default=1)
+    parser.add_argument(
+        "-width", metavar="<number>", action="store", type=int, default=1
+    )
 
     res = parser.parse_args(args)
     return vars(res)
@@ -113,8 +115,10 @@ def parse_pixelfont_args(args):
 def valid_datetime_type(arg_datetime_str, user_timezone: timezone = None):
     """Check if the given string is a valid datetime"""
 
-    error_msg = "Given time ({}) not valid. Expected format: `YYYY-mm-dd HH:MM`.".format(
-        " ".join(arg_datetime_str)
+    error_msg = (
+        "Given time ({}) not valid. Expected format: `YYYY-mm-dd HH:MM`.".format(
+            " ".join(arg_datetime_str)
+        )
     )
     user_timezone = user_timezone or timezone.utc
 

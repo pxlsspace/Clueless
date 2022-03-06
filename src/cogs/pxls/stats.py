@@ -87,10 +87,10 @@ class PxlsStats(commands.Cog):
             datetime.utcnow() - timedelta(days=time_interval) - timedelta(minutes=1)
         )
         record = await db_stats.find_record(time_to_search, canvas_code)
-        record_time = round_minutes_down(record["datetime"].replace(tzinfo=timezone.utc))
-        sql = (
-            "SELECT SUM(amount_placed) AS non_virgin FROM color_stat WHERE record_id = ?"
+        record_time = round_minutes_down(
+            record["datetime"].replace(tzinfo=timezone.utc)
         )
+        sql = "SELECT SUM(amount_placed) AS non_virgin FROM color_stat WHERE record_id = ?"
         non_virgin_interval = await db_stats.db.sql_select(sql, record["record_id"])
         time_diff = round_minutes_down(last_updated) - record_time
         filling_progress = total_non_virgin - non_virgin_interval[0]["non_virgin"]
@@ -119,7 +119,9 @@ class PxlsStats(commands.Cog):
         info_text = "• Canvas Code: `{}`\n• Start Date: {}\n• Time Elapsed: {}\n• Dimensions: `{} x {}`\n• Total Pixels: `{}`/`{}` (`{}%` placeable)\n".format(
             canvas_code,
             format_datetime(start_date),
-            td_format(datetime.utcnow() - start_date, hide_seconds=True, max_unit="day"),
+            td_format(
+                datetime.utcnow() - start_date, hide_seconds=True, max_unit="day"
+            ),
             board.shape[1],
             board.shape[0],
             format_number(int(total_placeable)),
@@ -177,7 +179,9 @@ class PxlsStats(commands.Cog):
     async def _userinfo(
         self,
         inter: disnake.AppCmdInter,
-        username: str = commands.Param(default=None, autocomplete=autocomplete_pxls_name),
+        username: str = commands.Param(
+            default=None, autocomplete=autocomplete_pxls_name
+        ),
     ):
         """Show some information about a pxls user.
 
@@ -623,7 +627,9 @@ class PxlsStats(commands.Cog):
         parser.add_argument(
             "-bgcolor", "-bg", nargs="*", type=str, action="store", required=False
         )
-        parser.add_argument("-placed", action="store_true", default=False, required=False)
+        parser.add_argument(
+            "-placed", action="store_true", default=False, required=False
+        )
         try:
             parsed_args = parser.parse_args(args)
         except ValueError as e:

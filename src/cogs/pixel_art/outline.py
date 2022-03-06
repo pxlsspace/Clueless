@@ -151,8 +151,10 @@ class Outline(commands.Cog):
             embed.description = (
                 f"The cropped image is **{format_number((1-ratio)*100)}%** smaller.\n"
             )
-            embed.description += "`{0.width}x{0.height}` → `{1.width}x{1.height}`".format(
-                input_image, image_cropped
+            embed.description += (
+                "`{0.width}x{0.height}` → `{1.width}x{1.height}`".format(
+                    input_image, image_cropped
+                )
             )
         file = await self.bot.loop.run_in_executor(
             None, image_to_file, image_cropped, "cropped.png", embed

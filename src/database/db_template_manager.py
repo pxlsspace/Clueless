@@ -69,7 +69,9 @@ class DbTemplateManager:
         template_id = await self.get_template_id(template)
         if not template_id:
             return None
-        sql = "INSERT INTO template_stat(template_id, datetime, progress) VALUES(?, ?, ?)"
+        sql = (
+            "INSERT INTO template_stat(template_id, datetime, progress) VALUES(?, ?, ?)"
+        )
         return await self.db.sql_insert(sql, (template_id, datetime, progress))
 
     async def update_template(self, t: "Template", new_url, new_name, new_owner_id):

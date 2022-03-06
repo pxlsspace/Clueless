@@ -95,7 +95,9 @@ class Font(commands.Cog):
                 elif is_hex_color(font_color):
                     font_rgba = ImageColor.getcolor(font_color, "RGBA")
                 else:
-                    return await ctx.send(f"❌ The font color `{font_color}` is invalid.")
+                    return await ctx.send(
+                        f"❌ The font color `{font_color}` is invalid."
+                    )
         else:
             font_rgba = None
 

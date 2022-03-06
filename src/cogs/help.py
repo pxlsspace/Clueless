@@ -380,7 +380,9 @@ class Help(commands.Cog):
         if category_name == "Home":
             await self.send_home_help(inter, command_author, is_slash)
         else:
-            await self.send_category_help(inter, category_name, command_author, is_slash)
+            await self.send_category_help(
+                inter, category_name, command_author, is_slash
+            )
 
 
 def setup(bot: commands.Bot):
@@ -420,7 +422,9 @@ def get_cog_category(cog: commands.Cog) -> str:
     cog_fullname = fullname(cog)
     cog_fullname = cog_fullname.split(".")
     cog_dir = cog_fullname[1:-2]
-    category_name = cog_dir[0].replace("_", " ").title() if len(cog_dir) > 0 else "Other"
+    category_name = (
+        cog_dir[0].replace("_", " ").title() if len(cog_dir) > 0 else "Other"
+    )
     return category_name
 
 

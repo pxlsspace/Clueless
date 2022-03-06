@@ -8,7 +8,12 @@ from io import BytesIO
 
 from utils.discord_utils import format_number, get_image_from_message, image_to_file
 from utils.table_to_image import table_to_image
-from utils.image.image_utils import h_concatenate, hex_to_rgb, rgb_to_hex, hex_str_to_int
+from utils.image.image_utils import (
+    h_concatenate,
+    hex_to_rgb,
+    rgb_to_hex,
+    hex_str_to_int,
+)
 from utils.plot_utils import fig2img
 from utils.setup import stats
 
@@ -56,7 +61,9 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
     nb_pixels = input_image.size[0] * input_image.size[1]
 
     # get the colors table
-    image_colors = await bot.loop.run_in_executor(None, input_image.getcolors, nb_pixels)
+    image_colors = await bot.loop.run_in_executor(
+        None, input_image.getcolors, nb_pixels
+    )
     if image_colors is None:
         return await ctx.send("❌ Unsupported format or image mode.")
 
@@ -137,7 +144,9 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
     labels_chart = [d[2] for d in data_chart]  # show the correct percentages as labels
     values_chart = [d[1] for d in data_chart]
     piechart = get_piechart(labels_chart, values_chart, colors_chart)
-    piechart_img = await bot.loop.run_in_executor(None, fig2img, piechart, 600, 600, 1.5)
+    piechart_img = await bot.loop.run_in_executor(
+        None, fig2img, piechart, 600, 600, 1.5
+    )
 
     # create the message with a header
     header = f"""• Number of colors: `{format_number(nb_colors)}`
@@ -146,10 +155,14 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
     header = inspect.cleandoc(header) + "\n"
 
     # concatenate the pie chart and table image
-    res_img = await bot.loop.run_in_executor(None, h_concatenate, table_img, piechart_img)
+    res_img = await bot.loop.run_in_executor(
+        None, h_concatenate, table_img, piechart_img
+    )
 
     # send an embed with the color table, the pie chart
-    emb = disnake.Embed(title=title, description=header, color=hex_str_to_int(colors[0]))
+    emb = disnake.Embed(
+        title=title, description=header, color=hex_str_to_int(colors[0])
+    )
     if len(data) > pie_chart_limit:
         emb.set_footer(
             text=f"Too many colors - Showing the top {pie_chart_limit} colors in the chart."
@@ -193,7 +206,9 @@ def get_piechart(labels, values, colors):
     layout = go.Layout(
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="white"
     )
-    fig = go.Figure(data=[go.Pie(text=labels, values=values, sort=False)], layout=layout)
+    fig = go.Figure(
+        data=[go.Pie(text=labels, values=values, sort=False)], layout=layout
+    )
     fig.update_traces(
         textinfo="text",
         textfont_size=20,

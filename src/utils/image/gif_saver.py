@@ -25,7 +25,9 @@ class TransparentAnimatedGifConverter(object):
         """Set the transparent pixels to the color 0."""
         self._transparent_pixels = set(
             idx
-            for idx, alpha in enumerate(self._img_rgba.getchannel(channel="A").getdata())
+            for idx, alpha in enumerate(
+                self._img_rgba.getchannel(channel="A").getdata()
+            )
             if alpha <= self._alpha_threshold
         )
 

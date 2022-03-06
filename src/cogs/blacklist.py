@@ -93,7 +93,9 @@ class Blacklist(commands.Cog):
         invoke_without_command=True,
         description="Show the current blacklist role.",
     )
-    @commands.check_any(commands.is_owner(), commands.has_permissions(manage_roles=True))
+    @commands.check_any(
+        commands.is_owner(), commands.has_permissions(manage_roles=True)
+    )
     async def roleblacklist(self, ctx):
         # show the current role
         current_role_id = await db_servers.get_blacklist_role(ctx.guild.id)

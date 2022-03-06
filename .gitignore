@@ -10,3 +10,5 @@ ecosystem.config.js
 env/
 logs/
 *.log
+# for pyenv users
+.python-version

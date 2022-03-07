@@ -12,6 +12,7 @@ from utils.discord_utils import (
     image_to_file,
     UserConverter,
     DropdownView,
+    MoreInfoView,
 )
 from utils.pxls.template_manager import (
     Combo,
@@ -31,6 +32,8 @@ from utils.image.image_utils import v_concatenate
 
 
 class TemplateURL(disnake.ui.View):
+    message: disnake.Message
+
     def __init__(self, template_url: str):
         super().__init__()
         self.add_item(disnake.ui.Button(label="Open Template", url=template_url))
@@ -164,12 +167,31 @@ class Progress(commands.Cog):
         embed = disnake.Embed(title="**Progress Check**", color=0x66C5CC)
         embed.set_thumbnail(url="attachment://template_image.png")
 
+        # INFO #
         info_text = f"• Title: `{title}`\n"
         if template.name:
             info_text += f"• Name: `{template.name}`\n"
 
-        embed.add_field(name="**Info**", value=info_text, inline=False)
+        # TRACKING INFO #
+        if is_tracked:
+            oldest_record = await db_templates.get_template_oldest_progress(template)
+            if oldest_record and oldest_record["datetime"]:
+                oldest_record_time_str = format_datetime(oldest_record["datetime"], "R")
 
+            else:
+                oldest_record_time_str = "`less than 5 min ago`"
+
+            info_text += f"• Owner: <@{template.owner_id}>\n"
+            info_text += f"• Started tracking: {oldest_record_time_str}"
+        else:
+            prefix = ctx.prefix if isinstance(ctx, commands.Context) else "/"
+            embed.set_footer(
+                text=f"[Not Tracked]\nUse {prefix}progress add <name> <url> to start tracking."
+            )
+
+        embed.add_field(name="**Info**", value=info_text, inline=True)
+
+        # PROGRESS #
         progress_text = f"• Correct pixels: `{format_number(correct_pixels)}`/`{format_number(total_placeable)}`\n"
         progress_text += f"• Pixels to go: `{format_number(togo_pixels)}`\n"
         progress_text += "• Virgin abuse: `{}` px (`{}%`)\n".format(
@@ -177,26 +199,69 @@ class Progress(commands.Cog):
             format_number(virgin_abuse_percentage),
         )
         progress_text += f"• Progress:\n**|`{bar}`|** `{correct_percentage}%`\n"
-
-        if is_tracked:
-            oldest_record = await db_templates.get_template_oldest_progress(template)
-            if oldest_record and oldest_record["datetime"]:
-                oldest_record_time = oldest_record["datetime"]
-            else:
-                # if there is no data for this template in the db, the starting tracking time is now
-                oldest_record_time = datetime.now(timezone.utc)
-            owner = self.bot.get_user(template.owner_id)
-            embed.set_footer(text=f"Owner • {owner}\nTracking Since")
-            embed.timestamp = oldest_record_time
-        else:
-            prefix = ctx.prefix if isinstance(ctx, commands.Context) else "/"
-            embed.set_footer(
-                text=f"[Not Tracked]\nUse {prefix}progress add <name> <url> to start tracking."
-            )
+        eta = await template.get_eta()
+        progress_text += f"• ETA: `{eta or 'N/A'}`\n"
         embed.add_field(name="**Current Progress**", value=progress_text, inline=False)
+
+        # ACTIVITY #
+        activity_text = ""
+        if is_tracked:
+            timeframes = [
+                {"minutes": 5},
+                {"hours": 1},
+                {"hours": 6},
+                {"days": 1},
+                {"days": 7},
+                {"days": 9999},
+            ]
+            timeframe_names = ["5 minutes", "hour", "6 hours", "day", "week"]
+            now = round_minutes_down(datetime.utcnow(), 5)
+            last_progress_dt, last_progress = await template.get_progress_at(now)
+            for i, tf in enumerate(timeframes):
+                td = timedelta(**tf)
+                tf_datetime, tf_progress = await template.get_progress_at(now - td)
+                if tf_progress is None or last_progress is None:
+                    delta_progress = "`N/A`"
+                else:
+                    delta_progress = last_progress - tf_progress
+                if i != len(timeframes) - 1:
+                    activity_text += "• Last {}: `{}` px\n".format(
+                        timeframe_names[i],
+                        format_number(delta_progress),
+                    )
+                else:
+                    if tf_progress is None or last_progress is None:
+                        activity_text += "• Average speed: `N/A`\n"
+                    else:
+                        delta_time = last_progress_dt - tf_datetime
+                        if delta_time != timedelta(0):
+                            speed_px_d = delta_progress / (delta_time / timedelta(days=1))
+                            speed_px_h = delta_progress / (
+                                delta_time / timedelta(hours=1)
+                            )
+                            activity_text += "**Average speed**:\n• `{}` px/day\n• `{}` px/hour\n".format(
+                                format_number(speed_px_d),
+                                format_number(speed_px_h),
+                            )
+                        else:
+                            activity_text += "• Average speed: `N/A`\n"
+
+            if last_progress:
+                last_updated = format_datetime(last_progress_dt, "R")
+            else:
+                last_updated = "-"
+            activity_text += f"\nLast Updated: {last_updated}"
+
         detemp_file = image_to_file(progress_image, "progress.png", embed)
         template_file = image_to_file(
             Image.fromarray(template.get_array()), "template_image.png"
+        )
+
+        embed_expanded = embed.copy()
+        # this is necessary because embed.copy() keeps the same fields ..
+        embed_expanded._fields = embed._fields.copy()
+        embed_expanded.add_field(
+            name="**Recent Activity**", value=activity_text, inline=False
         )
 
         if isinstance(template, Combo):
@@ -207,155 +272,33 @@ class Progress(commands.Cog):
                 m = await ctx.original_message()
             template_image_url = m.embeds[0].thumbnail.url
             template_url = template.generate_url(template_image_url, default_scale=1)
-            view = TemplateURL(template_url)
+            view = MoreInfoView(
+                ctx.author,
+                embed,
+                embed_expanded,
+                template_url,
+                self.speed,
+                template.name,
+            )
+            view.message = m
             await m.edit(view=view)
         else:
-            view = TemplateURL(template.generate_url(open_on_togo=True))
-            await ctx.send(files=[template_file, detemp_file], embed=embed, view=view)
-
-    @_progress.sub_command(name="info")
-    async def _info(
-        self,
-        inter: disnake.AppCmdInter,
-        template: str = commands.Param(autocomplete=autocomplete_templates),
-    ):
-        """Get some information about a template.
-
-        Parameters
-        ----------
-        template: The name of the template."""
-        await inter.response.defer()
-        await self.info(inter, template)
-
-    @progress.command(
-        name="info",
-        description="Get some information about a template.",
-        usage="<template>",
-    )
-    async def p_info(self, ctx, template: str):
-        async with ctx.typing():
-            await self.info(ctx, template)
-
-    async def info(self, ctx, template_name):
-        # get the template
-        try:
-            template = tracked_templates.get_template(template_name)
-        except Exception as e:
-            return await ctx.send(f":x: {e}")
-        if template is None:
-            return await ctx.send(f"No template named `{template_name}` found.")
-
-        # INFO #
-        oldest_record = await db_templates.get_template_oldest_progress(template)
-        if oldest_record and oldest_record["datetime"]:
-            oldest_record_time = oldest_record["datetime"].replace(tzinfo=timezone.utc)
-            oldest_record_time_str = format_datetime(oldest_record_time, "R")
-        else:
-            oldest_record_time_str = "`< 5 minutes ago`"
-        info_text = f"• Title: `{template.title or 'N/A'}`\n"
-        info_text += f"• Name: `{template.name}`\n"
-        info_text += f"• Owner: <@{template.owner_id}>\n"
-        info_text += f"• Started tracking: {oldest_record_time_str}\n"
-
-        # PROGRESS #
-        # get the current template progress stats
-        total_placeable = template.total_placeable
-        correct_pixels = template.update_progress()
-        correct_percentage = (correct_pixels / total_placeable) * 100
-        togo_pixels = total_placeable - correct_pixels
-        if correct_pixels != 0:
-            nb_virgin_abuse = template.get_virgin_abuse()
-            virgin_abuse_percentage = (nb_virgin_abuse / total_placeable) * 100
-        else:
-            nb_virgin_abuse = 0
-            virgin_abuse_percentage = 0
-
-        progress_text = "• Correct pixels: `{}`/`{}`\n".format(
-            format_number(int(correct_pixels)),
-            format_number(int(total_placeable)),
-        )
-        progress_text += f"• Pixels to go: `{format_number(int(togo_pixels))}`\n"
-        progress_text += "• Virgin abuse: `{}` px (`{}%`)\n".format(
-            format_number(nb_virgin_abuse),
-            format_number(virgin_abuse_percentage),
-        )
-        progress_text += "• Progress:\n**|`{}`|** `{}%`\n".format(
-            make_progress_bar(correct_percentage),
-            format_number(correct_percentage),
-        )
-        eta = await template.get_eta()
-        progress_text += f"• ETA: `{eta or 'N/A'}`\n"
-
-        # ACTIVITY #
-        timeframes = [
-            {"minutes": 5},
-            {"hours": 1},
-            {"hours": 6},
-            {"days": 1},
-            {"days": 7},
-            {"days": 9999},
-        ]
-        timeframe_names = ["5 minutes", "hour", "6 hours", "day", "week"]
-        now = round_minutes_down(datetime.utcnow(), 5)
-        last_progress_dt, last_progress = await template.get_progress_at(now)
-        activity_text = ""
-        for i, tf in enumerate(timeframes):
-            td = timedelta(**tf)
-            tf_datetime, tf_progress = await template.get_progress_at(now - td)
-            if tf_progress is None or last_progress is None:
-                delta_progress = "`N/A`"
-            else:
-                delta_progress = last_progress - tf_progress
-            if i != len(timeframes) - 1:
-                activity_text += "• Last {}: `{}` px\n".format(
-                    timeframe_names[i],
-                    format_number(delta_progress),
+            template_url = template.generate_url(open_on_togo=True)
+            if is_tracked:
+                view = MoreInfoView(
+                    ctx.author,
+                    embed,
+                    embed_expanded,
+                    template_url,
+                    self.speed,
+                    template.name,
                 )
             else:
-                if tf_progress is None or last_progress is None:
-                    activity_text += "• Average speed: `N/A`\n"
-                else:
-                    delta_time = last_progress_dt - tf_datetime
-                    if delta_time != timedelta(0):
-                        speed_px_d = delta_progress / (delta_time / timedelta(days=1))
-                        speed_px_h = delta_progress / (delta_time / timedelta(hours=1))
-                        activity_text += (
-                            "**Average speed**:\n• `{}` px/day\n• `{}` px/hour\n".format(
-                                format_number(speed_px_d),
-                                format_number(speed_px_h),
-                            )
-                        )
-                    else:
-                        activity_text += "• Average speed: `N/A`\n"
-
-        if last_progress:
-            last_updated = format_datetime(last_progress_dt, "R")
-        else:
-            last_updated = "-"
-        activity_text += f"\nLast Updated: {last_updated}"
-
-        embed = disnake.Embed(
-            title=f"Template info for `{template.name}`", color=0x66C5CC
-        )
-        embed.add_field(name="**Information**", value=info_text, inline=False)
-        embed.add_field(name="**Progress**", value=progress_text, inline=False)
-        embed.add_field(name="**Recent Activity**", value=activity_text, inline=False)
-        template_file = image_to_file(
-            Image.fromarray(template.get_array()), "template_image.png"
-        )
-        embed.set_thumbnail(url="attachment://template_image.png")
-
-        if template.url and not isinstance(template, Combo):
-            view = TemplateURL(template.generate_url(open_on_togo=True))
-            await ctx.send(embed=embed, view=view, file=template_file)
-        else:
-            m = await ctx.send(file=template_file, embed=embed)
+                view = TemplateURL(template_url)
+            m = await ctx.send(files=[template_file, detemp_file], embed=embed, view=view)
             if isinstance(ctx, disnake.AppCmdInter):
                 m = await ctx.original_message()
-            template_image_url = m.embeds[0].thumbnail.url
-            template_url = template.generate_url(template_image_url, default_scale=1)
-            view = TemplateURL(template_url)
-            await m.edit(view=view)
+            view.message = m
 
     @_progress.sub_command(name="add")
     async def _add(self, inter: disnake.AppCmdInter, name: str, url: str):
@@ -1021,7 +964,8 @@ class Progress(commands.Cog):
                 ctx, parsed_args.template, parsed_args.last, parsed_args.groupby
             )
 
-    async def speed(self, ctx, template_name, last: str = None, groupby: str = None):
+    @staticmethod
+    async def speed(ctx, template_name, last: str = None, groupby: str = None):
         # get the template
         try:
             template = tracked_templates.get_template(template_name)

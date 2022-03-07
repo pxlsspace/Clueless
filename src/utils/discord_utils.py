@@ -404,3 +404,69 @@ class DropdownView(disnake.ui.View):
         for c in self.children[:]:
             self.remove_item(c)
         await self.message.edit(view=self)
+
+
+class MoreInfoView(disnake.ui.View):
+    """A view used to add:
+    - a Link button that opens `url`
+    - a "More Info" button that switches the view message between "embed" and "embed_expaneded"
+    - a "speed graph`" buttons that runs the `speed function` on `template_name`"""
+
+    message: disnake.Message
+
+    def __init__(
+        self, author, embed, embed_expanded, url, speed_function, template_name
+    ) -> None:
+        super().__init__(timeout=300)
+        self.author = author
+        self.state = 0  # 0: collapsed, 1: expanded
+        self.embeds = [embed, embed_expanded]
+        self.labels = ["More Info", "Less Info"]
+        self.emojis = ["<:arrowdown:950178172140388402>", "<:arrowup:950178171892948992>"]
+        self.children.insert(0, disnake.ui.Button(label="Open Template", url=url))
+
+        self.speed_function = speed_function
+        self.template_name = template_name
+
+    async def interaction_check(self, inter: disnake.MessageInteraction) -> bool:
+        # check that the command author is the user who interracted
+        if inter.author != self.author:
+            embed = disnake.Embed(
+                title="This isn't your command!",
+                description="You cannot interact with a command you did not call.",
+                color=0xFF3621,
+            )
+            await inter.send(ephemeral=True, embed=embed)
+            return False
+        return True
+
+    async def on_timeout(self) -> None:
+        # disable all the buttons except the url one
+        for c in self.children[1:]:
+            c.disabled = True
+        await self.message.edit(view=self)
+
+    @disnake.ui.button(
+        label="More Info",
+        style=disnake.ButtonStyle.blurple,
+        emoji="<:arrowdown:950178172140388402>",
+    )
+    async def switch(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        self.state = 1 - self.state
+        emb = self.embeds[self.state]
+        button.label = self.labels[self.state]
+        button.emoji = self.emojis[self.state]
+        await inter.response.edit_message(embed=emb, view=self)
+
+    @disnake.ui.button(
+        label="Speed Graph",
+        style=disnake.ButtonStyle.blurple,
+        emoji="<:graph:950178171972649010>",
+    )
+    async def progress_speed(
+        self, button: disnake.ui.Button, inter: disnake.MessageInteraction
+    ):
+        button.disabled = True
+        await inter.message.edit(view=self)
+        await inter.response.defer(with_message=True)
+        await self.speed_function(inter, self.template_name)

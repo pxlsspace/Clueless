@@ -1,5 +1,6 @@
 import disnake
 import re
+import asyncio
 from io import BytesIO
 from PIL import Image
 from disnake.ext import commands
@@ -318,6 +319,26 @@ async def autocomplete_builtin_palettes(inter: disnake.AppCmdInter, user_input: 
 
 
 # --- Views --- #
+class AuthorView(disnake.ui.View):
+    """A view with an interaction check allowing only
+    the command author to interact with the view"""
+
+    def __init__(self, author: disnake.User, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.author = author
+
+    async def interaction_check(self, inter: disnake.MessageInteraction) -> bool:
+        if inter.author != self.author:
+            embed = disnake.Embed(
+                title="This isn't your command!",
+                description="You cannot interact with a command you did not call.",
+                color=disnake.Color.red(),
+            )
+            await inter.send(ephemeral=True, embed=embed)
+            return False
+        return True
+
+
 class Confirm(disnake.ui.View):
     """Simple View that gives a confirmation menu."""
 
@@ -470,3 +491,66 @@ class MoreInfoView(disnake.ui.View):
         await inter.message.edit(view=self)
         await inter.response.defer(with_message=True)
         await self.speed_function(inter, self.template_name)
+
+
+class AddTemplateView(AuthorView):
+    """View with a template link and a "add to tracker" button that sends
+    a modal for the template name and add it to the tracker."""
+
+    message: disnake.Message
+
+    def __init__(self, author: disnake.User, template_url: str, add_func):
+        super().__init__(author)
+        self.add_func = add_func
+        self.template_url = template_url
+        self.children.insert(
+            0, disnake.ui.Button(label="Open Template", url=template_url)
+        )
+
+    async def on_timeout(self) -> None:
+        # disable all the buttons except the url one
+        for c in self.children[1:]:
+            c.disabled = True
+        await self.message.edit(view=self)
+
+    @disnake.ui.button(label="+ Add To Tracker", style=disnake.ButtonStyle.blurple)
+    async def add_to_tracker(
+        self, button: disnake.ui.Button, button_inter: disnake.MessageInteraction
+    ):
+        # send a modal
+        await button_inter.response.send_modal(
+            title="Add a template to the tracker.",
+            custom_id="add_template",
+            components=[
+                disnake.ui.TextInput(
+                    label="Name",
+                    placeholder="The name of the template.",
+                    custom_id="name",
+                    style=disnake.TextInputStyle.short,
+                    min_length=2,
+                    max_length=40,
+                ),
+            ],
+        )
+
+        try:
+            # wait until the user submits the modal.
+            modal_inter: disnake.ModalInteraction = await button_inter.bot.wait_for(
+                "modal_submit",
+                check=lambda i: i.custom_id == "add_template"
+                and i.author.id == button_inter.author.id,
+                timeout=300,
+            )
+        except asyncio.TimeoutError:
+            # The user didn't submit the modal in the specified period of time.
+            # This is done since Discord doesn't dispatch any event for when a modal is closed/dismissed.
+            return
+
+        name = modal_inter.text_values["name"]
+        await modal_inter.response.defer()
+
+        if await self.add_func(modal_inter, name, self.template_url):
+            button.disabled = True
+            button.label = "✓ Added"
+            self.stop()
+            await button_inter.message.edit(view=self)

@@ -13,6 +13,7 @@ from utils.discord_utils import (
     UserConverter,
     DropdownView,
     MoreInfoView,
+    AddTemplateView,
 )
 from utils.pxls.template_manager import (
     Combo,
@@ -29,14 +30,6 @@ from utils.arguments_parser import MyParser
 from utils.plot_utils import get_theme, get_gradient_palette
 from cogs.pxls.speed import get_grouped_graph, get_stats_graph
 from utils.image.image_utils import v_concatenate
-
-
-class TemplateURL(disnake.ui.View):
-    message: disnake.Message
-
-    def __init__(self, template_url: str):
-        super().__init__()
-        self.add_item(disnake.ui.Button(label="Open Template", url=template_url))
 
 
 async def autocomplete_templates(inter: disnake.AppCmdInter, user_input: str):
@@ -184,9 +177,8 @@ class Progress(commands.Cog):
             info_text += f"• Owner: <@{template.owner_id}>\n"
             info_text += f"• Started tracking: {oldest_record_time_str}"
         else:
-            prefix = ctx.prefix if isinstance(ctx, commands.Context) else "/"
             embed.set_footer(
-                text=f"[Not Tracked]\nUse {prefix}progress add <name> <url> to start tracking."
+                text="This template is not in the tracker\nClick on [Add To Tracker] to add it directly."
             )
 
         embed.add_field(name="**Info**", value=info_text, inline=True)
@@ -199,8 +191,9 @@ class Progress(commands.Cog):
             format_number(virgin_abuse_percentage),
         )
         progress_text += f"• Progress:\n**|`{bar}`|** `{correct_percentage}%`\n"
-        eta = await template.get_eta()
-        progress_text += f"• ETA: `{eta or 'N/A'}`\n"
+        if is_tracked:
+            eta = await template.get_eta()
+            progress_text += f"• ETA: `{eta or 'N/A'}`\n"
         embed.add_field(name="**Current Progress**", value=progress_text, inline=False)
 
         # ACTIVITY #
@@ -294,7 +287,7 @@ class Progress(commands.Cog):
                     template.name,
                 )
             else:
-                view = TemplateURL(template_url)
+                view = AddTemplateView(ctx.author, template_url, self.add)
             m = await ctx.send(files=[template_file, detemp_file], embed=embed, view=view)
             if isinstance(ctx, disnake.AppCmdInter):
                 m = await ctx.original_message()
@@ -318,21 +311,25 @@ class Progress(commands.Cog):
         async with ctx.typing():
             await self.add(ctx, name, url)
 
-    async def add(self, ctx, name, url):
+    @staticmethod
+    async def add(ctx, name, url):
         try:
             template = await get_template_from_url(url)
         except ValueError as e:
-            return await ctx.send(f":x: {e}")
+            await ctx.send(f":x: {e}")
+            return False
 
         if template.total_placeable == 0:
-            return await ctx.send(
+            await ctx.send(
                 ":x: The template seems to be outside the canvas, make sure it's correctly positioned."
             )
+            return False
         correct_pixels = template.update_progress()
         try:
             await tracked_templates.save(template, name, ctx.author)
         except ValueError as e:
-            return await ctx.send(f":x: {e}")
+            await ctx.send(f":x: {e}")
+            return False
 
         # Send template infos
 
@@ -358,6 +355,7 @@ class Progress(commands.Cog):
             Image.fromarray(template.get_array()), "detemplatize.png", embed
         )
         await ctx.send(file=detemp_file, embed=embed)
+        return True
 
     sort_options = [
         ("Name", "name"),

@@ -61,18 +61,14 @@ I would prefer that you do not run an instance of this bot. If you wish to use i
 
 - Put your tokens in a `.env` file following the template in [.env.dist](.env.dist)
 
-## 2) Setup a venv
-
-    $ python -m venv env
-
-## 3) Install the required dependencies
+## 2) Install the required dependencies
 
     $ poetry install
 
 
-## 4) Start the bot
+## 3) Start the bot
 
-    $ python src/main.py
+    $ poetry run python src/main.py
 
 # Deploy on a distant host (with pm2)
 

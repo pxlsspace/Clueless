@@ -52,7 +52,7 @@ I would prefer that you do not run an instance of this bot. If you wish to use i
 ## Requirements
 
 - python3 [(version 3.9.5 recommended)](https://www.python.org/downloads/release/python-395/)
-
+- [poetry](https://python-poetry.org/docs/master/#installing-with-the-official-installer)
 ## 1) Register your bot on discord
 
 - See the [discord.py documentation](https://discordpy.readthedocs.io/en/stable/discord.html) on how to create an application and a bot.
@@ -61,18 +61,14 @@ I would prefer that you do not run an instance of this bot. If you wish to use i
 
 - Put your tokens in a `.env` file following the template in [.env.dist](.env.dist)
 
-## 2) Setup a venv
+## 2) Install the required dependencies
 
-    $ python -m venv env
-
-## 3) Install the required dependencies
-
-    $ pip install -r requirements.txt
+    $ poetry install
 
 
-## 4) Start the bot
+## 3) Start the bot
 
-    $ python src/main.py
+    $ poetry run python src/main.py
 
 # Deploy on a distant host (with pm2)
 

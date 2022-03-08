@@ -1,5 +1,6 @@
 from PIL import Image, ImageColor
 import numpy as np
+from copy import deepcopy
 
 from utils.font.font_manager import PixelText
 from utils import image_utils
@@ -260,11 +261,12 @@ def table_to_image(
         alignments = ["center"] * len(data[0])
 
     # copy the data to avoid changing the originals
-    data = data.copy()
-    titles = titles.copy()
-    alignments = alignments.copy()
-    colors = colors.copy()
-    bg_colors = bg_colors.copy()
+    # (using deepcopy() to also copy nested lists)
+    data = deepcopy(data)
+    titles = deepcopy(titles)
+    alignments = deepcopy(alignments)
+    colors = deepcopy(colors)
+    bg_colors = deepcopy(bg_colors)
 
     # insert title/headers values
     data.insert(0, titles)

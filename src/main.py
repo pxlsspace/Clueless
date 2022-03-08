@@ -99,7 +99,10 @@ async def on_command(ctx):
         for key, value in ctx.filled_options.items():
             options += f" {key}:{value}"
         args = f"/{command_name}{options}"
-        message += f"```{args}```"
+        if len(message + args) >= 1024:
+            message += "```[Command too long to show]```"
+        else:
+            message += f"```{args}```"
 
     # save commands used in the database
     await db_servers.create_command_usage(
@@ -133,45 +136,68 @@ async def on_slash_command_error(ctx, error):
 
 @bot.event
 async def on_command_error(ctx, error):
-    if isinstance(error, commands.CommandNotFound) or isinstance(
-        error, commands.DisabledCommand
-    ):
+    if isinstance(error, commands.CommandInvokeError):
+        error = error.original
+
+    ignored = (commands.CommandNotFound, commands.DisabledCommand)
+    if isinstance(error, ignored):
         return
+
     slash_command = isinstance(ctx, disnake.ApplicationCommandInteraction)
     if slash_command:
         command_name = ctx.application_command.qualified_name
     else:
         command_name = ctx.command.qualified_name
+
     # handled errors
     if not slash_command and isinstance(error, commands.MissingRequiredArgument):
         text = "❌ " + str(error) + "\n"
         text += f"Usage: `{ctx.prefix}{command_name} {ctx.command.usage}`"
         return await ctx.send(text)
-    if isinstance(error, commands.MissingPermissions) or isinstance(
-        error, commands.NotOwner
-    ):
+
+    if isinstance(error, (commands.MissingPermissions, commands.NotOwner)):
         return await ctx.send(
             f"❌ You don't have permissions to use the `{command_name}` command."
         )
+
     if isinstance(error, commands.CommandOnCooldown):
         return await ctx.send(f"❌ {error}")
-    if isinstance(error, OverflowError) or (
-        isinstance(error, commands.CommandInvokeError)
-        and isinstance(error.original, OverflowError)
-    ):
+
+    if isinstance(error, OverflowError):
         return await ctx.send("❌ Overflow error. <a:bruhkitty:880829401359589446>")
 
-    # unhandled errors
-    if slash_command:
-        if not isinstance(error, disnake.errors.NotFound):
+    if isinstance(error, (disnake.errors.Forbidden, disnake.Forbidden)):
+        # Try to send error message
+        missing_perms_emoji = "<:Im_missing_permissions:950557152815222806>"
+        try:
             embed = disnake.Embed(
                 color=0xFF4747,
-                title="Unexpected error.",
-                description="<a:peepoLeaveNope:822571977390817340> An unexpected error occurred, please contact the bot developer if the problem persists.",
+                title="Missing Permissions",
+                description=f"{missing_perms_emoji} I'm missing permissions to run this command.",
             )
-            await ctx.send(embed=embed, ephemeral=True)
-    else:
-        await ctx.message.add_reaction(r"a:peepoLeaveNope:822571977390817340")
+            return await ctx.send(embed=embed)
+        except Exception:
+            # Try to add reaction
+            try:
+                return await ctx.message.add_reaction(missing_perms_emoji)
+            except Exception:
+                # Give up
+                return
+
+    # unhandled errors
+    try:
+        if slash_command:
+            if not isinstance(error, disnake.errors.NotFound):
+                embed = disnake.Embed(
+                    color=0xFF4747,
+                    title="Unexpected error.",
+                    description="<a:peepoLeaveNope:822571977390817340> An unexpected error occurred, please contact the bot developer if the problem persists.",
+                )
+                await ctx.send(embed=embed, ephemeral=True)
+        else:
+            await ctx.message.add_reaction(r"a:peepoLeaveNope:822571977390817340")
+    except Exception:
+        pass
 
     logger.exception(
         f"Unexpected exception in command {command_name} by {ctx.author}:",
@@ -211,7 +237,10 @@ async def on_command_error(ctx, error):
             for key, value in ctx.filled_options.items():
                 options += f" {key}:{value}"
             args = f"/{command_name}{options}"
-            message += f"```{args}```"
+            if len(message + args) >= 1024:
+                message += "```[Command too long to show]```"
+            else:
+                message += f"```{args}```"
         emb = disnake.Embed(
             color=0xFF0000,
             title="Unexpected exception in command '{}'".format(command_name),
@@ -263,13 +292,22 @@ async def on_message(message):
                     return
 
     if message.content == ">_>":
-        return await message.channel.send("<_<")
+        try:
+            return await message.channel.send("<_<")
+        except Exception:
+            pass
 
     if message.content == "aa":
-        await message.channel.send("<:watermelonDEATH:856212273718886400>")
+        try:
+            await message.channel.send("<:watermelonDEATH:856212273718886400>")
+        except Exception:
+            pass
 
     if bot.user in message.mentions:
-        await message.add_reaction("<:peepopinged:867331826442960926>")
+        try:
+            await message.add_reaction("<:peepopinged:867331826442960926>")
+        except Exception:
+            pass
     await bot.process_commands(message)
 
 

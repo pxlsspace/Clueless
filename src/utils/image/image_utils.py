@@ -237,8 +237,8 @@ def lighten_color(color, amount=0.5):
 @jit(nopython=True, cache=True)
 def get_image_scale(image_array: np.ndarray) -> int:
     """return the scale for an upscaled image or None if not found"""
-    min_pixel_width = 1e6
-    min_pixel_height = 1e6
+    min_pixel_width = int(1e6)
+    min_pixel_height = int(1e6)
     prev_x = 0
     prev_y = 0
     height = image_array.shape[0]

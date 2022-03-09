@@ -27,12 +27,10 @@ def xyz2lab(xyz):
     xyz[1] = xyz[1] / 100.00
     xyz[2] = xyz[2] / 108.883
     for i in range(3):
-        c = xyz[i]
-        if c > 0.008856:
-            c = c ** (1.0 / 3.0)
+        if xyz[i] > 0.008856:
+            xyz[i] = xyz[i] ** (1.0 / 3.0)
         else:
-            c = (7.787 * c) + (16.0 / 116.0)
-        xyz[i] = c
+            xyz[i] = (7.787 * xyz[i]) + (16.0 / 116.0)
     lab = np.zeros((3), dtype=np.float64)
     lab[0] = (116.0 * xyz[1]) - 16.0
     lab[1] = 500.0 * (xyz[0] - xyz[1])

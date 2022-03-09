@@ -371,7 +371,31 @@ class AuthorView(disnake.ui.View):
             )
             await inter.send(ephemeral=True, embed=embed)
             return False
-        return True
+        return await super(AuthorView, self).interaction_check(inter)
+
+
+class CooldownView(disnake.ui.View):
+    """A view with a cooldown"""
+
+    def __init__(self, rate, per, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cd = commands.CooldownMapping.from_cooldown(
+            rate, per, lambda inter: inter.user
+        )
+
+    async def interaction_check(self, inter: disnake.MessageInteraction) -> bool:
+        # check the command cooldown
+        retry_after = self.cd.update_rate_limit(inter)
+        if retry_after:
+            # rate limited
+            embed = disnake.Embed(
+                title="You're doing this too quick!",
+                description=f"You're on cooldown for this interaction, try again in {round(retry_after,2)}s.",
+                color=disnake.Color.red(),
+            )
+            await inter.send(ephemeral=True, embed=embed)
+            return False
+        return await super(CooldownView, self).interaction_check(inter)
 
 
 class Confirm(disnake.ui.View):
@@ -589,3 +613,60 @@ class AddTemplateView(AuthorView):
             button.label = "✓ Added"
             self.stop()
             await button_inter.message.edit(view=self)
+
+
+class ResizeButton(disnake.ui.Button):
+    """Buttons for the resize view"""
+
+    def __init__(self, amount, func):
+        super().__init__(style=disnake.ButtonStyle.gray)
+        self.func = func
+        self.update_amount(amount)
+
+    def update_amount(self, new_amount):
+        self.amount = new_amount
+        self.label = f"{'+' if new_amount > 0 else ''}{new_amount}"
+
+    async def callback(self, inter: disnake.MessageInteraction):
+        assert self.view is not None
+        await inter.response.defer()
+        view: ResizeView = self.view
+        try:
+            embed, file = self.func(view.image_width + self.amount)
+            view.image_width += self.amount
+
+        except ValueError as e:
+            await inter.send(f":x: {e}", ephemeral=True)
+        else:
+            await inter.message.edit(embed=embed, file=file, view=view)
+
+
+class ResizeView(CooldownView, AuthorView):
+    """View used with the resize command"""
+
+    message: disnake.Message
+
+    def __init__(self, author: disnake.User, image_width: int, func):
+        super().__init__(rate=5, per=5, author=author)
+        self.image_width = image_width
+        self.func = func
+        # True: buttons will increase the width, False: buttons will decrease it
+        self.state = False
+        amounts = [-1, -10, -50, -100]
+        for amount in amounts:
+            self.add_item(ResizeButton(amount, self.func))
+
+    async def on_timeout(self):
+        # remove the dropdown on timeout
+        for c in self.children[:]:
+            self.remove_item(c)
+        await self.message.edit(view=self)
+
+    @disnake.ui.button(label="+", style=disnake.ButtonStyle.blurple)
+    async def plus_minus(self, button: disnake.Button, inter: disnake.MessageInteraction):
+        """invert the buttons"""
+        self.state = not self.state
+        button.label = "-" if self.state else "+"
+        for c in self.children[1:]:
+            c.update_amount(-c.amount)
+        await inter.response.edit_message(view=self)

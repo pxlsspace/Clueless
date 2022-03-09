@@ -7,7 +7,13 @@ from PIL import Image
 
 from utils.image.image_utils import remove_white_space, get_image_scale
 from utils.pxls.template_manager import detemplatize
-from utils.discord_utils import get_image_from_message, image_to_file, get_urls_from_list
+from utils.discord_utils import (
+    ResizeView,
+    format_number,
+    get_image_from_message,
+    image_to_file,
+    get_urls_from_list,
+)
 
 
 class Scale(commands.Cog):
@@ -167,6 +173,96 @@ class Scale(commands.Cog):
         )
         res_file = image_to_file(res_image, "upscaled.png", embed=embed)
         await ctx.send(embed=embed, file=res_file)
+
+    @commands.slash_command(name="resize")
+    async def _resize(self, inter: disnake.AppCmdInter, width: int, image: str = None):
+        """Change an image's width.
+
+        Parameters
+        ----------
+        width: The new width for the image.
+        image: The URL of the image.
+        """
+        await inter.response.defer()
+        await self.resize(inter, width, image)
+
+    @commands.command(
+        name="resize",
+        usage="<width> <image|url>",
+        description="Change an image's width.",
+        help="""- `<width>`: the new width for the image
+                - `<url|image>`: an image URL or an attached image""",
+    )
+    async def p_resize(self, ctx, width, url=None):
+        async with ctx.typing():
+            await self.resize(ctx, width, url)
+
+    async def resize(self, ctx, width, url=None):
+        # check on the width
+
+        def _check_width(width):
+            err_msg = f"Invalid width `{width}`: The width must be a positive integer."
+            try:
+                width = int(width)
+            except ValueError:
+                raise ValueError(err_msg)
+            if width <= 0:
+                raise ValueError(err_msg)
+            return width
+
+        try:
+            width = _check_width(width)
+        except ValueError as e:
+            return await ctx.send(f"❌ {e}")
+
+        # get the input image
+        try:
+            img_bytes, url = await get_image_from_message(ctx, url)
+        except ValueError as e:
+            return await ctx.send(f"❌ {e}")
+        input_image = Image.open(BytesIO(img_bytes))
+        input_image = input_image.convert("RGBA")
+
+        def _resize(width):
+            width = _check_width(width)
+
+            import time
+
+            start = time.time()
+            # check that the image won't be too big
+            limit = 7e6
+            ratio = input_image.width / width
+            new_height = int(input_image.height / ratio)
+            if new_height * width > limit:
+                err_msg = "The resulting image would be too big with this width ({} pixels, {}x{}).".format(
+                    format_number(width * new_height),
+                    format_number(width),
+                    format_number(new_height),
+                )
+                raise ValueError(err_msg)
+
+            res_image = input_image.resize((width, new_height), Image.NEAREST)
+            visible_pixels = int(np.sum(np.array(res_image)[:, :, 3] >= 128))
+            embed = disnake.Embed(title="Resize", color=0x66C5CC)
+            embed.description = (
+                "Size: `{0.width}x{0.height}` → `{1.width}x{1.height}`\n".format(
+                    input_image, res_image
+                )
+            )
+            embed.description += "Pixels: `{}`".format(format_number(visible_pixels))
+            res_file = image_to_file(res_image, "resized.png", embed=embed)
+            print("end, time:", time.time() - start)
+            return embed, res_file
+
+        try:
+            embed, res_file = _resize(width)
+        except ValueError as e:
+            return await ctx.send(f"❌ {e}")
+
+        view = ResizeView(ctx.author, width, _resize)
+        view.message = await ctx.send(embed=embed, file=res_file, view=view)
+        if isinstance(ctx, disnake.AppCmdInter):
+            view.message = await ctx.original_message()
 
 
 def setup(bot: commands.Bot):

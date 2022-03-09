@@ -1,4 +1,3 @@
-import re
 import disnake
 import numpy as np
 import time
@@ -8,10 +7,10 @@ from disnake.ext import commands
 
 from utils.arguments_parser import MyParser
 from utils.discord_utils import (
-    IMAGE_URL_REGEX,
     autocomplete_builtin_palettes,
     format_number,
     get_image_from_message,
+    get_urls_from_list,
     image_to_file,
 )
 from utils.image.image_utils import (
@@ -75,16 +74,11 @@ class Reduce(commands.Cog):
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
 
-        palette = parsed_args.palette
-        input_url = None
-        # search for a possible url in the palette args
-        for possible_url in palette[:]:
-            if re.match(IMAGE_URL_REGEX, possible_url):
-                input_url = possible_url
-                palette.remove(possible_url)
+        palette, urls = get_urls_from_list(parsed_args.palette)
+        input_url = urls[0] if urls else None
 
         if palette:
-            palette = " ".join(parsed_args.palette)
+            palette = " ".join(palette)
         else:
             palette = None
         matching = "fast" if parsed_args.fast else "accurate"

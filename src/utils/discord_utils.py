@@ -94,6 +94,9 @@ def format_number(num):
 
 EMOJI_REGEX = r"<(?P<animated>a?):(?P<name>[a-zA-Z0-9_]{2,32}):(?P<id>[0-9]{18,22})>"
 IMAGE_URL_REGEX = r"(?:http\:|https\:)?\/\/.*\.(?:png|jpg|gif|webp)"
+URL_REGEX = (
+    r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
+)
 
 
 class ImageNotFoundError(Exception):
@@ -213,6 +216,38 @@ def format_emoji(emoji):
     """formats a discord emoji into a string"""
     res = "<{1}:{0.name}:{0.id}>".format(emoji, "a" if emoji.animated else "")
     return res
+
+
+def get_urls_from_list(input_list: list = None, image_url: bool = True):
+    """Extract all the URLs from the input list and put them in an other list.
+
+    Parameters
+    ----------
+    input_list (list): a list of string containing URLs
+    image_url (bool): if set to true, only the image URLs will be parsed
+
+    Return
+    ------
+    A tuple with 2 lists (tuple(list, list)):
+        - the `input_list` without the URLs
+        - a list with all the URLs found
+    """
+    if image_url:
+        regex = IMAGE_URL_REGEX
+    else:
+        regex = URL_REGEX
+
+    not_url_list = []
+    url_list = []
+    # search for possible URLs in the input_list
+    if input_list:
+        input_list = list(input_list)
+        for possible_url in input_list:
+            if re.match(regex, possible_url):
+                url_list.append(possible_url)
+            else:
+                not_url_list.append(possible_url)
+    return (not_url_list, url_list)
 
 
 class MemberConverter(commands.Converter):

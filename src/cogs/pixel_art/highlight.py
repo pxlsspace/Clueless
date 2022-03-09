@@ -1,6 +1,5 @@
 import disnake
 import numpy as np
-import re
 from io import BytesIO
 from datetime import datetime, timezone
 from disnake.ext import commands
@@ -17,8 +16,8 @@ from utils.image.image_utils import (
 from utils.discord_utils import (
     format_number,
     get_image_from_message,
+    get_urls_from_list,
     image_to_file,
-    IMAGE_URL_REGEX,
 )
 from utils.arguments_parser import MyParser
 from utils.table_to_image import table_to_image
@@ -84,12 +83,8 @@ class Highlight(commands.Cog):
             return await ctx.send(f"❌ {e}")
 
         # check if there is an image URL in the arguments
-        input_url = None
-        possible_url = parsed_args.colors[-1]
-        urls = re.findall(IMAGE_URL_REGEX, possible_url)
-        if len(urls) > 0:
-            input_url = urls[0]
-            parsed_args.colors = parsed_args.colors[:-1]
+        colors, urls = get_urls_from_list(parsed_args.colors)
+        input_url = urls[0] if urls else None
 
         # get the input image
         image_bytes, url = await get_image_from_message(ctx, input_url)
@@ -97,14 +92,14 @@ class Highlight(commands.Cog):
         image = image.convert("RGBA")
         image_array = np.array(image)
 
-        await _highlight(ctx, image_array, parsed_args)
+        await _highlight(ctx, image_array, colors, parsed_args.bgcolor)
 
 
-async def _highlight(ctx, image_array: np.ndarray, parsed_args):
+async def _highlight(ctx, image_array: np.ndarray, colors, bg_color):
     """Highlight colors in an image."""
 
     # get color rgba
-    colors = " ".join(parsed_args.colors)
+    colors = " ".join(colors)
     colors = colors.split(",")
     colors = [c.strip(" ").lower() for c in colors]
     colors = list(dict.fromkeys(colors))
@@ -122,7 +117,6 @@ async def _highlight(ctx, image_array: np.ndarray, parsed_args):
         rgba_list.append(rgba)
 
     # get bg color rgba
-    bg_color = parsed_args.bgcolor
     if bg_color:
         bg_color = " ".join(bg_color).lower()
         try:

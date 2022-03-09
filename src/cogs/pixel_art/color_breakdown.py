@@ -61,7 +61,7 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
         return await ctx.send("❌ Unsupported format or image mode.")
 
     # remove transparent pixels (alpha < 128)
-    image_colors = [c for c in image_colors if (len(c[1]) != 4 or c[1][3] >= 128)]
+    image_colors = [c for c in image_colors if (len(c[1]) != 4 or c[1][3] > 128)]
     nb_colors = len(image_colors)
     if nb_colors > 1e6:
         return await ctx.send(

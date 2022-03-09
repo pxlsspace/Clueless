@@ -1,3 +1,4 @@
+from typing import Union
 from PIL import Image, ImageColor
 import numpy as np
 import re
@@ -236,8 +237,8 @@ def lighten_color(color, amount=0.5):
 @jit(nopython=True, cache=True)
 def get_image_scale(image_array: np.ndarray) -> int:
     """return the scale for an upscaled image or None if not found"""
-    min_pixel_width = 99999999
-    min_pixel_height = 99999999
+    min_pixel_width = 1e6
+    min_pixel_height = 1e6
     prev_x = 0
     prev_y = 0
     height = image_array.shape[0]
@@ -284,6 +285,19 @@ def get_image_scale(image_array: np.ndarray) -> int:
         return pixel_size
     else:
         return None
+
+
+def get_visible_pixels(image: Union[Image.Image, np.ndarray]) -> int:
+    """Get the amount of visible pixels in an image"""
+    image = np.array(image)
+    nb_channels = image.shape[-1]
+    if nb_channels == 1:
+        return int(np.sum(image != 255))
+    elif nb_channels == 3:
+        return image.shape[0] * image.shape[1]
+    else:
+        alpha_mask = image[:, :, 3] > 128
+        return int(np.sum(alpha_mask))
 
 
 # --- Palettes --- #

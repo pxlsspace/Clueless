@@ -5,7 +5,11 @@ from disnake.ext import commands
 from io import BytesIO
 from PIL import Image
 
-from utils.image.image_utils import remove_white_space, get_image_scale
+from utils.image.image_utils import (
+    get_visible_pixels,
+    remove_white_space,
+    get_image_scale,
+)
 from utils.pxls.template_manager import detemplatize
 from utils.discord_utils import (
     ResizeView,
@@ -101,11 +105,12 @@ class Scale(commands.Cog):
         downscaled_image = Image.fromarray(downscaled_array)
 
         embed = disnake.Embed(title="Downscale", color=0x66C5CC)
-        embed.description = "Original pixel size: **{0}x{0}**\n".format(scale)
+        embed.description = "• Original pixel size: **{0}x{0}**\n".format(scale)
+        embed.description += "• Image size: `{0.shape[1]}x{0.shape[0]}` → `{1.shape[1]}x{1.shape[0]}`\n".format(
+            input_image_array, downscaled_array
+        )
         embed.description += (
-            "`{0.shape[1]}x{0.shape[0]}` → `{1.shape[1]}x{1.shape[0]}`".format(
-                input_image_array, downscaled_array
-            )
+            f"• Pixels: `{format_number(get_visible_pixels(downscaled_image))}`"
         )
         embed.set_footer(text=f"Downscaled in {round((end - start), 3)}s")
         downscaled_file = image_to_file(downscaled_image, "downscaled.png", embed=embed)
@@ -167,10 +172,13 @@ class Scale(commands.Cog):
         res_image = input_image.resize((final_width, final_height), Image.NEAREST)
 
         embed = disnake.Embed(title="Upscale", color=0x66C5CC)
-        embed.description = "Final pixel size: **{0}x{0}**\n".format(scale)
-        embed.description += "`{0.width}x{0.height}` → `{1.width}x{1.height}`".format(
-            input_image, res_image
+        embed.description = "• Final pixel size: **{0}x{0}**\n".format(scale)
+        embed.description += (
+            "• Image size: `{0.width}x{0.height}` → `{1.width}x{1.height}`\n".format(
+                input_image, res_image
+            )
         )
+        embed.description += f"• Pixels: `{format_number(get_visible_pixels(res_image))}`"
         res_file = image_to_file(res_image, "upscaled.png", embed=embed)
         await ctx.send(embed=embed, file=res_file)
 
@@ -224,12 +232,8 @@ class Scale(commands.Cog):
         input_image = input_image.convert("RGBA")
 
         def _resize(width):
+            # checks on the width
             width = _check_width(width)
-
-            import time
-
-            start = time.time()
-            # check that the image won't be too big
             limit = 7e6
             ratio = input_image.width / width
             new_height = int(input_image.height / ratio)
@@ -241,17 +245,17 @@ class Scale(commands.Cog):
                 )
                 raise ValueError(err_msg)
 
+            # resize the input image
             res_image = input_image.resize((width, new_height), Image.NEAREST)
-            visible_pixels = int(np.sum(np.array(res_image)[:, :, 3] >= 128))
+            visible_pixels = get_visible_pixels(res_image)
             embed = disnake.Embed(title="Resize", color=0x66C5CC)
             embed.description = (
-                "Size: `{0.width}x{0.height}` → `{1.width}x{1.height}`\n".format(
+                "• Size: `{0.width}x{0.height}` → `{1.width}x{1.height}`\n".format(
                     input_image, res_image
                 )
             )
-            embed.description += "Pixels: `{}`".format(format_number(visible_pixels))
+            embed.description += "• Pixels: `{}`".format(format_number(visible_pixels))
             res_file = image_to_file(res_image, "resized.png", embed=embed)
-            print("end, time:", time.time() - start)
             return embed, res_file
 
         try:
@@ -263,6 +267,55 @@ class Scale(commands.Cog):
         view.message = await ctx.send(embed=embed, file=res_file, view=view)
         if isinstance(ctx, disnake.AppCmdInter):
             view.message = await ctx.original_message()
+
+    @commands.slash_command(name="size")
+    async def _size(self, inter: disnake.AppCmdInter, image: str = None):
+        """To quickly get the size of an image.
+
+        Parameters
+        ----------
+        image: The URL of the image.
+        """
+        await inter.response.defer()
+        await self.size(inter, image)
+
+    @commands.command(
+        name="size",
+        usage="<image|url>",
+        description="To quickly get the size of an image.",
+        help="""`<url|image>`: an image URL or an attached image""",
+    )
+    async def p_size(self, ctx, url=None):
+        async with ctx.typing():
+            await self.size(ctx, url)
+
+    async def size(self, ctx, url=None):
+        # get the input image
+        try:
+            img_bytes, url = await get_image_from_message(ctx, url)
+        except ValueError as e:
+            return await ctx.send(f"❌ {e}")
+        image = Image.open(BytesIO(img_bytes))
+        image = image.convert("RGBA")
+
+        width = image.width
+        height = image.height
+        total_size = width * height
+        total_visible = get_visible_pixels(image)
+        image_colors = image.getcolors(total_size)
+        image_colors = [c for c in image_colors if (len(c[1]) != 4 or c[1][3] > 128)]
+        total_colors = len(image_colors)
+
+        embed = disnake.Embed(title="Size", color=0x66C5CC)
+        embed.description = f" • Visible pixels: `{format_number(total_visible)}`\n"
+        embed.description += f" • Number of colors: `{format_number(total_colors)}`\n"
+        embed.description += "• Size: `{} x {}` (`{}` pixels)".format(
+            format_number(width),
+            format_number(height),
+            format_number(total_size),
+        )
+        embed.set_thumbnail(url=url)
+        await ctx.send(embed=embed)
 
 
 def setup(bot: commands.Bot):

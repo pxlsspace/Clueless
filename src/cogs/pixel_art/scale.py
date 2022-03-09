@@ -7,7 +7,7 @@ from PIL import Image
 
 from utils.image.image_utils import remove_white_space, get_image_scale
 from utils.pxls.template_manager import detemplatize
-from utils.discord_utils import get_image_from_message, image_to_file
+from utils.discord_utils import get_image_from_message, image_to_file, get_urls_from_list
 
 
 class Scale(commands.Cog):
@@ -15,27 +15,49 @@ class Scale(commands.Cog):
         self.bot: commands.Bot = bot
 
     @commands.slash_command(name="downscale")
-    async def _downscale(self, inter: disnake.AppCmdInter, image: str = None):
+    async def _downscale(
+        self,
+        inter: disnake.AppCmdInter,
+        image: str = None,
+        pixel_size: int = commands.Param(name="pixel-size", default=None, gt=1),
+    ):
         """Downscale an upscaled pixel art.
 
         Parameters
         ----------
         image: The URL of the image.
+        pixel_size: The current size of the pixels (e.g. "2" means  the pixels are 2x2).
         """
         await inter.response.defer()
-        await self.downscale(inter, image)
+        await self.downscale(inter, image, pixel_size)
 
     @commands.command(
         name="downscale",
-        usage="<image|url>",
+        usage="<image|url> [pixel size]",
         description="Downscale an upscaled pixel art.",
-        help="""- `<url|image>`: an image URL or an attached image""",
+        help="""
+        - `<url|image>`: an image URL or an attached image
+        - `[pixel size]`: The current size of the pixels (e.g. "2" means  the pixels are 2x2).
+        """,
     )
-    async def p_downscale(self, ctx, url=None):
+    async def p_downscale(self, ctx, *args):
+        args, urls = get_urls_from_list(args)
+        pixel_size = args[0] if args else None
+        url = urls[0] if urls else None
         async with ctx.typing():
-            await self.downscale(ctx, url)
+            await self.downscale(ctx, url, pixel_size)
 
-    async def downscale(self, ctx, url=None):
+    async def downscale(self, ctx, url=None, pixel_size=None):
+        # check on the pixel_size
+        if pixel_size is not None:
+            err_msg = "The pixel size must be an integer greater than 1."
+            try:
+                pixel_size = int(pixel_size)
+            except ValueError:
+                return await ctx.send(f"❌ {err_msg}")
+            if pixel_size < 2:
+                return await ctx.send(f"❌ {err_msg}")
+
         # get the input image
         try:
             img_bytes, url = await get_image_from_message(ctx, url)
@@ -47,9 +69,13 @@ class Scale(commands.Cog):
         input_image = remove_white_space(input_image)  # Remove extra space
         input_image_array = np.array(input_image)
         start = time.time()
-        scale = await self.bot.loop.run_in_executor(
-            None, get_image_scale, input_image_array
-        )
+        if pixel_size is None:
+            scale = await self.bot.loop.run_in_executor(
+                None, get_image_scale, input_image_array
+            )
+        else:
+            scale = pixel_size
+
         if not scale or scale == 1:
             msg = "Make sure that:\n"
             msg += "- The image doesn't have artificats (it needs to be a good quality image)\n"

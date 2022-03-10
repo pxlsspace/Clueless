@@ -636,7 +636,7 @@ class PxlsStats(commands.Cog):
             virgin_array = stats.virginmap_array
             canvas_array_idx[virgin_array != 0] = 255
         array = stats.palettize_array(canvas_array_idx)
-        await _highlight(ctx, array, parsed_args.colors, parsed_args.bgcolor)
+        await _highlight(ctx, array, parsed_args.colors.copy(), parsed_args.bgcolor)
 
 
 def setup(bot: commands.Bot):

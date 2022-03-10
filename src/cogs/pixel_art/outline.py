@@ -1,6 +1,6 @@
 import functools
 import disnake
-from PIL import Image, ImageColor
+from PIL import Image
 from disnake.ext import commands
 from io import BytesIO
 
@@ -11,12 +11,7 @@ from utils.discord_utils import (
     get_image_from_message,
     image_to_file,
 )
-from utils.image.image_utils import (
-    add_outline,
-    remove_white_space,
-    get_pxls_color,
-    is_hex_color,
-)
+from utils.image.image_utils import add_outline, remove_white_space, get_color
 
 
 class Outline(commands.Cog):
@@ -82,15 +77,11 @@ class Outline(commands.Cog):
             return await ctx.send("❌ This outline width is too small (min: 1).")
 
         # get the rgba from the color input
-        try:
-            color, rgba = get_pxls_color(color)
-        except ValueError:
-            if is_hex_color(color):
-                rgba = ImageColor.getcolor(color, "RGBA")
-            else:
-                return await ctx.send(
-                    f"❌ The color `{color}` is invalid.\n(use quotes if the color has 2 or more words)"
-                )
+        color_name, rgba = get_color(color)
+        if rgba is None:
+            return await ctx.send(
+                f"❌ The color `{color}` is invalid.\n(use quotes if the color has 2 or more words)"
+            )
 
         # get the input image
         try:

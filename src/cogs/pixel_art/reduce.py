@@ -14,10 +14,8 @@ from utils.discord_utils import (
     image_to_file,
 )
 from utils.image.image_utils import (
-    get_pxls_color,
-    is_hex_color,
+    get_color,
     rgb_to_hex,
-    hex_to_rgb,
     get_builtin_palette,
 )
 from utils.pxls.template import reduce, get_rgba_palette
@@ -130,17 +128,10 @@ class Reduce(commands.Cog):
             # search for colors names/hex
             for i, color in enumerate(palette_input):
                 color = color.strip(" ")
-                try:
-                    color, rgba = get_pxls_color(color)
-                    palette_names.append(color)  # to show the correct format
-                except ValueError:
-                    if is_hex_color(color):
-                        rgba = hex_to_rgb(color, "RGBA")
-                        palette_names.append(
-                            "#" if color[0] != "#" else "" + color.upper()
-                        )
-                    else:
-                        return await ctx.send(f"❌ The color `{color}` is invalid.")
+                color_name, rgba = get_color(color)
+                if rgba is None:
+                    return await ctx.send(f"❌ The color `{color}` is invalid.")
+                palette_names.append(color_name)  # to show the correct format
                 rgba_list.append(rgba)
 
             hex_palette = [rgb_to_hex(rgba[:3]) for rgba in rgba_list]

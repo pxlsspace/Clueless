@@ -1,11 +1,10 @@
 import disnake
-from PIL import ImageColor
 from disnake.ext import commands
 
 from utils.arguments_parser import parse_pixelfont_args
 from utils.font.font_manager import get_all_fonts, PixelText
 from utils.discord_utils import image_to_file, autocomplete_palette_with_none
-from utils.image.image_utils import get_pxls_color, is_hex_color
+from utils.image.image_utils import get_color
 
 
 class Font(commands.Cog):
@@ -87,14 +86,11 @@ class Font(commands.Cog):
         if font_color:
             # get the rgba from the color input
             font_color = " ".join(font_color).lower()
-            try:
-                font_color, font_rgba = get_pxls_color(font_color)
-            except ValueError:
-                if font_color == "none":
-                    font_rgba = (0, 0, 0, 0)
-                elif is_hex_color(font_color):
-                    font_rgba = ImageColor.getcolor(font_color, "RGBA")
-                else:
+            if font_color == "none":
+                font_rgba = (0, 0, 0, 0)
+            else:
+                font_color_name, font_rgba = get_color(font_color)
+                if font_rgba is None:
                     return await ctx.send(f"❌ The font color `{font_color}` is invalid.")
         else:
             font_rgba = None
@@ -103,14 +99,11 @@ class Font(commands.Cog):
         if background_color:
             # get the rgba from the color input
             background_color = " ".join(background_color).lower()
-            try:
-                background_color, bg_rgba = get_pxls_color(background_color)
-            except ValueError:
-                if background_color == "none":
-                    bg_rgba = (0, 0, 0, 0)
-                elif is_hex_color(background_color):
-                    bg_rgba = ImageColor.getcolor(background_color, "RGBA")
-                else:
+            if background_color == "none":
+                bg_rgba = (0, 0, 0, 0)
+            else:
+                background_color_name, bg_rgba = get_color(background_color)
+                if bg_rgba is None:
                     return await ctx.send(
                         f"❌ The background color `{background_color}` is invalid."
                     )

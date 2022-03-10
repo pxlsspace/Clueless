@@ -139,14 +139,14 @@ def remove_white_space(original_image):
     return Image.fromarray(out)
 
 
-def get_pxls_color(input):
+def get_pxls_color(input, mode="RGBA"):
     """Get the RGBA value of a pxls color by its name. Return `(color_name, rgba)`"""
     color_name = input.lower().replace("gray", "grey")
     color_name = color_name.replace('"', "")
     color_name = color_name.replace("_", " ")
     for color in stats.get_palette():
         if color["name"].lower().replace(" ", "") == color_name.lower().replace(" ", ""):
-            rgb = ImageColor.getcolor(f'#{color["value"]}', "RGBA")
+            rgb = ImageColor.getcolor(f'#{color["value"]}', mode)
             return color["name"], rgb
     raise ValueError("The color `{}` was not found in the pxls palette. ".format(input))
 
@@ -166,6 +166,23 @@ def rgb_to_hex(rgb):
     ((255,255,255) -> '#ffffff')"""
     str = "#" + "%02x" * len(rgb)
     return str % rgb
+
+
+def get_color(color: str, pxls_only=False, mode="RGBA"):
+    """Get the name and RGBA value of a color
+
+    Return `(color_name: str, rgba: tuple)`"""
+    try:
+        return get_pxls_color(color, mode)
+    except Exception:
+        if pxls_only:
+            return None, None
+        if is_hex_color(color):
+            if not color.startswith("#"):
+                color = "#" + color
+
+            return color.upper(), hex_to_rgb(color, mode)
+    return None, None
 
 
 def rgb_to_pxls(rgb):

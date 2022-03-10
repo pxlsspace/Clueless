@@ -3,13 +3,12 @@ import numpy as np
 from io import BytesIO
 from datetime import datetime, timezone
 from disnake.ext import commands
-from PIL import Image, ImageColor
+from PIL import Image
 
 
 from utils.image.image_utils import (
-    get_pxls_color,
+    get_color,
     hex_str_to_int,
-    is_hex_color,
     rgb_to_hex,
     is_dark,
 )
@@ -106,29 +105,24 @@ async def _highlight(ctx, image_array: np.ndarray, colors, bg_color):
 
     rgba_list = []
     for i, color in enumerate(colors):
-        try:
-            color, rgba = get_pxls_color(color)
-            colors[i] = color
-        except ValueError:
-            if is_hex_color(color):
-                rgba = ImageColor.getcolor(color, "RGBA")
-            else:
-                return await ctx.send(f"❌ The color `{color}` is invalid.")
+
+        color_name, rgba = get_color(color)
+        if rgba is None:
+            return await ctx.send(f"❌ The color `{color}` is invalid.")
+        colors[i] = color_name
+
         rgba_list.append(rgba)
 
     # get bg color rgba
     if bg_color:
         bg_color = " ".join(bg_color).lower()
-        try:
-            bg_color, bg_rgba = get_pxls_color(bg_color)
-        except ValueError:
-            if bg_color == "none":
-                bg_rgba = (0, 0, 0, 0)
-            elif bg_color in ["dark", "light"]:
-                bg_rgba = None
-            elif is_hex_color(bg_color):
-                bg_rgba = ImageColor.getcolor(bg_color, "RGBA")
-            else:
+        if bg_color == "none":
+            bg_rgba = (0, 0, 0, 0)
+        elif bg_color in ["dark", "light"]:
+            bg_rgba = None
+        else:
+            bg_color_name, bg_rgba = get_color(bg_color)
+            if bg_rgba is None:
                 return await ctx.send(f"❌ The background color `{bg_color}` is invalid.")
 
     # find the number of pixels non-transparent

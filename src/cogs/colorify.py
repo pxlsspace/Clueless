@@ -1,7 +1,7 @@
 import disnake
 import numpy as np
 from matplotlib.colors import hsv_to_rgb
-from PIL import Image, ImageColor
+from PIL import Image
 from io import BytesIO
 from disnake.ext import commands
 from blend_modes import hard_light
@@ -12,7 +12,7 @@ from utils.discord_utils import (
     autocomplete_palette,
 )
 from utils.image.gif_saver import save_transparent_gif
-from utils.image.image_utils import get_pxls_color, is_hex_color
+from utils.image.image_utils import get_color
 from utils.image.img_to_gif import img_to_animated_gif
 from utils.arguments_parser import MyParser
 
@@ -50,16 +50,13 @@ class Colorify(commands.Cog):
 
     async def colorify(self, ctx, color, url=None):
         # get the rgba from the color input
-        try:
-            color, rgba = get_pxls_color(color)
-        except ValueError:
-            if is_hex_color(color):
-                rgba = ImageColor.getcolor(color, "RGBA")
-            else:
-                return await ctx.send(
-                    f"❌ The color `{color}` is invalid.\n(use quotes if the color has 2 or more words)"
-                )
-        rgb = rgba[:-1]
+
+        color_name, rgb = get_color(color, mode="RGB")
+        if rgb is None:
+            return await ctx.send(
+                f"❌ The color `{color}` is invalid.\n(use quotes if the color has 2 or more words)"
+            )
+        color = color_name
 
         # get the image from the message
         try:

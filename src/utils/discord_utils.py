@@ -93,7 +93,7 @@ def format_number(num):
 
 
 EMOJI_REGEX = r"<(?P<animated>a?):(?P<name>[a-zA-Z0-9_]{2,32}):(?P<id>[0-9]{18,22})>"
-IMAGE_URL_REGEX = r"(?:http\:|https\:)?\/\/.*\.(?:png|jpg|gif|webp)"
+IMAGE_URL_REGEX = r"(?:http\:|https\:)?\/\/.*\.(?:png|jpg|jpeg|gif|webp)"
 URL_REGEX = (
     r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
 )

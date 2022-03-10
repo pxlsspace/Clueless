@@ -88,21 +88,21 @@ async def on_command(ctx):
     message = f"By <@{author_id}> "
     message += f"on <t:{int(message_time.timestamp())}>\n"
     if not slash_command:
-        if len(message + ctx.message.content) > 1024:
-            args = "[Message too long to show]"
-        else:
-            args = ctx.message.content
-        message += f"```{args}```"
-        message += f"[link to the message]({ctx.message.jump_url})\n"
+        args = f"```{ctx.message.content}```"
+        args += f"[link to the message]({ctx.message.jump_url})\n"
+        if len(message + args) > 1024:
+            args = "```[Message too long to show]```"
+            args += f"[link to the message]({ctx.message.jump_url})\n"
+
+        message += args
     else:
         options = ""
         for key, value in ctx.filled_options.items():
             options += f" {key}:{value}"
-        args = f"/{command_name}{options}"
-        if len(message + args) >= 1024:
-            message += "```[Command too long to show]```"
-        else:
-            message += f"```{args}```"
+        args = f"```/{command_name}{options}```"
+        if len(message + args) > 1024:
+            args = "```[Command too long to show]```"
+        message += args
 
     # save commands used in the database
     await db_servers.create_command_usage(
@@ -227,32 +227,40 @@ async def on_command_error(ctx, error):
         message += f"on <t:{int(message_time.timestamp())}>\n"
 
         if not slash_command:
-            if len(message + ctx.message.content) >= 1024:
-                message += "```[Message too long to show]```"
-            else:
-                message += f"```{ctx.message.content}```"
-            message += f"[link to the message]({ctx.message.jump_url})\n"
+            args = f"```{ctx.message.content}```"
+            args += f"[link to the message]({ctx.message.jump_url})\n"
+            if len(message + args) > 1024:
+                args = "```[Message too long to show]```"
+                args += f"[link to the message]({ctx.message.jump_url})\n"
+
+            message += args
         else:
             options = ""
             for key, value in ctx.filled_options.items():
                 options += f" {key}:{value}"
-            args = f"/{command_name}{options}"
-            if len(message + args) >= 1024:
-                message += "```[Command too long to show]```"
-            else:
-                message += f"```{args}```"
+            args = f"```/{command_name}{options}```"
+            if len(message + args) > 1024:
+                args = "```[Command too long to show]```"
+            message += args
         emb = disnake.Embed(
             color=0xFF0000,
             title="Unexpected exception in command '{}'".format(command_name),
         )
         emb.add_field(name="Context:", value=context, inline=False)
         emb.add_field(name="Message:", value=message, inline=False)
+        error_name = f"```{error.__class__.__name__}: {error}```"
+        if len(error_name) > 1024:
+            error_name = f"```{error.__class__.__name__}: [Too long to show]```"
+
         emb.add_field(
             name="Error:",
-            value=f"```{error.__class__.__name__}: {error}```",
+            value=error_name,
             inline=False,
         )
-        emb.add_field(name="Traceback:", value=f"```\n{tb}```", inline=False)
+        tb_str = f"```\n{tb}```"
+        if len(tb_str) > 1024:
+            tb_str = "```[Too long to show]```"
+        emb.add_field(name="Traceback:", value=tb_str, inline=False)
 
         await log_channel.send(embed=emb)
 

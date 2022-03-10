@@ -3,6 +3,7 @@ import os
 import sys
 from dotenv import load_dotenv
 
+LOG_DIR = "logs"
 load_dotenv()
 default_log_level = os.environ.get("LOG_LEVEL")
 if default_log_level:
@@ -32,9 +33,10 @@ def get_logger(name, level="DEBUG", file="clueless.log", in_console=True):
     formatter = logging.Formatter(log_format, datetime_format)
 
     if file is not None:
-        file_handler = logging.FileHandler(
-            filename="logs/" + file, encoding="utf-8", mode="a"
-        )
+        # make sure that the logs folder was created
+        os.makedirs(LOG_DIR, exist_ok=True)
+        path = os.path.join(LOG_DIR, file)
+        file_handler = logging.FileHandler(filename=path, encoding="utf-8", mode="a")
         file_handler.setFormatter(formatter)
         file_handler.setLevel(logging.DEBUG)
         logger.addHandler(file_handler)
@@ -64,9 +66,7 @@ def setup_loggers():
     """setup the loggers"""
 
     # make the log folder if it doesn't exist
-    log_folder = "logs"
-    if not os.path.exists(log_folder):
-        os.makedirs(log_folder)
+    os.makedirs(LOG_DIR, exist_ok=True)
 
     # Silence irrelevant loggers
     get_logger(name="disnake", level="INFO", file=None)

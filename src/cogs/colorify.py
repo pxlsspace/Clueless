@@ -7,6 +7,7 @@ from disnake.ext import commands
 from blend_modes import hard_light
 
 from utils.discord_utils import (
+    get_urls_from_list,
     image_to_file,
     get_image_from_message,
     autocomplete_palette,
@@ -44,7 +45,16 @@ class Colorify(commands.Cog):
         usage="<color> <image|url|emoji>",
         aliases=["colorize", "colourify"],
     )
-    async def p_colorify(self, ctx, color, url=None):
+    async def p_colorify(self, ctx, *args):
+        colors, urls = get_urls_from_list(list(args))
+        if colors:
+            color = " ".join(colors)
+        else:
+            raise commands.MissingRequiredArgument(commands.Param(name="color"))
+        url = None
+        if urls:
+            url = urls[0]
+
         async with ctx.typing():
             await self.colorify(ctx, color, url)
 
@@ -53,9 +63,7 @@ class Colorify(commands.Cog):
 
         color_name, rgb = get_color(color, mode="RGB")
         if rgb is None:
-            return await ctx.send(
-                f"❌ The color `{color}` is invalid.\n(use quotes if the color has 2 or more words)"
-            )
+            return await ctx.send(f"❌ The color `{color}` is invalid.")
         color = color_name
 
         # get the image from the message

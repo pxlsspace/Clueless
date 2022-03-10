@@ -9,6 +9,7 @@ from utils.discord_utils import (
     autocomplete_palette,
     format_number,
     get_image_from_message,
+    get_urls_from_list,
     image_to_file,
 )
 from utils.image.image_utils import add_outline, remove_white_space, get_color
@@ -25,7 +26,7 @@ class Outline(commands.Cog):
         color: str = commands.Param(autocomplete=autocomplete_palette),
         image: str = None,
         sparse: bool = False,
-        width: int = commands.Param(default=None, gt=0, le=32),
+        width: int = commands.Param(default=1, gt=0, le=32),
     ):
         """Add an outline to an image.
 
@@ -37,14 +38,7 @@ class Outline(commands.Cog):
         width: The width of the outline in pixels. (default: 1)
         """
         await inter.response.defer()
-        args = (color,)
-        if image:
-            args += (image,)
-        if sparse:
-            args += ("-sparse",)
-        if width:
-            args += ("-width", str(width))
-        await self.outline(inter, *args)
+        await self.outline(inter, color, image, sparse, width)
 
     @commands.command(
         name="outline",
@@ -57,20 +51,28 @@ class Outline(commands.Cog):
                   - `[-width <number>]`: the width of the outline in pixels""",
     )
     async def p_outline(self, ctx, *args):
-        async with ctx.typing():
-            await self.outline(ctx, *args)
-
-    async def outline(self, ctx, *args):
-        """command to add an to an image"""
         try:
             param = parse_outline_args(args)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
 
-        color = " ".join(param["color"])
-        url = param["url"]
+        colors, urls = get_urls_from_list(param["pos_args"])
+        if colors:
+            color = " ".join(colors)
+        else:
+            raise commands.MissingRequiredArgument(commands.Param(name="color"))
+        url = None
+        if urls:
+            url = urls[0]
+
         sparse = param["sparse"]
         width = param["width"]
+        async with ctx.typing():
+            await self.outline(ctx, color, url, sparse, width)
+
+    async def outline(self, ctx, color, url=None, sparse=False, width=1):
+        """command to add an to an image"""
+
         if width > 32:
             return await ctx.send("❌ This outline width is too big (max: 32).")
         elif width < 1:
@@ -79,9 +81,7 @@ class Outline(commands.Cog):
         # get the rgba from the color input
         color_name, rgba = get_color(color)
         if rgba is None:
-            return await ctx.send(
-                f"❌ The color `{color}` is invalid.\n(use quotes if the color has 2 or more words)"
-            )
+            return await ctx.send(f"❌ The color `{color}` is invalid.")
 
         # get the input image
         try:

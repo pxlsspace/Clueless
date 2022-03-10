@@ -163,9 +163,9 @@ def is_hex_color(input_string):
 
 def rgb_to_hex(rgb):
     """convert a RGB/RGBA tuple to the matching hex code as a string
-    ((255,255,255) -> '#ffffff')"""
+    ((255,255,255) -> '#FFFFFF')"""
     str = "#" + "%02x" * len(rgb)
-    return str % rgb
+    return (str % rgb).upper()
 
 
 def get_color(color: str, pxls_only=False, mode="RGBA"):

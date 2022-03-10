@@ -88,8 +88,7 @@ def parse_speed_args(args, user_timezone: timezone = None):
 def parse_outline_args(args):
     parser = MyParser(add_help=False)
 
-    parser.add_argument("color", type=str, nargs=1)
-    parser.add_argument("url", type=str, nargs="?")
+    parser.add_argument("pos_args", type=str, nargs="*")
     parser.add_argument("-sparse", "-thin", action="store_true", default=False)
     parser.add_argument("-width", metavar="<number>", action="store", type=int, default=1)
 

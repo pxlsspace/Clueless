@@ -137,7 +137,7 @@ class Reduce(commands.Cog):
                     if is_hex_color(color):
                         rgba = hex_to_rgb(color, "RGBA")
                         palette_names.append(
-                            "#" if color[0] != "#" else "" + color.upper()
+                            ("#" if color[0] != "#" else "") + color.upper()
                         )
                     else:
                         return await ctx.send(f"❌ The color `{color}` is invalid.")

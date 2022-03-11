@@ -139,6 +139,43 @@ def remove_white_space(original_image):
     return Image.fromarray(out)
 
 
+def highlight_image(
+    top_array: np.ndarray,
+    background_array: np.ndarray,
+    opacity=0.2,
+    background_color=(255, 255, 255, 255),
+):
+    """Highlight the `top_array` over the `background_array` reducing the opacity of the
+    background array to `opacity` and applying it color mask of `background_color`."""
+    msg = "top_array and background_array must have the same shape"
+    assert top_array.shape == background_array.shape, msg
+    assert top_array.shape[-1] in [3, 4], "top_array shapee must be [:,:,3|4]"
+    assert background_array.shape[-1] in [
+        3,
+        4,
+    ], "background_array shape must be [:,:,3|4]"
+    # convert background to rgba
+    if background_array.shape[-1] != 4:
+        background_array = np.dstack(
+            (background_array, np.zeros(background_array.shape[:-1]))
+        )
+
+    black_background = np.zeros_like(background_array)
+    black_background[:, :] = background_color
+    black_background[:, :, 3] = background_array[:, :, 3]
+
+    background_array[:, :, -1] = opacity * background_array[:, :, -1]
+
+    black_background_img = Image.fromarray(black_background)
+    background_img = Image.fromarray(background_array)
+    top_img = Image.fromarray(top_array)
+
+    black_background_img = Image.alpha_composite(black_background_img, background_img)
+    black_background_img.paste(top_img, (0, 0), top_img)
+
+    return black_background_img
+
+
 def get_pxls_color(input, mode="RGBA"):
     """Get the RGBA value of a pxls color by its name. Return `(color_name, rgba)`"""
     color_name = input.lower().replace("gray", "grey")

@@ -11,11 +11,11 @@ from PIL import Image
 from numba import jit
 from urllib.parse import parse_qs, urlparse
 from io import BytesIO
-from cogs.pixel_art.highlight import highlight_image
+
+from utils.image.image_utils import highlight_image
 from utils.font.font_manager import PixelText
 from utils.image.gif_saver import save_transparent_gif
 from utils.time_converter import round_minutes_down, td_format
-
 from utils.utils import get_content
 from utils.setup import stats, db_templates
 from utils.pxls.template import get_rgba_palette, reduce

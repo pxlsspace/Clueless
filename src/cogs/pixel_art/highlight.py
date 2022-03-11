@@ -11,6 +11,7 @@ from utils.image.image_utils import (
     hex_str_to_int,
     rgb_to_hex,
     is_dark,
+    highlight_image,
 )
 from utils.discord_utils import (
     format_number,
@@ -193,38 +194,6 @@ async def _highlight(ctx, image_array: np.ndarray, colors, bg_color):
     table_file = image_to_file(table_img, "table.png", emb)
     hl_file = image_to_file(hl_image, "highlight.png")
     await ctx.send(embed=emb, files=[hl_file, table_file])
-
-
-def highlight_image(
-    top_array, background_array, opacity=0.2, background_color=(255, 255, 255, 255)
-):
-    msg = "top_array and background_array must have the same shape"
-    assert top_array.shape == background_array.shape, msg
-    assert top_array.shape[-1] in [3, 4], "top_array shapee must be [:,:,3|4]"
-    assert background_array.shape[-1] in [
-        3,
-        4,
-    ], "background_array shape must be [:,:,3|4]"
-    # convert background to rgba
-    if background_array.shape[-1] != 4:
-        background_array = np.dstack(
-            (background_array, np.zeros(background_array.shape[:-1]))
-        )
-
-    black_background = np.zeros_like(background_array)
-    black_background[:, :] = background_color
-    black_background[:, :, 3] = background_array[:, :, 3]
-
-    background_array[:, :, -1] = opacity * background_array[:, :, -1]
-
-    black_background_img = Image.fromarray(black_background)
-    background_img = Image.fromarray(background_array)
-    top_img = Image.fromarray(top_array)
-
-    black_background_img = Image.alpha_composite(black_background_img, background_img)
-    black_background_img.paste(top_img, (0, 0), top_img)
-
-    return black_background_img
 
 
 def setup(bot: commands.Bot):

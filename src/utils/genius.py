@@ -59,7 +59,6 @@ async def get_lyrics(song_url):
     """Uses BeautifulSoup to scrape song info off of a Genius song URL."""
 
     # Scrape the song lyrics from the HTML
-    # text = requests.get(song_url).text.replace('<br/>', '\n')
     text = await get_content(song_url, "bytes")
     text = text.decode("utf-8")
     text = text.replace("<br/>", "\n")

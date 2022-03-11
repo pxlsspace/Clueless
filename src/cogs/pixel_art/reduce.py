@@ -2,7 +2,6 @@ import disnake
 import numpy as np
 import time
 from PIL import Image
-from io import BytesIO
 from disnake.ext import commands
 
 from utils.arguments_parser import MyParser
@@ -94,8 +93,6 @@ class Reduce(commands.Cog):
             img, url = await get_image_from_message(ctx, image_url, accept_emojis=False)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
-        img = Image.open(BytesIO(img))
-        img = img.convert("RGBA")
 
         start = time.time()
 

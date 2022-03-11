@@ -2,7 +2,6 @@ import disnake
 import numpy as np
 import time
 from disnake.ext import commands
-from io import BytesIO
 from PIL import Image
 
 from utils.image.image_utils import (
@@ -70,12 +69,10 @@ class Scale(commands.Cog):
 
         # get the input image
         try:
-            img_bytes, url = await get_image_from_message(ctx, url)
+            input_image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
 
-        input_image = Image.open(BytesIO(img_bytes))
-        input_image = input_image.convert("RGBA")  # Convert to RGBA
         input_image = remove_white_space(input_image)  # Remove extra space
         input_image_array = np.array(input_image)
         start = time.time()
@@ -151,11 +148,9 @@ class Scale(commands.Cog):
 
         # get the input image
         try:
-            img_bytes, url = await get_image_from_message(ctx, url)
+            input_image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
-        input_image = Image.open(BytesIO(img_bytes))
-        input_image = input_image.convert("RGBA")
 
         # check that the image won't be too big
         final_width = scale * input_image.width
@@ -225,11 +220,9 @@ class Scale(commands.Cog):
 
         # get the input image
         try:
-            img_bytes, url = await get_image_from_message(ctx, url)
+            input_image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
-        input_image = Image.open(BytesIO(img_bytes))
-        input_image = input_image.convert("RGBA")
 
         def _resize(width):
             # checks on the width
@@ -292,11 +285,9 @@ class Scale(commands.Cog):
     async def size(self, ctx, url=None):
         # get the input image
         try:
-            img_bytes, url = await get_image_from_message(ctx, url)
+            image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
-        image = Image.open(BytesIO(img_bytes))
-        image = image.convert("RGBA")
 
         width = image.width
         height = image.height

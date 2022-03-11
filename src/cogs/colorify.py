@@ -71,7 +71,6 @@ class Colorify(commands.Cog):
             img, url = await get_image_from_message(ctx, url)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
-        img = Image.open(BytesIO(img))
 
         try:
             is_animated = img.is_animated
@@ -195,7 +194,6 @@ class Colorify(commands.Cog):
             img, url = await get_image_from_message(ctx, url)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
-        img = Image.open(BytesIO(img))
         rainbow_img = await self.bot.loop.run_in_executor(
             None, rainbowfy, img, saturation, lightness
         )

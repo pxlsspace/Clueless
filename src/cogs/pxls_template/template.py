@@ -117,11 +117,9 @@ class Template(commands.Cog):
     ):
         # get the image from the message
         try:
-            img, url = await get_image_from_message(ctx, image_url, accept_emojis=False)
+            img, url = await get_image_from_message(ctx, image_url)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
-        img = Image.open(BytesIO(img))
-        img = img.convert("RGBA")
 
         start = time.time()
         # check on the style

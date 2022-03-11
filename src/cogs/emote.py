@@ -34,7 +34,7 @@ class Emote(commands.Cog):
 
         # get the input image
         try:
-            img_bytes, url = await get_image_from_message(ctx, url)
+            img_bytes, url = await get_image_from_message(ctx, url, return_type="bytes")
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
 
@@ -47,7 +47,7 @@ class Emote(commands.Cog):
         if nb_emoji >= ctx.guild.emoji_limit:
             stream = BytesIO(img_bytes)
             img = Image.open(stream)
-            if not img.is_animated:
+            if not (hasattr(img, "is_animated") and img.is_animated):
                 img_bytes = img_to_animated_gif(img)
 
         # adding the emote to the server

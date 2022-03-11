@@ -1,6 +1,5 @@
 import disnake
 import numpy as np
-from io import BytesIO
 from datetime import datetime, timezone
 from disnake.ext import commands
 from PIL import Image
@@ -87,9 +86,7 @@ class Highlight(commands.Cog):
         input_url = urls[0] if urls else None
 
         # get the input image
-        image_bytes, url = await get_image_from_message(ctx, input_url)
-        image = Image.open(BytesIO(image_bytes))
-        image = image.convert("RGBA")
+        image, url = await get_image_from_message(ctx, input_url)
         image_array = np.array(image)
 
         await _highlight(ctx, image_array, colors, parsed_args.bgcolor)

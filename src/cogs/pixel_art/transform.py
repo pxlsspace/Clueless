@@ -1,7 +1,6 @@
 import disnake
 from disnake.ext import commands
-from io import BytesIO
-from PIL import Image, ImageOps
+from PIL import ImageOps
 
 from utils.discord_utils import get_image_from_message, image_to_file
 
@@ -35,11 +34,9 @@ class Transform(commands.Cog):
     async def flip(self, ctx, url=None):
         # get the input image
         try:
-            img_bytes, url = await get_image_from_message(ctx, url)
+            image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
-        image = Image.open(BytesIO(img_bytes))
-        image = image.convert("RGBA")
 
         flipped = ImageOps.mirror(image)
 
@@ -71,11 +68,9 @@ class Transform(commands.Cog):
     async def hflip(self, ctx, url=None):
         # get the input image
         try:
-            img_bytes, url = await get_image_from_message(ctx, url)
+            image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
-        image = Image.open(BytesIO(img_bytes))
-        image = image.convert("RGBA")
 
         flipped = ImageOps.flip(image)
 

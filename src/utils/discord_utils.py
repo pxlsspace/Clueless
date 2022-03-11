@@ -106,10 +106,17 @@ class ImageNotFoundError(Exception):
 
 
 async def get_image_from_message(
-    ctx, url=None, search_last_messages=True, accept_emojis=True, accept_templates=True
+    ctx,
+    url=None,
+    *,
+    return_type="image_RGBA",
+    search_last_messages=True,
+    accept_emojis=True,
+    accept_templates=True,
 ):
     """Get an image from a discord Context or check on images among the 100
-    last messages sent in the channel. Return a byte image and the image url"""
+    last messages sent in the channel. Return bytes or PIL.Image image and the image url"""
+    assert return_type and return_type in ["image_RGBA", "image", "bytes"]
     message_limit = 100
     initial_message = None
     if isinstance(ctx, commands.Context):
@@ -117,7 +124,12 @@ async def get_image_from_message(
     try:
         # try to get the image from the initial message
         return await get_image(
-            initial_message, url, accept_emojis, accept_templates, accept_embeds=False
+            initial_message,
+            url,
+            return_type,
+            accept_emojis,
+            accept_templates,
+            accept_embeds=False,
         )
     except ImageNotFoundError as e:
         # if the message is a reply, we try to find an image in the replied message
@@ -128,6 +140,7 @@ async def get_image_from_message(
                 return await get_image(
                     reply_message,
                     url=None,
+                    return_type=return_type,
                     accept_emojis=False,
                     accept_templates=False,
                     accept_embeds=True,
@@ -144,6 +157,7 @@ async def get_image_from_message(
                         return await get_image(
                             message,
                             url=None,
+                            return_type=return_type,
                             accept_emojis=False,
                             accept_templates=False,
                             accept_embeds=True,
@@ -161,6 +175,7 @@ async def get_image_from_message(
 async def get_image(
     message: disnake.Message,
     url=None,
+    return_type="image_RGBA",
     accept_emojis=True,
     accept_templates=True,
     accept_embeds=True,
@@ -168,7 +183,7 @@ async def get_image(
     """Get an image from a discord message,
     raise ValueError if the URL isn't valid
     return a byte image and the image url"""
-    image_bytes = None
+    res_image = None
     # check the attachments
     if message and len(message.attachments) > 0:
         for a in message.attachments:
@@ -191,28 +206,35 @@ async def get_image(
     # check the message content
     elif url is not None:
         url_dict = get_url(url, accept_emojis, accept_templates)
-        if url is not None:
+        if url_dict is not None:
             if url_dict["type"] == "template":
                 temp_url = url_dict["url"]
                 temp = await get_template_from_url(temp_url)
                 temp_image = Image.fromarray(temp.get_array())
-                # convert to bytes
-                image_bytes = BytesIO()
-                temp_image.save(image_bytes, format="PNG")
-                image_bytes = image_bytes.getvalue()
                 url = temp.stylized_url  # this isn't really the image URL but oh well ..
+                if return_type == "bytes":
+                    # convert to bytes
+                    temp_bytes = BytesIO()
+                    temp_image.save(temp_bytes, format="PNG")
+                    res_image = temp_bytes.getvalue()
+                else:
+                    res_image = temp_image
             else:
                 url = url_dict["url"]
     if url is None:
         raise ImageNotFoundError("No image or url found.")
 
     # download the image from url
-    if not image_bytes:
+    if not res_image:
         try:
-            image_bytes = await get_content(url, "image")
+            res_image = await get_content(url, "image")
         except Exception as e:
             raise ValueError(e)
-    return image_bytes, url
+        if return_type in ["image", "image_RGBA"]:
+            res_image = Image.open(BytesIO(res_image))
+            if return_type == "image_RGBA":
+                res_image = res_image.convert("RGBA")
+    return res_image, url
 
 
 def get_url(content, accept_emojis=True, accept_templates=True):

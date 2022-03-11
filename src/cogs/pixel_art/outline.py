@@ -1,8 +1,6 @@
 import functools
 import disnake
-from PIL import Image
 from disnake.ext import commands
-from io import BytesIO
 
 from utils.arguments_parser import parse_outline_args
 from utils.discord_utils import (
@@ -85,11 +83,10 @@ class Outline(commands.Cog):
 
         # get the input image
         try:
-            img_bytes, url = await get_image_from_message(ctx, url)
+            input_image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
 
-        input_image = Image.open(BytesIO(img_bytes))
         func = functools.partial(add_outline, input_image, rgba, not (sparse), width)
         image_with_outline = await self.bot.loop.run_in_executor(None, func)
         file = await self.bot.loop.run_in_executor(
@@ -122,11 +119,10 @@ class Outline(commands.Cog):
     async def crop(self, ctx, url=None):
         # get the input image
         try:
-            img_bytes, url = await get_image_from_message(ctx, url)
+            input_image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
 
-        input_image = Image.open(BytesIO(img_bytes))
         image_cropped = await self.bot.loop.run_in_executor(
             None, remove_white_space, input_image
         )

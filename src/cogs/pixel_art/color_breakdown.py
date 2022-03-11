@@ -2,9 +2,7 @@ import disnake
 import inspect
 import plotly.graph_objects as go
 import functools
-from PIL import Image
 from disnake.ext import commands
-from io import BytesIO
 
 from utils.discord_utils import format_number, get_image_from_message, image_to_file
 from utils.table_to_image import table_to_image
@@ -40,12 +38,10 @@ class ColorBreakdown(commands.Cog):
     async def colors(self, ctx, url=None):
         # get the input image
         try:
-            img_bytes, url = await get_image_from_message(ctx, url)
+            input_image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
 
-        input_image = Image.open(BytesIO(img_bytes))
-        input_image = input_image.convert("RGBA")
         await _colors(self.bot, ctx, input_image)
 
 

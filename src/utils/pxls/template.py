@@ -20,22 +20,12 @@ class InvalidStyleException(Exception):
         super().__init__(*args)
 
 
-def get_style_from_image(style_name):
+def parse_style_image(style_image: Image.Image):
     try:
-        basepath = os.path.dirname(__file__)
-        styles_folder = os.path.abspath(
-            os.path.join(basepath, "..", "..", "..", "resources", "styles")
-        )
-        filename = os.path.join(styles_folder, style_name + ".png")
-        img = Image.open(filename)
-    except FileNotFoundError:
-        raise InvalidStyleException(f"Can't find {filename}")
-
-    try:
-        img_array = np.array(img)
+        img_array = np.array(style_image)
         mask = img_array[:, :, 3] != 0
         symbols_per_line = 16
-        style_size = int(img.width / symbols_per_line)
+        style_size = int(style_image.width / symbols_per_line)
         res = np.zeros((symbols_per_line * symbols_per_line, style_size, style_size))
         color_idx = 0
         for i in range(symbols_per_line):
@@ -47,11 +37,29 @@ def get_style_from_image(style_name):
                 symbol = mask[x0:x1, y0:y1]
                 res[color_idx] = symbol
                 color_idx += 1
-        style = {"name": style_name, "size": style_size, "array": res}
-        return style
+        return res, style_size
 
-    except Exception as e:
-        raise InvalidStyleException(f"Unexpected error: {e}")
+    except Exception:
+        return None, None
+
+
+def get_style_from_name(style_name):
+    try:
+        basepath = os.path.dirname(__file__)
+        styles_folder = os.path.abspath(
+            os.path.join(basepath, "..", "..", "..", "resources", "styles")
+        )
+        filename = os.path.join(styles_folder, style_name + ".png")
+        img = Image.open(filename)
+    except FileNotFoundError:
+        raise InvalidStyleException(f"Couldn't find '{filename}'")
+
+    style_array, style_size = parse_style_image(img)
+    if style_array is None:
+        raise InvalidStyleException("Couldn't parse the style image.")
+
+    style = {"name": style_name, "size": style_size, "array": style_array}
+    return style
 
 
 none = {"name": "none", "size": 1, "array": np.array([[[1]]] * 255)}
@@ -90,7 +98,7 @@ custom_styles = ["custom", "pgcustom", "numbers"]
 
 for s in custom_styles:
     try:
-        STYLES.append(get_style_from_image(s))
+        STYLES.append(get_style_from_name(s))
     except InvalidStyleException as e:
         logger.warning(f"failed to load '{s}' style: {e}")
 

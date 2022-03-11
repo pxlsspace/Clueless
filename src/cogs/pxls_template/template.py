@@ -1,3 +1,4 @@
+import re
 import disnake
 import numpy as np
 import urllib.parse
@@ -7,10 +8,23 @@ from io import BytesIO
 from disnake.ext import commands
 
 from utils.arguments_parser import MyParser
-from utils.discord_utils import format_number, get_image_from_message, image_to_file
+from utils.discord_utils import (
+    IMAGE_URL_REGEX,
+    format_number,
+    get_image_from_message,
+    image_to_file,
+)
 from utils.image.image_utils import remove_white_space
-from utils.pxls.template import STYLES, get_style, templatize, reduce, get_rgba_palette
+from utils.pxls.template import (
+    STYLES,
+    get_style,
+    parse_style_image,
+    templatize,
+    reduce,
+    get_rgba_palette,
+)
 from utils.setup import stats
+from utils.utils import get_content
 
 
 class Template(commands.Cog):
@@ -22,7 +36,7 @@ class Template(commands.Cog):
         self,
         inter: disnake.AppCmdInter,
         image: str = None,
-        style: str = commands.Param(default=None, choices=[s["name"] for s in STYLES]),
+        style: str = None,
         glow: bool = False,
         title: str = None,
         ox: int = None,
@@ -38,7 +52,7 @@ class Template(commands.Cog):
         Parameters
         ----------
         image: The URL of the image you want to templatize.
-        style: The template style. (default: custom)
+        style: The name or URL of a template style. (default: custom)
         glow: To add glow to the template. (default: False)
         title: The template title.
         ox: The template x-position.
@@ -49,12 +63,17 @@ class Template(commands.Cog):
         await inter.response.defer()
         await self.template(inter, image, style, glow, title, ox, oy, nocrop, matching)
 
+    @_template.autocomplete("style")
+    async def autocomplete_style(self, inter: disnake.AppCmdInter, user_input: str):
+        styles = [s["name"] for s in STYLES]
+        return [s for s in styles if user_input.lower() in s.lower()][:25]
+
     @commands.command(
         name="template",
         description="Generate a template link from an image.",
         usage="<image|url> [-style <style>] [-glow] [-title <title>] [-ox <ox>] [-oy <oy>] [-nocrop] [-matching fast|accurate]",
         help="""- `<image|url>`: an image URL or an attached file
-              - `[-style <style>]`: the template style you want (use `>styles` to see the list)
+              - `[-style <style>]`: the name or URL of a template style (use `>styles` to see the list)
               - `[-glow]`: add glow to the template
               - `[-title <title>]`: the template title
               - `[-ox <ox>]`: template x-position
@@ -106,14 +125,39 @@ class Template(commands.Cog):
 
         start = time.time()
         # check on the style
-        if not style_name:
-            style_name = "custom"  # default style
-        style = get_style(style_name)
-        if not style:
-            styles_available = "**Available Styles:**\n"
-            for s in STYLES:
-                styles_available += ("\t• {0} ({1}x{1})\n").format(s["name"], s["size"])
-            return await ctx.send(f"❌ Unknown style '{style_name}'.\n{styles_available}")
+        if style_name and re.match(IMAGE_URL_REGEX, style_name):
+            # if the style is an image URL, we try to use the image as style
+            style_url = style_name
+            try:
+                style_image_bytes = await get_content(style_url, "image")
+            except Exception as e:
+                return await ctx.send(f"❌ {e}")
+            style_image = Image.open(BytesIO(style_image_bytes))
+            style_image = style_image.convert("RGBA")
+            style_array, style_size = parse_style_image(style_image)
+            if style_array is None:
+                return await ctx.send(
+                    ":x: There was an error while parsing the style image, make sure it is valid."
+                )
+            style = {
+                "name": f"[[From User]]({style_url})",
+                "size": style_size,
+                "array": style_array,
+            }
+        else:
+            # the style is a style name, we search it from the built-in styles
+            if not style_name:
+                style_name = "custom"  # default style
+            style = get_style(style_name)
+            if not style:
+                styles_available = "**Available Styles:**\n"
+                for s in STYLES:
+                    styles_available += ("\t• {0} ({1}x{1})\n").format(
+                        s["name"], s["size"]
+                    )
+                return await ctx.send(
+                    f"❌ Unknown style '{style_name}'.\n{styles_available}"
+                )
 
         # check on the size
         output_size = img.width * img.height * style["size"]
@@ -161,7 +205,7 @@ class Template(commands.Cog):
 
         # create and send the image
         embed = disnake.Embed(title="**Template Image**", color=0x66C5CC)
-        embed.description = f"**Title**: {title if title else '`N/A`'}\n**Style**: {style_name}\n**Glow**: {'yes' if glow else 'no'}\n**Size**: {total_amount} pixels ({img.width}x{img.height})"
+        embed.description = f"**Title**: {title if title else '`N/A`'}\n**Style**: {style['name']}\n**Glow**: {'yes' if glow else 'no'}\n**Size**: {total_amount} pixels ({img.width}x{img.height})"
         embed.set_footer(
             text="Warning: if you delete this message the template might break."
         )

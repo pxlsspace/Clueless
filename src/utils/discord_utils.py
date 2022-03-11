@@ -8,6 +8,7 @@ from disnake.ext import commands
 from utils.utils import get_content
 from utils.setup import stats, db_stats
 from utils.image import PALETTES
+from utils.pxls.template_manager import get_template_from_url, parse_template
 
 STATUS_EMOJIS = {
     "bot": "<a:status_bot:878677107042025552>",
@@ -105,7 +106,7 @@ class ImageNotFoundError(Exception):
 
 
 async def get_image_from_message(
-    ctx, url=None, search_last_messages=True, accept_emojis=True
+    ctx, url=None, search_last_messages=True, accept_emojis=True, accept_templates=True
 ):
     """Get an image from a discord Context or check on images among the 100
     last messages sent in the channel. Return a byte image and the image url"""
@@ -115,16 +116,40 @@ async def get_image_from_message(
         initial_message = ctx.message
     try:
         # try to get the image from the initial message
-        return await get_image(initial_message, url, accept_emojis)
+        return await get_image(
+            initial_message, url, accept_emojis, accept_templates, accept_embeds=False
+        )
     except ImageNotFoundError as e:
+        # if the message is a reply, we try to find an image in the replied message
+        ref = initial_message.reference if initial_message else None
+        if ref and isinstance(ref.resolved, disnake.Message):
+            reply_message = ref.resolved
+            try:
+                return await get_image(
+                    reply_message,
+                    url=None,
+                    accept_emojis=False,
+                    accept_templates=False,
+                    accept_embeds=True,
+                )
+            except Exception:
+                pass
+
         # if no image was found in the message we check for images in the last
         # 100 messages sent in the channel
         if search_last_messages:
             async for message in ctx.channel.history(limit=message_limit):
-                try:
-                    return await get_image(message, accept_emojis=False)
-                except Exception:
-                    pass
+                if message != initial_message:
+                    try:
+                        return await get_image(
+                            message,
+                            url=None,
+                            accept_emojis=False,
+                            accept_templates=False,
+                            accept_embeds=True,
+                        )
+                    except Exception:
+                        pass
         # no image was found in the last 100 images
         raise ValueError(e)
 
@@ -133,12 +158,18 @@ async def get_image_from_message(
         raise ValueError(e)
 
 
-async def get_image(message: disnake.Message, url=None, accept_emojis=True):
+async def get_image(
+    message: disnake.Message,
+    url=None,
+    accept_emojis=True,
+    accept_templates=True,
+    accept_embeds=True,
+):
     """Get an image from a discord message,
     raise ValueError if the URL isn't valid
     return a byte image and the image url"""
-
-    # check the attachements
+    image_bytes = None
+    # check the attachments
     if message and len(message.attachments) > 0:
         for a in message.attachments:
             content_type = a.content_type
@@ -149,7 +180,7 @@ async def get_image(message: disnake.Message, url=None, accept_emojis=True):
             raise ValueError("Invalid file type. Only images are supported.")
 
     # check the embeds
-    elif message and len(message.embeds) > 0:
+    elif message and len(message.embeds) > 0 and accept_embeds:
         for e in message.embeds:
             if e.image:
                 url = message.embeds[0].image.url
@@ -158,31 +189,63 @@ async def get_image(message: disnake.Message, url=None, accept_emojis=True):
                 url = e.url
 
     # check the message content
-    elif url is not None or (message and message.content is not None):
-        content = url or message.content
-        # try to find a image URL in the message content
-        urls = re.findall(IMAGE_URL_REGEX, content)
-        if len(urls) > 0:
-            url = urls[0]
-        # try to find an emoji if no image URL found
-        elif accept_emojis:
-            results = re.findall(EMOJI_REGEX, content)
-            if len(results) != 0:
-                emoji_id = results[0][2]
-                is_animated = results[0][0] == "a"
-                url = "https://cdn.discordapp.com/emojis/{}.{}".format(
-                    emoji_id, "gif" if is_animated else "png"
-                )
-
+    elif url is not None:
+        url_dict = get_url(url, accept_emojis, accept_templates)
+        if url is not None:
+            if url_dict["type"] == "template":
+                temp_url = url_dict["url"]
+                temp = await get_template_from_url(temp_url)
+                temp_image = Image.fromarray(temp.get_array())
+                # convert to bytes
+                image_bytes = BytesIO()
+                temp_image.save(image_bytes, format="PNG")
+                image_bytes = image_bytes.getvalue()
+                url = temp.stylized_url  # this isn't really the image URL but oh well ..
+            else:
+                url = url_dict["url"]
     if url is None:
         raise ImageNotFoundError("No image or url found.")
 
-    # getting the image from url
-    try:
-        image_bytes = await get_content(url, "image")
-    except Exception as e:
-        raise ValueError(e)
+    # download the image from url
+    if not image_bytes:
+        try:
+            image_bytes = await get_content(url, "image")
+        except Exception as e:
+            raise ValueError(e)
     return image_bytes, url
+
+
+def get_url(content, accept_emojis=True, accept_templates=True):
+    """Get the URL from a content that can be:
+    - a string URL
+    - a custom emoji
+    - a pxls template
+
+    Return a dictionary like:
+    {url: <url>, type: <type>}"""
+
+    # template
+    if accept_templates and parse_template(content):
+        return dict(url=content, type="template")
+
+    # image URL
+    urls = re.findall(IMAGE_URL_REGEX, content)
+    if len(urls) > 0:
+        url = urls[0]
+        return dict(url=url, type="image_url")
+
+    # emoji
+    elif accept_emojis:
+        results = re.findall(EMOJI_REGEX, content)
+        if len(results) != 0:
+            emoji_id = results[0][2]
+            is_animated = results[0][0] == "a"
+            url = "https://cdn.discordapp.com/emojis/{}.{}".format(
+                emoji_id, "gif" if is_animated else "png"
+            )
+            return dict(url=url, type="emoji")
+
+    return None
 
 
 def image_to_file(
@@ -218,7 +281,7 @@ def format_emoji(emoji):
     return res
 
 
-def get_urls_from_list(input_list: list = None, image_url: bool = True):
+def get_urls_from_list(input_list: list = None):
     """Extract all the URLs from the input list and put them in an other list.
 
     Parameters
@@ -230,21 +293,17 @@ def get_urls_from_list(input_list: list = None, image_url: bool = True):
     ------
     A tuple with 2 lists (tuple(list, list)):
         - the `input_list` without the URLs
-        - a list with all the URLs found
+        - a list with all the URLs found (can be images or templates)
     """
-    if image_url:
-        regex = IMAGE_URL_REGEX
-    else:
-        regex = URL_REGEX
-
     not_url_list = []
     url_list = []
     # search for possible URLs in the input_list
     if input_list:
         input_list = list(input_list)
         for possible_url in input_list:
-            if re.match(regex, possible_url):
-                url_list.append(possible_url)
+            url_dict = get_url(possible_url)
+            if url_dict:
+                url_list.append(url_dict["url"])
             else:
                 not_url_list.append(possible_url)
     return (not_url_list, url_list)

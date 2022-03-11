@@ -314,8 +314,9 @@ class Scale(commands.Cog):
             format_number(height),
             format_number(total_size),
         )
-        embed.set_thumbnail(url=url)
-        await ctx.send(embed=embed)
+        file = image_to_file(image, "input.png")
+        embed.set_thumbnail(url="attachment://input.png")
+        await ctx.send(embed=embed, file=file)
 
 
 def setup(bot: commands.Bot):

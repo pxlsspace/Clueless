@@ -2,7 +2,11 @@
 
 import re
 from datetime import datetime, timedelta, timezone
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+try:
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+except ImportError:
+    from backports.zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 import pytz
 
 GMT_TIMEZONE_REGEX = re.compile(

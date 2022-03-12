@@ -303,12 +303,12 @@ class Template:
         min_y = 0 if self.oy > 0 else -self.oy
         array = self.palettized_array[min_y:, min_x:]
         x, y = max(0, self.ox), max(0, self.oy)
-        if y + array.shape[0] > canvas.shape[1]:
-            height = canvas.shape[1] - y
+        if y + array.shape[0] > canvas.shape[0]:
+            height = canvas.shape[0] - y
         else:
             height = array.shape[0]
-        if x + array.shape[1] > canvas.shape[0]:
-            width = canvas.shape[0] - x
+        if x + array.shape[1] > canvas.shape[1]:
+            width = canvas.shape[1] - x
         else:
             width = array.shape[1]
         array = array[:height, :width]

@@ -296,6 +296,7 @@ class Template:
         """
         Crop a numpy array to the canvas boundaries.
         :return: array, x, y -> array is the cropped array, and x and y the new ox and oy values.
+        Raises a ValueError if the template is outside canavs boundaries.
         """
         if canvas is None:
             canvas = stats.board_array
@@ -303,6 +304,8 @@ class Template:
         min_y = 0 if self.oy > 0 else -self.oy
         array = self.palettized_array[min_y:, min_x:]
         x, y = max(0, self.ox), max(0, self.oy)
+        if y > canvas.shape[0] or x > canvas.shape[1]:
+            raise ValueError("The template is outside canvas boundaries.")
         if y + array.shape[0] > canvas.shape[0]:
             height = canvas.shape[0] - y
         else:
@@ -589,7 +592,7 @@ class TemplateManager:
     def make_combo_image(self) -> np.ndarray:
         """Make an index array combining all the template arrays in self.list"""
         # reverse order to put the new templates at the bottom
-        return layer(self.list[::-1], crop_to_template=False)
+        return layer(self.list[::-1], crop_to_template=False)[2]
 
     def update_combo(self, bot_id=None, canvas_code=None) -> Combo:
         """Update the combo template or create it if it doesn't exist"""
@@ -832,10 +835,10 @@ def layer(
     placemap: Optional[np.ndarray] = None,
     crop_to_placemap=True,
     crop_to_template=True,
-) -> np.ndarray:
+) -> tuple[int, int, np.ndarray]:
     """
     Sequentially layer each of the received templates, and return the
-    corresponding palettized image. Result is cropped to the placemap.
+    corresponding ox, oy and palettized image. Result is cropped to the placemap.
     """
     if placemap is None:
         placemap = stats.placemap_array
@@ -843,7 +846,10 @@ def layer(
     max_x, max_y = 0, 0
     min_x, min_y = background.shape[1], background.shape[0]
     for template in templates:
-        arr, ox, oy = template.crop_to_canvas()
+        try:
+            arr, ox, oy = template.crop_to_canvas()
+        except ValueError:  # Template outside canvas
+            continue
         # Don't update transparent pixels
         mask = arr != 255
         background[oy : oy + arr.shape[0], ox : ox + arr.shape[1]][mask] = arr[mask]
@@ -854,5 +860,5 @@ def layer(
     if crop_to_placemap:
         background[placemap != 0] = 255
     if crop_to_template:
-        return background[min_y:max_y, min_x:max_x]
-    return background
+        return min_x, min_y, background[min_y:max_y, min_x:max_x]
+    return 0, 0, background

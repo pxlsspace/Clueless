@@ -84,13 +84,15 @@ class Layer(commands.Cog):
             return await ctx.send(f"❌ {e}")
 
         start = time.time()
-        palettized_array = layer(templates)
+        _, _, palettized_array = layer(templates)
+        if palettized_array.size == 0:
+            return await ctx.send("❌ No placeable pixels in the layered template.")
         img = Image.fromarray(stats.palettize_array(palettized_array))
         end = time.time()
         embed = disnake.Embed(color=0x66C5CC, title="Layered")
         embed.set_footer(text=f"Layered in {round((end-start),3)}s")
         file = image_to_file(img, "layered.png", embed)
-        await ctx.send(file=file, embed=embed)
+        return await ctx.send(file=file, embed=embed)
 
 
 def setup(bot: commands.Bot):

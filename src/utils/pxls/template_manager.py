@@ -1,4 +1,6 @@
+from __future__ import annotations
 import sqlite3
+from typing import Iterable, Optional
 import numpy as np
 import asyncio
 import re
@@ -288,6 +290,33 @@ class Template:
         )
         return coords_in_canvas
 
+    # From pycharity
+    # https://github.com/Seon82/pyCharity/blob/5eeb48df7990e096da190807714bcd634f806021/src/handlers/pxls/template.py#L38
+    def crop_to_canvas(self, canvas=None) -> tuple[np.ndarray, int, int]:
+        """
+        Crop a numpy array to the canvas boundaries.
+        :return: array, x, y -> array is the cropped array, and x and y the new ox and oy values.
+        Raises a ValueError if the template is outside canavs boundaries.
+        """
+        if canvas is None:
+            canvas = stats.board_array
+        min_x = 0 if self.ox > 0 else -self.ox
+        min_y = 0 if self.oy > 0 else -self.oy
+        array = self.palettized_array[min_y:, min_x:]
+        x, y = max(0, self.ox), max(0, self.oy)
+        if y > canvas.shape[0] or x > canvas.shape[1]:
+            raise ValueError("The template is outside canvas boundaries.")
+        if y + array.shape[0] > canvas.shape[0]:
+            height = canvas.shape[0] - y
+        else:
+            height = array.shape[0]
+        if x + array.shape[1] > canvas.shape[1]:
+            width = canvas.shape[1] - x
+        else:
+            width = array.shape[1]
+        array = array[:height, :width]
+        return array, x, y
+
 
 class Combo(Template):
     """Extension of template to contain a combo template"""
@@ -562,19 +591,8 @@ class TemplateManager:
 
     def make_combo_image(self) -> np.ndarray:
         """Make an index array combining all the template arrays in self.list"""
-        combo = np.full((stats.board_array.shape[0], stats.board_array.shape[1]), 255)
         # reverse order to put the new templates at the bottom
-        for template in self.list[::-1]:
-            ox = template.ox
-            oy = template.oy
-            # paste the template on the combo image but exclude transparent pixels
-            current_combo_at_temp_coords = template.crop_array_to_template(combo)
-            template_mask = template.palettized_array != 255
-            current_combo_at_temp_coords[template_mask] = template.palettized_array[
-                template_mask
-            ]
-            paste(combo, current_combo_at_temp_coords, (oy, ox))
-        return combo
+        return layer(self.list[::-1], crop_to_template=False)[2]
 
     def update_combo(self, bot_id=None, canvas_code=None) -> Combo:
         """Update the combo template or create it if it doesn't exist"""
@@ -696,22 +714,6 @@ async def get_template_from_url(template_url: str) -> Template:
     return template
 
 
-def paste_slices(tup):
-    pos, w, max_w = tup
-    wall_min = max(pos, 0)
-    wall_max = min(pos + w, max_w)
-    block_min = -min(pos, 0)
-    block_max = max_w - max(pos + w, max_w)
-    block_max = block_max if block_max != 0 else None
-    return slice(wall_min, wall_max), slice(block_min, block_max)
-
-
-def paste(wall, block, loc):
-    loc_zip = zip(loc, block.shape, wall.shape)
-    wall_slices, block_slices = zip(*map(paste_slices, loc_zip))
-    wall[wall_slices] = block[block_slices]
-
-
 def crop_array_to_shape(array1, height, width, oy, ox):
     y0 = min(max(0, oy), array1.shape[0])
     y1 = max(0, min(array1.shape[0], oy + height))
@@ -826,3 +828,37 @@ def fast_max_chunk(chunked_mask):
             chunk_pixels = sum
             max_index = i
     return max_index
+
+
+def layer(
+    templates: Iterable[Template],
+    placemap: Optional[np.ndarray] = None,
+    crop_to_placemap=True,
+    crop_to_template=True,
+) -> tuple[int, int, np.ndarray]:
+    """
+    Sequentially layer each of the received templates, and return the
+    corresponding ox, oy and palettized image. Result is cropped to the placemap.
+    """
+    if placemap is None:
+        placemap = stats.placemap_array
+    background = np.full_like(placemap, 255, dtype=np.uint8)
+    max_x, max_y = 0, 0
+    min_x, min_y = background.shape[1], background.shape[0]
+    for template in templates:
+        try:
+            arr, ox, oy = template.crop_to_canvas()
+        except ValueError:  # Template outside canvas
+            continue
+        # Don't update transparent pixels
+        mask = arr != 255
+        background[oy : oy + arr.shape[0], ox : ox + arr.shape[1]][mask] = arr[mask]
+        min_x = min(ox, min_x)
+        min_y = min(oy, min_y)
+        max_x = max(ox + template.width, max_x)
+        max_y = max(oy + template.height, max_y)
+    if crop_to_placemap:
+        background[placemap != 0] = 255
+    if crop_to_template:
+        return min_x, min_y, background[min_y:max_y, min_x:max_x]
+    return 0, 0, background

@@ -18,7 +18,7 @@ class Layer(commands.Cog):
         self.bot: commands.Bot = bot
 
     @commands.slash_command(name="layer")
-    async def _reduce(
+    async def _layer(
         self,
         inter: disnake.AppCmdInter,
         first_template: str = commands.Param(autocomplete=autocomplete_templates),

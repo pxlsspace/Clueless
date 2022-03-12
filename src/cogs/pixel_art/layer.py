@@ -100,7 +100,7 @@ class Layer(commands.Cog):
         palettized_array = layer(templates)
         img = Image.fromarray(stats.palettize_array(palettized_array))
         end = time.time()
-        embed = disnake.Embed(color=0x00BB00, title="Layered")
+        embed = disnake.Embed(color=0x66C5CC, title="Layered")
         embed.set_footer(text=f"Layered in {round((end-start),3)}s")
         file = image_to_file(img, "layered.png", embed)
         await ctx.send(file=file, embed=embed)

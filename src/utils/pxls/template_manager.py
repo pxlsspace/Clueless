@@ -1,4 +1,6 @@
+from __future__ import annotations
 import sqlite3
+from typing import Iterable, Optional
 import numpy as np
 import asyncio
 import re
@@ -287,6 +289,30 @@ class Template:
             coords_in_template[0] + self.oy,
         )
         return coords_in_canvas
+
+    # From pycharity
+    # https://github.com/Seon82/pyCharity/blob/5eeb48df7990e096da190807714bcd634f806021/src/handlers/pxls/template.py#L38
+    def crop_to_canvas(self, canvas=None) -> tuple[np.ndarray, int, int]:
+        """
+        Crop a numpy array to the canvas boundaries.
+        :return: array, x, y -> array is the cropped array, and x and y the new ox and oy values.
+        """
+        if canvas is None:
+            canvas = stats.board_array
+        min_x = 0 if self.ox > 0 else -self.ox
+        min_y = 0 if self.oy > 0 else -self.oy
+        array = self.palettized_array[min_y:, min_x:]
+        x, y = max(0, self.ox), max(0, self.oy)
+        if y + array.shape[0] > canvas.shape[1]:
+            height = canvas.shape[1] - y
+        else:
+            height = array.shape[0]
+        if x + array.shape[1] > canvas.shape[0]:
+            width = canvas.shape[0] - x
+        else:
+            width = array.shape[1]
+        array = array[:height, :width]
+        return array, x, y
 
 
 class Combo(Template):
@@ -826,3 +852,34 @@ def fast_max_chunk(chunked_mask):
             chunk_pixels = sum
             max_index = i
     return max_index
+
+
+def layer(
+    templates: Iterable[Template],
+    placemap: Optional[np.ndarray] = None,
+    crop_to_placemap=True,
+    crop_to_template=True,
+) -> np.ndarray:
+    """
+    Sequentially layer each of the received templates, and return the
+    corresponding palettized image. Result is cropped to the placemap.
+    """
+    if placemap is None:
+        placemap = stats.placemap_array
+    background = np.full_like(placemap, 255, dtype=np.uint8)
+    max_x, max_y = 0, 0
+    min_x, min_y = background.shape[1], background.shape[0]
+    for template in templates:
+        arr, ox, oy = template.crop_to_canvas()
+        # Don't update transparent pixels
+        mask = arr != 255
+        background[oy : oy + arr.shape[0], ox : ox + arr.shape[1]][mask] = arr[mask]
+        min_x = min(ox, min_x)
+        min_y = min(oy, min_y)
+        max_x = max(ox + template.width, max_x)
+        max_y = max(oy + template.height, max_y)
+    if crop_to_placemap:
+        background[placemap != 0] = 255
+    if crop_to_template:
+        return background[min_y:max_y, min_x:max_x]
+    return background

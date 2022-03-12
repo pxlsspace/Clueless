@@ -26,7 +26,7 @@ class Layer(commands.Cog):
         inter: disnake.AppCmdInter,
         templates: str,
     ):
-        """Layer several images.
+        """Layer several templates.
 
         Parameters
         ----------
@@ -39,7 +39,7 @@ class Layer(commands.Cog):
 
     @commands.command(
         name="layer",
-        description="Layer templates.",
+        description="Layer several templates.",
         usage="<templates>",
         help="""
             - `<templates>`: List of templates (URL or name) separated by a space (first goes above).

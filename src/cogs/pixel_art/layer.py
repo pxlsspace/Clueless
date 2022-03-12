@@ -60,9 +60,9 @@ class Layer(commands.Cog):
     @commands.command(
         name="layer",
         description="Layer templates.",
-        usage="<first template name|link> <second template name|link> ...",
+        usage="<templates>",
         help="""
-            - `<template name|link>`: a template link or name in the tracker
+            - `<templates>`: List of templates (URL or name) separated by a space (first goes above).
             """,
     )
     async def p_layer(self, ctx, *args):

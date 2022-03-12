@@ -6,9 +6,12 @@ from disnake.ext import commands
 from PIL import Image
 
 from main import tracked_templates
-from cogs.pxls_template.progress import autocomplete_templates
 from utils.arguments_parser import MyParser
-from utils.pxls.template_manager import get_template_from_url, parse_template, layer
+from utils.pxls.template_manager import (
+    get_template_from_url,
+    parse_template,
+    layer,
+)
 from utils.setup import stats
 from utils.discord_utils import image_to_file
 
@@ -21,41 +24,18 @@ class Layer(commands.Cog):
     async def _layer(
         self,
         inter: disnake.AppCmdInter,
-        first_template: str = commands.Param(autocomplete=autocomplete_templates),
-        second_template: str = commands.Param(autocomplete=autocomplete_templates),
-        third_template: str = commands.Param(
-            default=None, autocomplete=autocomplete_templates
-        ),
-        fourth_template: str = commands.Param(
-            default=None, autocomplete=autocomplete_templates
-        ),
-        fifth_template: str = commands.Param(
-            default=None, autocomplete=autocomplete_templates
-        ),
+        templates: str,
     ):
         """Layer several images.
 
         Parameters
         ----------
-        first_template: A template link or name in the tracker.
-        second_template: A template link or name in the tracker.
-        ...etc
+        templates: List of templates (URL or name) separated by a space (first goes above).
         """
         await inter.response.defer()
         # Remove unused entries, equal to None
-        template_uris = [
-            temp
-            for temp in [
-                first_template,
-                second_template,
-                third_template,
-                fourth_template,
-                fifth_template,
-            ]
-            if temp
-        ]
-        templates = await self._clean(inter, template_uris)
-        await self._layer(inter, templates)
+        template_uris = templates.split(" ")
+        await self.layer(inter, template_uris)
 
     @commands.command(
         name="layer",
@@ -72,30 +52,37 @@ class Layer(commands.Cog):
 
         try:
             parsed_args, _ = parser.parse_known_args(args)
+            template_uris = parsed_args.templates
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
         async with ctx.typing():
-            templates = await self._clean(ctx, parsed_args.templates)
-            await self._layer(ctx, templates)
+            await self.layer(ctx, template_uris)
 
     @staticmethod
-    async def _clean(ctx, templates_uris: list[str]):
+    async def _clean(templates_uris: list[str]):
         templates = []
-        for template_name in templates_uris:
+        for i, template_name in enumerate(templates_uris):
             if parse_template(template_name) is not None:
                 try:
                     template = await get_template_from_url(template_name)
-                except ValueError as e:
-                    return await ctx.send(f":x: Error while parsing {template_name}: {e}")
+                except ValueError:
+                    raise ValueError(
+                        f"Please use a valid template link for template {i}."
+                    )
             else:
                 template = tracked_templates.get_template(template_name, None, False)
                 if template is None:
-                    return await ctx.send(f":x: No template named `{template_name}` found.")
+                    raise ValueError(f"No template named `{template_name}` found.")
             templates.append(template)
         return templates
 
     @staticmethod
-    async def layer(ctx, templates):
+    async def layer(ctx, template_uris):
+        try:
+            templates = await Layer._clean(template_uris)
+        except ValueError as e:
+            return await ctx.send(f"❌ {e}")
+
         start = time.time()
         palettized_array = layer(templates)
         img = Image.fromarray(stats.palettize_array(palettized_array))

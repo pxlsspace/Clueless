@@ -95,7 +95,7 @@ class Layer(commands.Cog):
         return templates
 
     @staticmethod
-    async def _layer(ctx, templates):
+    async def layer(ctx, templates):
         start = time.time()
         palettized_array = layer(templates)
         img = Image.fromarray(stats.palettize_array(palettized_array))

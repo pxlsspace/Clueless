@@ -588,19 +588,8 @@ class TemplateManager:
 
     def make_combo_image(self) -> np.ndarray:
         """Make an index array combining all the template arrays in self.list"""
-        combo = np.full((stats.board_array.shape[0], stats.board_array.shape[1]), 255)
         # reverse order to put the new templates at the bottom
-        for template in self.list[::-1]:
-            ox = template.ox
-            oy = template.oy
-            # paste the template on the combo image but exclude transparent pixels
-            current_combo_at_temp_coords = template.crop_array_to_template(combo)
-            template_mask = template.palettized_array != 255
-            current_combo_at_temp_coords[template_mask] = template.palettized_array[
-                template_mask
-            ]
-            paste(combo, current_combo_at_temp_coords, (oy, ox))
-        return combo
+        return layer(self.list[::-1], crop_to_template=False)
 
     def update_combo(self, bot_id=None, canvas_code=None) -> Combo:
         """Update the combo template or create it if it doesn't exist"""

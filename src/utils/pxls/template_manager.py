@@ -711,22 +711,6 @@ async def get_template_from_url(template_url: str) -> Template:
     return template
 
 
-def paste_slices(tup):
-    pos, w, max_w = tup
-    wall_min = max(pos, 0)
-    wall_max = min(pos + w, max_w)
-    block_min = -min(pos, 0)
-    block_max = max_w - max(pos + w, max_w)
-    block_max = block_max if block_max != 0 else None
-    return slice(wall_min, wall_max), slice(block_min, block_max)
-
-
-def paste(wall, block, loc):
-    loc_zip = zip(loc, block.shape, wall.shape)
-    wall_slices, block_slices = zip(*map(paste_slices, loc_zip))
-    wall[wall_slices] = block[block_slices]
-
-
 def crop_array_to_shape(array1, height, width, oy, ox):
     y0 = min(max(0, oy), array1.shape[0])
     y1 = max(0, min(array1.shape[0], oy + height))

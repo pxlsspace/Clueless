@@ -90,7 +90,7 @@ class Layer(commands.Cog):
             else:
                 template = tracked_templates.get_template(template_name, None, False)
                 if template is None:
-                    return await ctx.send(f":x: {template_name} doesn't exist")
+                    return await ctx.send(f":x: No template named `{template_name}` found.")
             templates.append(template)
         return templates
 

@@ -10,6 +10,7 @@ from utils.utils import get_content
 from utils.setup import stats, db_stats
 from utils.image import PALETTES
 from utils.pxls.template_manager import get_template_from_url, parse_template
+from main import tracked_templates
 
 STATUS_EMOJIS = {
     "bot": "<a:status_bot:878677107042025552>",
@@ -433,6 +434,35 @@ async def autocomplete_builtin_palettes(inter: disnake.AppCmdInter, user_input: 
     palette_names = [name.title() for name in [p["names"][0] for p in PALETTES]]
     res_list = palette_names + color_names
     return [color for color in res_list if user_input.lower() in color.lower()][:25]
+
+
+async def autocomplete_templates(inter: disnake.AppCmdInter, user_input: str):
+    """Get all the public template names."""
+    template_names = [t.name for t in tracked_templates.get_all_public_templates()]
+    template_names.append("@combo")
+    return [
+        temp_name
+        for temp_name in template_names
+        if user_input.lower() in temp_name.lower()
+    ][:25]
+
+
+async def autocomplete_user_templates(inter: disnake.AppCmdInter, user_input: str):
+    """Get all the user-owned template names."""
+    author_id = inter.author.id
+    if author_id == tracked_templates.bot_owner_id:
+        return await autocomplete_templates(inter, user_input)
+    else:
+        template_names = [
+            t.name
+            for t in tracked_templates.get_all_public_templates()
+            if t.owner_id == inter.author.id
+        ]
+        return [
+            temp_name
+            for temp_name in template_names
+            if user_input.lower() in temp_name.lower()
+        ][:25]
 
 
 # --- Views --- #

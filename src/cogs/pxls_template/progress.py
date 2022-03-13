@@ -14,6 +14,8 @@ from utils.discord_utils import (
     DropdownView,
     MoreInfoView,
     AddTemplateView,
+    autocomplete_templates,
+    autocomplete_user_templates,
 )
 from utils.pxls.template_manager import (
     Combo,
@@ -30,35 +32,6 @@ from utils.arguments_parser import MyParser
 from utils.plot_utils import get_theme, get_gradient_palette
 from cogs.pxls.speed import get_grouped_graph, get_stats_graph
 from utils.image.image_utils import v_concatenate
-
-
-async def autocomplete_templates(inter: disnake.AppCmdInter, user_input: str):
-    """Get all the public template names."""
-    template_names = [t.name for t in tracked_templates.get_all_public_templates()]
-    template_names.append("@combo")
-    return [
-        temp_name
-        for temp_name in template_names
-        if user_input.lower() in temp_name.lower()
-    ][:25]
-
-
-async def autocomplete_user_templates(inter: disnake.AppCmdInter, user_input: str):
-    """Get all the user-owned template names."""
-    author_id = inter.author.id
-    if author_id == tracked_templates.bot_owner_id:
-        return await autocomplete_templates(inter, user_input)
-    else:
-        template_names = [
-            t.name
-            for t in tracked_templates.get_all_public_templates()
-            if t.owner_id == inter.author.id
-        ]
-        return [
-            temp_name
-            for temp_name in template_names
-            if user_input.lower() in temp_name.lower()
-        ][:25]
 
 
 class Progress(commands.Cog):

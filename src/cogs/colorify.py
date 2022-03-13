@@ -68,7 +68,7 @@ class Colorify(commands.Cog):
 
         # get the image from the message
         try:
-            img, url = await get_image_from_message(ctx, url)
+            img, url = await get_image_from_message(ctx, url, return_type="image")
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
 
@@ -191,7 +191,7 @@ class Colorify(commands.Cog):
 
         # get the image from the message
         try:
-            img, url = await get_image_from_message(ctx, url)
+            img, url = await get_image_from_message(ctx, url, return_type="image")
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
         rainbow_img = await self.bot.loop.run_in_executor(

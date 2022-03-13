@@ -57,8 +57,13 @@ async def on_ready():
 
 
 @bot.event
-async def on_slash_command(ctx):
-    await on_command(ctx)
+async def on_slash_command(inter):
+    await on_command(inter)
+
+
+@bot.event
+async def on_message_command(inter):
+    await on_command(inter)
 
 
 @bot.event
@@ -130,8 +135,13 @@ async def on_command(ctx):
 
 
 @bot.event
-async def on_slash_command_error(ctx, error):
-    await on_command_error(ctx, error)
+async def on_slash_command_error(inter, error):
+    await on_command_error(inter, error)
+
+
+@bot.event
+async def on_message_command_error(inter, error):
+    await on_command_error(inter, error)
 
 
 @bot.event

@@ -6,11 +6,13 @@ import time
 from datetime import datetime, timedelta, timezone
 from disnake.ext import commands
 from dotenv import load_dotenv
+from googletrans import Translator
+from googletrans.constants import LANGUAGES
 
 from utils.setup import BOT_INVITE, SERVER_INVITE, VERSION, db_servers, db_users
 from utils.time_converter import str_to_td, td_format
 from utils.timezoneslib import get_timezone
-from utils.utils import ordinal
+from utils.utils import get_lang_emoji, ordinal
 from utils.discord_utils import format_number, image_to_file
 from utils.table_to_image import table_to_image
 
@@ -21,6 +23,7 @@ class Utility(commands.Cog):
     def __init__(self, bot: commands.Bot):
         load_dotenv()
         self.bot: commands.Bot = bot
+        self.translator = Translator()
 
     @commands.slash_command(name="ping")
     async def _ping(self, inter: disnake.AppCmdInter):
@@ -393,6 +396,41 @@ class Utility(commands.Cog):
 
         invites = Invites(BOT_INVITE, SERVER_INVITE)
         await ctx.send(embed=embed, view=invites)
+
+    @commands.message_command(name="Translate")  # optional
+    async def translate(
+        self, inter: disnake.ApplicationCommandInteraction, message: disnake.Message
+    ):
+        await inter.response.defer(ephemeral=True)
+        text = message.content
+        try:
+            translation = await self.bot.loop.run_in_executor(
+                None, self.translator.translate, text
+            )
+        except Exception:
+            return await inter.send(
+                embed=disnake.Embed(
+                    title="Translation",
+                    color=disnake.Color.red(),
+                    description="An error occured while translating the text.",
+                ),
+                ephemeral=True,
+            )
+        src_flag = get_lang_emoji(translation.src)
+        dest_flag = get_lang_emoji(translation.dest)
+        lang = "{} {} →  {} {}".format(
+            src_flag or "",
+            LANGUAGES.get(translation.src).title(),
+            dest_flag or "",
+            LANGUAGES.get(translation.dest).title(),
+        )
+        emb = disnake.Embed(title="Translation", color=0x66C5CC)
+        emb.add_field(name=lang, value=f"```{translation.text}```")
+        emb.set_footer(
+            text="Source: Google Translate",
+            icon_url="https://translate.google.com/favicon.ico",
+        )
+        await inter.send(embed=emb, ephemeral=True)
 
 
 def setup(bot: commands.Bot):

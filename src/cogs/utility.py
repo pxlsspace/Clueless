@@ -8,9 +8,10 @@ from disnake.ext import commands
 from dotenv import load_dotenv
 from googletrans import Translator
 from googletrans.constants import LANGUAGES
+from utils.arguments_parser import valid_datetime_type
 
 from utils.setup import BOT_INVITE, SERVER_INVITE, VERSION, db_servers, db_users
-from utils.time_converter import str_to_td, td_format
+from utils.time_converter import format_timezone, str_to_td, td_format
 from utils.timezoneslib import get_timezone
 from utils.utils import get_lang_emoji, ordinal
 from utils.discord_utils import format_number, image_to_file
@@ -431,6 +432,100 @@ class Utility(commands.Cog):
             icon_url="https://translate.google.com/favicon.ico",
         )
         await inter.send(embed=emb, ephemeral=True)
+
+    @commands.slash_command(name="timestamp")
+    async def _timestamp(
+        self,
+        inter: disnake.AppCmdInter,
+        date: str = "",
+        time: str = "",
+        timezone: str = None,
+    ):
+        """Generate discord timestamps from a date, time and timezone.
+
+        Parameters
+        ----------
+        date: A date in the format 'YYYY-mm-dd'.
+        time: A time in the format 'HH:MM'.
+        timezone: A timezone (ex: 'UTC+8', US/Pacific, PST) (default: your set timezone or UTC)."""
+        dt_list = []
+        if date:
+            dt_list.append(date)
+        if time:
+            dt_list.append(time)
+        dt_str = " ".join(dt_list)
+        await self.timestamp(inter, dt_str, timezone)
+
+    @commands.command(
+        name="timestamp",
+        aliases=["ts"],
+        description="Generate discord timestamps from a date, time and timezone.",
+        usage="[date (YYYY-mm-dd)] [time (HH:MM)] [timezone]",
+        help="""
+            - `[date]`: a date in the format `YYYY-mm-dd`
+            - `[time]`: a time in the format `HH:MM`
+            - `[timezone]`: a timezone (ex: 'UTC+8', US/Pacific, PST)\n(default: your set timezone or UTC)
+        """,
+    )
+    async def p_timestamp(self, ctx, *, args: str = None):
+
+        args = args.split(" ") if args else []
+        if len(args) == 1:
+            dt_str = args[0]
+            tz_str = None
+        elif len(args) == 2:
+            # check if the last arg is a timezone
+            if get_timezone(args[1]):
+                dt_str = args[0]
+                tz_str = args[1]
+            else:
+                dt_str = " ".join(args)
+                tz_str = None
+        elif len(args) == 3:
+            dt_str = " ".join(args[0:2])
+            tz_str = args[2]
+        else:
+            return await ctx.send(
+                f"❌ Incorrect arguments\nusage: `{ctx.prefix}timestamp {ctx.command.usage}`"
+            )
+
+        await self.timestamp(ctx, dt_str, tz_str)
+
+    async def timestamp(self, ctx, dt_str: str, tz_str: str = None):
+
+        if tz_str is None:
+            discord_user = await db_users.get_discord_user(ctx.author.id)
+            tz_str = discord_user["timezone"] or "UTC"
+
+        tz = get_timezone(tz_str)
+        if "now" in dt_str:
+            dt = datetime.now(tz)
+        else:
+            try:
+                dt = valid_datetime_type(dt_str.split(" "), tz)
+            except ValueError as e:
+                return await ctx.send(f"❌ {e}")
+
+        timestamps = ""
+        for f in ["t", "T", "d", "D", "f", "F", "R"]:
+            timestamps += "• `<t:{0}:{1}>` → <t:{0}:{1}>\n".format(int(dt.timestamp()), f)
+        embed = disnake.Embed(title="Timestamps", color=0x66C5CC)
+
+        embed.add_field(
+            name="📆  **Input Date/Time:**",
+            value=f"```{dt.strftime('%Y-%m-%d %H:%M')} {format_timezone(tz)}```",
+            inline=False,
+        )
+
+        embed.add_field(
+            name=f"⏲️  **Time {'Elapsed' if dt < datetime.now(tz) else 'Remaining'}:**",
+            value=td_format(abs(datetime.now(tz) - dt)) or "0 seconds",
+            inline=False,
+        )
+        embed.add_field(name="📋  **Discord Timestamps:**", value=timestamps, inline=False)
+        embed.set_footer(text="Embed time")
+        embed.timestamp = dt
+        await ctx.send(embed=embed)
 
 
 def setup(bot: commands.Bot):

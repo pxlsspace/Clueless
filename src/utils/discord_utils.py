@@ -826,7 +826,7 @@ class CreateTemplateView(disnake.ui.View):
             image_url=self.template_image_url,
             style_name="custom",
             glow=False,
-            title=None,
+            title=self.template.title,
             ox=self.template.ox,
             oy=self.template.oy,
             nocrop=True,

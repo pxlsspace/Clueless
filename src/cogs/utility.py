@@ -14,7 +14,7 @@ from utils.setup import BOT_INVITE, SERVER_INVITE, VERSION, db_servers, db_users
 from utils.time_converter import format_timezone, str_to_td, td_format
 from utils.timezoneslib import get_timezone
 from utils.utils import get_lang_emoji, ordinal
-from utils.discord_utils import format_number, image_to_file
+from utils.discord_utils import UserConverter, format_number, image_to_file
 from utils.table_to_image import table_to_image
 
 
@@ -142,28 +142,52 @@ class Utility(commands.Cog):
 
         Parameters
         ----------
-        timezone: A timezone name (ex: 'UTC+8', US/Pacific, PST)."""
+        timezone: A discord user or a timezone name (ex: 'UTC+8', US/Pacific, PST)."""
         await self.time(inter, timezone)
 
     @commands.command(
         name="time",
-        description="Show the current time in a timezone.",
+        description="Show the current time in a timezone or for a user.",
         usage="<timezone>",
     )
     async def time(self, ctx, timezone: str = None):
+
+        # check if the input timezone is a user
+        user = None
+        if timezone:
+            try:
+                user = await UserConverter().convert(ctx, timezone)
+                discord_user = await db_users.get_discord_user(user.id)
+                timezone = discord_user["timezone"]
+                if timezone is None:
+                    return await ctx.send(":x: This user hasn't set their timezone.")
+            except Exception:
+                pass
+
         if timezone is None:
+            user = ctx.author
             discord_user = await db_users.get_discord_user(ctx.author.id)
-            timezone = discord_user["timezone"] or "UTC"
+            timezone = discord_user["timezone"]
+            if timezone is None:
+                err_msg = ":x: You haven't set your timezone!\n(use `{}settimezone <timezone>`)".format(
+                    ctx.prefix if isinstance(ctx, commands.Context) else "/"
+                )
+                return await ctx.send(err_msg)
         tz = get_timezone(timezone)
         if tz is None:
             return await ctx.send("❌ Timezone not found.")
 
-        await ctx.send(
-            "Current `{}` time: {}".format(
-                timezone,
-                datetime.astimezone(datetime.now(), tz).strftime("**%H:%M** (%Y-%m-%d)"),
+        if user:
+            msg = "**Current time for <@{}>**:\n```json\n{}```".format(
+                user.id,
+                datetime.astimezone(datetime.now(), tz).strftime("%H:%M %Z (%Y-%m-%d)"),
             )
-        )
+        else:
+            msg = "**Current `{}` time**:\n```json\n{}```".format(
+                timezone,
+                datetime.astimezone(datetime.now(), tz).strftime("%H:%M (%Y-%m-%d)"),
+            )
+        await ctx.send(embed=disnake.Embed(description=msg, color=0x66C5CC))
 
     @commands.group(hidden=True, usage="<sql expression>")
     @commands.is_owner()

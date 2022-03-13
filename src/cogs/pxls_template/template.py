@@ -1,3 +1,4 @@
+import asyncio
 import re
 import disnake
 import numpy as np
@@ -112,14 +113,14 @@ class Template(commands.Cog):
                 parsed_args.matching,
             )
 
-    async def template(
-        self, ctx, image_url, style_name, glow, title, ox, oy, nocrop, matching
-    ):
+    @staticmethod
+    async def template(ctx, image_url, style_name, glow, title, ox, oy, nocrop, matching):
         # get the image from the message
         try:
             img, url = await get_image_from_message(ctx, image_url)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            await ctx.send(f"❌ {e}")
+            return False
 
         start = time.time()
         # check on the style
@@ -129,14 +130,16 @@ class Template(commands.Cog):
             try:
                 style_image_bytes = await get_content(style_url, "image")
             except Exception as e:
-                return await ctx.send(f"❌ {e}")
+                await ctx.send(f"❌ {e}")
+                return False
             style_image = Image.open(BytesIO(style_image_bytes))
             style_image = style_image.convert("RGBA")
             style_array, style_size = parse_style_image(style_image)
             if style_array is None:
-                return await ctx.send(
+                await ctx.send(
                     ":x: There was an error while parsing the style image, make sure it is valid."
                 )
+                return False
             style = {
                 "name": f"[[From User]]({style_url})",
                 "size": style_size,
@@ -153,24 +156,24 @@ class Template(commands.Cog):
                     styles_available += ("\t• {0} ({1}x{1})\n").format(
                         s["name"], s["size"]
                     )
-                return await ctx.send(
-                    f"❌ Unknown style '{style_name}'.\n{styles_available}"
-                )
+                await ctx.send(f"❌ Unknown style '{style_name}'.\n{styles_available}")
+                return False
 
         # check on the size
-        output_size = img.width * img.height * style["size"]
-        limit = int(7e6)
+        output_size = img.width * img.height * style["size"] ** 2
+        limit = int(50e6)
         if output_size > limit:
             msg = f"You're trying to generate a **{format_number(output_size)}** pixels image.\n"
             msg += f"This exceeds the bot's limit of **{format_number(limit)}** pixels.\n"
             msg += "\n*Try using a style with a smaller size or a smaller image.*"
-            return await ctx.send(
+            await ctx.send(
                 embed=disnake.Embed(
                     title=":x: Size limit exceeded",
                     description=msg,
                     color=disnake.Color.red(),
                 )
             )
+            return False
         # check on the glow
         if glow:
             glow_opacity = 0.2
@@ -188,12 +191,14 @@ class Template(commands.Cog):
         # reduce the image to the pxls palette
         img_array = np.array(img)
         palette = get_rgba_palette()
-        reduced_array = await self.bot.loop.run_in_executor(
+        loop = asyncio.get_running_loop()
+        reduced_array = await loop.run_in_executor(
             None, reduce, img_array, palette, matching
         )
 
         # convert the image to a template style
-        template_array = await self.bot.loop.run_in_executor(
+        loop = asyncio.get_running_loop()
+        template_array = await loop.run_in_executor(
             None, templatize, style, reduced_array, glow_opacity
         )
         template_image = Image.fromarray(template_array)
@@ -213,7 +218,7 @@ class Template(commands.Cog):
         embed.set_thumbnail(url="attachment://reduced.png")
         file = image_to_file(template_image, "template.png", embed)
         m = await ctx.send(embed=embed, files=[file, reduced_file])
-        if isinstance(ctx, disnake.AppCmdInter):
+        if isinstance(ctx, (disnake.AppCmdInter, disnake.MessageInteraction)):
             m = await ctx.original_message()
 
         # create a template link with the sent image
@@ -238,6 +243,7 @@ class Template(commands.Cog):
         )
         template_embed.set_footer(text=f"Generated in {round((end-start),3)}s")
         await ctx.send(embed=template_embed)
+        return True
 
     @commands.command(
         name="styles",

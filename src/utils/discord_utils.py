@@ -4,6 +4,7 @@ import asyncio
 from io import BytesIO
 from PIL import Image
 from disnake.ext import commands
+from disnake import ButtonStyle
 
 from utils.utils import get_content
 from utils.setup import stats, db_stats
@@ -751,3 +752,61 @@ class ResizeView(CooldownView, AuthorView):
         for c in self.children[1:]:
             c.update_amount(-c.amount)
         await inter.response.edit_message(view=self)
+
+
+class CreateTemplateView(disnake.ui.View):
+    message: disnake.Message
+
+    def __init__(self, ctx, template):
+        super().__init__()
+        self.template_image_url = None
+        self.ctx = ctx
+        self.template = template  # the template object
+
+    async def on_timeout(self) -> None:
+        # delete everything
+        for c in self.children[:]:
+            self.remove_item(c)
+        await self.message.edit(view=self)
+
+    @disnake.ui.button(label="Create Template (no style)", style=ButtonStyle.blurple)
+    async def temp_no_style(self, btn: disnake.Button, inter: disnake.MessageInteraction):
+        # No style: uses the previously sent image to generate the template fast
+        await inter.response.defer()
+        url = self.template.generate_url(self.template_image_url)
+        await inter.send(
+            embed=disnake.Embed(title="Template Link", color=0x66C5CC, description=url)
+        )
+        await self.on_timeout()
+        self.stop()
+
+    @disnake.ui.button(label="Create Template (custom)", style=ButtonStyle.blurple)
+    async def temp_custom(self, btn: disnake.Button, inter: disnake.MessageInteraction):
+        # Custom Template: invoke the template command from the template Cog which sends
+        # the styled image and the template link
+        await inter.response.defer(with_message=True)
+
+        # disable the buttons so they're not clickable during the processing
+        for c in self.children:
+            c.disabled = True
+        await inter.message.edit(view=self)
+
+        if await self.ctx.bot.cogs.get("Template").template(
+            inter,
+            image_url=self.template_image_url,
+            style_name="custom",
+            glow=False,
+            title=None,
+            ox=self.template.ox,
+            oy=self.template.oy,
+            nocrop=True,
+            matching="fast",
+        ):
+            # delete all the buttons
+            await self.on_timeout()
+            self.stop()
+        else:
+            # template creation failed: re-enable the buttons
+            for c in self.children:
+                c.disabled = False
+            await inter.message.edit(view=self)

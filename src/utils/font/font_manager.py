@@ -14,6 +14,9 @@ fonts_folder = os.path.abspath(
 )
 
 SPACE_WIDTH = 4
+# fonts allowed for the table image
+ALLOWED_FONTS = ["minecraft", "typewriter", "roman", "3x5", "3x4", "indie", "gravity"]
+DEFAULT_FONT = "minecraft"
 
 all_accents = "ÀÁÂÃÄÅÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜàáâãäåèéêëìíîïñòóôõöùúûüÿŸ"
 all_special_chars = './-+*&~#’()|_^@[]{}%!?$€:,\\`><;"='
@@ -291,7 +294,9 @@ class PixelText:
 
 def get_all_fonts():
     """Return a list with all the available fonts"""
-    fonts = []
-    for extension in os.listdir(fonts_folder):
-        fonts.append(extension)
-    return fonts
+    return list(font_files.keys())
+
+
+def get_allowed_fonts():
+    """Return a list with all the fonts 'allowed' to make tables"""
+    return [f for f in get_all_fonts() if f in ALLOWED_FONTS]

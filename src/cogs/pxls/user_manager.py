@@ -3,6 +3,7 @@ from disnake.ext import commands
 from datetime import datetime
 
 from utils.discord_utils import UserConverter, autocomplete_pxls_name
+from utils.font.font_manager import DEFAULT_FONT, get_all_fonts, get_allowed_fonts
 from utils.image.image_utils import hex_str_to_int
 from utils.setup import db_users
 from utils.plot_utils import get_theme, theme_list
@@ -130,12 +131,10 @@ class UserManager(commands.Cog):
             title = "🤔 Who am I?"
 
         discord_user = await db_users.get_discord_user(user.id)
-
+        prefix = ctx.prefix if isinstance(ctx, commands.Context) else "/"
         # get the pxls username
         if discord_user["pxls_user_id"] is None:
-            pxls_username = "*Not set\n(use `{}setname <pxls username>`)*".format(
-                ctx.prefix if isinstance(ctx, commands.Context) else "/"
-            )
+            pxls_username = f"*Not set\n(use `{prefix}setname <pxls username>`)*"
         else:
             pxls_username = await db_users.get_pxls_user_name(
                 discord_user["pxls_user_id"]
@@ -144,12 +143,13 @@ class UserManager(commands.Cog):
         # get the user theme
         user_theme = discord_user["color"] or "default"
 
+        # get the font
+        user_font = discord_user["font"] or f"{DEFAULT_FONT} (default)"
+
         # get the timezone
         tz_str = discord_user["timezone"]
         if tz_str is None:
-            tz_str = "*Not set\n(use `{}settimezone <timezone>`)*".format(
-                ctx.prefix if isinstance(ctx, commands.Context) else "/"
-            )
+            tz_str = f"*Not set\n(use `{prefix}settimezone <timezone>`)*"
             current_time = None
         else:
             tz = get_timezone(tz_str)
@@ -162,6 +162,7 @@ class UserManager(commands.Cog):
         color = hex_str_to_int(color)
         text = f"• **Discord name:** {user}\n"
         text += f"• **Graph theme:** {user_theme}\n"
+        text += f"• **Font**: {user_font}\n"
         text += f"• **Pxls username:** {pxls_username}\n"
         text += f"• **Timezone:** {tz_str}\n"
         if current_time:
@@ -212,6 +213,40 @@ class UserManager(commands.Cog):
             return await ctx.send("❌ You haven't set any timezone.")
         await db_users.set_user_timezone(ctx.author.id, None)
         await ctx.send("✅ Timezone successfully unset.")
+
+    allowed_fonts = get_allowed_fonts()
+
+    @commands.slash_command(name="setfont")
+    async def _setfont(
+        self,
+        inter: disnake.AppCmdInter,
+        font: str = commands.Param(choices=allowed_fonts),
+    ):
+        """Set your font for the image tables.
+
+        Parameters
+        ----------
+        font: The font name."""
+        await self.setfont(inter, font)
+
+    @commands.command(
+        name="setfont",
+        description="Set your font for the image tables.",
+        usage="<font name>",
+        help="- `<font name>`: The name of the font",
+    )
+    async def setfont(self, ctx, font: str):
+        # check on the font
+        if font.lower() not in self.allowed_fonts:
+            allowed_fonts = "Allowed Fonts:\n"
+            allowed_fonts += " ".join([f"`{f}`" for f in self.allowed_fonts])
+            if font.lower() in get_all_fonts():
+                return await ctx.send(f":x: This font is not allowed.\n{allowed_fonts}")
+            else:
+                return await ctx.send(f":x: Font not found.\n{allowed_fonts}")
+
+        await db_users.set_user_font(ctx.author.id, font.lower())
+        await ctx.send(f"✅ Font successfully set to `{font.lower()}`.")
 
 
 def setup(bot: commands.Bot):

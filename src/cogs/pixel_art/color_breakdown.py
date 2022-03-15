@@ -111,7 +111,6 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
         ["Color", "Qty", "%"],
         alignments=["center", "right", "right"],
         colors=colors_cropped,
-        scale=3,
         font=font,
     )
 

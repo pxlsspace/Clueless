@@ -205,7 +205,7 @@ def table_to_image(
     font: str = None,
     bg_colors: list = None,
     alternate_bg: bool = False,
-    scale: int = 4,
+    scale="auto",
 ):
     """
     Create an image from a 2D array.
@@ -306,6 +306,20 @@ def table_to_image(
 
     # convert to image
     image = Image.fromarray(table_array)
+
+    # resize
+    if scale == "auto":
+        # find the scale ratio for the size to be the closest to the target (750 000 pixels)
+        target = 750000
+        min_dist = int(1e9)
+        scale = 1
+        for i in range(1, 5):
+            size = image.width * image.height * i**2
+            diff = abs(size - target)
+            if diff < min_dist:
+                scale = i
+                min_dist = diff
+
     new_width = image.size[0] * scale
     new_height = image.size[1] * scale
     image = image.resize((new_width, new_height), Image.NEAREST)

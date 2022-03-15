@@ -566,7 +566,6 @@ class Progress(commands.Cog):
                 theme=theme,
                 font=font,
                 alternate_bg=True,
-                scale=2,
             )
 
             # make the embed base

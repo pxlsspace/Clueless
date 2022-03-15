@@ -2,16 +2,13 @@ from PIL import Image, ImageColor
 import numpy as np
 from copy import deepcopy
 
-from utils.font.font_manager import PixelText
+from utils.font.font_manager import DEFAULT_FONT, PixelText, get_allowed_fonts
 from utils import image_utils
 from utils.plot_utils import Theme, get_theme
 from utils.utils import in_executor
 
-DEFAULT_FONT = "minecraft"
-OUTER_OUTLINE_WIDTH = 3
 
-
-def make_table_array(data, alignments, colors, bg_colors, theme: Theme):
+def make_table_array(data, alignments, colors, bg_colors, theme: Theme, font):
     """Make a numpy array using the data provided"""
     # config
     line_width = 1  # grid width
@@ -42,7 +39,7 @@ def make_table_array(data, alignments, colors, bg_colors, theme: Theme):
                 bg_color = hex_to_rgba(bg_color)
             bg_colors[i][j] = bg_color
             # make the text images
-            pt = PixelText(text, DEFAULT_FONT, color, (0, 0, 0, 0))
+            pt = PixelText(text, font, color, (0, 0, 0, 0))
             text_array = pt.make_array(accept_empty=True)
             if theme.outline_dark and image_utils.is_dark(color):
                 outline_color = image_utils.lighten_color(color, 0.3)
@@ -201,12 +198,14 @@ def make_styled_corner(array, color, width):
 def table_to_image(
     data,
     titles,
-    alignments=None,
-    colors=None,
+    *,
+    alignments: list = None,
+    colors: list = None,
     theme: Theme = None,
-    bg_colors=None,
-    alternate_bg=False,
-    scale=4,
+    font: str = None,
+    bg_colors: list = None,
+    alternate_bg: bool = False,
+    scale: int = 4,
 ):
     """
     Create an image from a 2D array.
@@ -218,6 +217,7 @@ def table_to_image(
     - alignments list(str): a list of alignments for each column, either `center`, `left`, `right`
     - colors: list(str) or list(list(str)): a list of color for each line, the colors must be a string of hex code (e.g. #ffffff)
     - theme: Theme: a Theme object to set the table colors
+    - font: str: the name of the font for the text (choices must be in `get_allowed_fonts()`)
     - bg_colors: list(str) or list(list(str)): a list of color for each cell background
     - alternate_bg: Bool: Alternate the background color on even rows if set to True
     - scale: int: the scale for the final image (default: x4)
@@ -246,6 +246,13 @@ def table_to_image(
     # use the theme default theme if None is given
     if theme is None:
         theme = get_theme("default")
+
+    # use the default font if None is given
+    if font is None:
+        font = DEFAULT_FONT
+    assert (
+        font in get_allowed_fonts()
+    ), f"The font '{font}' was not found or is not allowed."
 
     # reshape the colors table
     if colors is None:
@@ -286,7 +293,7 @@ def table_to_image(
                     bg_colors[i][j] = bg_color
 
     # get the table numpy array
-    table_array = make_table_array(data, alignments, colors, bg_colors, theme)
+    table_array = make_table_array(data, alignments, colors, bg_colors, theme, font)
 
     # add style
     table_array = add_border(

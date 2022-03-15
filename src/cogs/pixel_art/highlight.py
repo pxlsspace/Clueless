@@ -20,6 +20,7 @@ from utils.discord_utils import (
 )
 from utils.arguments_parser import MyParser
 from utils.table_to_image import table_to_image
+from utils.setup import db_users
 
 
 class Highlight(commands.Cog):
@@ -179,8 +180,10 @@ async def _highlight(ctx, image_array: np.ndarray, colors, bg_color):
     hex_colors = [d[-1] for d in data]
     data = [d[:-1] for d in data]
     data = [[format_number(c) for c in row] for row in data]
+    discord_user = await db_users.get_discord_user(ctx.author.id)
+    font = discord_user["font"]
     table_img = await table_to_image(
-        data, ["Color", "Amount", "Percentage"], colors=hex_colors
+        data, ["Color", "Amount", "Percentage"], colors=hex_colors, font=font
     )
 
     # set embed color to the top 1 color in colors

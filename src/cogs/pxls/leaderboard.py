@@ -103,6 +103,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         discord_user = await db_users.get_discord_user(ctx.author.id)
         current_user_theme = discord_user["color"] or "default"
         theme = get_theme(current_user_theme)
+        font = discord_user["font"]
         user_timezone = discord_user["timezone"]
 
         try:
@@ -340,7 +341,14 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         # format the numbers correctly
         res_ldb = [[format_number(line) for line in r] for r in res_ldb]
 
-        img = await table_to_image(res_ldb, column_names, alignments2, colors, theme)
+        img = await table_to_image(
+            res_ldb,
+            column_names,
+            alignments=alignments2,
+            colors=colors,
+            theme=theme,
+            font=font,
+        )
 
         # make title and embed header
         text = ""

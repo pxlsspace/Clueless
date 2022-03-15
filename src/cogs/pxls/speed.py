@@ -92,6 +92,7 @@ class PxlsSpeed(commands.Cog):
         discord_user = await db_users.get_discord_user(ctx.author.id)
         user_timezone = discord_user["timezone"]
         current_user_theme = discord_user["color"] or "default"
+        font = discord_user["font"]
         theme = get_theme(current_user_theme)
 
         try:
@@ -325,7 +326,12 @@ class PxlsSpeed(commands.Cog):
 
         table_data = [[format_number(c) for c in row] for row in table_data]
         table_image = await table_to_image(
-            table_data, titles, alignments, table_colors, theme=theme
+            table_data,
+            titles,
+            alignments=alignments,
+            colors=table_colors,
+            theme=theme,
+            font=font,
         )
 
         # create the graph

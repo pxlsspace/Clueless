@@ -175,11 +175,13 @@ class ColorsGraph(commands.Cog):
             new_row[1] = format_number(row[1])
             table_rows[i] = new_row
 
+        font = discord_user["font"]
         table_img = await table_to_image(
             table_rows,
             ["Color", "Progress", "px/h", "px/d"],
-            ["center", "right", "right", "right"],
-            table_colors,
+            alignments=["center", "right", "right", "right"],
+            colors=table_colors,
+            font=font,
         )
 
         files = await fig2file(fig, "colors_graph.png", table_img)

@@ -7,7 +7,7 @@ from utils.discord_utils import format_number, get_image_from_message, image_to_
 from utils.table_to_image import table_to_image
 from utils.image.image_utils import h_concatenate, hex_to_rgb, rgb_to_hex, hex_str_to_int
 from utils.plot_utils import fig2img
-from utils.setup import stats
+from utils.setup import stats, db_users
 from utils.utils import in_executor
 
 
@@ -103,16 +103,16 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
         data_cropped = data
         colors_cropped = colors
 
+    discord_user = await db_users.get_discord_user(ctx.author.id)
+    font = discord_user["font"]
     data_cropped = [[format_number(c) for c in row] for row in data_cropped]
     table_img = await table_to_image(
         data_cropped,
         ["Color", "Qty", "%"],
-        ["center", "right", "right"],
-        colors_cropped,
-        None,
-        None,
-        False,
-        3,
+        alignments=["center", "right", "right"],
+        colors=colors_cropped,
+        scale=3,
+        font=font,
     )
 
     # make the pie chart image

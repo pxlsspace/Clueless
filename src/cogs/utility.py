@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from googletrans import Translator
 from googletrans.constants import LANGUAGES
 from utils.arguments_parser import valid_datetime_type
+from utils.plot_utils import get_theme
 
 from utils.setup import BOT_INVITE, SERVER_INVITE, VERSION, db_servers, db_users
 from utils.time_converter import format_timezone, str_to_td, td_format
@@ -204,9 +205,13 @@ class Utility(commands.Cog):
         elif len(rows) > 100:
             return await ctx.send(f"❌ Too many lines to show ({len(rows)})")
 
+        discord_user = await db_users.get_discord_user(ctx.author.id)
+        theme = get_theme(discord_user["color"])
+        font = discord_user["font"]
+
         titles = rows[0].keys()
         rows = [list(row) for row in rows]
-        img = await table_to_image(rows, titles)
+        img = await table_to_image(rows, titles, theme=theme, font=font)
         file = await image_to_file(img, "table.png")
         content = f"Nb lines: {len(rows)}\nTime: {round(end-start,3)}s"
         await ctx.send(file=file, content=content)

@@ -507,6 +507,7 @@ class Progress(commands.Cog):
         discord_user = await db_users.get_discord_user(ctx.author.id)
         current_user_theme = discord_user["color"] or "default"
         theme = deepcopy(get_theme(current_user_theme))
+        font = discord_user["font"]
         last_updated = await db_templates.get_last_update_time()
 
         async def make_embed(table, sort):
@@ -563,6 +564,7 @@ class Progress(commands.Cog):
                 colors=table_colors,
                 bg_colors=bg_colors,
                 theme=theme,
+                font=font,
                 alternate_bg=True,
                 scale=2,
             )
@@ -958,6 +960,7 @@ class Progress(commands.Cog):
         discord_user = await db_users.get_discord_user(ctx.author.id)
         current_user_theme = discord_user["color"] or "default"
         theme = get_theme(current_user_theme)
+        font = discord_user["font"]
         user_timezone_name = discord_user["timezone"]
         user_timezone = get_timezone(user_timezone_name)
 
@@ -1070,7 +1073,14 @@ class Progress(commands.Cog):
             alignments = ["center", "right", "right", "right", "right"]
         table_data = [[format_number(c) for c in row] for row in table_data]
         colors = theme.get_palette(1)
-        table_image = await table_to_image(table_data, titles, alignments, colors, theme)
+        table_image = await table_to_image(
+            table_data,
+            titles,
+            alignments=alignments,
+            colors=colors,
+            theme=theme,
+            font=font,
+        )
 
         # make the embed
         embed = disnake.Embed(title="**Template Speed**", color=0x66C5CC)

@@ -438,6 +438,11 @@ class Utility(commands.Cog):
     ):
         await inter.response.defer(ephemeral=True)
         text = message.content
+        if len(text) == 0:
+            return await inter.send(
+                embed=disnake.Embed(title="No text found 😢", color=disnake.Color.red()),
+                ephemeral=True,
+            )
         try:
             translation = await self.bot.loop.run_in_executor(
                 None, self.translator.translate, text
@@ -460,7 +465,8 @@ class Utility(commands.Cog):
             LANGUAGES.get(translation.dest).title(),
         )
         emb = disnake.Embed(title="Translation", color=0x66C5CC)
-        emb.add_field(name=lang, value=f"```{translation.text}```")
+        value = f"```{translation.text}```[[Link to the message]]({message.jump_url})"
+        emb.add_field(name=lang, value=value)
         emb.set_footer(
             text="Source: Google Translate",
             icon_url="https://translate.google.com/favicon.ico",

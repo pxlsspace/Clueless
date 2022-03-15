@@ -125,7 +125,10 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         if "!" in username:
             pxls_user_id = discord_user["pxls_user_id"]
             if pxls_user_id is None:
-                usage_text = f"(You can set your default username with `{ctx.prefix}setname <username>`)"
+                is_slash = not isinstance(ctx, commands.Context)
+                cmd_name = "user setname" if is_slash else "setname"
+                prefix = "/" if is_slash else ctx.prefix
+                usage_text = f"(You can set your default username with `{prefix}{cmd_name} <username>`)"
                 return await ctx.send(
                     "❌ You need to have a set username to use `!`.\n" + usage_text
                 )

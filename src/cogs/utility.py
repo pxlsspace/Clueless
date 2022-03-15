@@ -170,8 +170,13 @@ class Utility(commands.Cog):
             discord_user = await db_users.get_discord_user(ctx.author.id)
             timezone = discord_user["timezone"]
             if timezone is None:
-                err_msg = ":x: You haven't set your timezone!\n(use `{}settimezone <timezone>`)".format(
-                    ctx.prefix if isinstance(ctx, commands.Context) else "/"
+                err_msg = (
+                    ":x: You haven't set your timezone!\n(use `{}{} <timezone>`)".format(
+                        ctx.prefix if isinstance(ctx, commands.Context) else "/",
+                        "settimezone"
+                        if isinstance(ctx, commands.Context)
+                        else "user settimezone",
+                    )
                 )
                 return await ctx.send(err_msg)
         tz = get_timezone(timezone)

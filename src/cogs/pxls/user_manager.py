@@ -15,7 +15,12 @@ class UserManager(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot: commands.Bot = bot
 
-    @commands.slash_command(name="setname")
+    @commands.slash_command(name="user")
+    async def user(self, inter):
+        """Manage your user settings."""
+        pass
+
+    @user.sub_command(name="setname")
     async def _setname(
         self,
         inter: disnake.AppCmdInter,
@@ -39,7 +44,7 @@ class UserManager(commands.Cog):
         await db_users.set_pxls_user(ctx.author.id, pxls_user_id)
         await ctx.send(f"✅ Pxls username successfully set to **{username}**.")
 
-    @commands.slash_command(name="unsetname")
+    @user.sub_command(name="unsetname")
     async def _unsetname(self, inter: disnake.AppCmdInter):
         """Unlink your discord account from a pxls username."""
         await self.unsetname(inter)
@@ -52,14 +57,23 @@ class UserManager(commands.Cog):
         await db_users.set_pxls_user(ctx.author.id, None)
         await ctx.send("✅ Pxls username successfully unset.")
 
-    @commands.slash_command(name="theme")
+    @user.sub_command(name="settheme")
     async def _theme(
         self,
         inter: disnake.AppCmdInter,
-        theme: str = commands.Param(default=None, choices=[t.name for t in theme_list]),
+        theme: str = commands.Param(choices=[t.name for t in theme_list]),
     ):
-        """Set your theme for the graphs."""
+        """Set your theme for the graphs.
+
+        Parameters
+        ----------
+        theme: The name of the theme."""
         await self.theme(inter, theme)
+
+    @user.sub_command(name="themes")
+    async def _themes(self, inter: disnake.AppCmdInter):
+        """Show the list of themes."""
+        await self.theme(inter)
 
     @commands.command(
         description="Set your theme for the graphs",
@@ -78,10 +92,20 @@ class UserManager(commands.Cog):
             )
 
         if theme is None:
-            set_theme_text = "*Use `{0}theme [theme name]` to change your theme.*".format(
-                ctx.prefix if isinstance(ctx, commands.Context) else "/"
+            if isinstance(ctx, commands.Context):
+                set_theme_text = (
+                    f"\n*Use `{ctx.prefix }theme <theme name>` to change your theme.*"
+                )
+            else:
+                set_theme_text = (
+                    "\n*Use `/user settheme <theme name>` to change your theme.*"
+                )
+            embed = disnake.Embed(
+                title="Available Themes",
+                color=0x66C5CC,
+                description=available_themes_text + set_theme_text,
             )
-            return await ctx.send(available_themes_text + set_theme_text)
+            return await ctx.send(embed=embed)
 
         if theme not in [t.name for t in theme_list]:
             error_msg = "❌ Can't find this theme.\n"
@@ -131,10 +155,12 @@ class UserManager(commands.Cog):
             title = "🤔 Who am I?"
 
         discord_user = await db_users.get_discord_user(user.id)
-        prefix = ctx.prefix if isinstance(ctx, commands.Context) else "/"
+        is_slash = not isinstance(ctx, commands.Context)
+        prefix = "/" if is_slash else ctx.prefix
         # get the pxls username
         if discord_user["pxls_user_id"] is None:
-            pxls_username = f"*Not set\n(use `{prefix}setname <pxls username>`)*"
+            cmd_name = "user setname" if is_slash else "setname"
+            pxls_username = f"*Not set\n(use `{prefix}{cmd_name} <pxls username>`)*"
         else:
             pxls_username = await db_users.get_pxls_user_name(
                 discord_user["pxls_user_id"]
@@ -149,7 +175,8 @@ class UserManager(commands.Cog):
         # get the timezone
         tz_str = discord_user["timezone"]
         if tz_str is None:
-            tz_str = f"*Not set\n(use `{prefix}settimezone <timezone>`)*"
+            cmd_name = "user settimezone" if is_slash else "settimezone"
+            tz_str = f"*Not set\n(use `{prefix}{cmd_name} <timezone>`)*"
             current_time = None
         else:
             tz = get_timezone(tz_str)
@@ -171,7 +198,7 @@ class UserManager(commands.Cog):
         embed.set_thumbnail(url=user.display_avatar)
         await ctx.send(embed=embed)
 
-    @commands.slash_command(name="settimezone")
+    @user.sub_command(name="settimezone")
     async def _settimezone(self, inter: disnake.AppCmdInter, timezone: str):
         """Set your timezone for the graphs and time inputs.
 
@@ -201,7 +228,7 @@ class UserManager(commands.Cog):
             )
         )
 
-    @commands.slash_command(name="unsettimezone")
+    @user.sub_command(name="unsettimezone")
     async def _unsettimezone(self, inter: disnake.AppCmdInter):
         """Unset your timezone."""
         await self.unsettimezone(inter)
@@ -216,7 +243,7 @@ class UserManager(commands.Cog):
 
     allowed_fonts = get_allowed_fonts()
 
-    @commands.slash_command(name="setfont")
+    @user.sub_command(name="setfont")
     async def _setfont(
         self,
         inter: disnake.AppCmdInter,
@@ -232,6 +259,7 @@ class UserManager(commands.Cog):
     @commands.command(
         name="setfont",
         description="Set your font for the image tables.",
+        aliases=["font"],
         usage="<font name>",
         help="- `<font name>`: The name of the font",
     )

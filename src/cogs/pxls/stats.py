@@ -214,9 +214,11 @@ class PxlsStats(commands.Cog):
             discord_user = await db_users.get_discord_user(ctx.author.id)
             pxls_user_id = discord_user["pxls_user_id"]
             if pxls_user_id is None:
-                prefix = ctx.prefix if isinstance(ctx, commands.Context) else "/"
+                is_slash = not isinstance(ctx, commands.Context)
+                cmd_name = "user setname" if is_slash else "setname"
+                prefix = "/" if is_slash else ctx.prefix
                 return await ctx.send(
-                    f"❌ You need to specify a pxls username.\n(You can set your default username with `{prefix}setname <username>`)"
+                    f"❌ You need to specify a pxls username.\n(You can set your default username with `{prefix}{cmd_name} <username>`)"
                 )
             else:
                 name = await db_users.get_pxls_user_name(pxls_user_id)

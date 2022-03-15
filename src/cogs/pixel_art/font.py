@@ -2,7 +2,7 @@ import disnake
 from disnake.ext import commands
 
 from utils.arguments_parser import parse_pixelfont_args
-from utils.font.font_manager import get_all_fonts, PixelText
+from utils.font.font_manager import get_all_fonts, PixelText, get_allowed_fonts
 from utils.discord_utils import image_to_file, autocomplete_palette_with_none
 from utils.image.image_utils import get_color
 
@@ -147,13 +147,19 @@ class Font(commands.Cog):
     @commands.command(description="Show the list of the fonts available.")
     async def fonts(self, ctx):
         fonts = get_all_fonts()
+        allowed_fonts = get_allowed_fonts()
         if len(fonts) == 0:
             return await ctx.send("❌ I can't find any font :(")
-
-        msg = "**Available fonts:**\n"
+        msg = ""
         for font in fonts:
-            msg += "\t• `" + font + "`\n"
-        return await ctx.send(msg)
+            if font in allowed_fonts:
+                msg += f"\t• **`{font}`** *\n"
+
+            else:
+                msg += f"\t• `{font}`\n"
+        embed = disnake.Embed(title="Available Fonts", color=0x66C5CC, description=msg)
+        embed.set_footer(text=f"* = available for {ctx.prefix}setfont\n")
+        return await ctx.send(embed=embed)
 
 
 def setup(bot: commands.Bot):

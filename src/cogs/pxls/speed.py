@@ -103,9 +103,11 @@ class PxlsSpeed(commands.Cog):
         # select the discord user's pxls username if it has one linked
         names = param["names"]
         pxls_user_id = discord_user["pxls_user_id"]
-        prefix = ctx.prefix if isinstance(ctx, commands.Context) else "/"
+        is_slash = not isinstance(ctx, commands.Context)
+        cmd_name = "user setname" if is_slash else "setname"
+        prefix = "/" if is_slash else ctx.prefix
         usage_text = (
-            f"(You can set your default username with `{prefix}setname <username>`)"
+            f"(You can set your default username with `{prefix}{cmd_name} <username>`)"
         )
 
         if len(names) == 0:

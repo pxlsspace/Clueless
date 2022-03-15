@@ -317,7 +317,19 @@ async def on_message(message):
         except Exception:
             pass
 
+    if message.content == ">_<":
+        try:
+            return await message.channel.send("<_>")
+        except Exception:
+            pass
+
     if message.content == "aa":
+        try:
+            await message.channel.send("<:eatwatermelon:953417593069379684>")
+        except Exception:
+            pass
+
+    if message.content == "AA":
         try:
             await message.channel.send("<:watermelonDEATH:856212273718886400>")
         except Exception:

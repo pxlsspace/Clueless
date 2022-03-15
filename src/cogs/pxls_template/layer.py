@@ -93,7 +93,7 @@ class Layer(commands.Cog):
 
         embed = disnake.Embed(color=0x66C5CC, title="Layered")
         embed.set_footer(text=f"Layered in {round((end-start),3)}s")
-        file = image_to_file(img, "layered.png", embed)
+        file = await image_to_file(img, "layered.png", embed)
         # Use the combo object here because it doesn't generate a placeable mask
         template = Combo(None, palettized_array, ox, oy, None, None, None)
         view = CreateTemplateView(ctx, template)

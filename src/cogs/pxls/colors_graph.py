@@ -18,6 +18,7 @@ from utils.setup import stats, db_stats, db_users
 from utils.plot_utils import fig2img, add_glow, get_theme
 from utils.time_converter import format_timezone, str_to_td, round_minutes_down
 from utils.timezoneslib import get_timezone
+from utils.utils import in_executor
 
 
 class ColorsGraph(commands.Cog):
@@ -141,9 +142,7 @@ class ColorsGraph(commands.Cog):
             for d in data_list:
                 d["values"] = [v - d["values"][0] for v in d["values"]]
         # create the graph and style
-        fig = await self.bot.loop.run_in_executor(
-            None, make_color_graph, data_list, colors, discord_user["timezone"]
-        )
+        fig = await make_color_graph(data_list, colors, discord_user["timezone"])
         if fig is None:
             return await ctx.send("❌ Invalid color name.")
         fig.update_layout(title="Colors Graph" + (" (non-virgin)" if placed_opt else ""))
@@ -176,19 +175,18 @@ class ColorsGraph(commands.Cog):
             new_row[1] = format_number(row[1])
             table_rows[i] = new_row
 
-        table_img = table_to_image(
+        table_img = await table_to_image(
             table_rows,
             ["Color", "Progress", "px/h", "px/d"],
             ["center", "right", "right", "right"],
             table_colors,
         )
 
-        files = await self.bot.loop.run_in_executor(
-            None, fig2file, fig, "colors_graph.png", table_img
-        )
+        files = await fig2file(fig, "colors_graph.png", table_img)
         await ctx.send(files=files)
 
 
+@in_executor()
 def make_color_graph(data_list, colors, user_timezone=None):
 
     # get the timezone information
@@ -265,16 +263,16 @@ def make_color_graph(data_list, colors, user_timezone=None):
     return fig
 
 
-def fig2file(fig, title, table_img):
+async def fig2file(fig, title, table_img):
 
-    graph_img = fig2img(fig)
+    graph_img = await fig2img(fig)
     if table_img.size[0] > table_img.size[1]:
-        res_img = v_concatenate(table_img, graph_img, gap_height=20)
-        res_file = image_to_file(res_img, title)
+        res_img = await v_concatenate(table_img, graph_img, gap_height=20)
+        res_file = await image_to_file(res_img, title)
         return [res_file]
     else:
-        table_file = image_to_file(table_img, "table.png")
-        graph_file = image_to_file(graph_img, title)
+        table_file = await image_to_file(table_img, "table.png")
+        graph_file = await image_to_file(graph_img, title)
         return [table_file, graph_file]
 
 

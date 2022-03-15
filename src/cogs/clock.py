@@ -203,7 +203,7 @@ class Clock(commands.Cog):
                 channel = self.bot.get_channel(int(channel_id))
                 embed = disnake.Embed(title="Canvas Snapshot", color=0x66C5CC)
                 embed.timestamp = datetime.now(timezone.utc)
-                file = image_to_file(board_img, filename, embed)
+                file = await image_to_file(board_img, filename, embed)
                 await channel.send(file=file, embed=embed)
             except Exception:
                 pass

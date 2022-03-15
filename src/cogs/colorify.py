@@ -16,6 +16,7 @@ from utils.image.gif_saver import save_transparent_gif
 from utils.image.image_utils import get_color
 from utils.image.img_to_gif import img_to_animated_gif
 from utils.arguments_parser import MyParser
+from utils.utils import in_executor
 
 
 class Colorify(commands.Cog):
@@ -101,7 +102,7 @@ class Colorify(commands.Cog):
         # still image (png, jpeg, ..)
         else:
             res = colorify(img, rgb)
-            file = image_to_file(res, "colorify.png")
+            file = await image_to_file(res, "colorify.png")
 
         await ctx.send(file=file)
 
@@ -194,13 +195,12 @@ class Colorify(commands.Cog):
             img, url = await get_image_from_message(ctx, url, return_type="image")
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
-        rainbow_img = await self.bot.loop.run_in_executor(
-            None, rainbowfy, img, saturation, lightness
-        )
+        rainbow_img = await rainbowfy(img, saturation, lightness)
         file = disnake.File(fp=rainbow_img, filename="rainbowfy.gif")
         await ctx.send(file=file)
 
 
+@in_executor()
 def rainbowfy(img: Image.Image, saturation=50, lightness=60) -> Image.Image:
     """Turn an image to a rainbow GIF."""
     # check if the image is animated

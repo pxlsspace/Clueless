@@ -89,9 +89,7 @@ class Outline(commands.Cog):
 
         func = functools.partial(add_outline, input_image, rgba, not (sparse), width)
         image_with_outline = await self.bot.loop.run_in_executor(None, func)
-        file = await self.bot.loop.run_in_executor(
-            None, image_to_file, image_with_outline, "outline.png"
-        )
+        file = await image_to_file(image_with_outline, "outline.png")
 
         await ctx.send(file=file)
 
@@ -141,9 +139,7 @@ class Outline(commands.Cog):
             embed.description += "`{0.width}x{0.height}` → `{1.width}x{1.height}`".format(
                 input_image, image_cropped
             )
-        file = await self.bot.loop.run_in_executor(
-            None, image_to_file, image_cropped, "cropped.png", embed
-        )
+        file = await image_to_file(image_cropped, "cropped.png", embed)
 
         await ctx.send(file=file, embed=embed)
 

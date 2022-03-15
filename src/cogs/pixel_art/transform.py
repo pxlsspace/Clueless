@@ -41,7 +41,7 @@ class Transform(commands.Cog):
         flipped = ImageOps.mirror(image)
 
         embed = disnake.Embed(title="Vertical Flip", color=0x66C5CC)
-        file = image_to_file(flipped, "flipped.png", embed)
+        file = await image_to_file(flipped, "flipped.png", embed)
         await ctx.send(embed=embed, file=file)
 
     @commands.slash_command(name="hflip")
@@ -75,7 +75,7 @@ class Transform(commands.Cog):
         flipped = ImageOps.flip(image)
 
         embed = disnake.Embed(title="Horizontal Flip", color=0x66C5CC)
-        file = image_to_file(flipped, "flipped.png", embed)
+        file = await image_to_file(flipped, "flipped.png", embed)
         await ctx.send(embed=embed, file=file)
 
 

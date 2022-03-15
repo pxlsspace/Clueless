@@ -110,7 +110,9 @@ class Scale(commands.Cog):
             f"• Pixels: `{format_number(get_visible_pixels(downscaled_image))}`"
         )
         embed.set_footer(text=f"Downscaled in {round((end - start), 3)}s")
-        downscaled_file = image_to_file(downscaled_image, "downscaled.png", embed=embed)
+        downscaled_file = await image_to_file(
+            downscaled_image, "downscaled.png", embed=embed
+        )
         await ctx.send(embed=embed, file=downscaled_file)
 
     @commands.slash_command(name="upscale")
@@ -174,7 +176,7 @@ class Scale(commands.Cog):
             )
         )
         embed.description += f"• Pixels: `{format_number(get_visible_pixels(res_image))}`"
-        res_file = image_to_file(res_image, "upscaled.png", embed=embed)
+        res_file = await image_to_file(res_image, "upscaled.png", embed=embed)
         await ctx.send(embed=embed, file=res_file)
 
     @commands.slash_command(name="resize")
@@ -224,7 +226,7 @@ class Scale(commands.Cog):
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
 
-        def _resize(width):
+        async def _resize(width):
             # checks on the width
             width = _check_width(width)
             limit = 7e6
@@ -248,11 +250,11 @@ class Scale(commands.Cog):
                 )
             )
             embed.description += "• Pixels: `{}`".format(format_number(visible_pixels))
-            res_file = image_to_file(res_image, "resized.png", embed=embed)
+            res_file = await image_to_file(res_image, "resized.png", embed=embed)
             return embed, res_file
 
         try:
-            embed, res_file = _resize(width)
+            embed, res_file = await _resize(width)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
 
@@ -305,7 +307,7 @@ class Scale(commands.Cog):
             format_number(height),
             format_number(total_size),
         )
-        file = image_to_file(image, "input.png")
+        file = await image_to_file(image, "input.png")
         embed.set_thumbnail(url="attachment://input.png")
         await ctx.send(embed=embed, file=file)
 

@@ -63,7 +63,7 @@ class Detemplatize(commands.Cog):
         embed.description += f"**Progress**: {correct_percentage}% done ({correct_pixels}/{total_placeable})\n"
         embed.description += f"[Template link]({template.url})"
 
-        detemp_file = image_to_file(
+        detemp_file = await image_to_file(
             Image.fromarray(template.get_array()), "detemplatize.png", embed
         )
         await ctx.send(file=detemp_file, embed=embed)

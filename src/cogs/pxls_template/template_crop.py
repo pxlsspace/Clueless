@@ -105,7 +105,7 @@ class TemplateCrop(commands.Cog):
         img = Image.fromarray(stats.palettize_array(res_array))
 
         embed = disnake.Embed(color=0x66C5CC, title="Cropped")
-        file = image_to_file(img, "cropped.png", embed)
+        file = await image_to_file(img, "cropped.png", embed)
         view = CreateTemplateView(ctx, template)
         m = await ctx.send(file=file, embed=embed, view=view)
 

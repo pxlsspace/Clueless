@@ -168,7 +168,7 @@ class PxlsStats(commands.Cog):
         # set the board image as thumbnail
         board_array = stats.palettize_array(board)
         board_img = Image.fromarray(board_array)
-        f = image_to_file(board_img, "board.png")
+        f = await image_to_file(board_img, "board.png")
         emb.set_thumbnail(url="attachment://board.png")
 
         await ctx.send(embed=emb, file=f)
@@ -529,7 +529,7 @@ class PxlsStats(commands.Cog):
             board_img = Image.fromarray(array)
         embed = disnake.Embed(title=title, color=0x66C5CC)
         embed.timestamp = datetime.now(timezone.utc)
-        file = image_to_file(board_img, "board.png", embed)
+        file = await image_to_file(board_img, "board.png", embed)
         await ctx.send(file=file, embed=embed)
 
     @commands.slash_command(name="canvascolors")

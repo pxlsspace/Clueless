@@ -5,6 +5,7 @@ from copy import deepcopy
 from utils.font.font_manager import PixelText
 from utils import image_utils
 from utils.plot_utils import Theme, get_theme
+from utils.utils import in_executor
 
 DEFAULT_FONT = "minecraft"
 OUTER_OUTLINE_WIDTH = 3
@@ -196,6 +197,7 @@ def make_styled_corner(array, color, width):
     array[-width:, -(width * 2) - 1] = color
 
 
+@in_executor()
 def table_to_image(
     data,
     titles,

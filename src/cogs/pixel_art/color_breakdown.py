@@ -1,7 +1,6 @@
 import disnake
 import inspect
 import plotly.graph_objects as go
-import functools
 from disnake.ext import commands
 
 from utils.discord_utils import format_number, get_image_from_message, image_to_file
@@ -9,6 +8,7 @@ from utils.table_to_image import table_to_image
 from utils.image.image_utils import h_concatenate, hex_to_rgb, rgb_to_hex, hex_str_to_int
 from utils.plot_utils import fig2img
 from utils.setup import stats
+from utils.utils import in_executor
 
 
 class ColorBreakdown(commands.Cog):
@@ -68,10 +68,7 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
             )
         )
     # group by rgb color and get the colors names
-    pxls_colors = rgb_to_pxlscolor(image_colors)
-    # sort by amount
-    pxls_colors.sort(key=lambda x: x[1], reverse=True)
-
+    pxls_colors = await rgb_to_pxlscolor(image_colors)
     labels = [pxls_color[0] for pxls_color in pxls_colors]
     values = [pxls_color[1] for pxls_color in pxls_colors]
     total_amount = sum(values)
@@ -107,8 +104,7 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
         colors_cropped = colors
 
     data_cropped = [[format_number(c) for c in row] for row in data_cropped]
-    func = functools.partial(
-        table_to_image,
+    table_img = await table_to_image(
         data_cropped,
         ["Color", "Qty", "%"],
         ["center", "right", "right"],
@@ -118,7 +114,6 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
         False,
         3,
     )
-    table_img = await bot.loop.run_in_executor(None, func)
 
     # make the pie chart image
     if len(data) > pie_chart_limit:
@@ -133,7 +128,7 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
     labels_chart = [d[2] for d in data_chart]  # show the correct percentages as labels
     values_chart = [d[1] for d in data_chart]
     piechart = get_piechart(labels_chart, values_chart, colors_chart)
-    piechart_img = await bot.loop.run_in_executor(None, fig2img, piechart, 600, 600, 1.5)
+    piechart_img = await fig2img(piechart, 600, 600, 1.5)
 
     # create the message with a header
     header = f"""• Number of colors: `{format_number(nb_colors)}`
@@ -142,7 +137,7 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
     header = inspect.cleandoc(header) + "\n"
 
     # concatenate the pie chart and table image
-    res_img = await bot.loop.run_in_executor(None, h_concatenate, table_img, piechart_img)
+    res_img = await h_concatenate(table_img, piechart_img)
 
     # send an embed with the color table, the pie chart
     emb = disnake.Embed(title=title, description=header, color=hex_str_to_int(colors[0]))
@@ -150,15 +145,14 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
         emb.set_footer(
             text=f"Too many colors - Showing the top {pie_chart_limit} colors in the chart."
         )
-    file = await bot.loop.run_in_executor(
-        None, image_to_file, res_img, "color_breakdown.png", emb
-    )
+    file = await image_to_file(res_img, "color_breakdown.png", emb)
     # set the input image as thumbnail
-    f = image_to_file(input_image, "input.png")
+    f = await image_to_file(input_image, "input.png")
     emb.set_thumbnail(url="attachment://input.png")
     await ctx.send(files=[file, f], embed=emb)
 
 
+@in_executor()
 def rgb_to_pxlscolor(img_colors):
     """convert a list (amount,RGB) to a list of (color_name,amount,hex code)
 
@@ -182,6 +176,8 @@ def rgb_to_pxlscolor(img_colors):
         else:
             res_dict[color_name] = dict(amount=amount, hex=rgb_to_hex(rgb))
     res_list = [(k, res_dict[k]["amount"], res_dict[k]["hex"]) for k in res_dict.keys()]
+    # sort by amount
+    res_list.sort(key=lambda x: x[1], reverse=True)
     return res_list
 
 

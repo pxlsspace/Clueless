@@ -29,7 +29,7 @@ from utils.utils import make_progress_bar
 from utils.time_converter import round_minutes_down, str_to_td, td_format, format_datetime
 from utils.table_to_image import table_to_image
 from utils.arguments_parser import MyParser
-from utils.plot_utils import get_theme, get_gradient_palette
+from utils.plot_utils import fig2img, get_theme, get_gradient_palette
 from cogs.pxls.speed import get_grouped_graph, get_stats_graph
 from utils.image.image_utils import v_concatenate
 
@@ -218,8 +218,8 @@ class Progress(commands.Cog):
                 last_updated = "-"
             activity_text += f"\nLast Updated: {last_updated}"
 
-        detemp_file = image_to_file(progress_image, "progress.png", embed)
-        template_file = image_to_file(
+        detemp_file = await image_to_file(progress_image, "progress.png", embed)
+        template_file = await image_to_file(
             Image.fromarray(template.get_array()), "template_image.png"
         )
 
@@ -324,7 +324,7 @@ class Progress(commands.Cog):
         embed.description += f"**Coordinates**: ({template.ox}, {template.oy})\n"
         embed.description += f"**Progress**: {correct_percentage}% done ({correct_pixels}/{total_placeable})\n"
 
-        detemp_file = image_to_file(
+        detemp_file = await image_to_file(
             Image.fromarray(template.get_array()), "detemplatize.png", embed
         )
         await ctx.send(file=detemp_file, embed=embed)
@@ -509,7 +509,7 @@ class Progress(commands.Cog):
         theme = deepcopy(get_theme(current_user_theme))
         last_updated = await db_templates.get_last_update_time()
 
-        def make_embed(table, sort):
+        async def make_embed(table, sort):
             # sort the table
             if sort == 0:
                 # sorting by name: keep normal order and ignore case
@@ -557,7 +557,7 @@ class Progress(commands.Cog):
                 bg_colors = table_colors
                 table_colors = None
             theme.outline_dark = False
-            table_image = table_to_image(
+            table_image = await table_to_image(
                 table_data,
                 titles,
                 colors=table_colors,
@@ -585,7 +585,7 @@ class Progress(commands.Cog):
                 embed.set_footer(text="Last Updated")
                 embed.timestamp = last_updated
 
-            table_file = image_to_file(table_image, "progress.png", embed=embed)
+            table_file = await image_to_file(table_image, "progress.png", embed=embed)
             return embed, table_file
 
         class SortDropdown(disnake.ui.Select):
@@ -611,14 +611,12 @@ class Progress(commands.Cog):
                     else:
                         option.default = False
                 await inter.response.defer()
-                embed, file = await inter.bot.loop.run_in_executor(
-                    None, make_embed, table, sort_index
-                )
+                embed, file = await make_embed(table, sort_index)
                 await inter.message.edit(embed=embed, file=file, view=self.view)
 
         dropdown = SortDropdown()
         dropdown_view = DropdownView(ctx.author, dropdown)
-        embed, file = await self.bot.loop.run_in_executor(None, make_embed, table, sort)
+        embed, file = await make_embed(table, sort)
         m = await ctx.send(embed=embed, file=file, view=dropdown_view)
         if isinstance(ctx, disnake.AppCmdInter):
             m = await ctx.original_message()
@@ -796,9 +794,7 @@ class Progress(commands.Cog):
             progress += "\n__**Image Difference**__\n"
             # make the image
             try:
-                diff_gif = await self.bot.loop.run_in_executor(
-                    None, make_before_after_gif, old_temp, new_temp
-                )
+                diff_gif = await make_before_after_gif(old_temp, new_temp)
                 filename = "diff.gif"
                 files = [disnake.File(fp=diff_gif, filename=filename)]
                 embed.set_image(url=f"attachment://{filename}")
@@ -1031,19 +1027,20 @@ class Progress(commands.Cog):
 
         # make the graph
         if not groupby:
-            graph_image = get_stats_graph(
+            graph_fig = await get_stats_graph(
                 [[template.name, dates, values]],
                 "Template Speed",
                 theme,
                 user_timezone_name,
             )
         else:
-            graph_image = get_grouped_graph(
+            graph_fig = await get_grouped_graph(
                 [[template.name, dates, values]],
                 f"Template speed (grouped by {groupby})",
                 theme,
                 user_timezone_name,
             )
+        graph_image = await fig2img(graph_fig)
 
         # make the table
         if groupby:
@@ -1073,7 +1070,7 @@ class Progress(commands.Cog):
             alignments = ["center", "right", "right", "right", "right"]
         table_data = [[format_number(c) for c in row] for row in table_data]
         colors = theme.get_palette(1)
-        table_image = table_to_image(table_data, titles, alignments, colors, theme)
+        table_image = await table_to_image(table_data, titles, alignments, colors, theme)
 
         # make the embed
         embed = disnake.Embed(title="**Template Speed**", color=0x66C5CC)
@@ -1086,8 +1083,8 @@ class Progress(commands.Cog):
         )
 
         # merge the table image and graph image
-        res_image = v_concatenate(table_image, graph_image, gap_height=20)
-        res_file = image_to_file(res_image, "template_speed.png", embed)
+        res_image = await v_concatenate(table_image, graph_image, gap_height=20)
+        res_file = await image_to_file(res_image, "template_speed.png", embed)
 
         await ctx.send(embed=embed, file=res_file)
 

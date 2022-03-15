@@ -214,9 +214,9 @@ class Template(commands.Cog):
         )
         embed.set_author(name=ctx.author, icon_url=ctx.author.display_avatar)
         reduced_image = Image.fromarray(stats.palettize_array(reduced_array))
-        reduced_file = image_to_file(reduced_image, "reduced.png")
+        reduced_file = await image_to_file(reduced_image, "reduced.png")
         embed.set_thumbnail(url="attachment://reduced.png")
-        file = image_to_file(template_image, "template.png", embed)
+        file = await image_to_file(template_image, "template.png", embed)
         m = await ctx.send(embed=embed, files=[file, reduced_file])
         if isinstance(ctx, (disnake.AppCmdInter, disnake.MessageInteraction)):
             m = await ctx.original_message()

@@ -1,5 +1,15 @@
+from __future__ import annotations
 import aiohttp
+import asyncio
+import functools
+import timeit
 from aiohttp.client_exceptions import InvalidURL, ClientConnectionError
+from typing import Awaitable, Callable, Optional, TypeVar
+from typing_extensions import ParamSpec
+
+T = TypeVar("T")
+P = ParamSpec("P")
+_MaybeEventLoop = Optional[asyncio.AbstractEventLoop]
 
 
 class BadResponseError(Exception):
@@ -45,6 +55,48 @@ def make_progress_bar(percentage, nb_char=20):
 def ordinal(n):
     """Get a rank suffix (1 -> 1st, 2 -> 2nd, ...)"""
     return "%d%s" % (n, "tsnrhtdd"[(n // 10 % 10 != 1) * (n % 10 < 4) * n % 10 :: 4])
+
+
+# from https://github.com/InterStella0/stella_bot/blob/6f273318c06e86fe3ba9cad35bc62e899653f031/utils/decorators.py#L108-L117
+def in_executor(
+    loop: _MaybeEventLoop = None,
+) -> Callable[[Callable[P, T]], Callable[P, Awaitable[T]]]:
+    """Make a sync blocking function unblocking and async"""
+    loop_ = loop or asyncio.get_event_loop()
+
+    def inner_function(func: Callable[P, T]) -> Callable[P, Awaitable[T]]:
+        @functools.wraps(func)
+        def function(*args: P.args, **kwargs: P.kwargs) -> Awaitable[T]:
+            partial = functools.partial(func, *args, **kwargs)
+            return loop_.run_in_executor(None, partial)
+
+        return function
+
+    return inner_function
+
+
+class CodeTimer:
+    """Class used for debug to time blocks of code.
+
+    Example
+    >>> with CodeTimer("func1"):
+    >>>     func1()
+    prints: 'func1' took: 102.01 ms"""
+
+    def __init__(self, name=None, unit="ms"):
+        assert unit in ["ms", "s"]
+        self.name = f"'{name}'" if name else "Code block"
+        self.unit = unit
+
+    def __enter__(self):
+        print(f"Starting {self.name}...", end="")
+        self.start = timeit.default_timer()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.took = (timeit.default_timer() - self.start) * (
+            1000.0 if self.unit == "ms" else 1.0
+        )
+        print(f"done! (took: {round(self.took, 4)} {self.unit})")
 
 
 # mapping of languages (ISO 639-1) to country codes (ISO 3166-1) as emojis

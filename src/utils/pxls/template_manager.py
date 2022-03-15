@@ -2,7 +2,6 @@ from __future__ import annotations
 import sqlite3
 from typing import Iterable, Optional
 import numpy as np
-import asyncio
 import re
 import copy
 import time
@@ -18,7 +17,7 @@ from utils.image.image_utils import highlight_image
 from utils.font.font_manager import PixelText
 from utils.image.gif_saver import save_transparent_gif
 from utils.time_converter import round_minutes_down, td_format
-from utils.utils import get_content
+from utils.utils import get_content, in_executor
 from utils.setup import stats, db_templates
 from utils.pxls.template import get_rgba_palette, reduce
 from utils.log import get_logger
@@ -689,6 +688,7 @@ async def get_template_from_url(template_url: str) -> Template:
         raise ValueError("Couldn't download the template image.")
     canvas_code = await stats.get_canvas_code()
 
+    @in_executor()
     def _get_template():
         template_image = Image.open(BytesIO(image_bytes))
         if template_image.mode != "RGBA":
@@ -708,9 +708,8 @@ async def get_template_from_url(template_url: str) -> Template:
             canvas_code,
         )
 
-    loop = asyncio.get_running_loop()
     # run this part of the code in executor to make it not blocking
-    template = await loop.run_in_executor(None, _get_template)
+    template = await _get_template()
     return template
 
 
@@ -725,6 +724,7 @@ def crop_array_to_shape(array1, height, width, oy, ox):
     return cropped_array
 
 
+@in_executor()
 def make_before_after_gif(
     old_temp: Template, new_temp: Template, extra_padding=5, with_text=True
 ) -> Image.Image:

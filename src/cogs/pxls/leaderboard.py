@@ -340,9 +340,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         # format the numbers correctly
         res_ldb = [[format_number(line) for line in r] for r in res_ldb]
 
-        img = await self.bot.loop.run_in_executor(
-            None, table_to_image, res_ldb, column_names, alignments2, colors, theme
-        )
+        img = await table_to_image(res_ldb, column_names, alignments2, colors, theme)
 
         # make title and embed header
         text = ""
@@ -403,10 +401,9 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                     data_pixels = [stat["pixels"] for stat in data]
                 stats.append([name, data_dates, data_pixels])
             stats.sort(key=lambda x: x[2][-1], reverse=True)
-            graph_img = await self.bot.loop.run_in_executor(
-                None, get_stats_graph, stats, "", theme, user_timezone
-            )
-            graph_file = image_to_file(graph_img, "graph.png")
+            graph_fig = await get_stats_graph(stats, "", theme, user_timezone)
+            graph_img = await fig2img(graph_fig)
+            graph_file = await image_to_file(graph_img, "graph.png")
 
         # make the bars graph
         if bars_opt:
@@ -437,14 +434,14 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             else:
                 bars_best_possible = None
             fig = self.make_bars(names, data, title, theme, colors, bars_best_possible)
-            bars_img = fig2img(fig)
-            bars_file = image_to_file(bars_img, "bar_chart.png")
+            bars_img = await fig2img(fig)
+            bars_file = await image_to_file(bars_img, "bar_chart.png")
 
         # create a discord embed
         emb = disnake.Embed(
             color=hex_str_to_int(theme.get_palette(1)[0]), title=title, description=text
         )
-        file = image_to_file(img, "leaderboard.png", emb)
+        file = await image_to_file(img, "leaderboard.png", emb)
 
         if eta_opt and not speed_opt:
             emb.set_footer(

@@ -7,9 +7,11 @@ import colorsys
 from numba import jit
 
 from utils.setup import stats
+from utils.utils import in_executor
 
 
 # from https://note.nkmk.me/en/python-pillow-concat-images/
+@in_executor()
 def h_concatenate(im1, im2, resample=Image.BICUBIC, resize_im2=True, gap_width=0):
     """concatenate 2 images next to each other,
     the 2nd image gets resized unless resize_im2 is False,
@@ -38,6 +40,7 @@ def h_concatenate(im1, im2, resample=Image.BICUBIC, resize_im2=True, gap_width=0
 
 
 # from https://note.nkmk.me/en/python-pillow-concat-images/
+@in_executor()
 def v_concatenate(im1, im2, resample=Image.BICUBIC, resize_im2=True, gap_height=0):
     """concatenate 2 images on top of each other,
     the 2nd image gets resized unless resize_im2 is False,

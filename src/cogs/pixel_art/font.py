@@ -138,7 +138,8 @@ class Font(commands.Cog):
             font_name = image[0]
             im = image[1]
             if im is not None:
-                files.append(image_to_file(im, font_name + ".png"))
+                file = await image_to_file(im, font_name + ".png")
+                files.append(file)
 
         # send the image(s)
         await ctx.send(files=files)

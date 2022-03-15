@@ -6,7 +6,7 @@ from PIL import Image
 from disnake.ext import commands
 from disnake import ButtonStyle
 
-from utils.utils import get_content
+from utils.utils import get_content, in_executor
 from utils.setup import stats, db_stats
 from utils.image import PALETTES
 from utils.pxls.template_manager import get_template_from_url, parse_template
@@ -272,6 +272,7 @@ def get_url(content, accept_emojis=True, accept_templates=True):
     return None
 
 
+@in_executor()
 def image_to_file(
     image: Image.Image, filename: str, embed: disnake.Embed = None
 ) -> disnake.File:
@@ -744,7 +745,7 @@ class ResizeButton(disnake.ui.Button):
         await inter.response.defer()
         view: ResizeView = self.view
         try:
-            embed, file = self.func(view.image_width + self.amount)
+            embed, file = await self.func(view.image_width + self.amount)
             view.image_width += self.amount
 
         except ValueError as e:

@@ -18,6 +18,7 @@ from utils.plot_utils import add_glow, get_theme, fig2img, hex_to_rgba_string
 from utils.image.image_utils import hex_str_to_int, v_concatenate
 from utils.pxls.cooldown import get_best_possible
 from utils.timezoneslib import get_timezone
+from utils.utils import in_executor
 
 
 class PxlsSpeed(commands.Cog):
@@ -323,23 +324,19 @@ class PxlsSpeed(commands.Cog):
         table_data = [d[:-2] for d in formatted_data]
 
         table_data = [[format_number(c) for c in row] for row in table_data]
-        table_image = table_to_image(
+        table_image = await table_to_image(
             table_data, titles, alignments, table_colors, theme=theme
         )
 
         # create the graph
         graph_data = [[d[0], d[-2], d[-1]] for d in formatted_data]
         if groupby_opt:
-            graph_image = await self.bot.loop.run_in_executor(
-                None, get_grouped_graph, graph_data, title, theme, user_timezone
-            )
+            graph_fig = await get_grouped_graph(graph_data, title, theme, user_timezone)
         else:
-            graph_image = await self.bot.loop.run_in_executor(
-                None, get_stats_graph, graph_data, title, theme, user_timezone
-            )
-
+            graph_fig = await get_stats_graph(graph_data, title, theme, user_timezone)
+        graph_image = await fig2img(graph_fig)
         # merge the table image and graph image
-        res_image = v_concatenate(table_image, graph_image, gap_height=20)
+        res_image = await v_concatenate(table_image, graph_image, gap_height=20)
 
         # calculate the best possbile amount in the time frame
         best_possible, average_cooldown = await get_best_possible(past_time, now_time)
@@ -357,7 +354,7 @@ class PxlsSpeed(commands.Cog):
         emb.add_field(name=title, value=description)
 
         # send the embed with the graph image
-        file = image_to_file(res_image, "speed.png", emb)
+        file = await image_to_file(res_image, "speed.png", emb)
         await ctx.send(file=file, embed=emb)
 
 
@@ -365,6 +362,7 @@ def setup(bot: commands.Bot):
     bot.add_cog(PxlsSpeed(bot))
 
 
+@in_executor()
 def get_stats_graph(stats_list: list, title, theme, user_timezone=None):
 
     # get the timezone information
@@ -436,9 +434,10 @@ def get_stats_graph(stats_list: list, title, theme, user_timezone=None):
     if theme.has_glow:
         add_glow(fig, nb_glow_lines=5, alpha_lines=0.5, diff_linewidth=4)
 
-    return fig2img(fig)
+    return fig
 
 
+@in_executor()
 def get_grouped_graph(stats_list: list, title, theme, user_timezone=None):
 
     # get the timezone information
@@ -512,4 +511,4 @@ def get_grouped_graph(stats_list: list, title, theme, user_timezone=None):
                 )
             )
 
-    return fig2img(fig)
+    return fig

@@ -12,6 +12,7 @@ from utils.pxls.cooldown import get_cd
 from utils.plot_utils import add_glow, get_theme, fig2img, hex_to_rgba_string
 from utils.setup import stats, db_stats, db_users
 from utils.timezoneslib import get_timezone
+from utils.utils import in_executor
 
 
 class Online(commands.Cog):
@@ -151,22 +152,18 @@ class Online(commands.Cog):
 
         # make graph
         if parsed_args.groupby:
-            fig = await self.bot.loop.run_in_executor(
-                None, make_grouped_graph, dates, online_counts, theme, user_timezone
-            )
+            fig = await make_grouped_graph(dates, online_counts, theme, user_timezone)
         else:
-            fig = await self.bot.loop.run_in_executor(
-                None, make_graph, dates, online_counts, theme, user_timezone
-            )
+            fig = await make_graph(dates, online_counts, theme, user_timezone)
         fig.update_layout(
             title="<span style='color:{};'>{}</span>".format(
                 theme.get_palette(1)[0],
                 title + (f" (average per {groupby})" if parsed_args.groupby else ""),
             )
         )
+        img = await fig2img(fig)
 
         # make embed
-        img = await self.bot.loop.run_in_executor(None, fig2img, fig)
         description = "• Between {} and {}\n• Current {}: `{}`\n• Average: `{}`\n• Min: `{}` • Max: `{}`".format(
             format_datetime(dates[-1]),
             format_datetime(dates[0]),
@@ -182,10 +179,11 @@ class Online(commands.Cog):
             description=description,
         )
 
-        file = image_to_file(img, "online_count.png", emb)
+        file = await image_to_file(img, "online_count.png", emb)
         await ctx.send(embed=emb, file=file)
 
 
+@in_executor()
 def make_graph(dates, values, theme, user_timezone=None):
 
     # get the timezone information
@@ -230,6 +228,7 @@ def make_graph(dates, values, theme, user_timezone=None):
     return fig
 
 
+@in_executor()
 def make_grouped_graph(dates, values, theme, user_timezone=None):
 
     # get the timezone information

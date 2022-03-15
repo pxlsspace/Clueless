@@ -206,8 +206,8 @@ class Utility(commands.Cog):
 
         titles = rows[0].keys()
         rows = [list(row) for row in rows]
-        img = table_to_image(rows, titles)
-        file = image_to_file(img, "table.png")
+        img = await table_to_image(rows, titles)
+        file = await image_to_file(img, "table.png")
         content = f"Nb lines: {len(rows)}\nTime: {round(end-start,3)}s"
         await ctx.send(file=file, content=content)
 

@@ -152,7 +152,7 @@ class Reduce(commands.Cog):
         embed.set_footer(text=f"Reduced in {round((end-start),3)}s")
 
         reduced_image = Image.fromarray(stats.palettize_array(reduced_array, hex_palette))
-        reduced_file = image_to_file(reduced_image, "reduced.png", embed)
+        reduced_file = await image_to_file(reduced_image, "reduced.png", embed)
 
         await ctx.send(embed=embed, files=[reduced_file])
 

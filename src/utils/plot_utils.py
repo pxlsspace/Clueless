@@ -7,6 +7,7 @@ from matplotlib import cm as cm
 from matplotlib.colors import LinearSegmentedColormap
 
 from utils.image.image_utils import is_dark, rgb_to_hex, hex_to_rgb, lighten_color
+from utils.utils import in_executor
 
 
 """ Themes and util functions for the plotly plots """
@@ -90,6 +91,7 @@ def hex_to_rgba_string(hex: str, alpha_value=1) -> str:
     return "rgba" + str(rgba)
 
 
+@in_executor()
 def fig2img(fig, width=2000, height=900, scale=1):
     buf = BytesIO()
     fig.write_image(buf, format="png", width=width, height=height, scale=scale)

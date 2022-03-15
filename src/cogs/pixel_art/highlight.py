@@ -179,7 +179,9 @@ async def _highlight(ctx, image_array: np.ndarray, colors, bg_color):
     hex_colors = [d[-1] for d in data]
     data = [d[:-1] for d in data]
     data = [[format_number(c) for c in row] for row in data]
-    table_img = table_to_image(data, ["Color", "Amount", "Percentage"], colors=hex_colors)
+    table_img = await table_to_image(
+        data, ["Color", "Amount", "Percentage"], colors=hex_colors
+    )
 
     # set embed color to the top 1 color in colors
     selected_color_int = hex_str_to_int(hex_colors[0])
@@ -188,8 +190,8 @@ async def _highlight(ctx, image_array: np.ndarray, colors, bg_color):
         color=selected_color_int,
         timestamp=datetime.now(timezone.utc),
     )
-    table_file = image_to_file(table_img, "table.png", emb)
-    hl_file = image_to_file(hl_image, "highlight.png")
+    table_file = await image_to_file(table_img, "table.png", emb)
+    hl_file = await image_to_file(hl_image, "highlight.png")
     await ctx.send(embed=emb, files=[hl_file, table_file])
 
 

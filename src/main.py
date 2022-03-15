@@ -93,7 +93,8 @@ async def on_command(ctx):
     message = f"By <@{author_id}> "
     message += f"on <t:{int(message_time.timestamp())}>\n"
     if not slash_command:
-        args = f"```{ctx.message.content}```"
+        args_clean = ctx.message.content
+        args = f"```{args_clean}```"
         args += f"[link to the message]({ctx.message.jump_url})\n"
         if len(message + args) > 1024:
             args = "```[Message too long to show]```"
@@ -104,7 +105,8 @@ async def on_command(ctx):
         options = ""
         for key, value in ctx.filled_options.items():
             options += f" {key}:{value}"
-        args = f"```/{command_name}{options}```"
+        args_clean = f"/{command_name}{options}"
+        args = f"```{args_clean}```"
         if len(message + args) > 1024:
             args = "```[Command too long to show]```"
         message += args
@@ -117,7 +119,7 @@ async def on_command(ctx):
         channel_id,
         author_id,
         message_time.replace(tzinfo=None),
-        args,
+        args_clean,
         slash_command,
     )
 

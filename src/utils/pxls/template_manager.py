@@ -619,6 +619,26 @@ class TemplateManager:
         self.combo.total_placeable = int(np.sum(self.combo.placeable_mask))
         return self.combo
 
+    async def get_templates(self, templates_uris: list[str]) -> list[Template]:
+        """Turn a list of strings (either template names or URLs) to a list of template.
+
+        Raises ValueError if a template is not found or cannot be parsed"""
+        templates = []
+        for i, template_name in enumerate(templates_uris):
+            if parse_template(template_name) is not None:
+                try:
+                    template = await get_template_from_url(template_name)
+                except ValueError:
+                    raise ValueError(
+                        f"Please use a valid template link for template {i}."
+                    )
+            else:
+                template = self.get_template(template_name, None, False)
+                if template is None:
+                    raise ValueError(f"No template named `{template_name}` found.")
+            templates.append(template)
+        return templates
+
 
 @jit(nopython=True, cache=True)
 def fast_detemplatize(array, true_height, true_width, block_size):

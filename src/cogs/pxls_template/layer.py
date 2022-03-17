@@ -9,8 +9,6 @@ from main import tracked_templates
 from utils.arguments_parser import MyParser
 from utils.pxls.template_manager import (
     Combo,
-    get_template_from_url,
-    parse_template,
     layer,
 )
 from utils.setup import stats
@@ -60,27 +58,9 @@ class Layer(commands.Cog):
             await self.layer(ctx, template_uris)
 
     @staticmethod
-    async def _clean(templates_uris: list[str]):
-        templates = []
-        for i, template_name in enumerate(templates_uris):
-            if parse_template(template_name) is not None:
-                try:
-                    template = await get_template_from_url(template_name)
-                except ValueError:
-                    raise ValueError(
-                        f"Please use a valid template link for template {i}."
-                    )
-            else:
-                template = tracked_templates.get_template(template_name, None, False)
-                if template is None:
-                    raise ValueError(f"No template named `{template_name}` found.")
-            templates.append(template)
-        return templates
-
-    @staticmethod
     async def layer(ctx, template_uris):
         try:
-            templates = await Layer._clean(template_uris)
+            templates = await tracked_templates.get_templates(template_uris)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
 

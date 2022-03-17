@@ -181,10 +181,19 @@ def highlight_image(
 
 def get_pxls_color(input, mode="RGBA"):
     """Get the RGBA value of a pxls color by its name. Return `(color_name, rgba)`"""
+    palette = stats.get_palette()
+    try:
+        input = int(input)
+        color = palette[int(input)]
+        rgb = ImageColor.getcolor(f'#{color["value"]}', mode)
+        return color["name"], rgb
+    except Exception:
+        pass
+
     color_name = input.lower().replace("gray", "grey")
     color_name = color_name.replace('"', "")
     color_name = color_name.replace("_", " ")
-    for color in stats.get_palette():
+    for color in palette:
         if color["name"].lower().replace(" ", "") == color_name.lower().replace(" ", ""):
             rgb = ImageColor.getcolor(f'#{color["value"]}', mode)
             return color["name"], rgb
@@ -215,13 +224,13 @@ def get_color(color: str, pxls_only=False, mode="RGBA"):
     try:
         return get_pxls_color(color, mode)
     except Exception:
-        if pxls_only:
-            return None, None
         if is_hex_color(color):
             if not color.startswith("#"):
                 color = "#" + color
-
-            return color.upper(), hex_to_rgb(color, mode)
+            color_name = rgb_to_pxls(hex_to_rgb(color, "RGB"))
+            if not color_name and pxls_only:
+                return None, None
+            return color_name or color.upper(), hex_to_rgb(color, mode)
     return None, None
 
 

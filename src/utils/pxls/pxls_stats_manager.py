@@ -1,7 +1,9 @@
-from datetime import datetime
-from PIL import ImageColor
-import pytz
 import numpy as np
+import os
+import pytz
+from PIL import ImageColor
+from dotenv import load_dotenv, set_key, find_dotenv
+from datetime import datetime
 
 from utils.utils import get_content
 
@@ -20,6 +22,9 @@ class PxlsStatsManager:
         self.board_array = None
         self.virginmap_array = None
         self.placemap_array = None
+        load_dotenv()
+        mult = os.environ.get("CD_MULTIPLIER")
+        self.cd_multiplier = float(mult) if mult else 1
 
     async def refresh(self):
         try:
@@ -177,3 +182,9 @@ class PxlsStatsManager:
     async def query(self, endpoint, content_type):
         url = self.base_url + endpoint
         return await get_content(url, content_type)
+
+    def set_cd_multiplier(self, new_multiplier: float):
+        """Change the cooldown multiplier."""
+        file = find_dotenv()
+        set_key(file, "CD_MULTIPLIER", str(new_multiplier))
+        self.cd_multiplier = new_multiplier

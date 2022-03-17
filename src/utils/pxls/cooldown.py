@@ -1,6 +1,6 @@
 import math
 from datetime import timedelta
-from utils.setup import db_stats
+from utils.setup import db_stats, stats
 
 
 def sum_up_to_n(n):
@@ -27,12 +27,13 @@ def time_convert(seconds):
 
 
 def get_cd(online):
-    return 2.5 * (math.sqrt(online + 11.96)) + 6.5
+
+    return (2.5 * (math.sqrt(online + 11.96)) + 6.5) * stats.cd_multiplier
 
 
 def get_cds(online):
 
-    cd = 2.5 * (math.sqrt(online + 11.96)) + 6.5
+    cd = get_cd(online)
     cds = []
     total = 0
     for i in range(0, 6):

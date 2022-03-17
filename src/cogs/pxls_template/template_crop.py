@@ -5,7 +5,7 @@ from disnake.ext import commands
 from PIL import Image
 
 from main import tracked_templates
-from utils.pxls.template_manager import get_template_from_url, parse_template
+from utils.pxls.template_manager import get_template_from_url, layer, parse_template
 from utils.setup import stats
 from utils.discord_utils import (
     autocomplete_templates,
@@ -94,11 +94,18 @@ class TemplateCrop(commands.Cog):
             )
 
         res_array = template.palettized_array.copy()
+        # crop to placemap
         res_array[~template.placeable_mask] = 255
+
+        # crop to templates
         if type == "totemplates":
-            combo_mask = tracked_templates.combo.placeable_mask.copy()
+            template_list = tracked_templates.list.copy()
+            if template in template_list:
+                # exclude the template if it's already in the list
+                template_list.remove(template)
+            combo_mask = layer(template_list[::-1], crop_to_template=False)[2]
             cropped_combo_mask = template.crop_array_to_template(combo_mask)
-            res_array[cropped_combo_mask == 1] = 255
+            res_array[cropped_combo_mask != 255] = 255
 
         if np.all(res_array == 255):
             return await ctx.send("❌ No placeable pixels in the cropped template.")

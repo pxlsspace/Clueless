@@ -43,7 +43,7 @@ class Reduce(commands.Cog):
         Parameters
         ----------
         image: The URL of the image you want to templatize.
-        palette: A list of colors (name of hex) seprated by a comma. (default: pxls (current))
+        palette: A list of colors (name of hex) seprated by a comma (!<color> = remove color). (default: pxls)
         matching: The color matching algorithm to use. (default: accurate)
         """
         await inter.response.defer()
@@ -57,6 +57,7 @@ class Reduce(commands.Cog):
             - `<image|url>`: an image URL or an attached file
             - `[palette]`: a list of color (name or hex) separated by a comma. (default: pxls (current))
             There are also built-in palettes: pxls, pxls_old, c1, grayscale, browns, yellows, greens, teals, blues, pinks, reds
+            Note: Use `!` in front of a color to remove it.
             - `[-fast]`: to use the fast (but less accurate) color matching algorithm
         """,
     )
@@ -111,26 +112,57 @@ class Reduce(commands.Cog):
             palette = palette.lower()
             palette_input = palette.split(",")
             palette_input = [c.strip(" ") for c in palette_input]
-            palette_input = list(dict.fromkeys(palette_input))  # remove duplicates
 
             rgba_list = []
+            banned_rgba = []
             # search for palette names
             for color in palette_input[:]:
+                ban_color = False
+                if color.startswith("!"):
+                    ban_color = True
+                    color = color[1:]
                 found_palette = get_builtin_palette(color, as_rgba=True)
                 if found_palette:
-                    palette_input.remove(color)
-                    rgba_list += found_palette
-                    palette_names.append(f"__{color.title()}__")
+                    if ban_color:
+                        palette_input.remove("!" + color)
+                        banned_rgba += found_palette
+                        palette_names.append(f"__No {color.title()}__")
+                    else:
+                        palette_input.remove(color)
+
+                        rgba_list += found_palette
+                        palette_names.append(f"__{color.title()}__")
 
             # search for colors names/hex
             for i, color in enumerate(palette_input):
                 color = color.strip(" ")
+                ban_color = False
+                if color.startswith("!"):
+                    ban_color = True
+                    color = color[1:]
                 color_name, rgba = get_color(color)
                 if rgba is None:
                     return await ctx.send(f"❌ The color `{color}` is invalid.")
-                palette_names.append(color_name)  # to show the correct format
-                rgba_list.append(rgba)
+                if ban_color:
+                    banned_rgba.append(rgba)
+                    palette_names.append("No " + color_name)
+                else:
+                    palette_names.append(color_name)
+                    rgba_list.append(rgba)
 
+            # remove duplicates
+            palette_names = list(dict.fromkeys(palette_names))
+            rgba_list = list(dict.fromkeys(rgba_list))
+
+            # remove banned colors
+            if banned_rgba:
+                palette_names.insert(0, "Pxls (current)")
+                rgba_list += list([tuple(c) for c in get_rgba_palette()])
+                rgba_list = [c for c in rgba_list if c not in banned_rgba]
+
+            if len(rgba_list) == 0:
+                return await ctx.send(":x: This palette is empty.")
+            # format the data
             hex_palette = [rgb_to_hex(rgba[:3]) for rgba in rgba_list]
             rgba_palette = np.array(rgba_list)
 

@@ -53,7 +53,7 @@ class TemplateCrop(commands.Cog):
         inter: disnake.AppCmdInter,
         template: str = commands.Param(autocomplete=autocomplete_templates),
     ):
-        """Crop to remove all overlaps with other tracked templates.
+        """Crop out all overlaps with other tracked templates.
 
         Parameters
         ----------
@@ -65,7 +65,7 @@ class TemplateCrop(commands.Cog):
     @commands.command(
         name="croptotemplates",
         aliases=["croptocombo", "ctt"],
-        description="Crop to remove all overlaps with other tracked templates.",
+        description="Crop out all overlaps with other tracked templates.",
         usage="<template>",
         help="""
             - `<template>`: A template name or URL.
@@ -75,6 +75,64 @@ class TemplateCrop(commands.Cog):
 
         async with ctx.typing():
             await self.crop(ctx, template, type="totemplates")
+
+    @commands.slash_command(name="crop-wrong-pixels")
+    async def _cropwrongpixels(
+        self,
+        inter: disnake.AppCmdInter,
+        template: str = commands.Param(autocomplete=autocomplete_templates),
+    ):
+        """Crop out all the current incorrect pixels"
+
+        Parameters
+        ----------
+        template: A template name or URL.
+        """
+        await inter.response.defer()
+        await self.crop(inter, template, type="cropwrongpixels")
+
+    @commands.command(
+        name="cropwrongpixels",
+        aliases=["cwp"],
+        description="Crop out all the current incorrect pixels.",
+        usage="<template>",
+        help="""
+            - `<template>`: A template name or URL.
+            """,
+    )
+    async def p_cropwrongpixels(self, ctx, template):
+
+        async with ctx.typing():
+            await self.crop(ctx, template, type="cropwrongpixels")
+
+    @commands.slash_command(name="replace-wrong-pixels")
+    async def _replacewrongpixels(
+        self,
+        inter: disnake.AppCmdInter,
+        template: str = commands.Param(autocomplete=autocomplete_templates),
+    ):
+        """Replace all the incorrect pixels with what is currently on the canvas."
+
+        Parameters
+        ----------
+        template: A template name or URL.
+        """
+        await inter.response.defer()
+        await self.crop(inter, template, type="replacewrongpixels")
+
+    @commands.command(
+        name="replacewrongpixels",
+        aliases=["rwp"],
+        description="Replace all the incorrect pixels with what is currently on the canvas.",
+        usage="<template>",
+        help="""
+            - `<template>`: A template name or URL.
+            """,
+    )
+    async def p_replacewrongpixels(self, ctx, template):
+
+        async with ctx.typing():
+            await self.crop(ctx, template, type="replacewrongpixels")
 
     @staticmethod
     async def crop(ctx, template_input, type="tocanvas"):
@@ -106,6 +164,19 @@ class TemplateCrop(commands.Cog):
             combo_mask = layer(template_list[::-1], crop_to_template=False)[2]
             cropped_combo_mask = template.crop_array_to_template(combo_mask)
             res_array[cropped_combo_mask != 255] = 255
+        # crop out wrong pixels
+        elif type == "cropwrongpixels":
+            template.update_progress()
+            wrong_pixels_mask = ~template.placed_mask
+            res_array[wrong_pixels_mask == 1] = 255
+        # replace wrong pixels with the current board
+        elif type == "replacewrongpixels":
+            template.update_progress()
+            wrong_pixels_mask = np.logical_and(
+                ~template.placed_mask, template.placeable_mask
+            )
+            cropped_board = template.crop_array_to_template(stats.board_array)
+            res_array[wrong_pixels_mask == 1] = cropped_board[wrong_pixels_mask == 1]
 
         if np.all(res_array == 255):
             return await ctx.send("❌ No placeable pixels in the cropped template.")

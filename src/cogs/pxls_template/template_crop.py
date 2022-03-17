@@ -93,6 +93,8 @@ class TemplateCrop(commands.Cog):
             templates_str = parsed_args.templates
             if templates_str:
                 templates = await tracked_templates.get_templates(templates_str)
+            else:
+                templates = None
         except ValueError as e:
             return await ctx.send(f":x: {e}")
 

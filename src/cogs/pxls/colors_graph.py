@@ -6,7 +6,8 @@ from datetime import datetime, timedelta, timezone
 from utils.arguments_parser import MyParser
 from utils.discord_utils import format_number, image_to_file
 from utils.image.image_utils import (
-    get_pxls_color,
+    get_builtin_palette,
+    get_color,
     hex_to_rgb,
     rgb_to_hex,
     v_concatenate,
@@ -96,10 +97,18 @@ class ColorsGraph(commands.Cog):
         colors = parsed_args.colors
         if parsed_args.colors:
             colors = " ".join(colors).split(",")
+            colors = [c.strip() for c in colors]
+            # search for a palette
+            for color in colors[:]:
+                found_palette = get_builtin_palette(color, as_rgba=False)
+                if found_palette:
+                    colors.remove(color)
+                    colors += found_palette
             for i, c in enumerate(colors):
                 try:
-                    colors[i] = get_pxls_color(c)[0].lower()
-                except Exception:
+                    colors[i] = get_color(c, pxls_only=True)[0].lower()
+                except Exception as e:
+                    print(e)
                     return await ctx.send(f"❌ The color `{c}` is invalid.")
         # init the 'placed' option
         placed_opt = False

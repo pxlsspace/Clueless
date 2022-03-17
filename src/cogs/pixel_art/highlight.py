@@ -6,6 +6,7 @@ from PIL import Image
 
 
 from utils.image.image_utils import (
+    get_builtin_palette,
     get_color,
     hex_str_to_int,
     rgb_to_hex,
@@ -39,7 +40,7 @@ class Highlight(commands.Cog):
 
         Parameters
         ----------
-        colors: List of pxls colors or hex colors separated by a comma.
+        colors: List of pxls colors or hex colors or palettes separated by a comma.
         image: The URL of the image you want to highlight.
         bgcolor: To display behind the selected colors (can be a color name, hex color, 'none', 'light' or 'dark').
         """
@@ -57,7 +58,7 @@ class Highlight(commands.Cog):
         aliases=["hl"],
         usage="<colors> <image|url> [-bgcolor|-bg <color>]",
         help="""
-            - `<colors>`: list of pxls or hex colors separated by a comma
+            - `<colors>`: list of pxls or hex colors or palettes separated by a comma
             - `<image|url>`: an image URL or an attached file
             - `[-bgcolor|bg <color>]`: the color to display behind the higlighted colors, it can be:
                 • a pxls name color (ex: "red")
@@ -100,17 +101,27 @@ async def _highlight(ctx, image_array: np.ndarray, colors, bg_color):
     colors = " ".join(colors)
     colors = colors.split(",")
     colors = [c.strip(" ").lower() for c in colors]
-    colors = list(dict.fromkeys(colors))
 
     rgba_list = []
-    for i, color in enumerate(colors):
+    # search for a palette
+    for color in colors[:]:
+        found_palette = get_builtin_palette(color, as_rgba=False)
+        if found_palette:
+            colors.remove(color)
+            colors += found_palette
 
+    # search for colors
+    for i, color in enumerate(colors):
         color_name, rgba = get_color(color)
         if rgba is None:
             return await ctx.send(f"❌ The color `{color}` is invalid.")
         colors[i] = color_name
 
         rgba_list.append(rgba)
+
+    # remove duplicates
+    colors = list(dict.fromkeys(colors))
+    rgba_list = list(dict.fromkeys(rgba_list))
 
     # get bg color rgba
     if bg_color:

@@ -161,7 +161,7 @@ class Template(commands.Cog):
 
         # check on the size
         output_size = img.width * img.height * style["size"] ** 2
-        limit = int(50e6)
+        limit = int(100e6)
         if output_size > limit:
             msg = f"You're trying to generate a **{format_number(output_size)}** pixels image.\n"
             msg += f"This exceeds the bot's limit of **{format_number(limit)}** pixels.\n"

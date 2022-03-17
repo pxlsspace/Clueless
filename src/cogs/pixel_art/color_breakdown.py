@@ -59,6 +59,8 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
     # remove transparent pixels (alpha < 128)
     image_colors = [c for c in image_colors if (len(c[1]) != 4 or c[1][3] > 128)]
     nb_colors = len(image_colors)
+    if nb_colors == 0:
+        return await ctx.send(":x: This image doesn't have any visible pixels.")
     if nb_colors > 1e6:
         return await ctx.send(
             embed=disnake.Embed(

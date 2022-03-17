@@ -5,6 +5,7 @@ from disnake.ext import commands
 from PIL import Image
 
 from main import tracked_templates
+from utils.arguments_parser import MyParser
 from utils.pxls.template_manager import get_template_from_url, layer, parse_template
 from utils.setup import stats
 from utils.discord_utils import (
@@ -52,29 +53,51 @@ class TemplateCrop(commands.Cog):
         self,
         inter: disnake.AppCmdInter,
         template: str = commands.Param(autocomplete=autocomplete_templates),
+        templates: str = None,
     ):
-        """Crop out all overlaps with other tracked templates.
+        """Crop out all overlaps with other templates.
 
         Parameters
         ----------
         template: A template name or URL.
+        templates: A list of overlapping templates (name or URL) to crop out (default: everything in the tracker).
         """
         await inter.response.defer()
-        await self.crop(inter, template, type="totemplates")
+        if templates:
+            templates = templates.split(" ")
+            try:
+                templates = await tracked_templates.get_templates(templates)
+            except ValueError as e:
+                return await inter.send(f":x: {e}")
+        await self.crop(inter, template, type="totemplates", templates=templates)
 
     @commands.command(
         name="croptotemplates",
-        aliases=["croptocombo", "ctt"],
-        description="Crop out all overlaps with other tracked templates.",
-        usage="<template>",
+        aliases=["croptocombo", "ctt", "cropoverlaps"],
+        description="Crop out all overlaps with other templates.",
+        usage="<template> [templates]",
         help="""
             - `<template>`: A template name or URL.
+            - `[templates]`: A list of overlapping templates (name or URL) to crop out (default: everything in the tracker).
             """,
     )
-    async def p_croptotemplates(self, ctx, template):
+    async def p_croptotemplates(self, ctx, *args):
+
+        parser = MyParser(add_help=False)
+        parser.add_argument("template", action="store")
+        parser.add_argument("templates", nargs="*")
+
+        try:
+            parsed_args, _ = parser.parse_known_args(args)
+            template = parsed_args.template
+            templates_str = parsed_args.templates
+            if templates_str:
+                templates = await tracked_templates.get_templates(templates_str)
+        except ValueError as e:
+            return await ctx.send(f":x: {e}")
 
         async with ctx.typing():
-            await self.crop(ctx, template, type="totemplates")
+            await self.crop(ctx, template, type="totemplates", templates=templates)
 
     @commands.slash_command(name="crop-wrong-pixels")
     async def _cropwrongpixels(
@@ -135,7 +158,7 @@ class TemplateCrop(commands.Cog):
             await self.crop(ctx, template, type="replacewrongpixels")
 
     @staticmethod
-    async def crop(ctx, template_input, type="tocanvas"):
+    async def crop(ctx, template_input, type="tocanvas", templates=None):
         if parse_template(template_input) is not None:
             try:
                 template = await get_template_from_url(template_input)
@@ -157,7 +180,7 @@ class TemplateCrop(commands.Cog):
 
         # crop to templates
         if type == "totemplates":
-            template_list = tracked_templates.list.copy()
+            template_list = templates or tracked_templates.list.copy()
             if template in template_list:
                 # exclude the template if it's already in the list
                 template_list.remove(template)

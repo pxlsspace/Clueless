@@ -38,7 +38,7 @@ class Reduce(commands.Cog):
             choices={"Accurate (default)": "accurate", "Fast (faster)": "fast"},
         ),
     ):
-        """Reduce an image to a palette.
+        """Reduce an image's colors to fit a specific palette.
 
         Parameters
         ----------
@@ -51,7 +51,7 @@ class Reduce(commands.Cog):
 
     @commands.command(
         name="reduce",
-        description="Reduce an image to a palette.",
+        description="Reduce an image's colors to fit a specific palette.",
         usage="<image|url> [palette] [-fast]",
         help="""
             - `<image|url>`: an image URL or an attached file

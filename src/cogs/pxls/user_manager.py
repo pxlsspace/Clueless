@@ -121,7 +121,7 @@ class UserManager(commands.Cog):
 
     @commands.slash_command(name="whois")
     async def _whois(self, inter: disnake.AppCmdInter, user: disnake.User):
-        """Show someone's linked pxls username, theme and timezone."
+        """Show someone's linked pxls username, theme and timezone.
 
         Parameters
         ----------

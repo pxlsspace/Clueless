@@ -107,7 +107,7 @@ class TemplateCrop(commands.Cog):
         inter: disnake.AppCmdInter,
         template: str = commands.Param(autocomplete=autocomplete_templates),
     ):
-        """Crop out all the current incorrect pixels"
+        """Crop out all the current incorrect pixels.
 
         Parameters
         ----------
@@ -136,7 +136,7 @@ class TemplateCrop(commands.Cog):
         inter: disnake.AppCmdInter,
         template: str = commands.Param(autocomplete=autocomplete_templates),
     ):
-        """Replace all the incorrect pixels with what is currently on the canvas."
+        """Replace all the incorrect pixels with what is currently on the canvas.
 
         Parameters
         ----------

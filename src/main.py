@@ -317,6 +317,12 @@ async def on_message(message):
         except Exception:
             pass
 
+    if message.content == ">.>":
+        try:
+            return await message.channel.send("<.<")
+        except Exception:
+            pass
+
     if message.content == ">_<":
         try:
             return await message.channel.send("<_>")

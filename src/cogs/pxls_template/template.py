@@ -210,7 +210,7 @@ class Template(commands.Cog):
         embed = disnake.Embed(title="**Template Image**", color=0x66C5CC)
         embed.description = f"**Title**: {title if title else '`N/A`'}\n**Style**: {style['name']}\n**Glow**: {'yes' if glow else 'no'}\n**Size**: {total_amount} pixels ({img.width}x{img.height})"
         embed.set_footer(
-            text="Warning: if you delete this message the template might break."
+            text="⚠️ Warning: if you delete this message the template WILL break."
         )
         embed.set_author(name=ctx.author, icon_url=ctx.author.display_avatar)
         reduced_image = Image.fromarray(stats.palettize_array(reduced_array))

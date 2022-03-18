@@ -81,14 +81,23 @@ class PxlsStatsManager:
             return self.stats_json["board_info"]["palette"]
 
     async def get_canvas_code(self):
+        canvas_code = None
         try:
-            return self.board_info["canvasCode"]
+            # Try to get the canvas code from the board info
+            canvas_code = self.board_info["canvasCode"]
         except Exception:
+            try:
+                # Try to get the canvas code from the stats.json
+                canvas_code = self.stats_json["board_info"]["canvasCode"]
+            except Exception:
+                pass
+        if canvas_code is None:
+            # Use the last canvas code saved in the database
             rows = await self.db_conn.sql_select(
                 "SELECT canvas_code, MAX(datetime) FROM record"
             )
             canvas_code = rows[0][0]
-            return canvas_code
+        return canvas_code
 
     async def fetch_online_count(self):
         response_json = await self.query("users", "json")

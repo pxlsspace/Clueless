@@ -194,13 +194,16 @@ class Template:
         td = timedelta(days=7)
         old_datetime, old_progress = await self.get_progress_at(now - td)
         now_datetime, now_progress = await self.get_progress_at(now)
-        if not old_progress or not now_progress:
+        if old_progress is None or now_progress is None:
             return None
 
         diff_pixels = now_progress - old_progress
         diff_time = now_datetime - old_datetime
         togo = self.total_placeable - now_progress
-        if togo == 0:
+        if togo == 0 or (
+            self.current_progress is not None
+            and self.total_placeable - self.current_progress == 0
+        ):
             return "done" if as_string else 0
         if diff_time == timedelta(0):
             return None
@@ -220,9 +223,11 @@ class Template:
             else:
                 return timedelta(hours=eta)
         if as_string:
-            return td_format(
-                timedelta(hours=eta), short_format=True, hide_seconds=True, max_unit="day"
-            )
+            td = timedelta(hours=eta)
+            if td / timedelta(minutes=1) < 1:
+                return "< 1m"
+            else:
+                return td_format(td, short_format=True, hide_seconds=True, max_unit="day")
         else:
             return timedelta(hours=eta)
 

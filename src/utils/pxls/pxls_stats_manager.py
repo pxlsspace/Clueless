@@ -1,8 +1,7 @@
 import numpy as np
-import os
 import pytz
+import math
 from PIL import ImageColor
-from dotenv import load_dotenv, set_key, find_dotenv
 from datetime import datetime
 
 from utils.utils import get_content
@@ -22,9 +21,6 @@ class PxlsStatsManager:
         self.board_array = None
         self.virginmap_array = None
         self.placemap_array = None
-        load_dotenv()
-        mult = os.environ.get("CD_MULTIPLIER")
-        self.cd_multiplier = float(mult) if mult else 1
 
     async def refresh(self):
         try:
@@ -192,8 +188,36 @@ class PxlsStatsManager:
         url = self.base_url + endpoint
         return await get_content(url, content_type)
 
-    def set_cd_multiplier(self, new_multiplier: float):
-        """Change the cooldown multiplier."""
-        file = find_dotenv()
-        set_key(file, "CD_MULTIPLIER", str(new_multiplier))
-        self.cd_multiplier = new_multiplier
+    def get_cd(self, online_count: int, multiplier: float = None):
+        """Get the cooldown for a given amount of online users"""
+        try:
+            # Try to get the cooldown info from the board info
+            cd_info = self.board_info["cooldownInfo"]
+            if cd_info["type"] == "activity":
+                activity_cd = cd_info["activityCooldown"]
+                steepness = activity_cd["steepness"]
+                _multiplier = activity_cd["multiplier"]
+                global_offset = activity_cd["globalOffset"]
+                user_offset = activity_cd["userOffset"]
+            else:
+                return cd_info["staticCooldownSeconds"]
+        except Exception:
+            # use the default values in case of error
+            steepness = 2.5
+            _multiplier = 1.0
+            global_offset = 6.5
+            user_offset = 11.96
+
+        if multiplier is None:
+            multiplier = _multiplier
+
+        cooldown = (
+            steepness * math.sqrt(online_count + user_offset) + global_offset
+        ) * multiplier
+        return cooldown
+
+    def get_cd_multiplier(self):
+        try:
+            return self.board_info["cooldownInfo"]["activityCooldown"]["multiplier"]
+        except Exception:
+            return 1.0

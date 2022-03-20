@@ -5,7 +5,7 @@ from disnake.ext import commands
 from PIL import Image, ImageEnhance
 
 
-from utils.pxls.cooldown import get_best_possible, get_cd
+from utils.pxls.cooldown import get_best_possible
 from utils.discord_utils import (
     autocomplete_pxls_name,
     format_number,
@@ -70,7 +70,7 @@ class PxlsStats(commands.Cog):
             "online_count", datetime.min, datetime.max, canvas=True
         )
         online_counts = [int(e[0]) for e in data if e[0] is not None]
-        cooldowns = [get_cd(count) for count in online_counts]
+        cooldowns = [stats.get_cd(count) for count in online_counts]
         average_online = sum(online_counts) / len(online_counts)
         min_online = min(online_counts)
         max_online = max(online_counts)

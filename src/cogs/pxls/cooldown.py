@@ -41,10 +41,9 @@ class PxlsCooldown(commands.Cog):
 
         total = 0
         cooldowns = get_cds(online)
+        multiplier = stats.get_cd_multiplier()
         multipler_text = (
-            f"Cooldown Multiplier: `{stats.cd_multiplier}` "
-            if stats.cd_multiplier != 1
-            else ""
+            f"Cooldown Multiplier: `{multiplier}` " if multiplier != 1 else ""
         )
 
         desc = multipler_text
@@ -67,25 +66,6 @@ class PxlsCooldown(commands.Cog):
         )
         embed.timestamp = datetime.utcnow()
         await ctx.send(embed=embed)
-
-    @commands.is_owner()
-    @commands.command(
-        name="setcd",
-        description="Change the cooldown multiplier (owner only).",
-        aliases=["setmult", "setcdmult", "cdevent"],
-        hidden=True,
-        usage="[multiplier]",
-    )
-    async def set_cd_multiplier(self, ctx, multiplier=None):
-        if multiplier:
-            try:
-                multiplier = float(multiplier)
-            except Exception:
-                return await ctx.send(":x: The multiplier must be a float.")
-            stats.set_cd_multiplier(multiplier)
-            return await ctx.send(f"✅ Cooldown multiplier set to `{multiplier}`")
-        else:
-            return await ctx.send(f"Current cooldown multiplier: `{stats.cd_multiplier}`")
 
 
 def setup(bot: commands.Bot):

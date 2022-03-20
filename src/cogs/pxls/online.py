@@ -8,7 +8,6 @@ from utils.arguments_parser import MyParser
 from utils.image.image_utils import hex_str_to_int
 from utils.time_converter import format_datetime, str_to_td, format_timezone
 from utils.discord_utils import image_to_file
-from utils.pxls.cooldown import get_cd
 from utils.plot_utils import add_glow, get_theme, fig2img, hex_to_rgba_string
 from utils.setup import stats, db_stats, db_users
 from utils.timezoneslib import get_timezone
@@ -147,8 +146,8 @@ class Online(commands.Cog):
 
         # get the cooldown for each online value if we have the cooldown arg
         if parsed_args.cooldown:
-            online_counts = [round(get_cd(count), 2) for count in online_counts]
-            current_count = round(get_cd(current_count), 2)
+            online_counts = [round(stats.get_cd(count), 2) for count in online_counts]
+            current_count = round(stats.get_cd(current_count), 2)
 
         # make graph
         if parsed_args.groupby:

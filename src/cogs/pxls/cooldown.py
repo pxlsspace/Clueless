@@ -13,22 +13,26 @@ class PxlsCooldown(commands.Cog):
 
     @commands.slash_command(name="cooldown")
     async def _cooldown(
-        self, inter: disnake.AppCmdInter, users: int = commands.Param(ge=0, default=None)
+        self,
+        inter: disnake.AppCmdInter,
+        users: int = commands.Param(ge=0, default=None),
+        cd_mult: float = commands.Param(ge=0, default=None, name="cooldown-multiplier"),
     ):
         """Show the current pxls cooldown.
 
         Parameters
         ----------
         users: The number of users to see the cooldown for.
+        cd_mult: The cooldown multiplier (useful to change for cd events).
         """
-        await self.cooldown(inter, users)
+        await self.cooldown(inter, users, cd_mult)
 
     @commands.command(
-        usage="[nb user]",
+        usage="[nb user] [cooldown multiplier]",
         description="Show the current pxls cooldown.",
         aliases=["cd", "timer"],
     )
-    async def cooldown(self, ctx, number=None):
+    async def cooldown(self, ctx, number=None, cd_mult=None):
         if number:
             try:
                 online = int(number)
@@ -39,16 +43,22 @@ class PxlsCooldown(commands.Cog):
         else:
             online = stats.online_count
 
-        total = 0
-        cooldowns = get_cds(online)
-        multiplier = stats.get_cd_multiplier()
+        if cd_mult:
+            try:
+                multiplier = float(cd_mult)
+            except Exception:
+                return await ctx.send(":x: The multiplier must be a valid float.")
+        else:
+            multiplier = stats.get_cd_multiplier()
         multipler_text = (
             f"Cooldown Multiplier: `{multiplier}` " if multiplier != 1 else ""
         )
-
         desc = multipler_text
         desc += "```JSON\n"
+
+        cooldowns = get_cds(online, multiplier)
         cd_table = []
+        total = 0
         for i, total in enumerate(cooldowns):
             if i == 0:
                 cd = time_convert(total)

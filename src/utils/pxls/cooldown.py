@@ -25,9 +25,9 @@ def time_convert(seconds):
         return "%02d:%02d:%05.2f" % (hour, min, sec)
 
 
-def get_cds(online):
+def get_cds(online, multiplier=None):
 
-    cd = stats.get_cd(online)
+    cd = stats.get_cd(online, multiplier)
     cds = []
     total = 0
     for i in range(0, 6):

@@ -1,5 +1,6 @@
 import disnake
 import pandas as pd
+import numpy as np
 from PIL import Image
 from datetime import datetime, timedelta, timezone
 from copy import deepcopy
@@ -23,13 +24,18 @@ from utils.pxls.template_manager import (
     make_before_after_gif,
     parse_template,
 )
-from utils.setup import db_templates, db_users
+from utils.setup import db_templates, db_users, stats
 from utils.timezoneslib import get_timezone
 from utils.utils import make_progress_bar
 from utils.time_converter import round_minutes_down, str_to_td, td_format, format_datetime
 from utils.table_to_image import table_to_image
 from utils.arguments_parser import MyParser
-from utils.plot_utils import fig2img, get_theme, get_gradient_palette
+from utils.plot_utils import (
+    fig2img,
+    get_theme,
+    get_gradient_palette,
+    matplotlib_to_plotly,
+)
 from cogs.pxls.speed import get_grouped_graph, get_stats_graph
 from utils.image.image_utils import v_concatenate
 
@@ -50,36 +56,71 @@ class Progress(commands.Cog):
         aliases=["prog"],
         invoke_without_command=True,
     )
-    async def progress(self, ctx, template=None):
+    async def progress(self, ctx, template=None, display=None):
         if template:
             async with ctx.typing():
-                await self.check(ctx, template)
+                await self.p_check(ctx, template, display)
         else:
             await ctx.send("Usage: `>progress <check|info|add|list|update|delete|speed>`")
+
+    display_options = {
+        "Default (progress image)": "default",
+        "Template": "template",
+        "Template (Highlighted)": "hltemplate",
+        "Wrong Pixels": "wrong",
+        "Wrong Pixels (Highlighted)": "hlwrong",
+        "Canvas": "canvas",
+        "Heatmap": "heatmap",
+        "Virginmap": "virginmap",
+        "Virginabuse": "virginabuse",
+        "None": "none",
+    }
 
     @_progress.sub_command(name="check")
     async def _check(
         self,
         inter: disnake.AppCmdInter,
         template: str = commands.Param(autocomplete=autocomplete_templates),
+        display: str = commands.Param(default="Default", choices=display_options),
     ):
         """Check the progress of a template.
 
         Parameters
         ----------
-        template: The name or URL of the template you want to check."""
+        template: The name or URL of the template you want to check.
+        display: How to display the template."""
         await inter.response.defer()
-        await self.check(inter, template)
+        await self.check(inter, template, display)
 
     @progress.command(
-        name="check", description="Check the progress of a template.", usage="<url|name>"
+        name="check",
+        description="Check the progress of a template.",
+        usage="<name|URL> [display option]",
+        help="""
+        - `<name|URL>`: The name or URL of the template you want to check
+        - `[display option]`: How to display the template.
+
+        **Display Options**:
+        • `default`: The progress image.
+        • `template`: The template image.
+        • `hltemplate`: The template image over the canvas.
+        • `wrong`: Only the wrong pixels.
+        • `hlwrong`: Wrong pixels highlighted over the template.
+        • `canvas`: The canvas in the template area.
+        • `heatmap`: The heatmap in the template area.
+        • `virginmap`: The virginmap in the template area.
+        • `virginabuse`: The pixels that are both correct and virgin.
+        • `none`: No image.""",
     )
-    async def p_check(self, ctx, template: str):
-
+    async def p_check(self, ctx, template, display=None):
+        if display and display.lower() not in self.display_options.values():
+            options = " ".join([f"`{o}`" for o in self.display_options.values()])
+            err_msg = f":x: Invalid display option '{display}' (choose from {options})"
+            return await ctx.send(err_msg)
         async with ctx.typing():
-            await self.check(ctx, template)
+            await self.check(ctx, template, display.lower() if display else None)
 
-    async def check(self, ctx, template_input):
+    async def check(self, ctx, template_input, display):
         # check if the input is an URL or template name
         if parse_template(template_input) is not None:
             try:
@@ -107,8 +148,6 @@ class Progress(commands.Cog):
         title = template.title or "`N/A`"
         total_placeable = template.total_placeable
         correct_pixels = template.update_progress()
-        progress_image = template.get_progress_image()
-
         if total_placeable == 0:
             return await ctx.send(
                 ":x: The template seems to be outside the canvas, make sure it's correctly positioned."
@@ -116,6 +155,55 @@ class Progress(commands.Cog):
         correct_percentage = round((correct_pixels / total_placeable) * 100, 2)
         togo_pixels = total_placeable - correct_pixels
 
+        # get the image to display
+        if display == "template":
+            progress_image = Image.fromarray(template.get_array())
+        elif display == "hltemplate":
+            progress_image = await template.get_preview_image(
+                crop_to_template=False, opacity=0.5
+            )
+        elif display == "wrong":
+            wrong_pixels = template.palettized_array.copy()
+            wrong_pixels[~template.get_wrong_pixels_mask()] = 255
+            progress_image = Image.fromarray(stats.palettize_array(wrong_pixels))
+        elif display == "hlwrong":
+            wrong_pixels = template.palettized_array.copy()
+            wrong_pixels[~template.get_wrong_pixels_mask()] = 255
+            wrong_pixels = stats.palettize_array(wrong_pixels)
+            progress_image = await template.get_preview_image(wrong_pixels)
+        elif display in ["canvas", "virginmap"]:
+            if display == "canvas":
+                board = await stats.get_placable_board()
+                palette = None
+            elif display == "virginmap":
+                board = stats.virginmap_array.copy()
+                board[board == 255] = 1
+                palette = ["#000000", "#00FF00"]
+            cropped_board = template.crop_array_to_template(board)
+            cropped_board[~template.placeable_mask] = 255
+            progress_image = Image.fromarray(
+                stats.palettize_array(cropped_board, palette)
+            )
+        elif display == "heatmap":
+            heatmap = await stats.fetch_heatmap()
+            heatmap = 255 - heatmap
+            palette = matplotlib_to_plotly("plasma_r", 255)
+            cropped_heatmap = template.crop_array_to_template(heatmap)
+            cropped_heatmap[~template.placeable_mask] = 255
+            cropped_heatmap = stats.palettize_array(cropped_heatmap, palette)
+            progress_image = await template.get_preview_image(cropped_heatmap)
+        elif display == "virginabuse":
+            template_virginmap = template.crop_array_to_template(stats.virginmap_array)
+            board = np.logical_and(template_virginmap, template.placed_mask)
+            board.dtype = np.uint8
+            board[~template.placeable_mask] = 255
+            palette = ["#000000", "#00FF00"]
+            progress_image = Image.fromarray(stats.palettize_array(board, palette))
+        elif display == "none":
+            pass
+        else:
+            display = "default"
+            progress_image = template.get_progress_image()
         # make the progress bar
         bar = make_progress_bar(correct_percentage)
 
@@ -132,6 +220,10 @@ class Progress(commands.Cog):
 
         embed = disnake.Embed(title="**Progress Check**", color=0x66C5CC)
         embed.set_thumbnail(url="attachment://template_image.png")
+        if display != "none":
+            footer_text = f"Displaying: {[name for name,val in self.display_options.items() if val == display][0]}"
+        else:
+            footer_text = ""
 
         # INFO #
         info_text = f"• Title: `{title}`\n"
@@ -145,15 +237,14 @@ class Progress(commands.Cog):
                 oldest_record_time_str = format_datetime(oldest_record["datetime"], "R")
 
             else:
-                oldest_record_time_str = "`less than 5 min ago`"
+                oldest_record_time_str = "`< 5 min ago`"
 
             info_text += f"• Owner: <@{template.owner_id}>\n"
             info_text += f"• Started tracking: {oldest_record_time_str}"
         else:
-            embed.set_footer(
-                text="This template is not in the tracker\nClick on [Add To Tracker] to add it directly."
-            )
+            footer_text += "\nThis template is not in the tracker.\nClick on [Add To Tracker] to add it directly."
 
+        embed.set_footer(text=footer_text)
         embed.add_field(name="**Info**", value=info_text, inline=True)
 
         # PROGRESS #
@@ -218,10 +309,14 @@ class Progress(commands.Cog):
                 last_updated = "-"
             activity_text += f"\nLast Updated: {last_updated}"
 
-        detemp_file = await image_to_file(progress_image, "progress.png", embed)
+        files = []
+        if display != "none":
+            progress_file = await image_to_file(progress_image, f"{display}.png", embed)
+            files.append(progress_file)
         template_file = await image_to_file(
             Image.fromarray(template.get_array()), "template_image.png"
         )
+        files.append(template_file)
 
         embed_expanded = embed.copy()
         # this is necessary because embed.copy() keeps the same fields ..
@@ -233,7 +328,7 @@ class Progress(commands.Cog):
         if isinstance(template, Combo):
             # send the template image first and edit the embed with the URL button
             # using the sent image
-            m = await ctx.send(files=[template_file, detemp_file], embed=embed)
+            m = await ctx.send(files=files, embed=embed)
             if isinstance(ctx, disnake.AppCmdInter):
                 m = await ctx.original_message()
             template_image_url = m.embeds[0].thumbnail.url
@@ -261,7 +356,7 @@ class Progress(commands.Cog):
                 )
             else:
                 view = AddTemplateView(ctx.author, template_url, self.add)
-            m = await ctx.send(files=[template_file, detemp_file], embed=embed, view=view)
+            m = await ctx.send(files=files, embed=embed, view=view)
             if isinstance(ctx, disnake.AppCmdInter):
                 m = await ctx.original_message()
             view.message = m

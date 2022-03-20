@@ -66,7 +66,7 @@ class Template:
         self.current_progress = None
 
     def get_array(self) -> np.ndarray:
-        """Return the combo image as an array of RGB colors"""
+        """Return the template image as an array of RGB colors"""
         return stats.palettize_array(self.palettized_array)
 
     def make_placeable_mask(self) -> np.ndarray:
@@ -150,6 +150,29 @@ class Template:
             res_image = progress_image
 
         return res_image
+
+    async def get_preview_image(
+        self, array=None, crop_to_template=True, opacity=0.2
+    ) -> Image.Image:
+        """Get an image of the template (or the given array) over the canvas.
+
+        Parameters
+        ----------
+        array: the array to highlight over the canvas (default: template array)
+        crop_to_template: crop the background to the template placemap
+        opacity: the opacity of the canvas."""
+        if array is None:
+            array = self.get_array()
+        board = await stats.get_placable_board()
+        cropped_board = self.crop_array_to_template(board)
+        if crop_to_template:
+            cropped_board[~self.placeable_mask] = 255
+        cropped_board_array = stats.palettize_array(cropped_board)
+        return highlight_image(array, cropped_board_array, opacity, (0, 0, 0, 255))
+
+    def get_wrong_pixels_mask(self):
+        """Get a mask with all the wrong pixels"""
+        return np.logical_and(~self.placed_mask, self.placeable_mask)
 
     async def get_progress_at(self, dt: datetime):
         """Get the template at a given datetime

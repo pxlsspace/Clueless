@@ -538,6 +538,8 @@ class Utility(commands.Cog):
             tz_str = discord_user["timezone"] or "UTC"
 
         tz = get_timezone(tz_str)
+        if tz is None:
+            return await ctx.send(f"❌ Invalid timezone `{tz_str}`.")
         if "now" in dt_str:
             dt = datetime.now(tz)
         else:

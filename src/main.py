@@ -311,41 +311,30 @@ async def on_message(message):
                 if blacklist_role in message.author.roles:
                     return
 
-    if message.content == ">_>":
-        try:
+    try:
+        if message.content == ">_>":
             return await message.channel.send("<_<")
-        except Exception:
-            pass
-
-    if message.content == ">.>":
-        try:
+        if message.content == ">.>":
             return await message.channel.send("<.<")
-        except Exception:
-            pass
-
-    if message.content == ">_<":
-        try:
+        if message.content == ">_<":
             return await message.channel.send("<_>")
-        except Exception:
-            pass
-
-    if message.content == "aa":
-        try:
+        if message.content == "aa":
             await message.channel.send("<:watermeloneat:955627387666694155>")
-        except Exception:
-            pass
-
-    if message.content == "AA":
-        try:
+        if message.content == "AA":
             await message.channel.send("<:watermelonDEATH:949447275753648268>")
-        except Exception:
-            pass
+    except Exception:
+        pass
 
-    if bot.user in message.mentions:
-        try:
-            await message.add_reaction("<:peepoPinged:943594603632816188>")
-        except Exception:
-            pass
+    try:
+        if bot.user in message.mentions:
+            if "good bot" in message.content.lower():
+                await message.add_reaction("<a:GoodBot:955658963171565658>")
+            elif "bad bot" in message.content.lower():
+                await message.add_reaction("<a:BadBot:955659116506935336>")
+            else:
+                await message.add_reaction("<:peepoPinged:943594603632816188>")
+    except Exception:
+        pass
     await bot.process_commands(message)
 
 

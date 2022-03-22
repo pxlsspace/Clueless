@@ -558,16 +558,125 @@ class Confirm(disnake.ui.View):
         self.stop()
 
 
-class DropdownView(disnake.ui.View):
+class PaginatorView(disnake.ui.View):
+    """Defines a simple paginator of buttons for the embed."""
+
+    def __init__(self, embeds: list[disnake.Embed], images: list[Image.Image] = []):
+        super().__init__(timeout=300)
+        self.embeds = embeds
+        self.images = images
+        self.change_page(0)
+
+        self.first_page.disabled = True
+        self.prev_page.disabled = True
+        # no buttons if there is only one page
+        if len(embeds) <= 1:
+            self.children = []
+
+    @disnake.ui.button(emoji="<:arrowfirst:955585658615910451>", style=ButtonStyle.gray)
+    async def first_page(
+        self, button: disnake.ui.Button, inter: disnake.MessageInteraction
+    ):
+        self.change_page(0)
+        embed = self.embeds[self.embed_count]
+        files = await self.get_file(embed)
+
+        self.first_page.disabled = True
+        self.prev_page.disabled = True
+        self.next_page.disabled = False
+        self.last_page.disabled = False
+        await inter.response.edit_message(embed=embed, files=files, view=self)
+
+    @disnake.ui.button(emoji="<:arrowleft:955585658922102844>", style=ButtonStyle.gray)
+    async def prev_page(
+        self, button: disnake.ui.Button, inter: disnake.MessageInteraction
+    ):
+        self.change_page(self.embed_count - 1)
+        embed = self.embeds[self.embed_count]
+        files = await self.get_file(embed)
+
+        self.next_page.disabled = False
+        self.last_page.disabled = False
+        if self.embed_count == 0:
+            self.first_page.disabled = True
+            self.prev_page.disabled = True
+        await inter.response.edit_message(embed=embed, files=files, view=self)
+
+    @disnake.ui.button(style=ButtonStyle.blurple, label="...")
+    async def page(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        await inter.response.defer()
+
+    @disnake.ui.button(emoji="<:arrowright:955585658863357972>", style=ButtonStyle.gray)
+    async def next_page(
+        self, button: disnake.ui.Button, inter: disnake.MessageInteraction
+    ):
+        self.change_page(self.embed_count + 1)
+        embed = self.embeds[self.embed_count]
+        files = await self.get_file(embed)
+
+        self.first_page.disabled = False
+        self.prev_page.disabled = False
+        if self.embed_count == len(self.embeds) - 1:
+            self.next_page.disabled = True
+            self.last_page.disabled = True
+        await inter.response.edit_message(embed=embed, files=files, view=self)
+
+    @disnake.ui.button(emoji="<:arrowlast:955585658867572787>", style=ButtonStyle.gray)
+    async def last_page(
+        self, button: disnake.ui.Button, inter: disnake.MessageInteraction
+    ):
+        self.change_page(len(self.embeds) - 1)
+
+        embed = self.embeds[self.embed_count]
+        files = await self.get_file(embed)
+
+        self.first_page.disabled = False
+        self.prev_page.disabled = False
+        self.next_page.disabled = True
+        self.last_page.disabled = True
+        await inter.response.edit_message(embed=embed, files=files, view=self)
+
+    async def get_file(self, embed):
+        if self.images:
+            file = await image_to_file(
+                self.images[self.embed_count], "progress.png", embed
+            )
+            files = [file]
+        else:
+            files = []
+        return files
+
+    async def update_embeds(
+        self, inter: disnake.MessageInteraction, new_embeds, new_images=None
+    ):
+        self.embeds = new_embeds
+        self.images = new_images
+
+        self.change_page(0)
+        embed = self.embeds[self.embed_count]
+        files = await self.get_file(embed)
+
+        self.first_page.disabled = True
+        self.prev_page.disabled = True
+        self.next_page.disabled = False
+        self.last_page.disabled = False
+        await inter.message.edit(embed=embed, files=files, view=self)
+
+    def change_page(self, new_index):
+        self.embed_count = new_index
+        self.page.label = f"{self.embed_count+1}/{len(self.embeds)}"
+
+
+class DropdownView(PaginatorView):
     """A view for a dropdown with a cooldown and user check"""
 
     message: disnake.Message
 
-    def __init__(self, author, dropdown):
+    def __init__(self, author, dropdown, embeds, images):
         self.author = author
-        super().__init__()
+        super().__init__(embeds, images)
         self.add_item(dropdown)
-        self.cd = commands.CooldownMapping.from_cooldown(1, 3, lambda inter: inter.user)
+        self.cd = commands.CooldownMapping.from_cooldown(1, 1, lambda inter: inter.user)
 
     async def interaction_check(self, inter: disnake.MessageInteraction) -> bool:
         # check that the command author is the user who interracted

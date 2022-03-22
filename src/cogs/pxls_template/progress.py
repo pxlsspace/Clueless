@@ -505,6 +505,7 @@ class Progress(commands.Cog):
             await self.list(ctx, sort, parsed_args.filter)
 
     async def list(self, ctx, sort: int = None, filters: str = None):
+        temp_per_page = 15
         public_tracked_templates = tracked_templates.get_all_public_templates()
         if len(public_tracked_templates) == 0:
             return await ctx.send("No templates tracked :'(")
@@ -544,6 +545,15 @@ class Progress(commands.Cog):
                 percentage = (current_progress / total) * 100
                 line_colors.append(get_percentage_color(percentage))
 
+            # Filters
+            if filters:
+                if "notdone" in filters and togo == 0:
+                    continue
+                if "done" in filters and togo != 0:
+                    continue
+                if "mine" in filters and template.owner_id != ctx.author.id:
+                    continue
+
             # timeframes speeds
             timeframes = [{"hours": 1}, {"hours": 6}, {"days": 1}, {"days": 7}]
             values = []
@@ -580,15 +590,6 @@ class Progress(commands.Cog):
                 eta = "N/A"
                 line_colors.append(None)
 
-            # Filters
-            if filters:
-                if "notdone" in filters and togo == 0:
-                    continue
-                if "done" in filters and togo != 0:
-                    continue
-                if "mine" in filters and template.owner_id != ctx.author.id:
-                    continue
-
             table.append(
                 [name, total, current_progress, togo, percentage]
                 + values
@@ -605,7 +606,7 @@ class Progress(commands.Cog):
         font = discord_user["font"]
         last_updated = await db_templates.get_last_update_time()
 
-        async def make_embed(table, sort):
+        async def make_embeds(table, sort, temp_per_page):
             # sort the table
             if sort == 0:
                 # sorting by name: keep normal order and ignore case
@@ -613,7 +614,7 @@ class Progress(commands.Cog):
                 key = lambda x: (
                     x[sort] is None or isinstance(x[sort], str),
                     x[sort].lower(),
-                )  # noqa: E731
+                )
 
             elif sort == len(titles) - 1:
                 # sorting by ETA: keep normal order
@@ -621,14 +622,14 @@ class Progress(commands.Cog):
                 key = lambda x: (
                     x[sort] is None or isinstance(x[sort], str),
                     x[sort],
-                )  # noqa: E731
+                )
             else:
                 # sorting by a number: reverse the order and ignore strings
                 reverse = True
                 key = lambda x: (
                     x[sort] is not None and not (isinstance(x[sort], str)),
                     x[sort],
-                )  # noqa: E731
+                )
             table.sort(key=key, reverse=reverse)
             table_data = [line[:-1] for line in table]
             table_colors = [line[-1] for line in table]
@@ -653,36 +654,55 @@ class Progress(commands.Cog):
                 bg_colors = table_colors
                 table_colors = None
             theme.outline_dark = False
-            table_image = await table_to_image(
-                table_data,
-                titles,
-                colors=table_colors,
-                bg_colors=bg_colors,
-                theme=theme,
-                font=font,
-                alternate_bg=True,
-            )
+
+            def split(array, chunks):
+                if array is None:
+                    return None
+                return [array[i : i + chunks] for i in range(0, len(array), chunks)]
+
+            # Split the data to make the pages
+            table_data_pages = split(table_data, temp_per_page)
+            table_colors_pages = split(table_colors, temp_per_page)
+            bg_colors_pages = split(bg_colors, temp_per_page)
+            nb_page = len(table_data_pages)
+            table_images = []
+            for i in range(nb_page):
+                table_image = await table_to_image(
+                    table_data_pages[i],
+                    titles,
+                    colors=table_colors_pages[i] if table_colors_pages else None,
+                    bg_colors=bg_colors_pages[i] if bg_colors_pages else None,
+                    theme=theme,
+                    font=font,
+                    alternate_bg=True,
+                )
+                table_images.append(table_image)
 
             # make the embed base
-            embed = disnake.Embed(title="Tracked Templates", color=0x66C5CC)
-            embed.description = f"Sorted By: `{titles[sort]}`\n"
-            if filters:
-                filter_str_list = []
-                for filter in filters:
-                    if filter == "notdone":
-                        filter_str_list.append("`Not Done`")
-                    elif filter == "done":
-                        filter_str_list.append("`Done`")
-                    elif filter == "mine":
-                        filter_str_list.append(f"<@{ctx.author.id}>'s templates")
-                embed.description += f"Filter: {' + '.join(filter_str_list)}\n"
-            embed.description += f"Total Templates: `{len(table)}`"
-            if last_updated:
-                embed.set_footer(text="Last Updated")
-                embed.timestamp = last_updated
+            embeds = []
+            for i in range(nb_page):
+                embed = disnake.Embed(title="Tracked Templates", color=0x66C5CC)
+                embed.description = f"Sorted By: `{titles[sort]}`\n"
+                if filters:
+                    filter_str_list = []
+                    for filter in filters:
+                        if filter == "notdone":
+                            filter_str_list.append("`Not Done`")
+                        elif filter == "done":
+                            filter_str_list.append("`Done`")
+                        elif filter == "mine":
+                            filter_str_list.append(f"<@{ctx.author.id}>'s templates")
+                    embed.description += f"Filter: {' + '.join(filter_str_list)}\n"
+                embed.description += f"Total Templates: `{len(table)}`"
+                if last_updated:
+                    if nb_page > 1:
+                        embed.set_footer(text=f"Page {i+1}/{nb_page}\nLast Updated")
+                    else:
+                        embed.set_footer(text="Last Updated")
 
-            table_file = await image_to_file(table_image, "progress.png", embed=embed)
-            return embed, table_file
+                    embed.timestamp = last_updated
+                embeds.append(embed)
+            return embeds, table_images
 
         class SortDropdown(disnake.ui.Select):
             def __init__(self):
@@ -707,13 +727,15 @@ class Progress(commands.Cog):
                     else:
                         option.default = False
                 await inter.response.defer()
-                embed, file = await make_embed(table, sort_index)
-                await inter.message.edit(embed=embed, file=file, view=self.view)
+                embeds, images = await make_embeds(table, sort_index, temp_per_page)
+                await self.view.update_embeds(inter, embeds, images)
+
+        embeds, images = await make_embeds(table, sort, temp_per_page)
 
         dropdown = SortDropdown()
-        dropdown_view = DropdownView(ctx.author, dropdown)
-        embed, file = await make_embed(table, sort)
-        m = await ctx.send(embed=embed, file=file, view=dropdown_view)
+        dropdown_view = DropdownView(ctx.author, dropdown, embeds, images)
+        file = await image_to_file(images[0], "progress.png", embeds[0])
+        m = await ctx.send(embed=embeds[0], file=file, view=dropdown_view)
         if isinstance(ctx, disnake.AppCmdInter):
             m = await ctx.original_message()
         dropdown_view.message = m

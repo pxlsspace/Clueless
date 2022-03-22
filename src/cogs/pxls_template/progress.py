@@ -918,7 +918,7 @@ class Progress(commands.Cog):
                 embed.set_image(url=f"attachment://{filename}")
             except Exception:
                 progress += (
-                    "**[An error occured while generating the diff GIF image.]**\n"
+                    "**[An error occurred while generating the diff GIF image.]**\n"
                 )
                 files = []
             embed.add_field(name="URL Changed", value=info + progress)

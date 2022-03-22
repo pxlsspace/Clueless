@@ -13,12 +13,12 @@ from utils.pxls.template_manager import get_template_from_url, parse_template
 from main import tracked_templates
 
 STATUS_EMOJIS = {
-    "bot": "<a:status_bot:878677107042025552>",
-    "fast": "<:status_fast:878642193861079060>",
-    "online": "<:status_online:878641779010842655>",
-    "idle": "<:status_idle:878641855619809280>",
-    "offline": "<:status_offline:878642079914410004>",
-    "inactive": "<a:status_inactive:878675014726086706>",
+    "bot": "<a:status_botting:955632660653408266>",
+    "fast": "<:status_fast:955632659739078747>",
+    "online": "<:status_online:955632659810381864>",
+    "idle": "<:status_idle:955632660238204950>",
+    "offline": "<:status_offline:955632659952979998>",
+    "inactive": "<:status_inactive:955632659743248434>",
 }
 
 
@@ -170,7 +170,7 @@ async def get_image_from_message(
         raise ValueError(e)
 
     except ValueError as e:
-        # if an image was found but an error occured, we raise it
+        # if an image was found but an error occurred, we raise it
         raise ValueError(e)
 
 
@@ -724,7 +724,7 @@ class MoreInfoView(disnake.ui.View):
         self.state = 0  # 0: collapsed, 1: expanded
         self.embeds = [embed, embed_expanded]
         self.labels = ["More Info", "Less Info"]
-        self.emojis = ["<:arrowdown:950178172140388402>", "<:arrowup:950178171892948992>"]
+        self.emojis = ["<:arrowdown:955585658787885077>", "<:arrowup:955585658758516797>"]
         self.children.insert(0, disnake.ui.Button(label="Open Template", url=url))
 
         self.speed_function = speed_function
@@ -751,7 +751,7 @@ class MoreInfoView(disnake.ui.View):
     @disnake.ui.button(
         label="More Info",
         style=disnake.ButtonStyle.blurple,
-        emoji="<:arrowdown:950178172140388402>",
+        emoji="<:arrowdown:955585658787885077>",
     )
     async def switch(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
         self.state = 1 - self.state
@@ -763,7 +763,7 @@ class MoreInfoView(disnake.ui.View):
     @disnake.ui.button(
         label="Speed Graph",
         style=disnake.ButtonStyle.blurple,
-        emoji="<:graph:950178171972649010>",
+        emoji="<:graph:955585658888544337>",
     )
     async def progress_speed(
         self, button: disnake.ui.Button, inter: disnake.MessageInteraction

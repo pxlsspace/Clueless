@@ -176,11 +176,11 @@ async def on_command_error(ctx, error):
         return await ctx.send(f"❌ {error}")
 
     if isinstance(error, OverflowError):
-        return await ctx.send("❌ Overflow error. <a:bruhkitty:880829401359589446>")
+        return await ctx.send("❌ Overflow error. <:bruhkitty:943594789532737586>")
 
     if isinstance(error, (disnake.errors.Forbidden, disnake.Forbidden)):
         # Try to send error message
-        missing_perms_emoji = "<:Im_missing_permissions:950557152815222806>"
+        missing_perms_emoji = "<:Im_missing_permissions:955623636818071562>"
         try:
             embed = disnake.Embed(
                 color=0xFF4747,
@@ -203,11 +203,11 @@ async def on_command_error(ctx, error):
                 embed = disnake.Embed(
                     color=0xFF4747,
                     title="Unexpected error.",
-                    description="<a:peepoLeaveNope:822571977390817340> An unexpected error occurred, please contact the bot developer if the problem persists.",
+                    description="<a:an_error_occurred:955625218968272947> An unexpected error occurred, please contact the bot developer if the problem persists.",
                 )
                 await ctx.send(embed=embed, ephemeral=True)
         else:
-            await ctx.message.add_reaction(r"a:peepoLeaveNope:822571977390817340")
+            await ctx.message.add_reaction("<a:an_error_occurred:955625218968272947>")
     except Exception:
         pass
 
@@ -331,19 +331,19 @@ async def on_message(message):
 
     if message.content == "aa":
         try:
-            await message.channel.send("<:eatwatermelon:953417593069379684>")
+            await message.channel.send("<:watermeloneat:955627387666694155>")
         except Exception:
             pass
 
     if message.content == "AA":
         try:
-            await message.channel.send("<:watermelonDEATH:856212273718886400>")
+            await message.channel.send("<:watermelonDEATH:949447275753648268>")
         except Exception:
             pass
 
     if bot.user in message.mentions:
         try:
-            await message.add_reaction("<:peepopinged:867331826442960926>")
+            await message.add_reaction("<:peepoPinged:943594603632816188>")
         except Exception:
             pass
     await bot.process_commands(message)

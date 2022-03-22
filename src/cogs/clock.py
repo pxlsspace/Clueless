@@ -126,7 +126,7 @@ class Clock(commands.Cog):
             await self._update_stats_data()
         except Exception as e:
             return await ctx.send(
-                f"❌ **An error occured during the update:**\n ```{type(e).__name__}: {e}```"
+                f"❌ **An error occurred during the update:**\n ```{type(e).__name__}: {e}```"
             )
         await ctx.send("✅ Successfully updated stats")
 

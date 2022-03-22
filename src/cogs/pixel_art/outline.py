@@ -130,7 +130,7 @@ class Outline(commands.Cog):
         embed = disnake.Embed(title="Crop", color=0x66C5CC)
         if ratio == 1:
             embed.description = (
-                "There was nothing to crop here. <a:bruhkitty:880829401359589446>"
+                "There was nothing to crop here. <:bruhkitty:943594789532737586>"
             )
         else:
             embed.description = (

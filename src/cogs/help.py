@@ -20,27 +20,27 @@ EMBED_COLOR = 0x66C5CC
 CATEGORIES = {
     "Reddit": {
         "description": "Get random images from reddit.",
-        "emoji": "<a:icon_reddit:939539009833668619>",
+        "emoji": "<:icon_reddit:955585658917883924>",
     },
     "Pixel Art": {
         "description": "Useful tools to make pixel art.",
-        "emoji": "<a:icon_pixelart:939537785658933350>",
+        "emoji": "<:icon_pixelart:955585658947256360>",
     },
     "Pxls": {
         "description": "Most pxls related commands.",
-        "emoji": "<a:icon_pxls:939538707919306783> ",
+        "emoji": "<:icon_pxls:955585658854973481>",
     },
     "Pxls Template": {
         "description": "Commands to handle pxls templates.",
-        "emoji": "<a:icon_template:939539139567681578> ",
+        "emoji": "<:icon_template:955585658838188042>",
     },
     "Other": {
         "description": None,
-        "emoji": "<a:icon_other:939539309873209426>",
+        "emoji": "<:icon_other:955585658989195305>",
     },
 }
 
-HOME_EMOJI = "<a:icon_home:939542127472439338>"
+HOME_EMOJI = "<:icon_home:955585658863370311>"
 
 
 async def autocomplete_commands(inter: disnake.AppCmdInter, user_input: str):

@@ -188,13 +188,13 @@ class Help(commands.Cog):
         emb = disnake.Embed(
             title=f"{category_emoji} {category_name} Category",
             color=EMBED_COLOR,
-            description=f"Use `{prefix}help [command]` to see more information about a command.\n",
+        )
+        emb.description = (
+            f"Use `{prefix}help [command]` to see more information about a command.\n"
         )
         if category_description:
-            emb.add_field(
-                name="**Description**", value=category_description, inline=False
-            )
-        emb.add_field(name="**Commands**", value=commands_text, inline=False)
+            emb.description += f"\n**Description**\n{category_description}\n"
+        emb.description += f"\n**Commands**\n{commands_text}"
         emb.set_author(name=ctx.me, icon_url=ctx.me.display_avatar)
         emb.set_footer(text=f"Requested by {author}", icon_url=author.display_avatar)
 

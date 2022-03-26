@@ -12,6 +12,9 @@ from utils.discord_utils import (
 )
 from utils.setup import db_canvas, db_users, stats
 from utils.pxls.archives import get_canvas_image, get_user_placemap
+from utils.log import get_logger
+
+logger = get_logger(__name__)
 
 
 class Placemap(commands.Cog):
@@ -100,13 +103,24 @@ class Placemap(commands.Cog):
             m = await ctx.original_message()
 
         start = time.time()
-        (
-            placemap_image,
-            nb_undo,
-            nb_placed,
-            nb_replaced_by_others,
-            nb_replaced_by_you,
-        ) = await get_user_placemap(canvas_code, log_key)
+        try:
+            (
+                placemap_image,
+                nb_undo,
+                nb_placed,
+                nb_replaced_by_others,
+                nb_replaced_by_you,
+            ) = await get_user_placemap(canvas_code, log_key)
+        except Exception:
+            logger.exception(
+                f"Error while generating c{canvas_code} placemap for {ctx.author}"
+            )
+            return await m.edit(
+                embed=disnake.Embed(
+                    color=disnake.Color.red(),
+                    description=":x: An error occurred while generating the placemap.",
+                )
+            )
         end = time.time()
 
         canvas_pixels = nb_placed - nb_undo

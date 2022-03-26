@@ -70,7 +70,7 @@ class Progress(commands.Cog):
         "Wrong Pixels": "wrong",
         "Wrong Pixels (Highlighted)": "hlwrong",
         "Correct Pixels": "correct",
-        "Correct Pixels (Highlighted": "hlcorrect",
+        "Correct Pixels (Highlighted)": "hlcorrect",
         "Canvas": "canvas",
         "Heatmap": "heatmap",
         "Virginmap": "virginmap",

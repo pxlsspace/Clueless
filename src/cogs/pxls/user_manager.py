@@ -390,14 +390,14 @@ class UserManager(commands.Cog):
             try:
                 await db_users.create_log_key(modal_inter.author.id, canvas_code, log_key)
             except sqlite3.IntegrityError:
-                error_embed.description = f":x: You already have a key for this canvas, you can use `/user deletekey {canvas_code}` if you wish to remove it."
+                error_embed.description = f":x: You already have a key for this canvas, you can use `/user unsetkey {canvas_code}` if you wish to remove it."
                 return await modal_inter.response.send_message(
                     embed=error_embed, ephemeral=True
                 )
 
             embed = disnake.Embed(
                 color=disnake.Color.green(),
-                description=f"✅ Log key for canvas `{canvas_code}` succefully added.",
+                description=f"✅ Log key for canvas `{canvas_code}` successfully added.",
             )
             embed.set_author(
                 name=modal_inter.author, icon_url=modal_inter.author.display_avatar

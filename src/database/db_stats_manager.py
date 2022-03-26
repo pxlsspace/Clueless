@@ -528,11 +528,11 @@ class DbStatsManager:
 
     async def get_palette(self, canvas_code):
         sql = """ SELECT color_id,color_name,color_hex
-            FROM palette_color WHERE canvas_code = ? """
+            FROM palette_color WHERE canvas_code = ? ORDER BY color_id """
 
         palette_colors = await self.db.sql_select(sql, canvas_code)
 
-        return palette_colors
+        return palette_colors or None
 
     async def get_session_start_time(self, user_id, canvas: bool):
         """Find the last time frame where the user didn't place"""

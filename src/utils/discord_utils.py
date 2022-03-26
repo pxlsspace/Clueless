@@ -7,7 +7,7 @@ from disnake.ext import commands
 from disnake import ButtonStyle
 
 from utils.utils import get_content, in_executor
-from utils.setup import stats, db_stats
+from utils.setup import stats, db_stats, db_canvas
 from utils.image import PALETTES
 from utils.pxls.template_manager import get_template_from_url, parse_template
 from main import tracked_templates
@@ -464,6 +464,11 @@ async def autocomplete_user_templates(inter: disnake.AppCmdInter, user_input: st
             for temp_name in template_names
             if user_input.lower() in temp_name.lower()
         ][:25]
+
+
+async def autocomplete_log_canvases(inter: disnake.AppCmdInter, user_input: str):
+    canvas_codes = await db_canvas.get_logs_canvases()
+    return [c for c in canvas_codes if user_input.lower() in c.lower()][:25]
 
 
 # --- Views --- #

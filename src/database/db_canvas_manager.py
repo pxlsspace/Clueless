@@ -83,9 +83,7 @@ class DbCanvasManager:
 
     async def get_logs_canvases(self, raw=False):
         """Get all the canvases that have logs."""
-        canvases = await self.db.sql_select(
-            "SELECT canvas_code FROM canvas WHERE has_logs = TRUE"
-        )
+        canvases = await self.db.sql_select("SELECT * FROM canvas WHERE has_logs = TRUE")
         if raw:
             return canvases
         else:

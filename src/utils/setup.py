@@ -7,13 +7,14 @@ from database.db_connection import DbConnection
 from database.db_servers_manager import DbServersManager
 from database.db_stats_manager import DbStatsManager
 from database.db_template_manager import DbTemplateManager
+from database.db_canvas_manager import DbCanvasManager
 from utils.pxls.websocket_client import WebsocketClient
 from utils.pxls.pxls_stats_manager import PxlsStatsManager
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 load_dotenv()
 
-VERSION = "2.4.5"
+VERSION = "2.5.0"
 BOT_INVITE = os.getenv("BOT_INVITE")
 SERVER_INVITE = os.getenv("SERVER_INVITE")
 
@@ -31,6 +32,7 @@ db_stats = DbStatsManager(db_conn, stats)
 db_servers = DbServersManager(db_conn, DEFAULT_PREFIX)
 db_users = DbUserManager(db_conn)
 db_templates = DbTemplateManager(db_conn)
+db_canvas = DbCanvasManager(db_conn)
 
 # websocket
 uri = "wss://pxls.space/ws"

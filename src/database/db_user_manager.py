@@ -43,6 +43,15 @@ class DbUserManager:
             PRIMARY KEY(pxls_user_id,server_id)
         );"""
 
+        create_user_keys_table = """
+            CREATE TABLE IF NOT EXISTS log_key(
+                discord_id TEXT,
+                canvas_code TEXT,
+                key TEXT,
+                PRIMARY KEY(discord_id, canvas_code),
+                FOREIGN KEY(discord_id) REFERENCES discord_user(discord_id)
+            )
+        """
         await self.db.sql_update(create_pxls_user_table)
         await self.db.sql_update(create_pxls_name_table)
         await self.db.sql_update(create_discord_user)
@@ -55,6 +64,7 @@ class DbUserManager:
         except sqlite3.OperationalError:
             pass
         await self.db.sql_update(create_server_pxls_users_table)
+        await self.db.sql_update(create_user_keys_table)
 
     async def create_pxls_user(self, name):
         """create a 'pxls_user' and its associated 'pxls_name'"""
@@ -197,3 +207,22 @@ class DbUserManager:
         """
         rows = await self.db.sql_select(sql, server_id)
         return rows
+
+    async def create_log_key(self, discord_id, canvas_code, log_key):
+        sql = """
+            INSERT INTO log_key(discord_id, canvas_code, key)
+            VALUES(?, ?, ?)
+        """
+        return await self.db.sql_update(sql, (discord_id, canvas_code, log_key))
+
+    async def get_key(self, discord_id, canvas_code):
+        sql = "SELECT key FROM log_key WHERE discord_id = ? AND canvas_code = ?"
+        res = await self.db.sql_select(sql, (discord_id, canvas_code))
+        if res:
+            return res[0][0]
+        else:
+            return None
+
+    async def delete_key(self, discord_id, canvas_code):
+        sql = "DELETE FROM log_key WHERE discord_id = ? AND canvas_code = ?"
+        return await self.db.sql_update(sql, (discord_id, canvas_code))

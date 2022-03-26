@@ -12,6 +12,7 @@ from utils.setup import (
     db_servers,
     db_users,
     db_templates,
+    db_canvas,
     GUILD_IDS,
 )
 from utils.log import get_logger, setup_loggers, close_loggers
@@ -49,6 +50,8 @@ async def on_connect():
     await db_users.create_tables()
     await db_stats.create_tables()
     await db_templates.create_tables()
+    await db_canvas.create_tables()
+    await db_canvas.setup()
 
 
 @bot.event

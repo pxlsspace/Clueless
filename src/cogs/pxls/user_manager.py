@@ -1,11 +1,13 @@
+import sqlite3
 import disnake
+import asyncio
 from disnake.ext import commands
 from datetime import datetime
 
-from utils.discord_utils import UserConverter, autocomplete_pxls_name
+from utils.discord_utils import STATUS_EMOJIS, UserConverter, autocomplete_pxls_name
 from utils.font.font_manager import DEFAULT_FONT, get_all_fonts, get_allowed_fonts
 from utils.image.image_utils import hex_str_to_int
-from utils.setup import db_users
+from utils.setup import db_users, db_canvas
 from utils.plot_utils import get_theme, theme_list
 from utils.time_converter import format_timezone
 from utils.timezoneslib import get_timezone
@@ -275,6 +277,198 @@ class UserManager(commands.Cog):
 
         await db_users.set_user_font(ctx.author.id, font.lower())
         await ctx.send(f"✅ Font successfully set to `{font.lower()}`.")
+
+    @user.sub_command(name="setkey")
+    async def _set_key(self, inter: disnake.AppCmdInter):
+        """Set your log keys to get past canvases stats."""
+        await self.set_key(inter)
+
+    @commands.command(
+        name="setkey", description="Set your log keys to get past canvases stats."
+    )
+    async def p_set_key(self, ctx):
+        await self.set_key(ctx)
+
+    async def set_key(self, inter: disnake.AppCmdInter):
+        info_embed = disnake.Embed(
+            title="Set your log keys",
+            color=0x66C5CC,
+            description="Set your log keys to access your stats on past canvases.",
+        )
+        instructions = """
+        1. Go to https://pxls.space/profile?action=data
+        2. Copy a log key (512 characters)
+        3. Click the `[Add Key]` button
+        4. Enter the canvas code and paste the log key
+        *(Repeat for every key)*"""
+        info_embed.add_field(name="How does this work?", value=instructions)
+
+        info_embed.set_footer(
+            text="Note: your log keys will stay private, only you and the bot maintainer will have access to them."
+        )
+
+        class AddKeyView(disnake.ui.View):
+            def __init__(self):
+                super().__init__(timeout=None)
+                self.add_item(
+                    disnake.ui.Button(
+                        label="Add Key",
+                        style=disnake.ButtonStyle.blurple,
+                        custom_id="add_key",
+                    )
+                )
+                self.add_item(
+                    disnake.ui.Button(
+                        label="List Keys",
+                        style=disnake.ButtonStyle.gray,
+                        custom_id="list_keys",
+                    )
+                )
+
+        await inter.send(embed=info_embed, view=AddKeyView())
+
+    @commands.Cog.listener()
+    async def on_button_click(self, inter: disnake.MessageInteraction):
+        """Handle what to do when the "add key" or "list keys" button is pressed."""
+        custom_id = inter.component.custom_id
+        if custom_id not in ["add_key", "list_keys"]:
+            return
+
+        if custom_id == "list_keys":
+            return await self.keys(inter)
+        else:
+            await inter.response.send_modal(
+                title="Add a log key",
+                custom_id="add_log_key",
+                components=[
+                    disnake.ui.TextInput(
+                        label="Canvas Code",
+                        placeholder="The canvas code for the key (e.g. '45' or '45a')",
+                        custom_id="canvas_code",
+                        style=disnake.TextInputStyle.short,
+                        min_length=1,
+                        max_length=10,
+                    ),
+                    disnake.ui.TextInput(
+                        label="Log Key",
+                        placeholder="Your log key for the canvas.",
+                        custom_id="log_key",
+                        style=disnake.TextInputStyle.paragraph,
+                        min_length=512,
+                        max_length=512,
+                    ),
+                ],
+            )
+
+            # Wait until the user submits the modal.
+            try:
+                modal_inter: disnake.ModalInteraction = await self.bot.wait_for(
+                    "modal_submit",
+                    check=lambda i: i.custom_id == "add_log_key"
+                    and i.author.id == inter.author.id,
+                    timeout=300,
+                )
+            except asyncio.TimeoutError:
+                return
+
+            canvas_code = modal_inter.text_values["canvas_code"]
+            log_key = modal_inter.text_values["log_key"]
+
+            error_embed = disnake.Embed(title="Error", color=disnake.Color.red())
+            # check on the canvas code
+            canvas = await db_canvas.get_canvas(canvas_code)
+            if canvas is None or not canvas["has_logs"]:
+                error_embed.description = (
+                    ":x: This canvas code is invalid or doesn't have logs yet."
+                )
+
+                return await modal_inter.response.send_message(
+                    embed=error_embed, ephemeral=True
+                )
+
+            # add to db and check on unique
+            try:
+                await db_users.create_log_key(modal_inter.author.id, canvas_code, log_key)
+            except sqlite3.IntegrityError:
+                error_embed.description = f":x: You already have a key for this canvas, you can use `/user deletekey {canvas_code}` if you wish to remove it."
+                return await modal_inter.response.send_message(
+                    embed=error_embed, ephemeral=True
+                )
+
+            embed = disnake.Embed(
+                color=disnake.Color.green(),
+                description=f"✅ Log key for canvas `{canvas_code}` succefully added.",
+            )
+            embed.set_author(
+                name=modal_inter.author, icon_url=modal_inter.author.display_avatar
+            )
+            await modal_inter.response.send_message(embed=embed, ephemeral=True)
+
+    @user.sub_command(name="keys")
+    async def _keys(self, inter):
+        """Check the status of your log keys."""
+        await self.keys(inter)
+
+    @commands.command(name="keys", description="Check the status of your log keys.")
+    async def p_keys(self, ctx):
+        await self.keys(ctx)
+
+    async def keys(self, ctx):
+        canvases_with_logs = await db_canvas.get_logs_canvases(raw=True)
+        res = []
+        for canvas in canvases_with_logs[::-1]:
+            canvas_code = canvas["canvas_code"]
+            key = await db_users.get_key(ctx.author.id, canvas_code)
+            if key:
+                status = "online"
+            else:
+                status = "offline"
+            res.append(f"{STATUS_EMOJIS.get(status)} `c{canvas_code}`")
+
+        embed = disnake.Embed(color=0x66C5CC)
+        embed.set_author(name=ctx.author, icon_url=ctx.author.display_avatar)
+        res = [res[i::3] for i in range(3)]
+
+        for i, group in enumerate(res):
+            if i == 0:
+                title = "**Log Keys**"
+            else:
+                title = "\u200b"
+            embed.add_field(name=title, value="\n".join(group))
+        embed.add_field(
+            name="Key Status",
+            value=f"{STATUS_EMOJIS['online']} = `key added` {STATUS_EMOJIS['offline']} = `key not added`",
+            inline=False,
+        )
+        if isinstance(ctx, commands.Context):
+            return await ctx.send(embed=embed)
+        else:
+            return await ctx.send(embed=embed, ephemeral=True)
+
+    @user.sub_command(name="unsetkey")
+    async def _unsetkey(
+        self, inter, canvas_code: str = commands.Param(name="canvas-code")
+    ):
+        """Delete your key from the bot.
+
+        Parameters
+        ----------
+        canvas_code: The canvas code of the key you wish to delete"""
+        await self.unsetkey(inter, canvas_code)
+
+    @commands.command(name="unsetkey", description="Delete your key from the bot.")
+    async def p_unsetkey(self, ctx, canvas_code):
+        await self.unsetkey(ctx, canvas_code)
+
+    async def unsetkey(self, ctx, canvas_code):
+        key = await db_users.get_key(ctx.author.id, canvas_code)
+        if key is None:
+            return await ctx.send(":x: You haven't set a key for this canvas.")
+        else:
+            await db_users.delete_key(ctx.author.id, canvas_code)
+        return await ctx.send(
+            f"✅ Log key for canvas `{canvas_code}` successfully deleted."
+        )
 
 
 def setup(bot: commands.Bot):

@@ -1,4 +1,5 @@
 import os
+import re
 from database.db_connection import DbConnection
 from utils.log import get_logger
 
@@ -87,7 +88,9 @@ class DbCanvasManager:
         if raw:
             return canvases
         else:
-            return [c["canvas_code"] for c in canvases]
+            res = [c["canvas_code"] for c in canvases]
+            res.sort(key=natural_keys)
+            return res
 
     async def get_all_canvases(self, raw=False):
         """Get all the canvases that have logs."""
@@ -95,4 +98,14 @@ class DbCanvasManager:
         if raw:
             return canvases
         else:
-            return [c["canvas_code"] for c in canvases]
+            res = [c["canvas_code"] for c in canvases]
+            res.sort(key=natural_keys)
+            return res
+
+
+def atoi(text):
+    return int(text) if text.isdigit() else text
+
+
+def natural_keys(text):
+    return [atoi(c) for c in re.split(r"(\d+)", text)]

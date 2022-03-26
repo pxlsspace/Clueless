@@ -414,10 +414,9 @@ class UserManager(commands.Cog):
         await self.keys(ctx)
 
     async def keys(self, ctx):
-        canvases_with_logs = await db_canvas.get_logs_canvases(raw=True)
+        canvases_with_logs = await db_canvas.get_logs_canvases()
         res = []
-        for canvas in canvases_with_logs[::-1]:
-            canvas_code = canvas["canvas_code"]
+        for canvas_code in canvases_with_logs[::-1]:
             key = await db_users.get_key(ctx.author.id, canvas_code)
             if key:
                 status = "online"

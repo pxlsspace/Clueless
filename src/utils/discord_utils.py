@@ -471,18 +471,8 @@ async def autocomplete_log_canvases(inter: disnake.AppCmdInter, user_input: str)
     return [c for c in canvas_codes if user_input.lower() in c.lower()][:25]
 
 
-def atoi(text):
-    return int(text) if text.isdigit() else text
-
-
-def natural_keys(text):
-    return [atoi(c) for c in re.split(r"(\d+)", text)]
-
-
 async def autocomplete_canvases(inter: disnake.AppCmdInter, user_input: str):
     canvas_codes = await db_canvas.get_all_canvases()
-    # to get the correct order
-    canvas_codes.sort(key=natural_keys)
     return [c for c in canvas_codes if user_input.lower() in c.lower()][:25]
 
 

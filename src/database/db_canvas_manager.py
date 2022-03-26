@@ -88,3 +88,11 @@ class DbCanvasManager:
             return canvases
         else:
             return [c["canvas_code"] for c in canvases]
+
+    async def get_all_canvases(self, raw=False):
+        """Get all the canvases that have logs."""
+        canvases = await self.db.sql_select("SELECT * FROM canvas")
+        if raw:
+            return canvases
+        else:
+            return [c["canvas_code"] for c in canvases]

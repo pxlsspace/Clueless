@@ -2,10 +2,16 @@ from disnake.ext import commands
 import disnake
 import asyncio
 import time
+from PIL import Image
 
-from utils.discord_utils import autocomplete_log_canvases, format_number, image_to_file
-from utils.setup import db_canvas, db_users
-from utils.pxls.archives import get_user_placemap
+from utils.discord_utils import (
+    autocomplete_log_canvases,
+    autocomplete_canvases,
+    format_number,
+    image_to_file,
+)
+from utils.setup import db_canvas, db_users, stats
+from utils.pxls.archives import get_canvas_image, get_user_placemap
 
 
 class Placemap(commands.Cog):
@@ -27,7 +33,6 @@ class Placemap(commands.Cog):
         ----------
         canvas_code: The canvas code for which you want to see your stats.
         """
-        # await inter.response.defer()
         await self.placemap(inter, canvas_code)
 
     @commands.cooldown(1, 20, commands.BucketType.user)
@@ -124,6 +129,54 @@ class Placemap(commands.Cog):
             placemap_image, f"placemap_c{canvas_code}.png", embed
         )
         return await m.edit(embed=embed, file=placemap_file)
+
+    @commands.slash_command(name="canvas")
+    async def _canvas(
+        self,
+        inter: disnake.AppCmdInter,
+        canvas_code: str = commands.Param(
+            name="canvas-code", autocomplete=autocomplete_canvases
+        ),
+    ):
+        """Get the final image for any canvas.
+
+        Parameters
+        ----------
+        canvas_code: The code of the canvas want to see the image.
+        """
+        await inter.response.defer()
+        await self.canvas(inter, canvas_code)
+
+    @commands.command(
+        name="canvas",
+        usage="<canvas code>",
+        description="Get the final image for any canvas.",
+    )
+    async def p_canvas(self, ctx, canvas_code):
+        async with ctx.typing():
+            await self.canvas(ctx, canvas_code)
+
+    async def canvas(self, ctx, canvas_code):
+
+        current_canvas = await stats.get_canvas_code()
+        if canvas_code == current_canvas:
+            canvas_array = stats.board_array
+            canvas_array = stats.palettize_array(canvas_array)
+            canvas_image = Image.fromarray(canvas_array)
+            title = f"Canvas {canvas_code} (current)"
+        else:
+            canvas_image = get_canvas_image(canvas_code)
+            if canvas_image is None:
+                return await ctx.send(
+                    ":x: This canvas code is invalid or doesn't have a final image."
+                )
+            title = f"Canvas {canvas_code} final"
+
+        embed = disnake.Embed(title=title, color=0x66C5CC)
+        canvas_file = await image_to_file(
+            canvas_image, f"Pxls_Canvas_{canvas_code}.png", embed
+        )
+        return await ctx.send(embed=embed, file=canvas_file)
 
 
 def setup(bot: commands.Bot):

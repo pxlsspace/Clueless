@@ -69,6 +69,8 @@ class Progress(commands.Cog):
         "Template (Highlighted)": "hltemplate",
         "Wrong Pixels": "wrong",
         "Wrong Pixels (Highlighted)": "hlwrong",
+        "Correct Pixels": "correct",
+        "Correct Pixels (Highlighted": "hlcorrect",
         "Canvas": "canvas",
         "Heatmap": "heatmap",
         "Virginmap": "virginmap",
@@ -171,6 +173,15 @@ class Progress(commands.Cog):
             wrong_pixels[~template.get_wrong_pixels_mask()] = 255
             wrong_pixels = stats.palettize_array(wrong_pixels)
             progress_image = await template.get_preview_image(wrong_pixels)
+        elif display == "correct":
+            correct_pixels_array = template.palettized_array.copy()
+            correct_pixels_array[~template.placed_mask] = 255
+            progress_image = Image.fromarray(stats.palettize_array(correct_pixels_array))
+        elif display == "hlcorrect":
+            correct_pixels_array = template.palettized_array.copy()
+            correct_pixels_array[~template.placed_mask] = 255
+            correct_pixels_array = stats.palettize_array(correct_pixels_array)
+            progress_image = await template.get_preview_image(correct_pixels_array)
         elif display in ["canvas", "virginmap"]:
             if display == "canvas":
                 board = await stats.get_placable_board()

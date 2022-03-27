@@ -12,6 +12,7 @@ from utils.setup import db_users, db_canvas
 from utils.plot_utils import get_theme, theme_list
 from utils.time_converter import format_timezone
 from utils.timezoneslib import get_timezone
+from utils.utils import chunk
 
 
 class UserManager(commands.Cog):
@@ -432,7 +433,7 @@ class UserManager(commands.Cog):
 
         embed = disnake.Embed(color=0x66C5CC)
         embed.set_author(name=ctx.author, icon_url=ctx.author.display_avatar)
-        res = [res[i::3] for i in range(3)]
+        res = chunk(res, 3)
 
         for i, group in enumerate(res):
             if i == 0:

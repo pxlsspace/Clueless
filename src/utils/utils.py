@@ -57,6 +57,12 @@ def ordinal(n):
     return "%d%s" % (n, "tsnrhtdd"[(n // 10 % 10 != 1) * (n % 10 < 4) * n % 10 :: 4])
 
 
+def chunk(a, n):
+    """Divide an array `a` into `n` sub arrays"""
+    k, m = divmod(len(a), n)
+    return [a[i * k + min(i, m) : (i + 1) * k + min(i + 1, m)] for i in range(n)]
+
+
 # from https://github.com/InterStella0/stella_bot/blob/6f273318c06e86fe3ba9cad35bc62e899653f031/utils/decorators.py#L108-L117
 def in_executor(
     loop: _MaybeEventLoop = None,

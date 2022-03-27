@@ -98,6 +98,7 @@ class Placemap(commands.Cog):
 
         m = await ctx.send(
             embed=disnake.Embed(
+                title=f"Canvas {canvas_code} Placemap",
                 description="<a:catload:957251966826860596> **Generating your placemap...**\n*(this can take a while)*",
                 color=0x66C5CC,
             )
@@ -126,6 +127,14 @@ class Placemap(commands.Cog):
             )
         end = time.time()
 
+        if nb_placed == 0:
+            return await m.edit(
+                embed=disnake.Embed(
+                    title="Invalid key",
+                    color=disnake.Color.red(),
+                    description=f":x: No pixels found for this canvas ({canvas_code}).\nMake sure that you used the correct log key with the correct canvas.",
+                )
+            )
         canvas_pixels = nb_placed - nb_undo
         survived = canvas_pixels - nb_replaced_by_others - nb_replaced_by_you
         if canvas_pixels == 0:

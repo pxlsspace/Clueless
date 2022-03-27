@@ -226,3 +226,7 @@ class DbUserManager:
     async def delete_key(self, discord_id, canvas_code):
         sql = "DELETE FROM log_key WHERE discord_id = ? AND canvas_code = ?"
         return await self.db.sql_update(sql, (discord_id, canvas_code))
+
+    async def update_key(self, discord_id, canvas_code, new_key):
+        sql = "UPDATE log_key SET key = ? WHERE discord_id = ? AND canvas_code = ?"
+        return await self.db.sql_update(sql, (new_key, discord_id, canvas_code))

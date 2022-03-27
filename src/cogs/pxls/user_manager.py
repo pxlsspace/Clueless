@@ -459,22 +459,33 @@ class UserManager(commands.Cog):
 
         Parameters
         ----------
-        canvas_code: The canvas code of the key you wish to delete"""
+        canvas_code: The canvas code of the key you wish to delete (or all to delete all)."""
         await self.unsetkey(inter, canvas_code)
 
-    @commands.command(name="unsetkey", description="Delete your key from the bot.")
+    @commands.command(
+        name="unsetkey",
+        description="Delete your key from the bot.",
+        usage="<canvas code|all>",
+    )
     async def p_unsetkey(self, ctx, canvas_code):
         await self.unsetkey(ctx, canvas_code)
 
     async def unsetkey(self, ctx, canvas_code):
-        key = await db_users.get_key(ctx.author.id, canvas_code)
-        if key is None:
-            return await ctx.send(":x: You haven't set a key for this canvas.")
+        if canvas_code.lower() == "all":
+            canvases = await db_canvas.get_logs_canvases()
+            for canvas_code in canvases:
+                await db_users.delete_key(ctx.author.id, canvas_code)
+
+            return await ctx.send("✅ All your log keys were successfully deleted.")
         else:
-            await db_users.delete_key(ctx.author.id, canvas_code)
-        return await ctx.send(
-            f"✅ Log key for canvas `{canvas_code}` successfully deleted."
-        )
+            key = await db_users.get_key(ctx.author.id, canvas_code)
+            if key is None:
+                return await ctx.send(":x: You haven't set a key for this canvas.")
+            else:
+                await db_users.delete_key(ctx.author.id, canvas_code)
+            return await ctx.send(
+                f"✅ Log key for canvas `{canvas_code}` successfully deleted."
+            )
 
 
 def setup(bot: commands.Bot):

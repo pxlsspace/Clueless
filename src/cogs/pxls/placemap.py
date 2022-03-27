@@ -2,9 +2,11 @@ from disnake.ext import commands
 import disnake
 import asyncio
 import time
+import numpy as np
 from PIL import Image
 
 from utils.discord_utils import (
+    AuthorView,
     autocomplete_log_canvases,
     autocomplete_canvases,
     format_number,
@@ -12,9 +14,60 @@ from utils.discord_utils import (
 )
 from utils.setup import db_canvas, db_users, stats
 from utils.pxls.archives import check_key, get_canvas_image, get_user_placemap
+from utils.image.image_utils import highlight_image
 from utils.log import get_logger
 
 logger = get_logger(__name__)
+
+
+class PlacemapView(AuthorView):
+    message = disnake.Message
+
+    def __init__(self, author: disnake.User, placemap_image, canvas_code):
+        super().__init__(author)
+        self.placemap_image = placemap_image
+        self.canvas_code = canvas_code
+
+    async def on_timeout(self) -> None:
+        await self.message.edit(view=None)
+
+    @disnake.ui.button(
+        label="Layer over canvas (dark)", style=disnake.ButtonStyle.blurple
+    )
+    async def layer_dark(self, button: disnake.Button, inter: disnake.MessageInteraction):
+        await self.layer(button, inter, dark=True)
+
+    @disnake.ui.button(
+        label="Layer over canvas (light)", style=disnake.ButtonStyle.blurple
+    )
+    async def layer_light(
+        self, button: disnake.Button, inter: disnake.MessageInteraction
+    ):
+        await self.layer(button, inter, dark=False)
+
+    async def layer(
+        self, button: disnake.Button, inter: disnake.MessageInteraction, dark: bool
+    ):
+        await inter.response.defer()
+        button.disabled = True
+
+        canvas_image = get_canvas_image(self.canvas_code).convert("RGBA")
+        highlighted_image = highlight_image(
+            np.array(self.placemap_image),
+            np.array(canvas_image),
+            background_color=(0, 0, 0, 255) if dark else (255, 255, 255, 255),
+        )
+
+        embed = disnake.Embed(
+            title=f"Layered Placemap ({'dark' if dark else 'light'})", color=0x66C5CC
+        )
+        file = await image_to_file(
+            highlighted_image,
+            f"placemap_c{self.canvas_code}_layered_{'dark' if dark else 'light'}.png",
+            embed,
+        )
+        await inter.message.edit(view=self)
+        await inter.send(embed=embed, file=file)
 
 
 class Placemap(commands.Cog):
@@ -154,7 +207,11 @@ class Placemap(commands.Cog):
         placemap_file = await image_to_file(
             placemap_image, f"placemap_c{canvas_code}.png", embed
         )
-        return await m.edit(embed=embed, file=placemap_file)
+
+        view = PlacemapView(ctx.author, placemap_image, canvas_code)
+        view.message = await m.edit(embed=embed, file=placemap_file, view=view)
+        if view.message is None:
+            view.message = await ctx.original_message()
 
     @commands.slash_command(name="canvas")
     async def _canvas(

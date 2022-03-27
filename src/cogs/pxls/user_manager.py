@@ -7,6 +7,7 @@ from datetime import datetime
 from utils.discord_utils import STATUS_EMOJIS, UserConverter, autocomplete_pxls_name
 from utils.font.font_manager import DEFAULT_FONT, get_all_fonts, get_allowed_fonts
 from utils.image.image_utils import hex_str_to_int
+from utils.pxls.archives import check_key
 from utils.setup import db_users, db_canvas
 from utils.plot_utils import get_theme, theme_list
 from utils.time_converter import format_timezone
@@ -354,8 +355,6 @@ class UserManager(commands.Cog):
                         placeholder="Your log key for the canvas.",
                         custom_id="log_key",
                         style=disnake.TextInputStyle.paragraph,
-                        min_length=512,
-                        max_length=512,
                     ),
                 ],
             )
@@ -382,6 +381,14 @@ class UserManager(commands.Cog):
                     ":x: This canvas code is invalid or doesn't have logs yet."
                 )
 
+                return await modal_inter.response.send_message(
+                    embed=error_embed, ephemeral=True
+                )
+            # check on the key
+            try:
+                log_key = check_key(log_key)
+            except ValueError as e:
+                error_embed.description = f":x: {e}"
                 return await modal_inter.response.send_message(
                     embed=error_embed, ephemeral=True
                 )

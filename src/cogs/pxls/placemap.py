@@ -11,7 +11,7 @@ from utils.discord_utils import (
     image_to_file,
 )
 from utils.setup import db_canvas, db_users, stats
-from utils.pxls.archives import get_canvas_image, get_user_placemap
+from utils.pxls.archives import check_key, get_canvas_image, get_user_placemap
 from utils.log import get_logger
 
 logger = get_logger(__name__)
@@ -70,8 +70,6 @@ class Placemap(commands.Cog):
                             placeholder="Log Key (will stay 100% private)",
                             custom_id="log_key",
                             style=disnake.TextInputStyle.paragraph,
-                            min_length=512,
-                            max_length=512,
                         ),
                     ],
                 )
@@ -88,6 +86,11 @@ class Placemap(commands.Cog):
                     return
 
             log_key = modal_inter.text_values["log_key"]
+            try:
+                log_key = check_key(log_key)
+            except ValueError as e:
+                return await modal_inter.response.send_message(f":x: {e}")
+
             await modal_inter.response.defer()
             ctx = modal_inter
         elif isinstance(ctx, disnake.AppCmdInter):

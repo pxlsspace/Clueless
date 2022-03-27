@@ -90,3 +90,16 @@ async def get_user_placemap(canvas_code, user_key):
     res_array = stats.palettize_array(res_array, palette)
     res_image = Image.fromarray(res_array)
     return res_image, nb_undo, nb_placed, nb_replaced_by_others, nb_replaced_by_you
+
+
+def check_key(key: str):
+    """Check if a key is valid (512 chars and hex) and remove empty spaces.
+    Raises ValueError if the key is invalid."""
+    key = key.strip()
+    if len(key) != 512:
+        raise ValueError(f"The key must have exactly 512 characters (not {len(key)}).")
+    try:
+        int(key, 16)
+    except ValueError:
+        raise ValueError("The key must be a valid hexadecimal.")
+    return key

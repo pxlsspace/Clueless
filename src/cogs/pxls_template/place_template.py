@@ -185,7 +185,7 @@ class PlaceTemplate(commands.Cog):
         )
 
         # paste the image at the given coords
-        canvas = np.full((1000, 1000), 255)
+        canvas = np.full((1000, 2000), 255)
         try:
             canvas[oy : oy + img.height, ox : ox + img.width] = reduced_array
         except Exception:

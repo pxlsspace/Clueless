@@ -185,7 +185,7 @@ class PlaceTemplate(commands.Cog):
         )
 
         # paste the image at the given coords
-        canvas = np.full((1000, 2000), 255)
+        canvas = np.full((2000, 2000), 255)
         try:
             canvas[oy : oy + img.height, ox : ox + img.width] = reduced_array
         except Exception:
@@ -231,7 +231,7 @@ class PlaceTemplate(commands.Cog):
         text += "2. Go to [r/place](https://www.reddit.com/r/place/), click on the extension and create a new script.\n"
         text += "3. Go to this [GitHub Gist](https://gist.github.com/oralekin/240d536d13d0a87ecf2474658115621b) and copy and paste the code.\n"
         text += '4. Replace the line `i.src = "<some image link>";` with the following:\n'
-        text += f'```i.src = "{template_image_url}";```\n'
+        text += f'```image.src = "{template_image_url}";```\n'
         text += "5. Go back to [r/place](https://www.reddit.com/r/place/) and refresh the page."
 
         template_embed = disnake.Embed(

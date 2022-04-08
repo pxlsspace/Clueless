@@ -1,6 +1,7 @@
 import numpy as np
 import pytz
 import math
+import uuid
 from PIL import ImageColor
 from datetime import datetime
 
@@ -235,7 +236,10 @@ class PxlsStatsManager:
 
     async def query(self, endpoint, content_type):
         url = self.base_url + endpoint
-        return await get_content(url, content_type)
+
+        pxls_validate = str(uuid.uuid4())
+        cookies = {"pxls-validate": pxls_validate}
+        return await get_content(url, content_type, cookies=cookies)
 
     def get_cd(self, online_count: int, multiplier: float = None):
         """Get the cooldown for a given amount of online users"""

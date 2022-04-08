@@ -7,6 +7,7 @@ import copy
 import time
 import urllib.parse
 import disnake
+import asyncio
 from datetime import datetime, timedelta
 from PIL import Image
 from numba import jit
@@ -48,6 +49,7 @@ class Template:
         self.owner_id = None
         self.hidden = None
         self.name = None
+        self.id = None
 
         # template image and array
         self.palettized_array: np.ndarray = reduce(
@@ -464,7 +466,8 @@ class TemplateManager:
             )
 
         # save in db
-        await db_templates.create_template(template)
+        id = await db_templates.create_template(template)
+        template.id = id
         # save in list
         self.list.append(template)
         # update the @combo
@@ -531,6 +534,7 @@ class TemplateManager:
             new_temp.name = old_temp.name
             new_temp.owner_id = old_temp.owner_id
             new_temp.hidden = old_temp.hidden
+            new_temp.id = old_temp.id
         else:
             new_temp = copy.deepcopy(old_temp)
 
@@ -582,39 +586,55 @@ class TemplateManager:
     def get_hidden_templates(self, owner_id):
         return [t for t in self.list if t.hidden and t.owner_id == owner_id]
 
-    async def load_all_templates(self, canvas_code):
+    async def load_all_templates(self, canvas_code, update=False):
         """Load all the templates from the database in self.list"""
-        logger.info("Loading templates...")
         start = time.time()
         db_list = await db_templates.get_all_templates(canvas_code)
-        count = 0
+        initial_len = len(self.list)
         has_combo = False
         for db_temp in db_list:
             name = db_temp["name"]
             owner_id = db_temp["owner_id"]
             hidden = db_temp["hidden"]
             url = db_temp["url"]
+            id = db_temp["id"]
             if name != "@combo":
+                if self.get_template(name, owner_id, hidden):
+                    if not update:
+                        logger.debug(f"Template {name} not loaded: Duplicate template.")
+                    continue
                 try:
-                    temp = await get_template_from_url(url)
+                    temp = await asyncio.wait_for(get_template_from_url(url), timeout=5.0)
                     temp.name = name
                     temp.owner_id = int(owner_id)
                     temp.hidden = bool(hidden)
                     temp.canvas_code = canvas_code
+                    temp.id = id
                     self.list.append(temp)
-                    count += 1
                     logger.debug(
-                        f"template {temp.name} loaded ({count}/{len(db_list)-1})"
+                        f"template {temp.name} loaded ({len(self.list)}/{len(db_list)-1})"
                     )
+                except asyncio.TimeoutError:
+                    if not update:
+                        logger.warn(
+                            "Failed to load template {}: TimeoutError".format(name)
+                        )
                 except Exception as e:
-                    logger.warn("Failed to load template {}: {}".format(name, e))
+                    if not update:
+                        logger.warn("Failed to load template {}: {}".format(name, e))
             else:
                 has_combo = True
         end = time.time()
         nb_templates = len(db_list) - (1 if has_combo else 0)
-        logger.info(
-            f"{count}/{nb_templates} Templates loaded (time: {round(end-start, 2)}s)"
-        )
+        if not update or (update and len(self.list) != initial_len):
+            logger.info(
+                f"{len(self.list)}/{nb_templates} Templates loaded (time: {round(end-start, 2)}s)"
+            )
+        elif update and len(self.list) != nb_templates:
+            logger.debug("Couldn't load all templates.")
+
+        # sort the list by id
+        self.list.sort(key=lambda x: x.id)
 
     def make_combo_image(self) -> np.ndarray:
         """Make an index array combining all the template arrays in self.list"""

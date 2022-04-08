@@ -57,6 +57,7 @@ class Clock(commands.Cog):
             app_info = await self.bot.application_info()
             bot_owner_id = app_info.owner.id
             tracked_templates.bot_owner_id = bot_owner_id
+            logger.info("Loading templates...")
             await tracked_templates.load_all_templates(canvas_code)
 
         except Exception:
@@ -165,6 +166,12 @@ class Clock(commands.Cog):
 
         except Exception:
             logger.exception("Unexpected exception in task 'save_online_count'")
+
+        try:
+            canvas_code = await stats.get_canvas_code()
+            await tracked_templates.load_all_templates(canvas_code, update=True)
+        except Exception:
+            logger.exception("Unexpected error in 'load_all_templates'")
 
         # update template stats
         try:

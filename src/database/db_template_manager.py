@@ -56,6 +56,10 @@ class DbTemplateManager:
 
     async def create_template(self, t: "Template"):
         """Add a template in the database and return its ID or None if it already exists"""
+        if await self.check_duplicate_name(t):
+            raise ValueError(
+                f"There is already a template with the name `{t.name}` in the database."
+            )
         template_id = await self.get_template_id(t)
         if template_id:
             return None
@@ -175,3 +179,8 @@ class DbTemplateManager:
             await self.create_template(combo)
             logger.info("New combo created in the database")
         return await self.create_template_stat(combo, datetime, progress)
+
+    async def check_duplicate_name(self, t: "Template"):
+        sql = "SELECT * FROM template where LOWER(name) = LOWER(?) AND canvas_code = ? AND hidden = ?"
+        res = await self.db.sql_select(sql, (t.name, t.canvas_code, t.hidden))
+        return res

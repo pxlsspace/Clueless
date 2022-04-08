@@ -7,7 +7,7 @@ from datetime import timezone
 from utils.arguments_parser import MyParser
 from utils.image.image_utils import hex_str_to_int
 from utils.time_converter import format_datetime, str_to_td, format_timezone
-from utils.discord_utils import image_to_file
+from utils.discord_utils import format_number, image_to_file
 from utils.plot_utils import add_glow, get_theme, fig2img, hex_to_rgba_string
 from utils.setup import stats, db_stats, db_users
 from utils.timezoneslib import get_timezone
@@ -135,8 +135,9 @@ class Online(commands.Cog):
         else:
             online_counts = [int(e[0]) for e in data if e[0] is not None]
             dates = [e[1] for e in data if e[0] is not None]
-            online_counts.insert(0, int(current_count))
-            dates.insert(0, datetime.utcnow())
+            if current_count:
+                online_counts.insert(0, int(current_count))
+                dates.insert(0, datetime.utcnow())
 
         # make graph title
         if parsed_args.cooldown:
@@ -147,7 +148,8 @@ class Online(commands.Cog):
         # get the cooldown for each online value if we have the cooldown arg
         if parsed_args.cooldown:
             online_counts = [round(stats.get_cd(count), 2) for count in online_counts]
-            current_count = round(stats.get_cd(current_count), 2)
+            if current_count:
+                current_count = round(stats.get_cd(current_count), 2)
 
         # make graph
         if parsed_args.groupby:
@@ -167,7 +169,7 @@ class Online(commands.Cog):
             format_datetime(dates[-1]),
             format_datetime(dates[0]),
             title,
-            current_count,
+            format_number(current_count),
             round(sum(online_counts) / len(online_counts), 2),
             min(online_counts),
             max(online_counts),

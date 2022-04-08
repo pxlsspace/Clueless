@@ -17,6 +17,7 @@ class WebsocketClient:
         self.loop = asyncio.new_event_loop()
         self.thread = threading.Thread(target=self._start, daemon=True)
         self._paused = False
+        self.status = False
 
     def start(self):
         """Start the websocket in a separate thread."""
@@ -37,6 +38,7 @@ class WebsocketClient:
         while True:
             try:
                 async with websockets.connect(self.uri) as websocket:
+                    self.status = True
                     logger.info("Websocket connected")
                     async for message in websocket:
                         while self._paused:
@@ -47,8 +49,10 @@ class WebsocketClient:
                             if message_json["type"] == "pixel":
                                 pixels = message_json["pixels"]
                                 for pixel in pixels:
-                                    self.stats.update_board_pixel(**pixel)
-                                    self.stats.update_virginmap_pixel(**pixel)
+                                    if self.stats.board_array is not None:
+                                        self.stats.update_board_pixel(**pixel)
+                                    if self.stats.virginmap_array is not None:
+                                        self.stats.update_virginmap_pixel(**pixel)
                             if message_json["type"] == "users":
                                 count = message_json["count"]
                                 self.stats.online_count = count
@@ -56,6 +60,8 @@ class WebsocketClient:
                         except Exception:
                             logger.exception("Websocket client raised")
             except Exception as error:
+                self.status = False
+                self.stats.online_count = None
                 logger.debug(f"Websocket disconnected: {error}")
                 logger.debug("Attempting reconnect...")
                 await asyncio.sleep(1)

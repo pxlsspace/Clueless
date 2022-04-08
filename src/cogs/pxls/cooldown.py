@@ -42,6 +42,8 @@ class PxlsCooldown(commands.Cog):
                 return await ctx.send("❌ The number of users must be positive.")
         else:
             online = stats.online_count
+            if online is None:
+                return await ctx.send(":x: Current online count unreachable.")
 
         if cd_mult:
             try:

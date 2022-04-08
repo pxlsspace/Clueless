@@ -459,7 +459,7 @@ class DbStatsManager:
     async def save_palette(self, palette_list, canvas_code):
         """Save the palette with the given canvas code,
         do nothing if there is already a palette for the canvas code."""
-
+        added = False
         sql = """
             INSERT INTO palette_color (canvas_code,color_id,color_name,
                 color_hex) VALUES (?,?,?,?) """
@@ -471,9 +471,11 @@ class DbStatsManager:
             values = (canvas_code, color_id, color_name, color_hex)
             try:
                 await self.db.sql_insert(sql, values)
+                added = True
             except IntegrityError:
                 # a color with this id is already saved for this canvas
                 pass
+        return added
 
     async def save_color_stats(self, colors_dict: dict, record_id: int):
         """Save the color stats"""

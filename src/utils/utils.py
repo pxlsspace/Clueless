@@ -35,8 +35,10 @@ async def get_content(url: str, content_type, **kwargs):
                             return await r.read()
                 else:
                     raise BadResponseError(f"The URL leads to an error {r.status}")
-        except (InvalidURL, ClientConnectionError):
+        except InvalidURL:
             raise ValueError("The URL provided is invalid.")
+        except ClientConnectionError:
+            raise ValueError("Couldn't connect to URL.")
 
 
 def make_progress_bar(percentage, nb_char=20):

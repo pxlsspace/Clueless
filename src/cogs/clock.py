@@ -44,24 +44,31 @@ class Clock(commands.Cog):
     @update_stats.before_loop
     async def before_update_stats(self):
         await self.bot.wait_until_ready()
-        try:
-            # update the data on startup
-            await self._update_stats_data()
 
-            # load the templates from the database
+        # update the data on startup
+        try:
+            await self._update_stats_data()
+        except Exception:
+            logger.exception("Unexpected error in 'update_stats_data'")
+
+        # load the templates from the database
+        try:
             canvas_code = await stats.get_canvas_code()
             app_info = await self.bot.application_info()
-            await tracked_templates.load_all_templates(canvas_code)
             bot_owner_id = app_info.owner.id
             tracked_templates.bot_owner_id = bot_owner_id
+            await tracked_templates.load_all_templates(canvas_code)
 
-            # initialise the combo
+        except Exception:
+            logger.exception("Unexpected error in 'load_all_templates'")
+
+        # initialise the combo
+        try:
             bot_id = app_info.id
             tracked_templates.update_combo(bot_id, canvas_code)
             logger.debug("Combo initialized.")
-
         except Exception:
-            logger.exception("Unexpected error before starting task 'update_stats'")
+            logger.exception("Unexpected error in 'update_combo'")
 
         # start the websocket to update the board
         ws_client.start()
@@ -73,49 +80,68 @@ class Clock(commands.Cog):
 
     async def _update_stats_data(self):
         # refreshing stats json
-        await stats.refresh()
-        if stats.stats_json is None:
+        if await stats.refresh():
+            logger.debug("Stats refreshed.")
+
+            # create a record for the current time and canvas
+            record_id = await self.create_record()
+            if record_id is None:
+                # there is already a record saved for the current time
+                try:
+                    await self.update_boards()
+                    logger.debug("Board updated.")
+                except ValueError as e:
+                    logger.error(f"Couldn't update boards: {e}")
+                except Exception:
+                    logger.exception("Couldn't update boards:")
+                return
+
+            # save the new stats data in the database
+            await self.save_stats(record_id)
+            logger.debug("Stats saved.")
+
+            # check on update for the palette
+            palette = stats.get_palette()
+            canvas_code = await stats.get_canvas_code()
+            if await db_stats.save_palette(palette, canvas_code):
+                logger.info("Palette changed.")
+            else:
+                logger.debug("No palette change.")
+
+        else:
+            record_id = None
             logger.warning("Stats page unreachable.")
 
-            return
-        logger.debug("Stats refreshed.")
-
-        # create a record for the current time and canvas
-        record_id = await self.create_record()
-        if record_id is None:
-            # there is already a record saved for the current time
-            await self.update_boards()
-            logger.debug("Board updated.")
-            return
-
-        # save the new stats data in the database
-        await self.save_stats(record_id)
-        logger.debug("Stats saved.")
-
-        # check on update for the palette
-        palette = stats.get_palette()
-        canvas_code = await stats.get_canvas_code()
-        await db_stats.save_palette(palette, canvas_code)
-        logger.debug("Palette saved.")
-
         ws_client.pause()
-
         # update the board
-        await self.update_boards()
-        logger.debug("Boards updated.")
+        try:
+            await self.update_boards()
+            logger.debug("Boards updated.")
+        except ValueError as e:
+            logger.error(f"Couldn't update boards: {e}")
+            ws_client.resume()
+            return
+        except Exception:
+            logger.exception("Couldn't update boards:")
+            ws_client.resume()
+            return
 
         # save the color stats
-        await self.save_color_stats(record_id)
-        logger.debug("Color stats saved.")
+        if record_id:
+            try:
+                await self.save_color_stats(record_id)
+                logger.debug("Color stats saved.")
+            except Exception:
+                logger.exception("Couldn't save color stats:")
 
         ws_client.resume()
 
-        # check milestones
-        # await self.check_milestones()
-
         # send snapshots
-        await self.send_snapshots()
-        logger.debug("Snapshot sent.")
+        try:
+            await self.send_snapshots()
+            logger.debug("Snapshot sent.")
+        except Exception:
+            logger.exception("Couldn't send snapshots:")
 
         logger.info("All stats updated.")
 

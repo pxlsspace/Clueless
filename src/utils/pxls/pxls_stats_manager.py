@@ -5,6 +5,9 @@ from PIL import ImageColor
 from datetime import datetime
 
 from utils.utils import get_content
+from utils.log import get_logger
+
+logger = get_logger(__name__)
 
 
 class PxlsStatsManager:
@@ -21,16 +24,40 @@ class PxlsStatsManager:
         self.board_array = None
         self.virginmap_array = None
         self.placemap_array = None
+        self.palette = None
 
     async def refresh(self):
+
+        status = False
         try:
             self.board_info = await self.query("info", "json")
+        except ValueError as e:
+            logger.error(f"Couldn't update board info: {e}")
+        except Exception:
+            logger.exception("Couldn't update board info:")
+
+        try:
             count = await self.fetch_online_count()
             self.online_count = count
+        except ValueError as e:
+            logger.error(f"Couldn't fetch online count: {e}")
+            self.online_count = None
+        except Exception:
+            logger.exception("Couldn't fetch online count:")
+
+        try:
+            self.stats_json = await self.query("stats/stats.json", "json")
+            status = True
+        except ValueError as e:
+            logger.error(f"Couldn't update stats.json: {e}")
+        except Exception:
+            logger.exception("Couldn't update stats.json:")
+
+        try:
+            await self.update_palette()
         except Exception:
             pass
-
-        self.stats_json = await self.query("stats/stats.json", "json")
+        return status
 
     def get_general_stats(self):
         general = self.stats_json["general"].copy()
@@ -71,10 +98,32 @@ class PxlsStatsManager:
         return self.stats_json["toplist"]["canvas"]
 
     def get_palette(self):
+        return self.palette
+
+    async def update_palette(self):
+        self.palette = None
         try:
-            return self.board_info["palette"]
+            self.palette = self.board_info["palette"]
         except Exception:
-            return self.stats_json["board_info"]["palette"]
+            try:
+                self.palette = self.stats_json["board_info"]["palette"]
+            except Exception:
+                self.palette = await self.get_db_palette()
+
+    async def get_db_palette(self):
+        """Get the last palette saved in the database"""
+        canvas_code = await self.get_canvas_code()
+        sql = """
+            SELECT color_id,color_name,color_hex
+            FROM palette_color
+            WHERE canvas_code = ?
+            ORDER BY color_id
+        """
+        db_palette = await self.db_conn.sql_select(sql, canvas_code)
+        res_palette = []
+        for color in db_palette:
+            res_palette.append(dict(name=color["color_name"], value=color["color_hex"]))
+        return res_palette
 
     async def get_canvas_code(self):
         canvas_code = None

@@ -97,6 +97,17 @@ class Reduce(commands.Cog):
 
         start = time.time()
 
+        # check on image size
+        limit = int(25e6)
+        if img.width * img.height > limit:
+            msg = f"This image exceeds the limit of **{format_number(limit)}** pixels for this command.\n"
+            return await ctx.send(
+                embed=disnake.Embed(
+                    title=":x: Size limit exceeded",
+                    description=msg,
+                    color=disnake.Color.red(),
+                )
+            )
         # check on the matching
         if matching is None:
             matching = "accurate"  # default = 'accurate'

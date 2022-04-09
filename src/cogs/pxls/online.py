@@ -133,8 +133,8 @@ class Online(commands.Cog):
             dates = dates[:-1]
             online_counts = online_counts[:-1]
         else:
-            online_counts = [int(e[0]) for e in data if e[0] is not None]
-            dates = [e[1] for e in data if e[0] is not None]
+            online_counts = [(int(e[0]) if e[0] is not None else 0) for e in data]
+            dates = [e[1] for e in data if e[0]]
             if current_count:
                 online_counts.insert(0, int(current_count))
                 dates.insert(0, datetime.utcnow())

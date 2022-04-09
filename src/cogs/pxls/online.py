@@ -132,9 +132,11 @@ class Online(commands.Cog):
                 return await ctx.send("❌ The time frame given is too short.")
             dates = dates[:-1]
             online_counts = online_counts[:-1]
+            online_counts_without_none = online_counts
         else:
             online_counts = [(int(e[0]) if e[0] is not None else 0) for e in data]
             dates = [e[1] for e in data if e[0]]
+            online_counts_without_none = [int(e[0]) for e in data if e[0] is not None]
             if current_count:
                 online_counts.insert(0, int(current_count))
                 dates.insert(0, datetime.utcnow())
@@ -170,9 +172,9 @@ class Online(commands.Cog):
             format_datetime(dates[0]),
             title,
             format_number(current_count),
-            round(sum(online_counts) / len(online_counts), 2),
-            min(online_counts),
-            max(online_counts),
+            round(sum(online_counts_without_none) / len(online_counts_without_none), 2),
+            min(online_counts_without_none),
+            max(online_counts_without_none),
         )
         emb = disnake.Embed(
             title=title,

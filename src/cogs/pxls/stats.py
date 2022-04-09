@@ -93,12 +93,23 @@ class PxlsStats(commands.Cog):
         )
         non_virgin_interval = await db_stats.db.sql_select(sql, record["record_id"])
         time_diff = round_minutes_down(last_updated) - record_time
-        filling_progress = total_non_virgin - non_virgin_interval[0]["non_virgin"]
-        canvas_fill_speed_interval = filling_progress / (time_diff / timedelta(days=1))
-        pixels_until_goal = (total_placeable * goal / 100) - total_non_virgin
-        eta = pixels_until_goal / canvas_fill_speed_interval
 
-        if eta <= 0:
+        if non_virgin_interval[0]["non_virgin"] is None:
+            filling_progress = None
+            canvas_fill_speed_interval = None
+            pixels_until_goal = None
+            eta = None
+        else:
+            filling_progress = total_non_virgin - non_virgin_interval[0]["non_virgin"]
+            canvas_fill_speed_interval = filling_progress / (
+                time_diff / timedelta(days=1)
+            )
+            pixels_until_goal = (total_placeable * goal / 100) - total_non_virgin
+            eta = pixels_until_goal / canvas_fill_speed_interval
+
+        if eta is None:
+            pass
+        elif eta <= 0:
             eta = "where reset 💀"
         else:
             td_eta = timedelta(days=eta)
@@ -149,7 +160,7 @@ class PxlsStats(commands.Cog):
             f"`{make_progress_bar(total_non_virgin/total_placeable*100)}`",
             format_number(total_non_virgin / total_placeable * 100),
             goal,
-            eta,
+            eta or "N/A",
         )
 
         # create an embed with all the infos

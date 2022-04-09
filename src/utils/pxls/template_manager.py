@@ -592,38 +592,43 @@ class TemplateManager:
         db_list = await db_templates.get_all_templates(canvas_code)
         initial_len = len(self.list)
         has_combo = False
-        for db_temp in db_list:
-            name = db_temp["name"]
-            owner_id = db_temp["owner_id"]
-            hidden = db_temp["hidden"]
-            url = db_temp["url"]
-            id = db_temp["id"]
-            if name != "@combo":
-                if self.get_template(name, owner_id, hidden):
-                    if not update:
-                        logger.debug(f"Template {name} not loaded: Duplicate template.")
-                    continue
-                try:
-                    temp = await asyncio.wait_for(get_template_from_url(url), timeout=5.0)
-                    temp.name = name
-                    temp.owner_id = int(owner_id)
-                    temp.hidden = bool(hidden)
-                    temp.canvas_code = canvas_code
-                    temp.id = id
-                    self.list.append(temp)
-                    logger.debug(
-                        f"template {temp.name} loaded ({len(self.list)}/{len(db_list)-1})"
-                    )
-                except asyncio.TimeoutError:
-                    if not update:
-                        logger.warn(
-                            "Failed to load template {}: TimeoutError".format(name)
+        if stats.placemap_array is not None:
+            for db_temp in db_list:
+                name = db_temp["name"]
+                owner_id = db_temp["owner_id"]
+                hidden = db_temp["hidden"]
+                url = db_temp["url"]
+                id = db_temp["id"]
+                if name != "@combo":
+                    if self.get_template(name, owner_id, hidden):
+                        if not update:
+                            logger.debug(
+                                f"Template {name} not loaded: Duplicate template."
+                            )
+                        continue
+                    try:
+                        temp = await asyncio.wait_for(
+                            get_template_from_url(url), timeout=5.0
                         )
-                except Exception as e:
-                    if not update:
-                        logger.warn("Failed to load template {}: {}".format(name, e))
-            else:
-                has_combo = True
+                        temp.name = name
+                        temp.owner_id = int(owner_id)
+                        temp.hidden = bool(hidden)
+                        temp.canvas_code = canvas_code
+                        temp.id = id
+                        self.list.append(temp)
+                        logger.debug(
+                            f"template {temp.name} loaded ({len(self.list)}/{len(db_list)-1})"
+                        )
+                    except asyncio.TimeoutError:
+                        if not update:
+                            logger.warn(
+                                "Failed to load template {}: TimeoutError".format(name)
+                            )
+                    except Exception as e:
+                        if not update:
+                            logger.warn("Failed to load template {}: {}".format(name, e))
+                else:
+                    has_combo = True
         end = time.time()
         nb_templates = len(db_list) - (1 if has_combo else 0)
         if not update or (update and len(self.list) != initial_len):

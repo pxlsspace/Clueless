@@ -57,7 +57,7 @@ class PxlsStatsManager:
         try:
             await self.update_palette()
         except Exception:
-            pass
+            logger.exception("Couldn't update the palette:")
         return status
 
     def get_general_stats(self):
@@ -109,7 +109,9 @@ class PxlsStatsManager:
             try:
                 self.palette = self.stats_json["board_info"]["palette"]
             except Exception:
-                self.palette = await self.get_db_palette()
+                pass
+        if self.palette is None:
+            self.palette = await self.get_db_palette()
 
     async def get_db_palette(self):
         """Get the last palette saved in the database"""

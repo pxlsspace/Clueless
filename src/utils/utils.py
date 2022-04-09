@@ -19,7 +19,10 @@ class BadResponseError(Exception):
 async def get_content(url: str, content_type, **kwargs):
     """Send a GET request to the url and return the response as json or bytes.
     Raise BadResponseError or ValueError."""
-    async with aiohttp.ClientSession(**kwargs) as session:
+    timeout = aiohttp.ClientTimeout(
+        sock_connect=10.0, sock_read=10.0
+    )  # set a timeout of 10 seconds
+    async with aiohttp.ClientSession(timeout=timeout, **kwargs) as session:
         try:
             async with session.get(url) as r:
                 if r.status == 200:
@@ -37,6 +40,8 @@ async def get_content(url: str, content_type, **kwargs):
                     raise BadResponseError(f"The URL leads to an error {r.status}")
         except InvalidURL:
             raise ValueError("The URL provided is invalid.")
+        except asyncio.TimeoutError:
+            raise ValueError("Couldn't connect to URL. (Timeout)")
         except ClientConnectionError:
             raise ValueError("Couldn't connect to URL.")
 

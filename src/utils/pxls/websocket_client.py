@@ -2,6 +2,7 @@ import asyncio
 import json
 import threading
 import websockets
+import uuid
 from utils.log import get_logger
 
 logger = get_logger("pxls_websocket")
@@ -35,9 +36,14 @@ class WebsocketClient:
         self._paused = False
 
     async def _listen(self):
+
         while True:
+            pxls_validate = str(uuid.uuid4())
+            headers = {"Cookie": f"pxls-validate={pxls_validate}"}
             try:
-                async with websockets.connect(self.uri) as websocket:
+                async with websockets.connect(
+                    self.uri, extra_headers=headers
+                ) as websocket:
                     self.status = True
                     logger.info("Websocket connected")
                     async for message in websocket:

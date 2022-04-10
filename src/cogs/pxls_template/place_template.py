@@ -243,4 +243,5 @@ class PlaceTemplate(commands.Cog):
 
 
 def setup(bot: commands.Bot):
+    return
     bot.add_cog(PlaceTemplate(bot))

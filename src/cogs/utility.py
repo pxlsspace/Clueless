@@ -623,8 +623,15 @@ class Utility(commands.Cog):
             if usage:
                 nb_usage = usage["nb_usage"]
                 last_usage = usage["last_usage"]
-                last_usage = datetime.strptime(last_usage, "%Y-%m-%d %H:%M:%S.%f")
-                last_usage.replace(tzinfo=timezone.utc)
+                try:
+                    last_usage = datetime.strptime(last_usage, "%Y-%m-%d %H:%M:%S.%f")
+                    last_usage.replace(tzinfo=timezone.utc)
+                except Exception:
+                    try:
+                        last_usage = datetime.strptime(last_usage, "%Y-%m-%d %H:%M:%S")
+                        last_usage.replace(tzinfo=timezone.utc)
+                    except Exception:
+                        last_usage = None
             else:
                 nb_usage = last_usage = None
 

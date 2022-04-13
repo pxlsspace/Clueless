@@ -22,8 +22,8 @@ async def get_stats_df(dt1, dt2, canvas: bool) -> pandas.DataFrame:
     video_duration = 90  # seconds
     video_duration = video_duration / dates_skipped
     steps_per_period = 10
-    canvas_code = "52"
-    colors = True  # to get a bar chart of the canvas colors
+    canvas_code = "55"
+    colors = False  # to get a bar chart of the canvas colors
 
     if colors:
         nb_bars = 32
@@ -59,11 +59,12 @@ async def get_stats_df(dt1, dt2, canvas: bool) -> pandas.DataFrame:
         FROM color_stat
         JOIN record on color_stat.record_id = record.record_id
         JOIN palette_color on color_stat.color_id = palette_color.color_id
-        WHERE record.canvas_code=? """
+        WHERE record.canvas_code = ?
+        AND palette_color.canvas_code = ?"""
 
     print("getting data...")
     if colors:
-        rows = await db_conn.sql_select(sql_colors, (canvas_code))
+        rows = await db_conn.sql_select(sql_colors, (canvas_code, canvas_code))
     else:
         rows = await db_conn.sql_select(
             sql,

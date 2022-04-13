@@ -139,6 +139,21 @@ async def on_command(ctx):
     await log_channel.send(embed=emb)
 
 
+# add a global check for blacklisted users
+class UserBlacklisted(commands.CommandError):
+    pass
+
+
+@bot.application_command_check(
+    slash_commands=True, user_commands=True, message_commands=True
+)
+async def blacklist_check(inter: disnake.AppCmdInter):
+    discord_user = await db_users.get_discord_user(inter.author.id)
+    if discord_user["is_blacklisted"]:
+        raise UserBlacklisted()
+    return True
+
+
 @bot.event
 async def on_slash_command_error(inter, error):
     await on_command_error(inter, error)
@@ -198,6 +213,13 @@ async def on_command_error(ctx, error):
             except Exception:
                 # Give up
                 return
+    if isinstance(error, UserBlacklisted):
+        embed = disnake.Embed(
+            title="Blacklisted",
+            color=disnake.Color.red(),
+            description="You have been blacklisted, you cannot use this bot anymore.",
+        )
+        return await ctx.send(embed=embed, ephemeral=True)
 
     # unhandled errors
     try:
@@ -342,7 +364,19 @@ async def on_message(message):
 
 
 @bot.event
-async def on_guild_join(guild):
+async def on_guild_join(guild: disnake.Guild):
+
+    # check that the guild owner isnt blacklisted
+    discord_user = await db_users.get_discord_user(guild.owner.id)
+    if discord_user["is_blacklisted"]:
+        logger.info(
+            "Tried to join a new server: {0.name} (id: {0.id}) but owner blacklisted: {1.name} ({1.id})".format(
+                guild, guild.owner
+            )
+        )
+        await guild.leave()
+        return
+
     await db_servers.create_server(guild.id, DEFAULT_PREFIX)
     logger.info("joined a new server: {0.name} (id: {0.id})".format(guild))
 

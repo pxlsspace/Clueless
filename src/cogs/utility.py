@@ -12,10 +12,16 @@ from utils.arguments_parser import valid_datetime_type
 from utils.plot_utils import get_theme
 
 from utils.setup import BOT_INVITE, SERVER_INVITE, VERSION, db_servers, db_users
-from utils.time_converter import format_timezone, str_to_td, td_format
+from utils.time_converter import format_datetime, format_timezone, str_to_td, td_format
 from utils.timezoneslib import get_timezone
 from utils.utils import get_lang_emoji, ordinal
-from utils.discord_utils import UserConverter, format_number, image_to_file
+from utils.discord_utils import (
+    AuthorView,
+    PaginatorView,
+    UserConverter,
+    format_number,
+    image_to_file,
+)
 from utils.table_to_image import table_to_image
 
 
@@ -568,6 +574,95 @@ class Utility(commands.Cog):
         embed.set_footer(text="Embed time")
         embed.timestamp = dt
         await ctx.send(embed=embed)
+
+    @commands.command(
+        name="leave",
+        description="Make the bot leave a server. (owner only)",
+        hidden=True,
+        usage="<server ID>",
+    )
+    @commands.is_owner()
+    async def leave(self, ctx, guild_id):
+        try:
+            guild = await self.bot.fetch_guild(guild_id)
+        except Exception as e:
+            return await ctx.send(f":x: {e}")
+        guild_name = guild.name
+        guild_id = guild.id
+        try:
+            await guild.leave()
+        except Exception as e:
+            return await ctx.send(f":x: {e}")
+        return await ctx.send(
+            f"✅ Successfully left guild **{guild_name}** (id: {guild_id})"
+        )
+
+    @commands.command(
+        name="serverlist",
+        description="Show the list of servers the bot is in. (owner only)",
+        hidden=True,
+    )
+    @commands.is_owner()
+    async def serverlist(self, ctx):
+        sql = """
+            SELECT
+                server_name,
+                COUNT(server_name) as nb_usage,
+                MAX(datetime) as last_usage
+            FROM command_usage
+            GROUP BY server_name
+        """
+        stats = await db_servers.db.sql_select(sql)
+        stats_dict = {g["server_name"]: g for g in stats}
+        guilds = self.bot.guilds
+        guilds.sort(key=lambda x: x.member_count, reverse=True)
+        guild_infos = []
+        for guild in guilds:
+            usage = stats_dict.get(guild.name)
+            join_time = guild.me.joined_at
+            if usage:
+                nb_usage = usage["nb_usage"]
+                last_usage = usage["last_usage"]
+                last_usage = datetime.strptime(last_usage, "%Y-%m-%d %H:%M:%S.%f")
+                last_usage.replace(tzinfo=timezone.utc)
+            else:
+                nb_usage = last_usage = None
+
+            res = f"**{guild.name}** *(id: {guild.id})*\n"
+            res += f"• Owner: <@{guild.owner.id}> ({guild.owner})\n"
+            res += f"• Members: `{guild.member_count}`\n"
+            res += f"• Joined: {format_datetime(join_time)} ({format_datetime(join_time,'R')})\n"
+            res += f"• Total Usage: `{format_number(nb_usage)}`\n"
+            if last_usage:
+                res += f"• Last Usage: {format_datetime(last_usage)} ({format_datetime(last_usage,'R')})\n"
+            guild_infos.append(res)
+
+        def split(array, chunks):
+            if array is None:
+                return None
+            return [array[i : i + chunks] for i in range(0, len(array), chunks)]
+
+        server_per_page = 5
+        pages_guilds_infos = split(guild_infos, server_per_page)
+        embeds = []
+        i = 1
+        nb_page = len(pages_guilds_infos)
+        for page in pages_guilds_infos:
+            message = "\n".join(page)
+            embed = disnake.Embed(
+                title=f"Sever list (total: `{len(guilds)}`)",
+                color=0x66C5CC,
+                description=message,
+            )
+            embed.set_footer(text=f"Page {i}/{nb_page}")
+            embeds.append(embed)
+            i += 1
+
+        class ServerPagesView(AuthorView, PaginatorView):
+            pass
+
+        view = ServerPagesView(ctx.author, embeds=embeds)
+        await ctx.send(embed=embeds[0], view=view)
 
 
 def setup(bot: commands.Bot):

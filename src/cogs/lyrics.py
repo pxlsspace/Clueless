@@ -39,7 +39,17 @@ class Lyrics(commands.Cog):
         if query is None:
             # if no query is given, we get the song from the discord activity
             user = ctx.author
-            for activity in user.activities:
+            if hasattr(user, "activities"):
+                activities = user.activities
+            else:
+                # if DM, get the activities from a member object from a mutual guild
+                if user.mutual_guilds:
+                    activities = user.mutual_guilds[0].get_member(user.id).activities
+                else:
+                    return await ctx.send(
+                        "❌ You must share at least one server with me for this to work in DM."
+                    )
+            for activity in activities:
                 if isinstance(activity, Spotify):
                     spotify_title = activity.title
                     spotify_artists = activity.artists

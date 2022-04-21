@@ -98,7 +98,7 @@ class Reduce(commands.Cog):
         start = time.time()
 
         # check on image size
-        limit = int(25e6)
+        limit = int(15e6)
         if img.width * img.height > limit:
             msg = f"This image exceeds the limit of **{format_number(limit)}** pixels for this command.\n"
             return await ctx.send(

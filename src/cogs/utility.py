@@ -471,7 +471,10 @@ class Utility(commands.Cog):
             LANGUAGES.get(translation.dest).title(),
         )
         emb = disnake.Embed(title="Translation", color=0x66C5CC)
-        value = f"```{translation.text}```[[Link to the message]]({message.jump_url})"
+        value = f"```{translation.text}```"
+        # for some reason `jump_url` doesn't work in DM/threads
+        if message.channel is not None:
+            value += f"[[Link to the message]]({message.jump_url})"
         emb.add_field(name=lang, value=value)
         emb.set_footer(
             text="Source: Google Translate",

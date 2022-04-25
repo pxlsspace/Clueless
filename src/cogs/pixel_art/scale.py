@@ -85,7 +85,7 @@ class Scale(commands.Cog):
 
         if not scale or scale == 1:
             msg = "Make sure that:\n"
-            msg += "- The image doesn't have artificats (it needs to be a good quality image)\n"
+            msg += "- The image doesn't have artifacts (it needs to be a good quality image)\n"
             msg += "- The image isn't already at its smallest possible scale"
             error_embed = disnake.Embed(
                 title=":x: **Couldn't downscale that image**",

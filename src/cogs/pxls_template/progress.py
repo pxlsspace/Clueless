@@ -1094,7 +1094,9 @@ class Progress(commands.Cog):
         # get the data
         template_stats = await db_templates.get_all_template_data(template, dt1, dt2)
         if not template_stats:
-            return await ctx.send(":x: Couldn't find any data for this template.")
+            return await ctx.send(
+                ":x: Couldn't find any data for this template *(try again in ~5 minutes)*."
+            )
         template_stats = list([list(r) for r in template_stats])
         df = pd.DataFrame(template_stats, columns=["datetime", "progress"])
         df = df.set_index("datetime")
@@ -1128,10 +1130,16 @@ class Progress(commands.Cog):
                 df = df.groupby(df.index.strftime(format))["progress"].sum()
                 dates = [datetime.strptime(d, format) for d in df.index.tolist()]
                 values = df.values
-                oldest_time = dates[0]
                 if dt1 != datetime.min:
                     values = values[1:]
                     dates = dates[1:]
+                if len(dates) > 0:
+                    oldest_time = (
+                        dates[0]
+                        .replace(tzinfo=user_timezone)
+                        .astimezone(timezone.utc)
+                        .replace(tzinfo=None)
+                    )
 
             if len(dates) == 0 or len(values) == 0:
                 return await ctx.send(":x: The time frame given is too short.")

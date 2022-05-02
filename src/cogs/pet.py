@@ -33,6 +33,7 @@ class Pet(commands.Cog):
         target: The user to pet.
         image: The image or emote to pet.
         """
+        url = None
         if image:
             url = image
         if target:

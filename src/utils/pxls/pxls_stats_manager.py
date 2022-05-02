@@ -102,16 +102,30 @@ class PxlsStatsManager:
         return self.palette
 
     async def update_palette(self):
-        self.palette = None
+        palette = None
         try:
-            self.palette = self.board_info["palette"]
+            palette = self.board_info["palette"]
         except Exception:
             try:
-                self.palette = self.stats_json["board_info"]["palette"]
+                palette = self.stats_json["board_info"]["palette"]
             except Exception:
                 pass
-        if self.palette is None:
+        if palette is None:
+            # couldn't get the palette from the board info or stats info
+            # so we get the last palette saved in the database
             self.palette = await self.get_db_palette()
+        else:
+            # get the palette but ignore restricted colors
+            self.palette = []
+            for color in palette:
+                if "usable" in color:
+                    if color["usable"]:
+                        self.palette.append(color)
+                elif "restricted" in color:
+                    if not color["restricted"]:
+                        self.palette.append(color)
+                else:
+                    self.palette.append(color)
 
     async def get_db_palette(self):
         """Get the last palette saved in the database"""

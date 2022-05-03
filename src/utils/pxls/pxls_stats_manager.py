@@ -98,34 +98,38 @@ class PxlsStatsManager:
     def get_all_canvas_stats(self):
         return self.stats_json["toplist"]["canvas"]
 
-    def get_palette(self):
-        return self.palette
+    def get_palette(self, restricted=False):
+        """Get the current palette, set restricted to True to get unplaceable colors too"""
+        if restricted:
+            return self.palette
+        else:
+            # get the palette without the restricted colors
+            palette = []
+            for color in self.palette:
+                if "usable" in color:
+                    if color["usable"]:
+                        palette.append(color)
+                elif "restricted" in color:
+                    if not color["restricted"]:
+                        palette.append(color)
+                else:
+                    palette.append(color)
+            return palette
 
     async def update_palette(self):
-        palette = None
+        self.palette = None
         try:
-            palette = self.board_info["palette"]
+            self.palette = self.board_info["palette"]
         except Exception:
             try:
-                palette = self.stats_json["board_info"]["palette"]
+                self.palette = self.stats_json["board_info"]["palette"]
             except Exception:
                 pass
-        if palette is None:
+        if self.palette is None:
             # couldn't get the palette from the board info or stats info
             # so we get the last palette saved in the database
             self.palette = await self.get_db_palette()
-        else:
-            # get the palette but ignore restricted colors
-            self.palette = []
-            for color in palette:
-                if "usable" in color:
-                    if color["usable"]:
-                        self.palette.append(color)
-                elif "restricted" in color:
-                    if not color["restricted"]:
-                        self.palette.append(color)
-                else:
-                    self.palette.append(color)
+        return self.palette
 
     async def get_db_palette(self):
         """Get the last palette saved in the database"""
@@ -181,7 +185,7 @@ class PxlsStatsManager:
         the current pxls palette will be used"""
         colors_list = []
         if not palette:
-            palette = [f"#{c['value']}" for c in self.get_palette()]
+            palette = [f"#{c['value']}" for c in self.get_palette(restricted=True)]
         for color in palette:
             rgb = ImageColor.getcolor(color, "RGBA")
             colors_list.append(rgb)

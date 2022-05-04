@@ -8,7 +8,7 @@ from numba.core import types
 from numba.typed import Dict
 
 from utils.setup import stats
-from utils.image.image_utils import get_builtin_palette, hex_to_rgb
+from utils.image.image_utils import hex_to_rgb
 from utils.image.ciede2000 import ciede2000, rgb2lab
 from utils.log import get_logger
 
@@ -256,9 +256,7 @@ def templatize(
 
     if palette is None:
         palette = get_rgba_palette()
-    else:
-        palette = get_builtin_palette("place")
-        palette = np.array(palette, dtype=np.float64)
+
     st = stylize(style_array, style_size, palette, glow_opacity)
     res = fast_templatize(n, m, st, image_array, style_size)
     return res

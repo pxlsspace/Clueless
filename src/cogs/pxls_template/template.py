@@ -11,11 +11,12 @@ from disnake.ext import commands
 from utils.arguments_parser import MyParser
 from utils.discord_utils import (
     IMAGE_URL_REGEX,
+    autocomplete_builtin_palettes,
     format_number,
     get_image_from_message,
     image_to_file,
 )
-from utils.image.image_utils import remove_white_space
+from utils.image.image_utils import get_colors_from_input, remove_white_space
 from utils.pxls.template import (
     STYLES,
     get_style,
@@ -47,6 +48,10 @@ class Template(commands.Cog):
             default=None,
             choices={"Fast (default)": "fast", "Accurate (slower)": "accurate"},
         ),
+        palette: str = commands.Param(
+            default=None,
+            autocomplete=autocomplete_builtin_palettes,
+        ),
     ):
         """Generate a template link from an image.
 
@@ -60,9 +65,12 @@ class Template(commands.Cog):
         oy: The template y-position.
         nocrop: If you don't want the template to be automatically cropped. (default: False)
         matching: The color matching algorithm to use.
+        palette: A palette name or list of colors (name or hex) seprated by a comma. (default: pxls)
         """
         await inter.response.defer()
-        await self.template(inter, image, style, glow, title, ox, oy, nocrop, matching)
+        await self.template(
+            inter, image, style, glow, title, ox, oy, nocrop, matching, palette
+        )
 
     @_template.autocomplete("style")
     async def autocomplete_style(self, inter: disnake.AppCmdInter, user_input: str):
@@ -72,7 +80,7 @@ class Template(commands.Cog):
     @commands.command(
         name="template",
         description="Generate a template link from an image.",
-        usage="<image|url> [-style <style>] [-glow] [-title <title>] [-ox <ox>] [-oy <oy>] [-nocrop] [-matching fast|accurate]",
+        usage="<image|url> [-style <style>] [-glow] [-title <title>] [-ox <ox>] [-oy <oy>] [-nocrop] [-matching fast|accurate] [-palette ...]",
         help="""- `<image|url>`: an image URL or an attached file
               - `[-style <style>]`: the name or URL of a template style (use `>styles` to see the list)
               - `[-glow]`: add glow to the template
@@ -80,7 +88,8 @@ class Template(commands.Cog):
               - `[-ox <ox>]`: template x-position
               - `[-oy <oy>]`: template y-position
               - `[-nocrop]`: if you don't want the template to be automatically cropped
-              - `[-matching fast|accurate]`: the color matching algorithm to use""",
+              - `[-matching fast|accurate]`: the color matching algorithm to use
+              - `[-palette ...]`: the palette to use for the template (palette name or list of colors seprated by a comma.)""",
         aliases=["templatize", "temp"],
     )
     async def p_template(self, ctx, *args):
@@ -94,12 +103,14 @@ class Template(commands.Cog):
         parser.add_argument("-oy", action="store", required=False)
         parser.add_argument("-nocrop", action="store_true", default=False)
         parser.add_argument("-matching", choices=["fast", "accurate"], required=False)
+        parser.add_argument("-palette", action="store", nargs="*")
 
         try:
             parsed_args = parser.parse_args(args)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
         url = parsed_args.url[0] if parsed_args.url else None
+        palette = " ".join(parsed_args.palette) if parsed_args.palette else None
         async with ctx.typing():
             await self.template(
                 ctx,
@@ -111,10 +122,13 @@ class Template(commands.Cog):
                 parsed_args.oy,
                 parsed_args.nocrop,
                 parsed_args.matching,
+                palette,
             )
 
     @staticmethod
-    async def template(ctx, image_url, style_name, glow, title, ox, oy, nocrop, matching):
+    async def template(
+        ctx, image_url, style_name, glow, title, ox, oy, nocrop, matching, palette
+    ):
         # get the image from the message
         try:
             img, url = await get_image_from_message(ctx, image_url)
@@ -184,22 +198,34 @@ class Template(commands.Cog):
         if matching is None:
             matching = "fast"  # default = 'fast'
 
+        # get the palette
+        if not palette:
+            palette_names = ["pxls (current)"]
+            rgba_palette = get_rgba_palette()
+            hex_palette = None  # default pxls
+        else:
+            try:
+                rgba_palette, hex_palette, palette_names = get_colors_from_input(
+                    palette, accept_colors=True, accept_palettes=True
+                )
+            except ValueError as e:
+                return await ctx.send(f":x: {e}")
+
         # crop the white space around the image
         if not (nocrop):
             img = remove_white_space(img)
 
-        # reduce the image to the pxls palette
+        # reduce the image to the given palette
         img_array = np.array(img)
-        palette = get_rgba_palette()
         loop = asyncio.get_running_loop()
         reduced_array = await loop.run_in_executor(
-            None, reduce, img_array, palette, matching
+            None, reduce, img_array, rgba_palette, matching
         )
 
         # convert the image to a template style
         loop = asyncio.get_running_loop()
         template_array = await loop.run_in_executor(
-            None, templatize, style, reduced_array, glow_opacity
+            None, templatize, style, reduced_array, glow_opacity, rgba_palette
         )
         template_image = Image.fromarray(template_array)
         total_amount = np.sum(reduced_array != 255)
@@ -208,12 +234,12 @@ class Template(commands.Cog):
 
         # create and send the image
         embed = disnake.Embed(title="**Template Image**", color=0x66C5CC)
-        embed.description = f"**Title**: {title if title else '`N/A`'}\n**Style**: {style['name']}\n**Glow**: {'yes' if glow else 'no'}\n**Size**: {total_amount} pixels ({img.width}x{img.height})"
+        embed.description = f"**Title**: {title if title else '`N/A`'}\n**Style**: {style['name']}\n**Glow**: {'yes' if glow else 'no'}\n**Palette**: {', '.join(palette_names)}\n**Size**: {total_amount} pixels ({img.width}x{img.height})"
         embed.set_footer(
             text="⚠️ Warning: if you delete this message the template WILL break."
         )
         embed.set_author(name=ctx.author, icon_url=ctx.author.display_avatar)
-        reduced_image = Image.fromarray(stats.palettize_array(reduced_array))
+        reduced_image = Image.fromarray(stats.palettize_array(reduced_array, hex_palette))
         reduced_file = await image_to_file(reduced_image, "reduced.png")
         embed.set_thumbnail(url="attachment://reduced.png")
         file = await image_to_file(template_image, "template.png", embed)

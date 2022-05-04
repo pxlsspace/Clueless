@@ -541,6 +541,15 @@ PALETTES = [
             "ffffff",
         ],
     },
+    {
+        "names": ["gameboy", "c56a"],
+        "colors": [
+            "051620",
+            "316950",
+            "86C06C",
+            "DFF8D1",
+        ],
+    },
 ]
 
 

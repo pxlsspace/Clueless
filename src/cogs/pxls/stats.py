@@ -54,7 +54,7 @@ class PxlsStats(commands.Cog):
         placemap = stats.placemap_array
         total_amount = board.shape[0] * board.shape[1]
         total_placeable = np.sum(placemap != 255)
-        total_non_virgin = np.sum(virginmap == 0)
+        total_non_virgin = np.sum(np.logical_and(virginmap == 0, placemap == 0))
         pixel_per_user = int(total_placed) / int(active_users)
 
         # get canvas info

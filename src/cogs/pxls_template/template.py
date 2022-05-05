@@ -127,7 +127,7 @@ class Template(commands.Cog):
 
     @staticmethod
     async def template(
-        ctx, image_url, style_name, glow, title, ox, oy, nocrop, matching, palette
+        ctx, image_url, style_name, glow, title, ox, oy, nocrop, matching, palette=None
     ):
         # get the image from the message
         try:

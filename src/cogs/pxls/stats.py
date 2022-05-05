@@ -82,7 +82,7 @@ class PxlsStats(commands.Cog):
 
         # calculate the ETA with the filling speed in the last 2 days
         goal = 95  # % of canvas filled
-        time_interval = 2  # number of days to calculate the recent filling speed
+        time_interval = 1  # number of days to calculate the recent filling speed
         time_to_search = round_minutes_down(
             datetime.utcnow() - timedelta(days=time_interval) - timedelta(minutes=1)
         )
@@ -106,6 +106,10 @@ class PxlsStats(commands.Cog):
             )
             pixels_until_goal = (total_placeable * goal / 100) - total_non_virgin
             eta = pixels_until_goal / canvas_fill_speed_interval
+            if eta <= 0:
+                goal = 100
+                pixels_until_goal = (total_placeable * goal / 100) - total_non_virgin
+                eta = pixels_until_goal / canvas_fill_speed_interval
 
         if eta is None:
             pass
@@ -120,7 +124,10 @@ class PxlsStats(commands.Cog):
             if days:
                 eta_array.append(f"{days} day{'s' if days > 1 else ''}")
             if hours or days == 0:
-                eta_array.append(f"{hours} hour{'s' if days > 1 else ''}")
+                if hours == 0 and days == 0:
+                    eta_array.append("< 1 hour")
+                else:
+                    eta_array.append(f"{hours} hour{'s' if hours > 1 else ''}")
             eta = ", ".join(eta_array)
 
         general_stats_text = "• Total Users: `{}`\n• Total Factions: `{}`".format(

@@ -482,6 +482,25 @@ class Utility(commands.Cog):
         )
         await inter.send(embed=emb, ephemeral=True)
 
+    @commands.message_command(name="Unþornify")
+    async def unthornify(
+        self, inter: disnake.ApplicationCommandInteraction, message: disnake.Message
+    ):
+        await inter.response.defer(ephemeral=True)
+        text = message.content
+        if len(text) == 0:
+            return await inter.send(
+                embed=disnake.Embed(title="No text found 😢", color=disnake.Color.red()),
+                ephemeral=True,
+            )
+        clean_text = re.sub(r"þ", "th", text)
+        emb = disnake.Embed(title="Translation", color=0x66C5CC)
+        value = f"```{clean_text}```"
+        # for some reason `jump_url` doesn't work in DM/threads
+        if message.channel is not None:
+            value += f"[[Link to the message]]({message.jump_url})"
+        await inter.send(embed=emb, ephemeral=True)
+
     @commands.slash_command(name="timestamp")
     async def _timestamp(
         self,

@@ -30,6 +30,7 @@ googletrans = "3.1.0a0"
 [tool.poetry.dev-dependencies]
 black = "^22.1.0"
 flake8 = "^4.0.1"
+isort = "^5.10.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -37,3 +38,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length=90
+
+[tool.isort]
+profile = "black"
+line_length = 90

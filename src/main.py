@@ -74,7 +74,13 @@ async def on_command(ctx):
     """Save the command usage in the database and in a discord channel if set"""
     slash_command = isinstance(ctx, disnake.ApplicationCommandInteraction)
     if slash_command:
-        command_name = ctx.application_command.qualified_name
+        command_name = ctx.data.name
+        for option in ctx.data.options:
+            if option.type in (
+                disnake.OptionType.sub_command,
+                disnake.OptionType.sub_command_group,
+            ):
+                command_name += f" {option.name}"
     else:
         command_name = ctx.command.qualified_name
 
@@ -175,7 +181,13 @@ async def on_command_error(ctx, error):
 
     slash_command = isinstance(ctx, disnake.ApplicationCommandInteraction)
     if slash_command:
-        command_name = ctx.application_command.qualified_name
+        command_name = ctx.data.name
+        for option in ctx.data.options:
+            if option.type in (
+                disnake.OptionType.sub_command,
+                disnake.OptionType.sub_command_group,
+            ):
+                command_name += f" {option.name}"
     else:
         command_name = ctx.command.qualified_name
 

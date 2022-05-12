@@ -303,8 +303,16 @@ class UserManager(commands.Cog):
         3. Click the `[Add Key]` button
         4. Enter the canvas code and paste the log key
         *(Repeat for every key)*"""
+        if isinstance(inter, disnake.AppCmdInter):
+            usage = "/placemap canvas-code:<the canvas you want>"
+        else:
+            usage = f"{inter.prefix}placemap <canvas code>"
         info_embed.add_field(name="How does this work?", value=instructions)
-
+        info_embed.add_field(
+            name="Now how do I get my placemaps?",
+            value=f"You can simply use `{usage}`",
+            inline=False,
+        )
         info_embed.set_footer(
             text="Note: your log keys will stay private, only you and the bot maintainer will have access to them."
         )

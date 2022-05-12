@@ -5,7 +5,7 @@ from disnake.ext import commands
 
 from utils.discord_utils import image_to_file, format_number
 from utils.setup import db_stats, db_users
-from utils.arguments_parser import parse_speed_args
+from utils.arguments_parser import parse_speed_args, valid_datetime_type
 from utils.table_to_image import table_to_image
 from utils.time_converter import (
     format_datetime,
@@ -43,37 +43,26 @@ class PxlsSpeed(commands.Cog):
 
         Parameters
         ----------
-        usernames: A list pxls user name separated by a space. ('!' = your set username.)
+        usernames: A list pxls usernames separated by a space. ('!' = your set username.)
         last: Show the speed in the last x year/month/week/day/hour/minute/second. (format: ?y?mo?w?d?h?m?s)
         canvas: To show the speed during the whole current canvas.
-        groupby: Show a bar chart for each hour/day/week/month/canvas/.
+        groupby: Show a bar chart for each hour/day/week/month/canvas.
         progress: To compare the progress instead of alltime/canvas stats.
         before: To show the speed before a specific date (format: YYYY-mm-dd HH:MM)
         after: To show the speed after a specific date (format: YYYY-mm-dd HH:MM)
         """
         await inter.response.defer()
-        args = ()
-        if usernames:
-            args += tuple(usernames.split(" "))
-        if last:
-            args += ("-last", last)
-        if canvas:
-            args += ("-canvas",)
-        if groupby:
-            args += ("-groupby", groupby)
-        if progress:
-            args += ("-progress",)
         if before:
-            args += ("-before",) + tuple(before.split(" "))
+            before = before.split(" ")
         if after:
-            args += ("-after",) + tuple(after.split(" "))
-        await self.speed(inter, *args)
+            after = after.split(" ")
+        await self.speed(inter, usernames, last, canvas, groupby, progress, before, after)
 
     @commands.command(
         name="speed",
-        usage="<name> [-canvas] [-groupby [hour|day|week|month]] [-progress] [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
+        usage="<username> [-canvas] [-groupby [hour|day|week|month]] [-progress] [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
         description="Show the speed of a pxls user with a graph.",
-        help="""- `<names>`: list of pxls users names separated by a space (`!` = your set username)
+        help="""- `<usernames>`: list of pxls usernames separated by a space (`!` = your set username)
               - `[-canvas|-c]`: show the canvas stats
               - `[-groupby|-g]`: show a bar chart for each `hour`, `day`, `week`, `month` or `canvas`
               - `[-progress|-p]`: compare the progress between users
@@ -82,10 +71,34 @@ class PxlsSpeed(commands.Cog):
               - `[-after <date time>]`: show the speed after a date and time (format YYYY-mm-dd HH:MM)""",
     )
     async def p_speed(self, ctx, *args):
-        async with ctx.typing():
-            await self.speed(ctx, *args)
+        try:
+            params = parse_speed_args(args)
+        except ValueError as e:
+            return await ctx.send(f"❌ {e}")
 
-    async def speed(self, ctx, *args):
+        async with ctx.typing():
+            await self.speed(
+                ctx,
+                " ".join(params["usernames"]) if params["usernames"] else None,
+                params["last"],
+                params["canvas"],
+                params["groupby"],
+                params["progress"],
+                params["before"],
+                params["after"],
+            )
+
+    async def speed(
+        self,
+        ctx,
+        usernames=None,
+        last=None,
+        canvas=False,
+        groupby=None,
+        progress=False,
+        before: datetime = None,
+        after: datetime = None,
+    ):
         """Show the average speed of a user in the last x min, hours or days"""
 
         # get the user theme
@@ -95,49 +108,47 @@ class PxlsSpeed(commands.Cog):
         font = discord_user["font"]
         theme = get_theme(current_user_theme)
 
-        try:
-            param = parse_speed_args(args, get_timezone(user_timezone))
-        except ValueError as e:
-            return await ctx.send(f"❌ {e}")
-
         # select the discord user's pxls username if it has one linked
-        names = param["names"]
         pxls_user_id = discord_user["pxls_user_id"]
         is_slash = not isinstance(ctx, commands.Context)
         cmd_name = "user setname" if is_slash else "setname"
         prefix = "/" if is_slash else ctx.prefix
-        usage_text = (
-            f"(You can set your default username with `{prefix}{cmd_name} <username>`)"
-        )
+        usage_text = f"(Use {'`/speed usernames:<your name>`' if is_slash else f'`{prefix}speed <your name>`'} or you can set your default name with `{prefix}{cmd_name} <your name>`)"
 
-        if len(names) == 0:
+        if usernames is None:
+            usernames = []
+        else:
+            if "," in usernames:
+                usernames = usernames.split(",")
+            else:
+                usernames = usernames.split(" ")
+
+        if len(usernames) == 0:
             if pxls_user_id is None:
                 return await ctx.send(
                     "❌ You need to specify at least one username.\n" + usage_text
                 )
             else:
                 name = await db_users.get_pxls_user_name(pxls_user_id)
-                names.append(name)
+                usernames.append(name)
 
-        if "!" in names:
+        if "!" in usernames:
             if pxls_user_id is None:
                 return await ctx.send(
                     "❌ You need to have a set username to use `!`.\n" + usage_text
                 )
             else:
                 name = await db_users.get_pxls_user_name(pxls_user_id)
-                names = [name if u == "!" else u for u in names]
+                usernames = [name if u == "!" else u for u in usernames]
 
         # check on date arguments
-        canvas_opt = param["canvas"]
-        groupby_opt = param["groupby"]
-        if param["before"] is None and param["after"] is None:
+        if before is None and after is None:
             # if no date argument and -canvas : show the whole canvas
-            if param["last"] is None and canvas_opt:
-                old_time = datetime(1900, 1, 1, 0, 0, 0)
+            if last is None and canvas:
+                old_time = datetime.min
                 recent_time = datetime.now(timezone.utc)
             else:
-                date = param["last"] or "1d"
+                date = last or "1d"
                 input_time = str_to_td(date)
                 if not input_time:
                     return await ctx.send(
@@ -147,24 +158,38 @@ class PxlsSpeed(commands.Cog):
                 recent_time = datetime.now(timezone.utc)
                 old_time = round_minutes_down(datetime.now(timezone.utc) - input_time)
         else:
-            old_time = param["after"] or datetime.min
-            recent_time = param["before"] or datetime.max
+            try:
+                # Convert the dates to datetime object and check if they are valid
+                if after:
+                    after = valid_datetime_type(after, get_timezone(user_timezone))
+                if before:
+                    before = valid_datetime_type(before, get_timezone(user_timezone))
+            except ValueError as e:
+                return await ctx.send(f"❌ {e}")
+
+            if after and before and before < after:
+                return await ctx.send(
+                    ":x: The 'before' date can't be earlier than the 'after' date."
+                )
+
+            old_time = after or datetime.min
+            recent_time = before or datetime.max
 
         # get the data we need
-        if groupby_opt and groupby_opt != "canvas":
+        if groupby and groupby != "canvas":
             (past_time, now_time, stats) = await db_stats.get_grouped_stats_history(
-                names, old_time, recent_time, groupby_opt, canvas_opt
+                usernames, old_time, recent_time, groupby, canvas
             )
-        elif groupby_opt == "canvas":
-            (past_time, now_time, stats) = await db_stats.get_stats_per_canvas(names)
+        elif groupby == "canvas":
+            (past_time, now_time, stats) = await db_stats.get_stats_per_canvas(usernames)
         else:
             (past_time, now_time, stats) = await db_stats.get_stats_history(
-                names, old_time, recent_time, canvas_opt
+                usernames, old_time, recent_time, canvas
             )
 
         # check that we found data
         if len(stats) == 0:
-            msg = "❌ User{} not found.".format("s" if len(names) > 1 else "")
+            msg = "❌ User{} not found.".format("s" if len(usernames) > 1 else "")
             return await ctx.send(msg)
 
         # check that we can calculate the speed
@@ -178,7 +203,7 @@ class PxlsSpeed(commands.Cog):
         found_but_no_data = False
         for user in stats:
             data = user[1]
-            if groupby_opt and groupby_opt != "canvas":
+            if groupby and groupby != "canvas":
                 # truncate the first data if we're groupping by day/hour
                 data = data[1:]
 
@@ -190,7 +215,7 @@ class PxlsSpeed(commands.Cog):
             # current pixels
             current_pixels = data[-1]["pixels"]
 
-            if groupby_opt:
+            if groupby:
                 if all([d["placed"] is None for d in data]):
                     # skip the user if all the values are None
                     continue
@@ -214,8 +239,8 @@ class PxlsSpeed(commands.Cog):
             speed_px_d = speed_px_h * 24
 
             # format data for the graph
-            if groupby_opt:
-                if groupby_opt == "month":
+            if groupby:
+                if groupby == "month":
                     dates = [
                         datetime.strptime(
                             stat["first_datetime"], "%Y-%m-%d %H:%M:%S"
@@ -224,7 +249,7 @@ class PxlsSpeed(commands.Cog):
                     ]
                     user_timezone = None
 
-                elif groupby_opt == "week":
+                elif groupby == "week":
                     dates = []
                     for stat in data:
                         first_dt = datetime.strptime(
@@ -237,11 +262,11 @@ class PxlsSpeed(commands.Cog):
                         dates.append(week_dates)
                     user_timezone = None
 
-                elif groupby_opt == "day":
+                elif groupby == "day":
                     dates = [stat["first_datetime"][:10] for stat in data]
                     user_timezone = None
 
-                elif groupby_opt == "hour":
+                elif groupby == "hour":
                     dates = [stat["first_datetime"][:13] for stat in data]
                     # convert the dates to the user's timezone
                     dates = [datetime.strptime(d, "%Y-%m-%d %H") for d in dates]
@@ -251,7 +276,7 @@ class PxlsSpeed(commands.Cog):
                         for d in dates
                     ]
 
-                elif groupby_opt == "canvas":
+                elif groupby == "canvas":
                     dates = ["C" + stat["canvas_code"] for stat in data]
                     user_timezone = None
 
@@ -266,7 +291,7 @@ class PxlsSpeed(commands.Cog):
                     min_pixels = max_pixels = average = None
             else:
                 dates = [stat["datetime"] for stat in data]
-                if param["progress"]:
+                if progress:
                     # substract the first value to each value so they start at 0
                     pixels = [
                         (
@@ -280,7 +305,7 @@ class PxlsSpeed(commands.Cog):
                     pixels = [stat["pixels"] for stat in data]
 
             user_data = [name, current_pixels, diff_pixels]
-            if groupby_opt:
+            if groupby:
                 user_data.append(average)
                 user_data.append(min_pixels)
                 user_data.append(max_pixels)
@@ -292,10 +317,13 @@ class PxlsSpeed(commands.Cog):
             formatted_data.append(user_data)
 
         if len(formatted_data) == 0:
-            if found_but_no_data and not canvas_opt:
-                msg = f"❌ User{'s' if len(names) > 1 else ''} not found in the all-time leaderboard.\n(try using `-canvas` to use the canvas data instead.)"
+            if found_but_no_data and not canvas:
+                if is_slash:
+                    msg = f"❌ User{'s' if len(usernames) > 1 else ''} not found in the all-time leaderboard.\n(try using `/speed canvas:True` to use the canvas data instead.)"
+                else:
+                    msg = f"❌ User{'s' if len(usernames) > 1 else ''} not found in the all-time leaderboard.\n(try using `{prefix}speed -canvas` to use the canvas data instead.)"
             else:
-                msg = f"❌ User{'s' if len(names) > 1 else ''} not found."
+                msg = f"❌ User{'s' if len(usernames) > 1 else ''} not found."
             return await ctx.send(msg)
 
         # sort the data by the 3rd column (progress in the time frame)
@@ -305,9 +333,9 @@ class PxlsSpeed(commands.Cog):
         table_colors = theme.get_palette(len(formatted_data))
 
         # make the title
-        if groupby_opt:
-            title = "Speed {}".format("per " + groupby_opt if groupby_opt else "")
-        elif canvas_opt and param["last"] is None:
+        if groupby:
+            title = "Speed {}".format("per " + groupby if groupby else "")
+        elif canvas and last is None:
             title = "Canvas Speed"
         else:
             title = "Speed"
@@ -316,10 +344,10 @@ class PxlsSpeed(commands.Cog):
         diff_time_str = td_format(diff_time)
 
         # get the image of the table
-        if groupby_opt:
+        if groupby:
             # add a "min" and "max" columns if groupby option
             alignments = ["center", "right", "right", "right", "right", "right"]
-            titles = ["Name", "Pixels", "Progress", f"px/{groupby_opt}", "Min", "Max"]
+            titles = ["Name", "Pixels", "Progress", f"px/{groupby}", "Min", "Max"]
 
         else:
             alignments = ["center", "right", "right", "right", "right"]
@@ -338,7 +366,7 @@ class PxlsSpeed(commands.Cog):
 
         # create the graph
         graph_data = [[d[0], d[-2], d[-1]] for d in formatted_data]
-        if groupby_opt:
+        if groupby:
             graph_fig = await get_grouped_graph(graph_data, title, theme, user_timezone)
         else:
             graph_fig = await get_stats_graph(graph_data, title, theme, user_timezone)

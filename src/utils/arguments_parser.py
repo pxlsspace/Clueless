@@ -48,7 +48,7 @@ def parse_leaderboard_args(args, user_timezone: timezone = None):
     return vars(res)
 
 
-def parse_speed_args(args, user_timezone: timezone = None):
+def parse_speed_args(args):
     """Parse the speed command arguments, return a dictionary with the values parsed:
 
     dict:{
@@ -57,7 +57,7 @@ def parse_speed_args(args, user_timezone: timezone = None):
         'after': <datetime> | None
     }"""
     parser = MyParser(add_help=False)
-    parser.add_argument("names", type=str, nargs="*", default=[])
+    parser.add_argument("usernames", type=str, nargs="*", default=[])
     parser.add_argument("-canvas", "-c", action="store_true", default=False)
     parser.add_argument(
         "-groupby",
@@ -72,16 +72,6 @@ def parse_speed_args(args, user_timezone: timezone = None):
     parser.add_argument("-before", dest="before", nargs="+", default=None)
 
     res = parser.parse_args(args)
-
-    # Convert the args to datetime and check if they are valid
-    if res.after:
-        res.after = valid_datetime_type(res.after, user_timezone)
-    if res.before:
-        res.before = valid_datetime_type(res.before, user_timezone)
-
-    if res.after and res.before and res.before < res.after:
-        raise ValueError("The 'before' date can't be earlier than the 'after' date.")
-
     return vars(res)
 
 

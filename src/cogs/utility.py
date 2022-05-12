@@ -475,7 +475,18 @@ class Utility(commands.Cog):
         # for some reason `jump_url` doesn't work in DM/threads
         if message.channel is not None:
             value += f"[[Link to the message]]({message.jump_url})"
-        emb.add_field(name=lang, value=value)
+
+        description = f"**{lang}**\n{value}"
+        if len(description) > 4096:
+            return await inter.send(
+                embed=disnake.Embed(
+                    title="Translation",
+                    color=disnake.Color.red(),
+                    description="Error: the text exceeds the discord size limit of 4096 characters.",
+                ),
+                ephemeral=True,
+            )
+        emb.description = description
         emb.set_footer(
             text="Source: Google Translate",
             icon_url="https://translate.google.com/favicon.ico",

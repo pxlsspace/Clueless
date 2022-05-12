@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from disnake.ext import commands
 
 from utils.discord_utils import image_to_file, format_number
-from utils.setup import db_stats, db_users
+from utils.setup import db_stats, db_users, stats as stats_manager
 from utils.arguments_parser import parse_speed_args, valid_datetime_type
 from utils.table_to_image import table_to_image
 from utils.time_converter import (
@@ -31,7 +31,7 @@ class PxlsSpeed(commands.Cog):
         inter: disnake.AppCmdInter,
         usernames: str = None,
         last: str = None,
-        canvas: bool = False,
+        alltime: bool = False,
         groupby: str = commands.Param(
             default=None, choices=["hour", "day", "week", "month", "canvas"]
         ),
@@ -45,7 +45,7 @@ class PxlsSpeed(commands.Cog):
         ----------
         usernames: A list pxls usernames separated by a space. ('!' = your set username.)
         last: Show the speed in the last x year/month/week/day/hour/minute/second. (format: ?y?mo?w?d?h?m?s)
-        canvas: To show the speed during the whole current canvas.
+        alltime: To use the all-time data (default: False).
         groupby: Show a bar chart for each hour/day/week/month/canvas.
         progress: To compare the progress instead of alltime/canvas stats.
         before: To show the speed before a specific date (format: YYYY-mm-dd HH:MM)
@@ -56,14 +56,16 @@ class PxlsSpeed(commands.Cog):
             before = before.split(" ")
         if after:
             after = after.split(" ")
-        await self.speed(inter, usernames, last, canvas, groupby, progress, before, after)
+        await self.speed(
+            inter, usernames, last, not (alltime), groupby, progress, before, after
+        )
 
     @commands.command(
         name="speed",
-        usage="<username> [-canvas] [-groupby [hour|day|week|month]] [-progress] [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
+        usage="<username> [-alltime] [-groupby [hour|day|week|month]] [-progress] [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
         description="Show the speed of a pxls user with a graph.",
         help="""- `<usernames>`: list of pxls usernames separated by a space (`!` = your set username)
-              - `[-canvas|-c]`: show the canvas stats
+              - `[-alltime|-at]`: show the all-time stats
               - `[-groupby|-g]`: show a bar chart for each `hour`, `day`, `week`, `month` or `canvas`
               - `[-progress|-p]`: compare the progress between users
               - `[-last ?y?mo?w?d?h?m?s]` Show the progress in the last x years/months/weeks/days/hours/minutes/seconds (default: 1d)
@@ -81,7 +83,7 @@ class PxlsSpeed(commands.Cog):
                 ctx,
                 " ".join(params["usernames"]) if params["usernames"] else None,
                 params["last"],
-                params["canvas"],
+                not (params["alltime"]),
                 params["groupby"],
                 params["progress"],
                 params["before"],
@@ -93,11 +95,11 @@ class PxlsSpeed(commands.Cog):
         ctx,
         usernames=None,
         last=None,
-        canvas=False,
+        canvas=True,
         groupby=None,
         progress=False,
-        before: datetime = None,
-        after: datetime = None,
+        before=None,
+        after=None,
     ):
         """Show the average speed of a user in the last x min, hours or days"""
 
@@ -182,6 +184,7 @@ class PxlsSpeed(commands.Cog):
             )
         elif groupby == "canvas":
             (past_time, now_time, stats) = await db_stats.get_stats_per_canvas(usernames)
+            canvas = False
         else:
             (past_time, now_time, stats) = await db_stats.get_stats_history(
                 usernames, old_time, recent_time, canvas
@@ -206,6 +209,13 @@ class PxlsSpeed(commands.Cog):
             if groupby and groupby != "canvas":
                 # truncate the first data if we're groupping by day/hour
                 data = data[1:]
+            elif groupby and groupby == "canvas":
+                # remove all the first "None" values
+                for d in data[::]:
+                    if d["placed"] is None:
+                        data.remove(d)
+                    else:
+                        break
 
             if len(data) == 0:
                 continue
@@ -319,9 +329,9 @@ class PxlsSpeed(commands.Cog):
         if len(formatted_data) == 0:
             if found_but_no_data and not canvas:
                 if is_slash:
-                    msg = f"❌ User{'s' if len(usernames) > 1 else ''} not found in the all-time leaderboard.\n(try using `/speed canvas:True` to use the canvas data instead.)"
+                    msg = f"❌ User{'s' if len(usernames) > 1 else ''} not found in the all-time leaderboard.\n(try using `/speed alltime:False` to use the canvas data instead.)"
                 else:
-                    msg = f"❌ User{'s' if len(usernames) > 1 else ''} not found in the all-time leaderboard.\n(try using `{prefix}speed -canvas` to use the canvas data instead.)"
+                    msg = f"❌ User{'s' if len(usernames) > 1 else ''} not found in the all-time leaderboard.\n(try using `{prefix}speed` without `-alltime` to use the canvas data instead.)"
             else:
                 msg = f"❌ User{'s' if len(usernames) > 1 else ''} not found."
             return await ctx.send(msg)
@@ -333,13 +343,12 @@ class PxlsSpeed(commands.Cog):
         table_colors = theme.get_palette(len(formatted_data))
 
         # make the title
-        if groupby:
-            title = "Speed {}".format("per " + groupby if groupby else "")
-        elif canvas and last is None:
+        if canvas:
             title = "Canvas Speed"
         else:
-            title = "Speed"
-
+            title = "All-time Speed"
+        if groupby:
+            title += f" (grouped by {groupby})"
         diff_time = round_minutes_down(now_time) - round_minutes_down(past_time)
         diff_time_str = td_format(diff_time)
 
@@ -388,6 +397,21 @@ class PxlsSpeed(commands.Cog):
         )
         emb = disnake.Embed(color=hex_str_to_int(theme.get_palette(1)[0]))
         emb.add_field(name=title, value=description)
+
+        if canvas:
+            canvas_start = await db_stats.get_canvas_start_date(
+                await stats_manager.get_canvas_code()
+            )
+            if (
+                canvas_start
+                and old_time != datetime.min
+                and old_time < canvas_start.replace(tzinfo=timezone.utc)
+            ):
+                emb.set_footer(
+                    text="Warning: The time given is earlier than the canvas start, use {} to use the all-time data.".format(
+                        "/speed alltime:True" if is_slash else f"{prefix}speed -alltime"
+                    )
+                )
 
         # send the embed with the graph image
         file = await image_to_file(res_image, "speed.png", emb)

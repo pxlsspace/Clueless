@@ -58,7 +58,9 @@ def parse_speed_args(args):
     }"""
     parser = MyParser(add_help=False)
     parser.add_argument("usernames", type=str, nargs="*", default=[])
-    parser.add_argument("-canvas", "-c", action="store_true", default=False)
+    parser.add_argument("-canvas", "-c", action="store_true", default=True)
+    parser.add_argument("-alltime", "-at", action="store_true", default=False)
+
     parser.add_argument(
         "-groupby",
         "-g",

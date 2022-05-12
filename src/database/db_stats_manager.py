@@ -640,3 +640,19 @@ class DbStatsManager:
             return [r["name"] for r in rows]
         else:
             return None
+
+    async def get_canvas_start_date(self, canvas_code):
+        sql = "SELECT MIN(datetime),datetime FROM record WHERE canvas_code = ?"
+        start_date = await self.db.sql_select(sql, canvas_code)
+        if start_date:
+            return start_date[0]["datetime"]
+        else:
+            return None
+
+    async def get_canvas_end_date(self, canvas_code):
+        sql = "SELECT MAX(datetime),datetime FROM record WHERE canvas_code = ?"
+        start_date = await self.db.sql_select(sql, canvas_code)
+        if start_date:
+            return start_date[0]["datetime"]
+        else:
+            return None

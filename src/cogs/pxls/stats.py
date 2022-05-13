@@ -378,17 +378,22 @@ class PxlsStats(commands.Cog):
             else:
                 # search for the last online time
                 last_online = await db_stats.get_last_online(
-                    user_id, not (bool(alltime_count)), alltime_count or canvas_count
+                    user_id,
+                    not (bool(alltime_count)),
+                    alltime_count or canvas_count,
+                    current_canvas_code,
                 )
                 if last_online is not None:
-                    last_online_date = last_online["datetime"]
-                    if last_online["record_id"] == 1:
-                        last_online_date = "over " + format_datetime(
-                            last_online_date, "R"
-                        )
-                    else:
-                        last_online_date = format_datetime(last_online_date, "R")
-
+                    last_online_date = (
+                        f"*{format_datetime(last_online['datetime'], 'R')}*"
+                    )
+                    canvas_code = last_online["canvas_code"]
+                    if canvas_code != current_canvas_code:
+                        last_online_date += f" `(c{canvas_code})`"
+                else:
+                    last_online_date = await db_stats.find_record(datetime.min)
+                    last_online_date = last_online_date["datetime"]
+                    last_online_date = f"*over {format_datetime(last_online_date, 'R')}*"
                 # inactive
                 if canvas_count == 0 or canvas_count is None:
                     status = "inactive"
@@ -405,9 +410,9 @@ class PxlsStats(commands.Cog):
 
         description = f"**Status**: {status_emoji} `{status}`\n"
         if session_start_str is not None:
-            description += f"*(Started placing: {session_start_str})*\n"
+            description += f"*Started placing: {session_start_str}*\n"
         if last_online_date is not None:
-            description += f"*(Last pixel: {last_online_date})*\n"
+            description += f"*Last pixel:* {last_online_date}\n"
 
         description += f"[Profile page]({profile_url})"
 

@@ -567,25 +567,60 @@ class DbStatsManager:
         else:
             return res[0]
 
-    async def get_last_online(self, user_id, canvas: bool, last_count):
-        sql = """
-            SELECT datetime, canvas_code, pxls_user_stat.record_id
-            FROM pxls_user_stat
-            JOIN record on record.record_id = pxls_user_stat.record_id
-            JOIN pxls_name on pxls_name.pxls_name_id = pxls_user_stat.pxls_name_id
-            WHERE pxls_user_id = ?
-            AND {} = ?
-            ORDER BY datetime
-            LIMIT 1""".format(
-            "canvas_count" if canvas else "alltime_count"
-        )
+    async def get_last_online(self, user_id, canvas: bool, last_count, canvas_code):
 
-        res = await self.db.sql_select(sql, (user_id, last_count))
+        # find the name ID
+        sql = """SELECT pxls_name_id FROM pxls_name WHERE pxls_user_id = ?"""
+        name_id = await self.db.sql_select(sql, user_id)
+        name_id = name_id[0]["pxls_name_id"]
 
-        if len(res) == 0:
-            return None
+        # find the last count different than the current one
+        if canvas:
+            # find the record_id of the canvas start
+            first_canvas_record = await self.find_record(datetime.min, canvas_code)
+            first_canvas_record_dt = first_canvas_record["datetime"]
+            sql = """
+                SELECT pxls_user_stat.record_id, canvas_code
+                FROM pxls_user_stat
+                JOIN record on record.record_id = pxls_user_stat.record_id
+                WHERE pxls_name_id = ? AND canvas_count != ? AND datetime >= ?
+                ORDER BY datetime DESC
+                LIMIT 1
+            """
+            res = await self.db.sql_select(
+                sql, (name_id, last_count, first_canvas_record_dt)
+            )
+            if len(res) == 0:
+                sql = """
+                    SELECT datetime, canvas_code
+                    FROM pxls_user_stat
+                    JOIN record on record.record_id = pxls_user_stat.record_id
+                    WHERE pxls_name_id = ? AND datetime >= ?
+                    ORDER BY datetime
+                    LIMIT 1
+                """
+                res = await self.db.sql_select(sql, (name_id, first_canvas_record_dt))
+                return res[0]
+
         else:
-            return res[0]
+            sql = """
+                SELECT record_id
+                FROM pxls_user_stat
+                WHERE pxls_name_id = ? AND alltime_count != ?
+                ORDER BY record_id DESC
+                LIMIT 1
+            """
+            res = await self.db.sql_select(sql, (name_id, last_count))
+            if len(res) == 0:
+                return None
+
+        # get the record just after the one we found
+        # go get the last time where the count was the same as the given one
+        record_id = res[0]["record_id"]
+        last_pixel_record = await self.db.sql_select(
+            "SELECT * FROM record WHERE record_id = ?", record_id + 1
+        )
+        return last_pixel_record[0]
 
     async def get_stats_per_canvas(self, user_list):
         sql_last_canvas_records = """

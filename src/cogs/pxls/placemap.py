@@ -1,7 +1,9 @@
-from disnake.ext import commands
-import disnake
 import asyncio
+import os
 import time
+
+import disnake
+from disnake.ext import commands
 import numpy as np
 from PIL import Image
 
@@ -130,9 +132,10 @@ class Placemap(commands.Cog):
                     f":x: You haven't added your log key for this canvas, use `>setkey` to add it.\n(You can also use the slash command `/placemap canvas-code:{canvas_code_input}` to input your log key directly)"
                 )
             else:
+                modal_id = os.urandom(16).hex()
                 await ctx.response.send_modal(
                     title=f"C{canvas_code} Placemap",
-                    custom_id="put_log_key",
+                    custom_id=modal_id,
                     components=[
                         disnake.ui.TextInput(
                             label=f"Log key for canvas {canvas_code}",
@@ -147,7 +150,7 @@ class Placemap(commands.Cog):
                 try:
                     modal_inter: disnake.ModalInteraction = await self.bot.wait_for(
                         "modal_submit",
-                        check=lambda i: i.custom_id == "put_log_key"
+                        check=lambda i: i.custom_id == modal_id
                         and i.author.id == ctx.author.id,
                         timeout=300,
                     )
@@ -158,7 +161,9 @@ class Placemap(commands.Cog):
             try:
                 log_key = check_key(log_key)
             except ValueError as e:
-                return await modal_inter.response.send_message(f":x: {e}")
+                return await modal_inter.response.send_message(
+                    f":x: {e}\nYou can find your log keys here: https://pxls.space/profile?action=data"
+                )
 
             await modal_inter.response.defer()
             ctx = modal_inter

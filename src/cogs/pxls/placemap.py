@@ -78,8 +78,8 @@ class PlacemapView(AuthorView):
 class Placemap(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot: commands.Bot = bot
+        self.cd = commands.CooldownMapping.from_cooldown(1, 20, commands.BucketType.user)
 
-    @commands.cooldown(1, 20, commands.BucketType.user)
     @commands.slash_command(name="placemap")
     async def _placemap(
         self,
@@ -96,7 +96,6 @@ class Placemap(commands.Cog):
         """
         await self.placemap(inter, canvas_code)
 
-    @commands.cooldown(1, 20, commands.BucketType.user)
     @commands.command(
         name="placemap",
         usage="<canvas code>",
@@ -107,6 +106,11 @@ class Placemap(commands.Cog):
             await self.placemap(ctx, canvas_code)
 
     async def placemap(self, ctx, canvas_code_input):
+        # check cooldown
+        bucket = self.cd.get_bucket(ctx)
+        retry_after = bucket.get_retry_after()
+        if retry_after:
+            raise commands.CommandOnCooldown(bucket, retry_after, self.cd.type)
 
         canvas_code = check_canvas_code(canvas_code_input)
         if canvas_code is None:
@@ -171,6 +175,7 @@ class Placemap(commands.Cog):
         if isinstance(ctx, (disnake.AppCmdInter, disnake.ModalInteraction)):
             m = await ctx.original_message()
 
+        self.cd.update_rate_limit(ctx)
         start = time.time()
         try:
             (

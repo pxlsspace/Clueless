@@ -1,3 +1,4 @@
+import re
 import os
 import numpy as np
 from hashlib import sha256
@@ -103,3 +104,16 @@ def check_key(key: str):
     except ValueError:
         raise ValueError("The key must be a valid hexadecimal.")
     return key
+
+
+def check_canvas_code(input):
+    """Get the exact code of the canvas from a user input.
+    >>> get_canvas_code("c50")
+    >>> "50"
+    """
+    regex = r"^(c|canvas|canv)?([0-9]+[a|b|c]?)$"
+    match = re.findall(regex, input.lower().replace(" ", ""))
+    if match:
+        return match[0][1]
+    else:
+        return None

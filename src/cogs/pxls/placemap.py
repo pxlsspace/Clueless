@@ -13,7 +13,12 @@ from utils.discord_utils import (
     image_to_file,
 )
 from utils.setup import db_canvas, db_users, stats
-from utils.pxls.archives import check_key, get_canvas_image, get_user_placemap
+from utils.pxls.archives import (
+    check_key,
+    get_canvas_image,
+    get_user_placemap,
+    check_canvas_code,
+)
 from utils.image.image_utils import highlight_image
 from utils.log import get_logger
 
@@ -76,7 +81,7 @@ class Placemap(commands.Cog):
 
     @commands.cooldown(1, 20, commands.BucketType.user)
     @commands.slash_command(name="placemap")
-    async def _cooldown(
+    async def _placemap(
         self,
         inter: disnake.AppCmdInter,
         canvas_code: str = commands.Param(
@@ -97,11 +102,18 @@ class Placemap(commands.Cog):
         usage="<canvas code>",
         description="Get your placemap and personal stats for a given canvas.",
     )
-    async def p_placemap(self, ctx, canvas_code):
+    async def p_placemap(self, ctx, *, canvas_code):
         async with ctx.typing():
             await self.placemap(ctx, canvas_code)
 
-    async def placemap(self, ctx, canvas_code):
+    async def placemap(self, ctx, canvas_code_input):
+
+        canvas_code = check_canvas_code(canvas_code_input)
+        if canvas_code is None:
+            return await ctx.send(
+                f":x: The given canvas code `{canvas_code_input}` is invalid."
+            )
+
         canvas_codes = await db_canvas.get_logs_canvases()
         if canvas_code not in canvas_codes:
             return await ctx.send(
@@ -111,7 +123,7 @@ class Placemap(commands.Cog):
         if log_key is None:
             if isinstance(ctx, commands.Context):
                 return await ctx.send(
-                    ":x: You haven't added your log key for this canvas, use `>setkey` to add it (or use `/placemap <canvas code>` to input your log key directly)"
+                    f":x: You haven't added your log key for this canvas, use `>setkey` to add it.\n(You can also use the slash command `/placemap canvas-code:{canvas_code_input}` to input your log key directly)"
                 )
             else:
                 await ctx.response.send_modal(
@@ -234,12 +246,19 @@ class Placemap(commands.Cog):
         name="canvas",
         usage="<canvas code>",
         description="Get the final image for any canvas.",
+        aliases=["c"],
     )
-    async def p_canvas(self, ctx, canvas_code):
+    async def p_canvas(self, ctx, *, canvas_code):
         async with ctx.typing():
             await self.canvas(ctx, canvas_code)
 
-    async def canvas(self, ctx, canvas_code):
+    async def canvas(self, ctx, canvas_code_input):
+
+        canvas_code = check_canvas_code(canvas_code_input)
+        if canvas_code is None:
+            return await ctx.send(
+                f":x: The given canvas code `{canvas_code_input}` is invalid."
+            )
 
         current_canvas = await stats.get_canvas_code()
         if canvas_code == current_canvas:

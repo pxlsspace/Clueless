@@ -4,10 +4,10 @@ import asyncio
 from disnake.ext import commands
 from datetime import datetime
 
-from utils.discord_utils import STATUS_EMOJIS, UserConverter, autocomplete_pxls_name
+from utils.discord_utils import STATUS_EMOJIS, UserConverter, autocomplete_log_canvases, autocomplete_pxls_name
 from utils.font.font_manager import DEFAULT_FONT, get_all_fonts, get_allowed_fonts
 from utils.image.image_utils import hex_str_to_int
-from utils.pxls.archives import check_key
+from utils.pxls.archives import check_canvas_code, check_key
 from utils.setup import db_users, db_canvas
 from utils.plot_utils import get_theme, theme_list
 from utils.time_converter import format_timezone
@@ -379,17 +379,26 @@ class UserManager(commands.Cog):
             except asyncio.TimeoutError:
                 return
 
-            canvas_code = modal_inter.text_values["canvas_code"]
+            canvas_code_input = modal_inter.text_values["canvas_code"]
             log_key = modal_inter.text_values["log_key"]
 
             error_embed = disnake.Embed(title="Error", color=disnake.Color.red())
+            # check on the canvas code syntax
+            canvas_code = check_canvas_code(canvas_code_input)
+            if canvas_code is None:
+                error_embed.description = (
+                    f":x: The given canvas code `{canvas_code_input}` is invalid."
+                )
+                return await modal_inter.response.send_message(
+                    embed=error_embed, ephemeral=True
+                )
+
             # check on the canvas code
             canvas = await db_canvas.get_canvas(canvas_code)
             if canvas is None or not canvas["has_logs"]:
                 error_embed.description = (
                     ":x: This canvas code is invalid or doesn't have logs yet."
                 )
-
                 return await modal_inter.response.send_message(
                     embed=error_embed, ephemeral=True
                 )
@@ -461,13 +470,13 @@ class UserManager(commands.Cog):
 
     @user.sub_command(name="unsetkey")
     async def _unsetkey(
-        self, inter, canvas_code: str = commands.Param(name="canvas-code")
+        self, inter, canvas_code: str = commands.Param(name="canvas-code", autocomplete=autocomplete_log_canvases)
     ):
         """Delete your key from the bot.
 
         Parameters
         ----------
-        canvas_code: The canvas code of the key you wish to delete (or all to delete all)."""
+        canvas_code: The canvas code of the key you wish to delete (or "all" to delete all)."""
         await self.unsetkey(inter, canvas_code)
 
     @commands.command(
@@ -475,17 +484,23 @@ class UserManager(commands.Cog):
         description="Delete your key from the bot.",
         usage="<canvas code|all>",
     )
-    async def p_unsetkey(self, ctx, canvas_code):
+    async def p_unsetkey(self, ctx, *, canvas_code):
         await self.unsetkey(ctx, canvas_code)
 
-    async def unsetkey(self, ctx, canvas_code):
-        if canvas_code.lower() == "all":
+    async def unsetkey(self, ctx, canvas_code_input):
+        if canvas_code_input.lower() == "all":
             canvases = await db_canvas.get_logs_canvases()
             for canvas_code in canvases:
                 await db_users.delete_key(ctx.author.id, canvas_code)
 
             return await ctx.send("✅ All your log keys were successfully deleted.")
         else:
+            canvas_code = check_canvas_code(canvas_code_input)
+            if canvas_code is None:
+                return await ctx.send(
+                    f":x: The given canvas code `{canvas_code_input}` is invalid."
+                )
+
             key = await db_users.get_key(ctx.author.id, canvas_code)
             if key is None:
                 return await ctx.send(":x: You haven't set a key for this canvas.")

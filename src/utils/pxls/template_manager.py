@@ -394,6 +394,7 @@ class TemplateManager:
         self.list: list[Template] = []
         self.bot_owner_id: int = None
         self.combo: Combo = None
+        self.is_loading = False
 
     def check_duplicate_template(self, template: Template):
         """Check if there is already a template with the same image and same coordinates.
@@ -588,6 +589,9 @@ class TemplateManager:
 
     async def load_all_templates(self, canvas_code, update=False):
         """Load all the templates from the database in self.list"""
+        if self.is_loading:
+            return
+        self.is_loading = True
         start = time.time()
         db_list = await db_templates.get_all_templates(canvas_code)
         initial_len = len(self.list)
@@ -640,6 +644,7 @@ class TemplateManager:
 
         # sort the list by id
         self.list.sort(key=lambda x: x.id)
+        self.is_loading = False
 
     def make_combo_image(self) -> np.ndarray:
         """Make an index array combining all the template arrays in self.list"""
@@ -664,6 +669,9 @@ class TemplateManager:
                 raise Exception("Cannot init the combo with empty bot_id or canvas_code")
         else:
             self.combo.palettized_array = palettized_array
+            # update the canvas code in case it changes
+            if canvas_code:
+                self.combo.canvas_code = canvas_code
 
         # remove the non placeable pixels
         self.combo.palettized_array[stats.placemap_array == 255] = 255

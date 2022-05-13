@@ -51,6 +51,9 @@ class Clock(commands.Cog):
         except Exception:
             logger.exception("Unexpected error in 'update_stats_data'")
 
+        # start the websocket to update the board
+        ws_client.start()
+
         # load the templates from the database
         try:
             canvas_code = await stats.get_canvas_code()
@@ -61,6 +64,7 @@ class Clock(commands.Cog):
             await tracked_templates.load_all_templates(canvas_code)
 
         except Exception:
+            tracked_templates.is_loading = False
             logger.exception("Unexpected error in 'load_all_templates'")
 
         # initialise the combo
@@ -70,9 +74,6 @@ class Clock(commands.Cog):
             logger.debug("Combo initialized.")
         except Exception:
             logger.exception("Unexpected error in 'update_combo'")
-
-        # start the websocket to update the board
-        ws_client.start()
 
         # wait for the time to be a round value
         round_minute = datetime.now(timezone.utc) + timedelta(minutes=1)

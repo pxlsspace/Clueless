@@ -517,6 +517,8 @@ class Progress(commands.Cog):
 
     async def list(self, ctx, sort: int = None, filters: str = None):
         temp_per_page = 15
+        if tracked_templates.is_loading:
+            return await ctx.send(":x: Templates are loading, try again later.")
         public_tracked_templates = tracked_templates.get_all_public_templates()
         if len(public_tracked_templates) == 0:
             return await ctx.send("No templates tracked :'(")

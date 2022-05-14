@@ -57,9 +57,10 @@ class Detemplatize(commands.Cog):
             f"**Size**: {total_pixels} pixels ({template.width}x{template.height})\n"
         )
         embed.description += f"**Coordinates**: ({template.ox}, {template.oy})\n"
-        embed.description += (
-            f"**Templatized Image**: [[click to open]]({template.stylized_url})\n"
-        )
+        if not (template.stylized_url).startswith("data:image"):
+            embed.description += (
+                f"**Templatized Image**: [[click to open]]({template.stylized_url})\n"
+            )
         embed.description += f"**Progress**: {correct_percentage}% done ({correct_pixels}/{total_placeable})\n"
         embed.description += f"[Template link]({template.url})"
 

@@ -452,6 +452,14 @@ class TemplateManager:
         # check on the name
         template.name = self.check_valid_name(template.name)
 
+        # check on template link size
+        if template.stylized_url.startswith("data:image"):
+            msg = "You cannot add a template with a base64 URL to the tracker."
+            msg += "\nUse `/template image:<your template link>` to shorten the link."
+            raise ValueError(msg)
+        if len(template.url) > 512:
+            raise ValueError("The template URL cannot be longer than 512 characters.")
+
         # check duplicate template names
         same_name_template = self.get_template(
             template.name, template.owner_id, template.hidden
@@ -525,6 +533,14 @@ class TemplateManager:
 
         if new_url:
             new_temp = await get_template_from_url(new_url)
+            # check on template link size
+            if new_temp.stylized_url.startswith("data:image"):
+                msg = "You cannot add a template with a base64 URL to the tracker."
+                msg += "\nUse `/template image:<your template link>` to shorten the link."
+                raise ValueError(msg)
+            if len(new_temp.url) > 512:
+                raise ValueError("The template URL cannot be longer than 512 characters.")
+
             if new_temp.total_placeable == 0:
                 raise ValueError(
                     "The template seems to be outside the canvas, make sure it's correctly positioned."

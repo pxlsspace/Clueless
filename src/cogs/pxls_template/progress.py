@@ -253,7 +253,8 @@ class Progress(commands.Cog):
             info_text += f"• Owner: <@{template.owner_id}>\n"
             info_text += f"• Started tracking: {oldest_record_time_str}"
         else:
-            footer_text += "\nThis template is not in the tracker.\nClick on [Add To Tracker] to add it directly."
+            if not template.stylized_url.startswith("data:image"):
+                footer_text += "\nThis template is not in the tracker.\nClick on [Add To Tracker] to add it directly."
 
         embed.set_footer(text=footer_text)
         embed.add_field(name="**Info**", value=info_text, inline=True)
@@ -366,11 +367,20 @@ class Progress(commands.Cog):
                     template.name,
                 )
             else:
-                view = AddTemplateView(ctx.author, template_url, self.add)
+                if template.stylized_url.startswith("data:image"):
+                    view = (
+                        None
+                        if isinstance(ctx, commands.Context)
+                        else disnake.utils.MISSING
+                    )
+                else:
+                    view = AddTemplateView(ctx.author, template_url, self.add)
             m = await ctx.send(files=files, embed=embed, view=view)
             if isinstance(ctx, disnake.AppCmdInter):
+                ctx.send
                 m = await ctx.original_message()
-            view.message = m
+            if view:
+                view.message = m
 
     @_progress.sub_command(name="add")
     async def _add(self, inter: disnake.AppCmdInter, name: str, url: str):

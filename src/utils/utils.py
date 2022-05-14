@@ -1,4 +1,6 @@
 from __future__ import annotations
+import base64
+import re
 import aiohttp
 import asyncio
 import functools
@@ -19,6 +21,10 @@ class BadResponseError(Exception):
 async def get_content(url: str, content_type, **kwargs):
     """Send a GET request to the url and return the response as json or bytes.
     Raise BadResponseError or ValueError."""
+    # check if the URL is a data URL
+    data = check_data_url(url)
+    if data:
+        return data
     timeout = aiohttp.ClientTimeout(
         sock_connect=10.0, sock_read=10.0
     )  # set a timeout of 10 seconds
@@ -44,6 +50,29 @@ async def get_content(url: str, content_type, **kwargs):
             raise ValueError("Couldn't connect to URL. (Timeout)")
         except ClientConnectionError:
             raise ValueError("Couldn't connect to URL.")
+
+
+def check_data_url(url):
+    """Check if the URL is a data URL (format: 'data:[<mediatype>][;base64],<data>')
+    return:
+    - the URL converted to bytes if it is data URL
+    - `None` if it isn't a data URL"""
+    data_url_regex = r"^data:([\w\/\+-]*)(;charset=[\w-]+)?(;base64)?,(.*)"
+    match = re.match(data_url_regex, url)
+    if not match:
+        return None
+    groups = match.groups()
+    mime_type = groups[0]
+    encoding = groups[2]
+    data = groups[3]
+    if "image" not in mime_type:
+        raise ValueError("Only images are supported with data URLs.")
+
+    if "base64" in encoding:
+        data_bytes = base64.b64decode(data)
+    else:
+        data_bytes = data
+    return data_bytes
 
 
 def make_progress_bar(percentage, nb_char=20):

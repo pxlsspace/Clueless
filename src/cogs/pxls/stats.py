@@ -335,75 +335,69 @@ class PxlsStats(commands.Cog):
         last_online_date = None
         session_start_str = None
 
-        if last_15m is None and last_30m is None:
-            status = "???"
-            status_emoji = ""
-            embed_color = 0x747F8D
-        else:
-            # online
-            if last_15m != 0:
-                # get the session duration
-                session_start = await db_stats.get_session_start_time(
-                    user_id, not (bool(alltime_count))
-                )
-                if session_start is not None:
-                    session_start_dt = session_start["datetime"]
-                    session_start_str = format_datetime(session_start_dt, "R")
+        # online
+        if last_15m is not None and last_15m != 0:
+            # get the session duration
+            session_start = await db_stats.get_session_start_time(
+                user_id, not (bool(alltime_count))
+            )
+            if session_start is not None:
+                session_start_dt = session_start["datetime"]
+                session_start_str = format_datetime(session_start_dt, "R")
 
-                # if the amount placed in the last 15m is at least 95% of the
-                # best possible, the status is 'online (fast)'
-                dt2 = user_row["datetime"]
-                dt1 = record_list[0]["datetime"]
-                best_possible, average_cooldown = await get_best_possible(dt1, dt2)
-                fast_amount = int(best_possible * 0.95)
+            # if the amount placed in the last 15m is at least 95% of the
+            # best possible, the status is 'online (fast)'
+            dt2 = user_row["datetime"]
+            dt1 = record_list[0]["datetime"]
+            best_possible, average_cooldown = await get_best_possible(dt1, dt2)
+            fast_amount = int(best_possible * 0.95)
 
-                if last_15m > best_possible:
-                    status = "online (botting)"
-                    status_emoji = STATUS_EMOJIS["bot"]
-                    embed_color = 0x7CE1EC
-                elif last_15m >= fast_amount:
-                    status = "online (fast)"
-                    status_emoji = STATUS_EMOJIS["fast"]
-                    embed_color = 0x9676CB
-                else:
-                    status = "online"
-                    status_emoji = STATUS_EMOJIS["online"]
-                    embed_color = 0x43B581
-            # idle
-            elif last_30m != 0:
-                status = "idle"
-                status_emoji = STATUS_EMOJIS["idle"]
-                embed_color = 0xFCC15E
-
+            if last_15m > best_possible:
+                status = "online (botting)"
+                status_emoji = STATUS_EMOJIS["bot"]
+                embed_color = 0x7CE1EC
+            elif last_15m >= fast_amount:
+                status = "online (fast)"
+                status_emoji = STATUS_EMOJIS["fast"]
+                embed_color = 0x9676CB
             else:
-                # search for the last online time
-                last_online = await db_stats.get_last_online(
-                    user_id,
-                    not (bool(alltime_count)),
-                    alltime_count or canvas_count,
-                    current_canvas_code,
-                )
-                if last_online is not None:
-                    last_online_date = (
-                        f"*{format_datetime(last_online['datetime'], 'R')}*"
-                    )
-                    canvas_code = last_online["canvas_code"]
-                    if canvas_code != current_canvas_code:
-                        last_online_date += f" `(c{canvas_code})`"
-                else:
-                    last_online_date = await db_stats.find_record(datetime.min)
-                    last_online_date = last_online_date["datetime"]
-                    last_online_date = f"*over {format_datetime(last_online_date, 'R')}*"
-                # inactive
-                if canvas_count == 0 or canvas_count is None:
-                    status = "inactive"
-                    status_emoji = STATUS_EMOJIS["inactive"]
-                    embed_color = 0x484848
-                # offline
-                else:
-                    status = "offline"
-                    status_emoji = STATUS_EMOJIS["offline"]
-                    embed_color = 0x747F8D
+                status = "online"
+                status_emoji = STATUS_EMOJIS["online"]
+                embed_color = 0x43B581
+        # idle
+        elif last_30m is not None and last_30m != 0:
+            status = "idle"
+            status_emoji = STATUS_EMOJIS["idle"]
+            embed_color = 0xFCC15E
+
+        else:
+            # search for the last online time
+            canvas = not (bool(alltime_count)) if canvas_count or alltime_count else None
+            last_online = await db_stats.get_last_online(
+                user_id,
+                canvas,
+                alltime_count or canvas_count,
+                current_canvas_code,
+            )
+            if last_online is not None:
+                last_online_date = f"*{format_datetime(last_online['datetime'], 'R')}*"
+                canvas_code = last_online["canvas_code"]
+                if canvas_code != current_canvas_code:
+                    last_online_date += f" `(c{canvas_code})`"
+            else:
+                last_online_date = await db_stats.find_record(datetime.min)
+                last_online_date = last_online_date["datetime"]
+                last_online_date = f"*over {format_datetime(last_online_date, 'R')}*"
+            # inactive
+            if canvas_count == 0 or canvas_count is None:
+                status = "inactive"
+                status_emoji = STATUS_EMOJIS["inactive"]
+                embed_color = 0x484848
+            # offline
+            else:
+                status = "offline"
+                status_emoji = STATUS_EMOJIS["offline"]
+                embed_color = 0x747F8D
 
         # get the profile page
         profile_url = "https://pxls.space/profile/{}".format(name)

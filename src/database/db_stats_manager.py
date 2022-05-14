@@ -575,6 +575,24 @@ class DbStatsManager:
         name_id = name_id[0]["pxls_name_id"]
 
         # find the last count different than the current one
+        if canvas is None:
+            # find the last record with this user
+            sql = """
+                SELECT *
+                FROM pxls_user_stat
+                JOIN record on record.record_id = pxls_user_stat.record_id
+                WHERE pxls_name_id = ?
+                ORDER BY record_id DESC
+                LIMIT 1
+            """
+            last_record = await self.db.sql_select(sql, name_id)
+            last_record = last_record[0]
+            canvas = last_record["alltime_count"] is None
+            canvas_code = last_record["canvas_code"]
+            last_count = (
+                last_record["canvas_count"] if canvas else last_record["alltime_count"]
+            )
+
         if canvas:
             # find the record_id of the canvas start
             first_canvas_record = await self.find_record(datetime.min, canvas_code)

@@ -204,18 +204,21 @@ class PxlsSpeed(commands.Cog):
         # format the data to be displayed
         formatted_data = []
         found_but_no_data = False
+        min_data_idx = int(1e6)
         for user in stats:
             data = user[1]
             if groupby and groupby != "canvas":
                 # truncate the first data if we're groupping by day/hour
                 data = data[1:]
             elif groupby and groupby == "canvas":
-                # remove all the first "None" values
-                for d in data[::]:
-                    if d["placed"] is None:
-                        data.remove(d)
-                    else:
+                # find the minimum non-null index
+                min_user_idx = 0
+                for i, d in enumerate(data):
+                    if d["placed"] is not None:
+                        min_user_idx = i
                         break
+                if min_user_idx < min_data_idx:
+                    min_data_idx = min_user_idx
 
             if len(data) == 0:
                 continue
@@ -339,6 +342,15 @@ class PxlsSpeed(commands.Cog):
         # sort the data by the 3rd column (progress in the time frame)
         formatted_data.sort(key=lambda x: x[2], reverse=True)
 
+        # remove all the first None values
+        if groupby and groupby == "canvas":
+            for dat in formatted_data:
+                dat[-1] = dat[-1][min_data_idx:]
+                dat[-2] = dat[-2][min_data_idx:]
+
+            min_canvas_code = formatted_data[0][-2][0][1:]  # pain
+            canvas_start_date = await db_stats.get_canvas_start_date(min_canvas_code)
+            past_time = canvas_start_date
         # create the headers needed for the table
         table_colors = theme.get_palette(len(formatted_data))
 

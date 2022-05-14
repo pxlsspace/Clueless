@@ -65,7 +65,7 @@ class Online(commands.Cog):
     async def online(self, ctx, *args):
         # parse the arguemnts
         parser = MyParser(add_help=False)
-        parser.add_argument("-last", "-l", action="store", default=None)
+        parser.add_argument("-last", "-l", nargs="+", default=None)
         parser.add_argument("-cooldown", "-cd", action="store_true", default=False)
         parser.add_argument("-canvas", "-c", action="store_true", default=False)
         parser.add_argument("-groupby", "-g", choices=["day", "hour"], required=False)

@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 import re
 import time
+from typing import Iterable
 
 """ Helper functions to convert datetime objects """
 
@@ -10,11 +11,13 @@ def str_to_td(input: str, raw=False):
      `timedelta` object.
     Return `None` if the string does not match."""
 
+    if not isinstance(input, str) and isinstance(input, Iterable):
+        input = " ".join(input)
     time_formats = [
         ("years", "(y|year|years)"),
         ("months", "(mo|month|months)"),
         ("weeks", "(w|week|weeks)"),
-        ("days", "(d|day|days])"),
+        ("days", "(d|day|days)"),
         ("hours", "(h|hr|hour|hours)"),
         ("minutes", "(m|min|minute|minutes)"),
         ("seconds", "(s|sec|second|seconds)"),
@@ -25,7 +28,7 @@ def str_to_td(input: str, raw=False):
         regex += r"((?P<" + t[0] + r">(\d*\.)?\d*?)" + t[1] + r")?"
     regex = re.compile(regex)
 
-    parts = regex.fullmatch(input.lower())
+    parts = regex.fullmatch(input.lower().replace(" ", ""))
     if not parts:
         return None
     parts = parts.groupdict()

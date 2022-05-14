@@ -74,7 +74,7 @@ class ColorsGraph(commands.Cog):
         parser = MyParser(add_help=False)
         parser.add_argument("colors", type=str, nargs="*")
         parser.add_argument("-placed", action="store_true", default=False, required=False)
-        parser.add_argument("-last", action="store", default=None)
+        parser.add_argument("-last", "-l", nargs="+", default=None)
         try:
             parsed_args = parser.parse_args(args)
         except ValueError as e:

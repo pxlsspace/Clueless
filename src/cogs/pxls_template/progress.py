@@ -1057,7 +1057,7 @@ class Progress(commands.Cog):
         # parse the arguemnts
         parser = MyParser(add_help=False)
         parser.add_argument("template", action="store")
-        parser.add_argument("-last", "-l", action="store", default=None)
+        parser.add_argument("-last", "-l", nargs="+", default=None)
         parser.add_argument(
             "-groupby", "-g", choices=["5min", "hour", "day"], required=False
         )

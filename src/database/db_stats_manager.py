@@ -652,6 +652,8 @@ class DbStatsManager:
         last_canvas_records = await self.db.sql_select(sql_last_canvas_records)
 
         res = []
+        # remove duplicates
+        user_list = list(dict.fromkeys(user_list))
         for user in user_list:
             user_data = []
             for canvas in last_canvas_records:

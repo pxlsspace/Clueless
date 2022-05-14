@@ -248,7 +248,7 @@ class Template(commands.Cog):
             m = await ctx.original_message()
 
         # create a template link with the sent image
-        template_title = f"&title={urllib.parse.quote(title)}" if title else ""
+        template_title = f"&title={urllib.parse.quote(title,safe='')}" if title else ""
         template_image_url = m.embeds[0].image.url
         if ox or oy:
             t_ox = int(ox) if (ox and str(ox).isdigit()) else 0
@@ -263,7 +263,7 @@ class Template(commands.Cog):
                 x = y = 500
             t_ox = int(x - img.width / 2)
             t_oy = int(y - img.height / 2)
-        template_url = f"https://pxls.space/#x={x}&y={y}&scale=5&template={urllib.parse.quote(template_image_url)}&ox={t_ox}&oy={t_oy}&tw={img.width}&oo=1{template_title}"
+        template_url = f"https://pxls.space/#x={x}&y={y}&scale=5&template={urllib.parse.quote(template_image_url, safe='')}&ox={t_ox}&oy={t_oy}&tw={img.width}{template_title}"
         template_embed = disnake.Embed(
             title="**Template Link**", description=template_url, color=0x66C5CC
         )

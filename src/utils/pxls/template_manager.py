@@ -242,7 +242,9 @@ class Template:
         scale: the scale at which to display the template (if open_on_togo is False)
         open_on_togo: open the template zoomed on an inccorect pixel"""
         template_image_url = template_image_url or self.stylized_url
-        template_title = f"&title={urllib.parse.quote(self.title)}" if self.title else ""
+        template_title = (
+            f"&title={urllib.parse.quote(self.title, safe='')}" if self.title else ""
+        )
 
         # coords
         x = y = None
@@ -257,11 +259,11 @@ class Template:
             y = self.oy + self.height // 2
             scale = default_scale
 
-        template_url = "https://pxls.space/#x={}&y={}&scale={}&template={}&ox={}&oy={}&tw={}&oo=1{}".format(
+        template_url = "https://pxls.space/#x={}&y={}&scale={}&template={}&ox={}&oy={}&tw={}{}".format(
             x,
             y,
             scale,
-            urllib.parse.quote(template_image_url),
+            urllib.parse.quote(template_image_url, safe=""),
             self.ox,
             self.oy,
             self.width,

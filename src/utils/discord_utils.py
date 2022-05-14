@@ -960,3 +960,55 @@ class CreateTemplateView(disnake.ui.View):
             for c in self.children:
                 c.disabled = False
             await inter.message.edit(view=self)
+
+
+class UserinfoView(AuthorView):
+    """A view for the /userinfo command that adds:
+    - a Link button that opens `profile_url`
+    - a "Speed" button that runs the `speed_function` on `username`
+    - a "Speed by Canvas" button that runs the `speed_function` on `username` with the
+    parameter groupby="canvas"
+    """
+
+    message: disnake.Message
+
+    def __init__(
+        self, author: disnake.User, profile_url, speed_function, username, canvas
+    ):
+        super().__init__(author, timeout=300)
+        self.children.insert(0, disnake.ui.Button(label="Profile", url=profile_url))
+        if not canvas:
+            self.remove_item(self.children[1])
+        self.username = username
+        self.speed_function = speed_function
+        self.username = username
+
+    async def on_timeout(self) -> None:
+        # disable all the buttons except the url one
+        for c in self.children[1:]:
+            c.disabled = True
+        await self.message.edit(view=self)
+
+    @disnake.ui.button(
+        label="Speed",
+        style=disnake.ButtonStyle.blurple,
+        emoji="<:graph:955585658888544337>",
+    )
+    async def speed(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        button.disabled = True
+        await inter.message.edit(view=self)
+        await inter.response.defer(with_message=True)
+        await self.speed_function(inter, self.username)
+
+    @disnake.ui.button(
+        label="Speed by Canvas",
+        style=disnake.ButtonStyle.blurple,
+        emoji="<:graph_bars:974811872471691314>",
+    )
+    async def speed_group_canvas(
+        self, button: disnake.ui.Button, inter: disnake.MessageInteraction
+    ):
+        button.disabled = True
+        await inter.message.edit(view=self)
+        await inter.response.defer(with_message=True)
+        await self.speed_function(inter, self.username, groupby="canvas")

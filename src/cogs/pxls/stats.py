@@ -7,6 +7,7 @@ from PIL import Image, ImageEnhance
 
 from utils.pxls.cooldown import get_best_possible
 from utils.discord_utils import (
+    UserinfoView,
     autocomplete_pxls_name,
     format_number,
     image_to_file,
@@ -408,8 +409,6 @@ class PxlsStats(commands.Cog):
         if last_online_date is not None:
             description += f"*Last pixel:* {last_online_date}\n"
 
-        description += f"[Profile page]({profile_url})"
-
         # create and send the embed
         emb = disnake.Embed(
             title=f"User Info for `{name}`", color=embed_color, description=description
@@ -419,7 +418,11 @@ class PxlsStats(commands.Cog):
         emb.add_field(
             name="**Recent activity**", value=recent_activity_text, inline=False
         )
-        await ctx.send(embed=emb)
+        speed_func = self.bot.get_cog("PxlsSpeed").speed
+        view = UserinfoView(ctx.author, profile_url, speed_func, name, bool(canvas_count))
+        view.message = await ctx.send(embed=emb, view=view)
+        if isinstance(ctx, disnake.AppCmdInter):
+            view.message = await ctx.original_message()
 
     choices = ["heatmap", "virginmap", "nonvirgin", "initial"]
 

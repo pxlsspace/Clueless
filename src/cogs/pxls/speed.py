@@ -401,8 +401,6 @@ class PxlsSpeed(commands.Cog):
         else:
             graph_fig = await get_stats_graph(graph_data, title, theme, user_timezone)
         graph_image = await fig2img(graph_fig)
-        # merge the table image and graph image
-        res_image = await v_concatenate(table_image, graph_image, gap_height=20)
 
         # calculate the best possbile amount in the time frame
         best_possible, average_cooldown = await get_best_possible(past_time, now_time)
@@ -434,9 +432,20 @@ class PxlsSpeed(commands.Cog):
                     )
                 )
 
+        # send the graph in an other embed if the table is too big
+        if table_image.size[0] > table_image.size[1]:
+            res_image = await v_concatenate(table_image, graph_image, gap_height=20)
+            file = await image_to_file(res_image, "speed.png", emb)
+            files = [file]
+            embeds = [emb]
+        else:
+            table_file = await image_to_file(table_image, "speed1.png", emb)
+            graph_embed = disnake.Embed(color=0x66C5CC)
+            graph_file = await image_to_file(graph_image, "speed2.png", graph_embed)
+            files = [table_file, graph_file]
+            embeds = [emb, graph_embed]
         # send the embed with the graph image
-        file = await image_to_file(res_image, "speed.png", emb)
-        await ctx.send(file=file, embed=emb)
+        await ctx.send(files=files, embeds=embeds)
 
 
 def setup(bot: commands.Bot):

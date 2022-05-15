@@ -37,13 +37,6 @@ def parse_leaderboard_args(args, user_timezone: timezone = None):
     parser.add_argument("-before", dest="before", nargs="+", default=None)
 
     res = parser.parse_args(args)
-    if res.after:
-        res.after = valid_datetime_type(res.after, user_timezone)
-    if res.before:
-        res.before = valid_datetime_type(res.before, user_timezone)
-
-    if res.after and res.before and res.before < res.after:
-        raise ValueError("The 'before' date can't be earlier than the 'after' date.")
 
     return vars(res)
 

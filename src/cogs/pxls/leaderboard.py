@@ -11,7 +11,11 @@ from utils.time_converter import (
     td_format,
     format_datetime,
 )
-from utils.arguments_parser import parse_leaderboard_args
+from utils.arguments_parser import (
+    check_ranks,
+    parse_leaderboard_args,
+    valid_datetime_type,
+)
 from utils.discord_utils import format_number, image_to_file
 from utils.table_to_image import table_to_image
 from utils.plot_utils import fig2img, get_theme, hex_to_rgba_string
@@ -28,10 +32,10 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
     async def _leaderboard(
         self,
         inter: disnake.AppCmdInter,
-        username: str = None,
-        last: str = None,
+        username: str = [],
         canvas: bool = False,
-        lines: int = commands.Param(default=None, ge=1, le=40),
+        last: str = None,
+        lines: int = commands.Param(default=15, ge=1, le=40),
         graph: bool = None,
         bars: bool = False,
         ranks: str = None,
@@ -55,48 +59,73 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         after: To show the leaderboard after a specific date. (format: YYYY-mm-dd HH:MM)
         """
         await inter.response.defer()
-        args = ()
         if username:
-            args += tuple(username.split(" "))
-        if canvas:
-            args += ("-canvas",)
-        if lines:
-            args += ("-lines", str(lines))
-        if graph:
-            args += ("-graph",)
-        if bars:
-            args += ("-bars",)
-        if ranks:
-            args += ("-ranks", ranks)
-        if eta:
-            args += ("-eta",)
-        if last:
-            args += ("-last", last)
+            username = username.split(" ")
         if before:
-            args += ("-before",) + tuple(before.split(" "))
+            before = before.split(" ")
         if after:
-            args += ("-after",) + tuple(after.split(" "))
-        await self.leaderboard(inter, *args)
+            after = after.split(" ")
+        if ranks:
+            try:
+                ranks = check_ranks(ranks)
+            except Exception as e:
+                return await inter.send(f":x: {e}")
+        await self.leaderboard(
+            inter, username, canvas, last, lines, graph, bars, ranks, eta, before, after
+        )
 
     @commands.command(
         name="leaderboard",
-        usage="[username] [-canvas] [-lines <number>] [-graph] [-bars] [-ranks ?-?] [-last ?y?m?w?d?h?m?s] [-before <date time>] [-after <date time>]",
+        usage="[username] [-canvas] [-last ?y?m?w?d?h?m?s] [-lines <number>] [-graph] [-bars] [-ranks ?-?] [-before <date time>] [-after <date time>]",
         description="Show the all-time or canvas leaderboard.",
         aliases=["ldb"],
         help="""- `[username]`: center the leaderboard on this user (`!` = your set username)
                   - `[-canvas|-c]`: to get the canvas leaderboard
+                  - `[-last ?y?mo?w?d?h?m?s]` Show the leaderboard in the last x years/months/weeks/days/hour/min/s
                   - `[-lines <number>]`: number of lines to show, must be less than 40 (default 15)
                   - `[-graph|-g]`: show a progress graph for each user in the leaderboard
                   - `[-bars|-b]`: show a bar graph of the leaderboard
                   - `[-ranks ?-?]`: show the leaderboard between 2 ranks
                   - `[-eta]`: add an ETA column showing the estimated time to pass the user above
-                  - `[-last ?y?mo?w?d?h?m?s]` Show the leaderboard in the last x years/months/weeks/days/hour/min/s""",
+                  - `[-before <date time>]`: show the speed before a date and time (format YYYY-mm-dd HH:MM)
+                  - `[-after <date time>]`: show the speed after a date and time (format YYYY-mm-dd HH:MM)
+                  """,
     )
     async def p_leaderboard(self, ctx, *args):
-        async with ctx.typing():
-            await self.leaderboard(ctx, *args)
+        try:
+            param = parse_leaderboard_args(args)
+        except ValueError as e:
+            return await ctx.send(f"❌ {e}")
 
-    async def leaderboard(self, ctx, *args):
+        async with ctx.typing():
+            await self.leaderboard(
+                ctx,
+                param["names"],
+                param["canvas"],
+                param["last"],
+                param["lines"],
+                param["graph"],
+                param["bars"],
+                param["ranks"],
+                param["eta"],
+                param["before"],
+                param["after"],
+            )
+
+    async def leaderboard(
+        self,
+        ctx,
+        username=[],
+        canvas=False,
+        last=None,
+        nb_line=15,
+        graph=False,
+        bars=False,
+        ranks=None,
+        eta=None,
+        before=None,
+        after=None,
+    ):
         """Shows the pxls.space leaderboard"""
 
         # get the user theme
@@ -106,22 +135,10 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         font = discord_user["font"]
         user_timezone = discord_user["timezone"]
 
-        try:
-            param = parse_leaderboard_args(args, get_timezone(user_timezone))
-        except ValueError as e:
-            return await ctx.send(f"❌ {e}")
-        nb_line = int(param["lines"])
-        canvas_opt = param["canvas"]
         speed_opt = False
         sort_opt = None
-        last_opt = param["last"]
-        bars_opt = param["bars"]
-        graph_opt = param["graph"]
-        ranks_opt = param["ranks"]
-        eta_opt = param["eta"]
 
         # get the linked username if "!" is in the names list
-        username = param["names"]
         if "!" in username:
             pxls_user_id = discord_user["pxls_user_id"]
             if pxls_user_id is None:
@@ -136,12 +153,11 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             username = [name if u == "!" else u for u in username]
 
         # if a time value is given, we will show the leaderboard during this time
-        if param["before"] or param["after"] or last_opt:
+        if before or after or last:
             speed_opt = True
             sort_opt = "speed"
-            if param["before"] is None and param["after"] is None:
-                date = last_opt
-                input_time = str_to_td(date)
+            if before is None and after is None:
+                input_time = str_to_td(last)
                 if not input_time:
                     return await ctx.send(
                         "❌ Invalid `last` parameter, format must be `?y?mo?w?d?h?m?s`."
@@ -150,38 +166,51 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                 date2 = datetime.now(timezone.utc)
                 date1 = round_minutes_down(datetime.now(timezone.utc) - input_time)
             else:
-                last_opt = None
-                date1 = param["after"] or datetime.min
-                date2 = param["before"] or datetime.max
+                last = None
+                try:
+                    # Convert the dates to datetime object and check if they are valid
+                    if after:
+                        after = valid_datetime_type(after, get_timezone(user_timezone))
+                    if before:
+                        before = valid_datetime_type(before, get_timezone(user_timezone))
+                except ValueError as e:
+                    return await ctx.send(f"❌ {e}")
+
+                if after and before and before < after:
+                    return await ctx.send(
+                        ":x: The 'before' date can't be earlier than the 'after' date."
+                    )
+
+                date1 = after or datetime.min
+                date2 = before or datetime.max
         else:
             date1 = datetime.now(timezone.utc)
             date2 = datetime.now(timezone.utc)
 
         # check on sort arg
         if not sort_opt:
-            sort = "canvas" if canvas_opt else "alltime"
+            sort = "canvas" if canvas else "alltime"
         else:
             sort = sort_opt
             # canvas_opt = "canvas" # only get the canvas stats when sorting by speed
 
         # fetch the leaderboard from the database
+        # + change the canvas opt if sort by speed on time frame on the current canvas
         (
             canvas,
             last_date,
             datetime1,
             datetime2,
             ldb,
-        ) = await db_stats.get_leaderboard_between(date1, date2, canvas_opt, sort)
-        # change the canvas opt if sort by speed on time frame on the current canvas
-        canvas_opt = canvas
+        ) = await db_stats.get_leaderboard_between(date1, date2, canvas, sort)
 
         # check that we can actually calculate the speed
         if speed_opt and datetime1 == datetime2:
             return await ctx.send("❌ The time frame given is too short.")
 
         # trim the leaderboard to only get the lines asked
-        if ranks_opt:
-            (rank_low, rank_high) = ranks_opt
+        if ranks:
+            (rank_low, rank_high) = ranks
             username = []
             try:
                 ldb = ldb[rank_low - 1 : rank_high]
@@ -235,7 +264,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         if speed_opt:
             column_names.append("Speed")
             alignments2.append("right")
-        elif eta_opt:
+        elif eta:
             column_names.append("Speed (px/d)")
             alignments2.append("center")
             column_names.append("ETA")
@@ -283,17 +312,17 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                     res_ldb[i].append(f"{round(speed,1)} px/d")
                 else:
                     res_ldb[i].append(f"{round(speed,1)} px/h")
-            elif eta_opt:
+            elif eta:
                 # add the ETA
                 # get the speed in the last 1 day
                 eta_time = datetime2 - timedelta(days=1)
                 eta_record_time, eta_record = await db_stats.get_pixels_at(
-                    eta_time, ldb[i][1], canvas_opt
+                    eta_time, ldb[i][1], canvas
                 )
                 if eta_record:
                     diff_time = (datetime2 - eta_record_time) / timedelta(days=1)
                     if ldb[i][2] is not None:
-                        if canvas_opt:
+                        if canvas:
                             eta_pixels = ldb[i][2] - eta_record["canvas_count"]
                         else:
                             eta_pixels = ldb[i][2] - eta_record["alltime_count"]
@@ -331,7 +360,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
         # create the image with the leaderboard data
         colors = None
-        if graph_opt:
+        if graph:
             colors = theme.get_palette(len(res_ldb))
         elif username:
             colors = []
@@ -360,7 +389,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             recent_time = datetime2
             diff_time = round_minutes_down(recent_time) - round_minutes_down(past_time)
             diff_time_str = td_format(diff_time)
-            if last_opt:
+            if last:
                 title = "Leaderboard of the last {}".format(
                     diff_time_str[2:]
                     if (diff_time_str.startswith("1 ") and "," not in diff_time_str)
@@ -380,44 +409,56 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             text += f"• Average cooldown: `{round(average_cooldown,2)}` seconds\n"
             text += f"• Best possible (without stack): ~`{format_number(best_possible)}` pixels.\n"
 
-        elif canvas_opt:
+        elif canvas:
             title = "Canvas Leaderboard"
         else:
             title = "All-time Leaderboard"
 
-        if not (param["before"] or param["after"]):
+        if not (before or after):
             text += f"• Last updated: {format_datetime(last_date,'R')}"
 
         # make the progress graph
-        if graph_opt:
+        if graph:
             name_list = [u[1] for u in res_ldb]
-            if last_opt is None:
+            if last is None:
                 dt1 = datetime(1900, 1, 1)
                 dt2 = datetime.utcnow()
             else:
                 dt1 = datetime1
                 dt2 = datetime2
             stats_dt1, stats_dt2, stats_history = await db_stats.get_stats_history(
-                name_list, dt1, dt2, canvas_opt
+                name_list, dt1, dt2, canvas
             )
             stats = []
             for user in stats_history:
                 name = user[0]
                 data = user[1]
                 data_dates = [stat["datetime"] for stat in data]
-                if last_opt is not None:
+                if last is not None:
                     # substract the first value to each value so they start at 0
-                    data_pixels = [stat["pixels"] - data[0]["pixels"] for stat in data]
+                    data_without_none = [
+                        d["pixels"] for d in data if d["pixels"] is not None
+                    ]
+                    if not data_without_none:
+                        continue
+                    lowest_pixels = data_without_none[0]
+                    data_pixels = [
+                        (
+                            (stat["pixels"] - lowest_pixels)
+                            if (stat["pixels"] is not None and lowest_pixels is not None)
+                            else None
+                        )
+                        for stat in data
+                    ]
                 else:
                     data_pixels = [stat["pixels"] for stat in data]
                 stats.append([name, data_dates, data_pixels])
             stats.sort(key=lambda x: x[2][-1], reverse=True)
             graph_fig = await get_stats_graph(stats, "", theme, user_timezone)
             graph_img = await fig2img(graph_fig)
-            graph_file = await image_to_file(graph_img, "graph.png")
 
         # make the bars graph
-        if bars_opt:
+        if bars:
             data = [
                 int(user[2].replace(" ", "")) if user[2] != "???" else None
                 for user in res_ldb
@@ -446,7 +487,6 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                 bars_best_possible = None
             fig = self.make_bars(names, data, title, theme, colors, bars_best_possible)
             bars_img = await fig2img(fig)
-            bars_file = await image_to_file(bars_img, "bar_chart.png")
 
         # create a discord embed
         emb = disnake.Embed(
@@ -454,18 +494,26 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         )
         file = await image_to_file(img, "leaderboard.png", emb)
 
-        if eta_opt and not speed_opt:
+        if eta and not speed_opt:
             emb.set_footer(
                 text="The ETA values are calculated with the speed in the last 1 day.\n"
             )
 
-        # send graph and embed
-        await ctx.send(embed=emb, file=file)
-        # send graph image
-        if graph_opt:
-            await ctx.channel.send(file=graph_file)
-        if bars_opt:
-            await ctx.channel.send(file=bars_file)
+        files = [file]
+        embeds = [emb]
+        # add the graphs if options enabled
+        if graph:
+            graph_embed = disnake.Embed(color=0x66C5CC)
+            graph_file = await image_to_file(graph_img, "graph.png", graph_embed)
+            files.append(graph_file)
+            embeds.append(graph_embed)
+        if bars:
+            bars_embed = disnake.Embed(color=0x66C5CC)
+            bars_file = await image_to_file(bars_img, "bar_chart.png", bars_embed)
+            files.append(bars_file)
+            embeds.append(bars_embed)
+
+        await ctx.send(embeds=embeds, files=files)
 
     @staticmethod
     def make_bars(users, pixels, title, theme, colors=None, best_possible=None):

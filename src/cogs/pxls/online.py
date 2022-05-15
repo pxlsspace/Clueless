@@ -149,12 +149,22 @@ class Online(commands.Cog):
 
         # get the cooldown for each online value if we have the cooldown arg
         if parsed_args.cooldown:
-            online_counts = [round(stats.get_cd(count), 2) for count in online_counts]
+            online_counts = [stats.get_cd(count) for count in online_counts]
+            online_counts_without_none = [
+                stats.get_cd(count) for count in online_counts_without_none
+            ]
+
             if current_count:
                 current_count = round(stats.get_cd(current_count), 2)
 
         # make graph
         if parsed_args.groupby:
+            # check that we arent plotting too many bars (limit: 10000 bars)
+            nb_bars = len(online_counts)
+            if nb_bars > 10000:
+                return await ctx.send(
+                    f":x: That's too many bars too show (**{nb_bars}**). <:bruhkitty:943594789532737586>"
+                )
             fig = await make_grouped_graph(dates, online_counts, theme, user_timezone)
         else:
             fig = await make_graph(dates, online_counts, theme, user_timezone)
@@ -172,9 +182,11 @@ class Online(commands.Cog):
             format_datetime(dates[0]),
             title,
             format_number(current_count),
-            round(sum(online_counts_without_none) / len(online_counts_without_none), 2),
-            min(online_counts_without_none),
-            max(online_counts_without_none),
+            format_number(
+                sum(online_counts_without_none) / len(online_counts_without_none)
+            ),
+            format_number(min(online_counts_without_none)),
+            format_number(max(online_counts_without_none)),
         )
         emb = disnake.Embed(
             title=title,
@@ -210,13 +222,13 @@ def make_graph(dates, values, theme, user_timezone=None):
             y=values,
             mode="lines",
             name="Online Count",
-            line=dict(width=4),
+            line=dict(width=2),
             marker=dict(color=theme.get_palette(1)[0], size=6),
         )
     )
 
-    if theme.has_glow:
-        add_glow(fig, nb_glow_lines=5, alpha_lines=0.5, diff_linewidth=4)
+    if theme.has_glow and len(values) < 1000:
+        add_glow(fig, nb_glow_lines=3, alpha_lines=0.3, diff_linewidth=4)
     if theme.has_underglow:
         fig.add_trace(
             go.Scatter(
@@ -250,6 +262,7 @@ def make_grouped_graph(dates, values, theme, user_timezone=None):
     fig.update_yaxes(rangemode="tozero")
 
     # add an outline of the bg color to the text above the bars
+    nb_bars = len(values)
     text = [
         '<span style = "text-shadow:\
     -{2}px -{2}px 0 {0},\
@@ -262,6 +275,8 @@ def make_grouped_graph(dates, values, theme, user_timezone=None):
     0px -{2}px 0px {0};">{1}</span>'.format(
             theme.background_color, v, 2
         )
+        if nb_bars <= 200
+        else None
         for v in values
     ]
 

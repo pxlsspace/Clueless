@@ -1,4 +1,5 @@
 from __future__ import annotations
+import numpy as np
 import base64
 import re
 import aiohttp
@@ -97,6 +98,12 @@ def chunk(a, n):
     """Divide an array `a` into `n` sub arrays"""
     k, m = divmod(len(a), n)
     return [a[i * k + min(i, m) : (i + 1) * k + min(i + 1, m)] for i in range(n)]
+
+
+def shorten_list(input_list: list, nb_element: int) -> list:
+    """Shorten a list by keeping evenly spaced elements"""
+    idx = np.round(np.linspace(0, len(input_list) - 1, nb_element)).astype(int)
+    return np.array(input_list)[idx].tolist()
 
 
 # from https://github.com/InterStella0/stella_bot/blob/6f273318c06e86fe3ba9cad35bc62e899653f031/utils/decorators.py#L108-L117

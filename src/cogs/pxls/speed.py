@@ -18,7 +18,7 @@ from utils.plot_utils import add_glow, get_theme, fig2img, hex_to_rgba_string
 from utils.image.image_utils import hex_str_to_int, v_concatenate
 from utils.pxls.cooldown import get_best_possible
 from utils.timezoneslib import get_timezone
-from utils.utils import in_executor
+from utils.utils import in_executor, shorten_list
 
 
 class PxlsSpeed(commands.Cog):
@@ -179,9 +179,12 @@ class PxlsSpeed(commands.Cog):
 
         # get the data we need
         if groupby and groupby != "canvas":
-            (past_time, now_time, stats) = await db_stats.get_grouped_stats_history(
-                usernames, old_time, recent_time, groupby, canvas
-            )
+            try:
+                (past_time, now_time, stats) = await db_stats.get_grouped_stats_history(
+                    usernames, old_time, recent_time, groupby, canvas
+                )
+            except ValueError as e:
+                return await ctx.send(f":x: {e}")
         elif groupby == "canvas":
             (past_time, now_time, stats) = await db_stats.get_stats_per_canvas(usernames)
             canvas = False
@@ -388,6 +391,12 @@ class PxlsSpeed(commands.Cog):
         # create the graph
         graph_data = [[d[0], d[-2], d[-1]] for d in formatted_data]
         if groupby:
+            # check that we arent plotting too many bars (limit: 10000 bars)
+            nb_bars = sum([len(d[2]) for d in graph_data])
+            if nb_bars > 10000:
+                return await ctx.send(
+                    f":x: That's too many bars too show (**{nb_bars}**). <:bruhkitty:943594789532737586>"
+                )
             graph_fig = await get_grouped_graph(graph_data, title, theme, user_timezone)
         else:
             graph_fig = await get_stats_graph(graph_data, title, theme, user_timezone)
@@ -420,7 +429,7 @@ class PxlsSpeed(commands.Cog):
                 and old_time < canvas_start.replace(tzinfo=timezone.utc)
             ):
                 emb.set_footer(
-                    text="Warning: The time given is earlier than the canvas start, use {} to use the all-time data.".format(
+                    text="⚠️ Warning: The time given is earlier than the canvas start, use {} to use the all-time data.".format(
                         "/speed alltime:True" if is_slash else f"{prefix}speed -alltime"
                     )
                 )
@@ -445,6 +454,10 @@ def get_stats_graph(stats_list: list, title, theme, user_timezone=None):
     else:
         annotation_text = f"Timezone: {format_timezone(tz)}"
 
+    glow = theme.has_glow
+    if sum([len(d[2]) for d in stats_list]) > 1000:
+        glow = False
+
     # create the graph
     colors = theme.get_palette(len(stats_list))
     fig = go.Figure(layout=theme.get_layout(annotation_text=annotation_text))
@@ -456,6 +469,12 @@ def get_stats_graph(stats_list: list, title, theme, user_timezone=None):
         name = user[0]
         dates = user[1]
         pixels = user[2]
+
+        # remove some data if we have too much
+        limit = 1000
+        if len(pixels) > limit:
+            pixels = shorten_list(pixels, limit)
+            dates = shorten_list(dates, limit)
 
         # convert the dates to the user timezone
         dates = [datetime.astimezone(d.replace(tzinfo=timezone.utc), tz) for d in dates]
@@ -503,7 +522,7 @@ def get_stats_graph(stats_list: list, title, theme, user_timezone=None):
             font=dict(color=colors[i], size=40),
         )
 
-    if theme.has_glow:
+    if glow:
         add_glow(fig, nb_glow_lines=5, alpha_lines=0.5, diff_linewidth=4)
 
     return fig
@@ -528,6 +547,8 @@ def get_grouped_graph(stats_list: list, title, theme, user_timezone=None):
     # the title displays the user if there is only 1 in the user_list
     fig.update_layout(title="<span style='color:{};'>{}</span>".format(colors[0], title))
 
+    # get the total number of bars to see if it's worth adding text
+    nb_bars = sum([len(d[2]) for d in stats_list])
     for i, user in enumerate(stats_list):
         # get the data
         dates = user[1]
@@ -546,6 +567,8 @@ def get_grouped_graph(stats_list: list, title, theme, user_timezone=None):
         0px -{2}px 0px {0};">{1}</span>'.format(
                 theme.background_color, pixel, 2
             )
+            if nb_bars <= 200
+            else None
             for pixel in pixels
         ]
 

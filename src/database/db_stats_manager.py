@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 from database.db_connection import DbConnection
 from utils.pxls.pxls_stats_manager import PxlsStatsManager
+from utils.utils import shorten_list
 
 
 class DbStatsManager:
@@ -191,21 +192,29 @@ class DbStatsManager:
             canvas_to_select = None
         record1 = await self.find_record(date1, canvas_to_select)
         record2 = await self.find_record(date2, canvas_to_select)
+        # Find all the records between the 2 dates
+        # if it's more than 1000, shorten the record list to only have 1000 values
+        records = await self.db.sql_select(
+            "SELECT * FROM record WHERE datetime BETWEEN ? AND ? ORDER BY datetime",
+            (record1["datetime"], record2["datetime"]),
+        )
+        records = [r["record_id"] for r in records]
+        if len(records) > 1000:
+            records = shorten_list(records, 1000)
         sql = """
             SELECT name, {0} as pixels, datetime
             FROM pxls_user_stat
             JOIN record ON record.record_id = pxls_user_stat.record_id
             JOIN pxls_name ON pxls_name.pxls_name_id = pxls_user_stat.pxls_name_id
             WHERE name IN ({1})
-            AND datetime BETWEEN ? AND ?
+            AND pxls_user_stat.record_id IN ({2})
             ORDER BY {0} """.format(
             "canvas_count" if canvas_opt else "alltime_count",
             ", ".join("?" for u in user_list),
+            ", ".join("?" for r in records),
         )
 
-        rows = await self.db.sql_select(
-            sql, tuple(user_list) + (record1["datetime"], record2["datetime"])
-        )
+        rows = await self.db.sql_select(sql, tuple(user_list) + tuple(records))
 
         # group by user
         users_dict = {}
@@ -243,6 +252,20 @@ class DbStatsManager:
         record1 = await self.find_record(dt1, canvas_to_select)
         record2 = await self.find_record(dt2, canvas_to_select)
 
+        # check that we aren't fetching too much data
+        records = await self.db.sql_select(
+            """
+            SELECT * FROM record
+            WHERE datetime BETWEEN ? AND ?
+            GROUP BY strftime(?, datetime)
+            """,
+            (record1["datetime"], record2["datetime"], groupby),
+        )
+        nb_data_max = len(records) * len(user_list)
+        if nb_data_max > 10000:
+            raise ValueError(
+                f"That's too many bars too show (estimated **{nb_data_max}**). <:bruhkitty:943594789532737586>"
+            )
         sql = """
             SELECT
                 name,

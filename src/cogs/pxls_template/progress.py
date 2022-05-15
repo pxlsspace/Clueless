@@ -843,7 +843,7 @@ class Progress(commands.Cog):
         # Show owner update
         if new_owner is not None:
             embed.add_field(
-                name="Ownership transfered",
+                name="Ownership transferred",
                 value=f"<@{old_temp.owner_id}> → <@{new_temp.owner_id}>",
                 inline=False,
             )
@@ -1184,6 +1184,11 @@ class Progress(commands.Cog):
                 user_timezone_name,
             )
         else:
+            nb_bars = len(values)
+            if nb_bars > 10000:
+                return await ctx.send(
+                    f":x: That's too many bars too show (**{nb_bars}**). <:bruhkitty:943594789532737586>"
+                )
             graph_fig = await get_grouped_graph(
                 [[template.name, dates, values]],
                 f"Template speed (grouped by {groupby})",

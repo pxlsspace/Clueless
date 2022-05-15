@@ -19,7 +19,7 @@ from utils.setup import stats, db_stats, db_users
 from utils.plot_utils import fig2img, add_glow, get_theme
 from utils.time_converter import format_timezone, str_to_td, round_minutes_down
 from utils.timezoneslib import get_timezone
-from utils.utils import in_executor
+from utils.utils import in_executor, shorten_list
 
 
 class ColorsGraph(commands.Cog):
@@ -218,13 +218,20 @@ def make_color_graph(data_list, colors, user_timezone=None):
             continue
         colors_found = True
 
+        values = color["values"]
         dates = color["datetimes"]
         dates = [datetime.astimezone(d.replace(tzinfo=timezone.utc), tz) for d in dates]
+
+        # remove some data if we have too much
+        limit = 200
+        if len(values) > limit:
+            values = shorten_list(values, limit)
+            dates = shorten_list(dates, limit)
 
         fig.add_trace(
             go.Scatter(
                 x=dates,
-                y=color["values"],
+                y=values,
                 mode="lines",
                 name=color["color_name"],
                 line=dict(width=4),

@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+import os
 import asyncio
 import re
 import disnake
@@ -7,10 +9,10 @@ import time
 from PIL import Image
 from io import BytesIO
 from disnake.ext import commands
-
 from utils.arguments_parser import MyParser
 from utils.discord_utils import (
     IMAGE_URL_REGEX,
+    AuthorView,
     autocomplete_builtin_palettes,
     format_number,
     get_image_from_message,
@@ -25,8 +27,87 @@ from utils.pxls.template import (
     reduce,
     get_rgba_palette,
 )
-from utils.setup import stats
+from utils.setup import stats, db_users, db_stats
+from utils.time_converter import td_format
 from utils.utils import get_content
+
+
+class TemplateView(AuthorView):
+    def __init__(self, author: disnake.User, template_url, message, embed, has_title):
+        super().__init__(author, timeout=300)
+        self.template_url = template_url
+        self.message = message
+        self.embed: disnake.Embed = embed
+        self.children.insert(
+            0, disnake.ui.Button(label="Open Template", url=self.template_url)
+        )
+        if has_title:
+            self.remove_item(self.children[1])
+
+    async def on_timeout(self) -> None:
+        # disable all the buttons except the url one
+        for c in self.children[1:]:
+            self.remove_item(c)
+        await self.message.edit(view=self)
+
+    @disnake.ui.button(
+        label="Add a Title",
+        style=disnake.ButtonStyle.green,
+    )
+    async def add_title(
+        self, button: disnake.ui.Button, button_inter: disnake.MessageInteraction
+    ):
+        # send a modal
+        modal_id = os.urandom(16).hex()
+        await button_inter.response.send_modal(
+            title="Add a title to the template",
+            custom_id=modal_id,
+            components=[
+                disnake.ui.TextInput(
+                    label="Title",
+                    placeholder="Very Cool Template v42 (final-final for real) [WIP] (solo)",
+                    custom_id="title",
+                    min_length=1,
+                    max_length=256,
+                    style=disnake.TextInputStyle.short,
+                ),
+            ],
+        )
+
+        try:
+            # wait until the user submits the modal.
+            modal_inter: disnake.ModalInteraction = await button_inter.bot.wait_for(
+                "modal_submit",
+                check=lambda i: i.custom_id == modal_id
+                and i.author.id == button_inter.author.id,
+                timeout=300,
+            )
+        except asyncio.TimeoutError:
+            # The user didn't submit the modal in the specified period of time.
+            # This is done since Discord doesn't dispatch any event for when a modal is closed/dismissed.
+            return
+
+        title = modal_inter.text_values["title"].strip()
+        template_title = f"&title={urllib.parse.quote(title, safe='')}"
+        self.template_url += template_title
+        # update the view
+        self.children[0].url = self.template_url
+        self.remove_item(self.children[1])
+        # update the embed
+        self.embed.set_field_at(
+            -1, name="Template Link", value=self.template_url, inline=False
+        )
+        self.embed._fields[0]["value"] = self.embed._fields[0]["value"].replace(
+            "N/A", title
+        )
+        await button_inter.message.edit(view=self, embed=self.embed)
+        # confirmation message (because we HAVE to respond something to the modal inter)
+        await modal_inter.response.send_message(
+            embed=disnake.Embed(
+                color=0x66C5CC, title="✅ Template title successfully added."
+            ),
+            ephemeral=True,
+        )
 
 
 class Template(commands.Cog):
@@ -159,6 +240,7 @@ class Template(commands.Cog):
                 "size": style_size,
                 "array": style_array,
             }
+            style_name = f"[[From User]]({style_url}){' `(+ glow)`' if glow else ''}"
         else:
             # the style is a style name, we search it from the built-in styles
             if not style_name:
@@ -170,8 +252,9 @@ class Template(commands.Cog):
                     styles_available += ("\t• {0} ({1}x{1})\n").format(
                         s["name"], s["size"]
                     )
-                await ctx.send(f"❌ Unknown style '{style_name}'.\n{styles_available}")
+                await ctx.send(f"❌ Unknown style `{style_name}`.\n{styles_available}")
                 return False
+            style_name = f"`{style['name']}{' (+ glow)' if glow else ''}`"
 
         # check on the size
         output_size = img.width * img.height * style["size"] ** 2
@@ -228,28 +311,61 @@ class Template(commands.Cog):
             None, templatize, style, reduced_array, glow_opacity, rgba_palette
         )
         template_image = Image.fromarray(template_array)
-        total_amount = np.sum(reduced_array != 255)
-        total_amount = format_number(int(total_amount))
+        total_amount = int(np.sum(reduced_array != 255))
         end = time.time()
 
+        # Calculate an ETA
+        estimate = None
+        discord_user = await db_users.get_discord_user(ctx.author.id)
+        pxls_user_id = discord_user["pxls_user_id"]
+        if pxls_user_id:
+            try:
+                pxls_name = await db_users.get_pxls_user_name(pxls_user_id)
+                canvas_stats = stats.get_canvas_stat(pxls_name) or 0
+                canvas_code = await stats.get_canvas_code()
+                canvas_start = await db_stats.get_canvas_start_date(canvas_code)
+                if canvas_start:
+                    canvas_duration = datetime.utcnow() - canvas_start
+                    canvas_duration = canvas_duration / timedelta(days=1)
+                    if canvas_duration > 0:
+                        canvas_speed = canvas_stats / canvas_duration
+                        if canvas_speed != 0:
+                            eta = timedelta(days=(total_amount / canvas_speed))
+                            eta = td_format(eta, short_format=True, max_unit="day")
+                        else:
+                            eta = "Infinity days"
+                        estimate = f"`{eta}` (at `{format_number(canvas_speed)}` px/day)"
+            except Exception:
+                pass
+
         # create and send the image
-        embed = disnake.Embed(title="**Template Image**", color=0x66C5CC)
-        embed.description = f"**Title**: {title if title else '`N/A`'}\n**Style**: {style['name']}\n**Glow**: {'yes' if glow else 'no'}\n**Palette**: {', '.join(palette_names)}\n**Size**: {total_amount} pixels ({img.width}x{img.height})"
+        embed = disnake.Embed(title="**Template**", color=0x66C5CC)
+        template_info = f"Title: `{title if title else 'N/A'}`\n"
+        template_info += f"Style: {style_name}\n"
+
+        if palette:
+            template_info += f"Palette: {', '.join(palette_names)}\n"
+        embed.add_field(name="**Template Info**", value=template_info)
+        template_size = f"Size: `{format_number(total_amount)}` pixels\n"
+        template_size += f"Dimensions: `{img.width} x {img.height}`\n"
+
+        embed.add_field(name="**Template Size**", value=template_size)
+        if estimate:
+            embed.add_field(name="Estimate", value=estimate, inline=False)
         embed.set_footer(
-            text="⚠️ Warning: if you delete this message the template WILL break."
+            text=f"⏲️ Generated in {round((end-start),3)}s\n⚠️ Warning: if you delete this message the template WILL break."
         )
         embed.set_author(name=ctx.author, icon_url=ctx.author.display_avatar)
-        reduced_image = Image.fromarray(stats.palettize_array(reduced_array, hex_palette))
-        reduced_file = await image_to_file(reduced_image, "reduced.png")
-        embed.set_thumbnail(url="attachment://reduced.png")
-        file = await image_to_file(template_image, "template.png", embed)
-        m = await ctx.send(embed=embed, files=[file, reduced_file])
+        embed.set_thumbnail(url="attachment://template.png")
+        file = await image_to_file(template_image, "template.png")
+
+        m = await ctx.send(embed=embed, file=file)
         if isinstance(ctx, (disnake.AppCmdInter, disnake.MessageInteraction)):
             m = await ctx.original_message()
 
         # create a template link with the sent image
-        template_title = f"&title={urllib.parse.quote(title,safe='')}" if title else ""
-        template_image_url = m.embeds[0].image.url
+        template_title = f"&title={urllib.parse.quote(title, safe='')}" if title else ""
+        template_image_url = m.embeds[0].thumbnail.url
         if ox or oy:
             t_ox = int(ox) if (ox and str(ox).isdigit()) else 0
             t_oy = int(oy) if (oy and str(oy).isdigit()) else 0
@@ -264,11 +380,11 @@ class Template(commands.Cog):
             t_ox = int(x - img.width / 2)
             t_oy = int(y - img.height / 2)
         template_url = f"https://pxls.space/#x={x}&y={y}&scale=5&template={urllib.parse.quote(template_image_url, safe='')}&ox={t_ox}&oy={t_oy}&tw={img.width}{template_title}"
-        template_embed = disnake.Embed(
-            title="**Template Link**", description=template_url, color=0x66C5CC
-        )
-        template_embed.set_footer(text=f"Generated in {round((end-start),3)}s")
-        await ctx.send(embed=template_embed)
+
+        # update the embed with the link in a new field
+        embed.add_field(name="**Template Link**", value=template_url, inline=False)
+        view = TemplateView(ctx.author, template_url, m, embed, bool(title))
+        await m.edit(embed=embed, view=view)
         return True
 
     @commands.command(

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 import os
 import asyncio
 import re
@@ -27,7 +27,7 @@ from utils.pxls.template import (
     reduce,
     get_rgba_palette,
 )
-from utils.setup import stats, db_users, db_stats
+from utils.setup import stats, db_users, db_stats, imgur_app
 from utils.time_converter import td_format
 from utils.utils import get_content
 
@@ -119,11 +119,15 @@ class Template(commands.Cog):
         self,
         inter: disnake.AppCmdInter,
         image: str = None,
+        title: str = None,
         style: str = None,
         glow: bool = False,
-        title: str = None,
         ox: int = None,
         oy: int = None,
+        host: str = commands.Param(
+            default="discord",
+            choices={"Discord": "discord", "Imgur": "imgur"},
+        ),
         nocrop: bool = False,
         matching: str = commands.Param(
             default=None,
@@ -144,13 +148,14 @@ class Template(commands.Cog):
         title: The template title.
         ox: The template x-position.
         oy: The template y-position.
+        host: Where to host the template image. (default: discord)
         nocrop: If you don't want the template to be automatically cropped. (default: False)
         matching: The color matching algorithm to use.
         palette: A palette name or list of colors (name or hex) seprated by a comma. (default: pxls)
         """
         await inter.response.defer()
         await self.template(
-            inter, image, style, glow, title, ox, oy, nocrop, matching, palette
+            inter, image, title, style, glow, ox, oy, host, nocrop, matching, palette
         )
 
     @_template.autocomplete("style")
@@ -161,13 +166,14 @@ class Template(commands.Cog):
     @commands.command(
         name="template",
         description="Generate a template link from an image.",
-        usage="<image|url> [-style <style>] [-glow] [-title <title>] [-ox <ox>] [-oy <oy>] [-nocrop] [-matching fast|accurate] [-palette ...]",
+        usage="<image|url> [-style <style>] [-title <title>] [-glow] [-ox <ox>] [-oy <oy>] [-nocrop] [-matching fast|accurate] [-palette ...]",
         help="""- `<image|url>`: an image URL or an attached file
+              - `[-title <title>]`: the template title
               - `[-style <style>]`: the name or URL of a template style (use `>styles` to see the list)
               - `[-glow]`: add glow to the template
-              - `[-title <title>]`: the template title
               - `[-ox <ox>]`: template x-position
               - `[-oy <oy>]`: template y-position
+              - `[-host discord|imgur]`: where to host the template image (default: discord)
               - `[-nocrop]`: if you don't want the template to be automatically cropped
               - `[-matching fast|accurate]`: the color matching algorithm to use
               - `[-palette ...]`: the palette to use for the template (palette name or list of colors seprated by a comma.)""",
@@ -177,11 +183,12 @@ class Template(commands.Cog):
 
         parser = MyParser(add_help=False)
         parser.add_argument("url", action="store", nargs="*")
+        parser.add_argument("-title", action="store", required=False)
         parser.add_argument("-style", action="store", required=False)
         parser.add_argument("-glow", action="store_true", default=False)
-        parser.add_argument("-title", action="store", required=False)
         parser.add_argument("-ox", action="store", required=False)
         parser.add_argument("-oy", action="store", required=False)
+        parser.add_argument("-host", choices=["discord", "imgur"], default="discord")
         parser.add_argument("-nocrop", action="store_true", default=False)
         parser.add_argument("-matching", choices=["fast", "accurate"], required=False)
         parser.add_argument("-palette", action="store", nargs="*")
@@ -196,11 +203,12 @@ class Template(commands.Cog):
             await self.template(
                 ctx,
                 url,
+                parsed_args.title,
                 parsed_args.style,
                 parsed_args.glow,
-                parsed_args.title,
                 parsed_args.ox,
                 parsed_args.oy,
+                parsed_args.host,
                 parsed_args.nocrop,
                 parsed_args.matching,
                 palette,
@@ -208,7 +216,17 @@ class Template(commands.Cog):
 
     @staticmethod
     async def template(
-        ctx, image_url, style_name, glow, title, ox, oy, nocrop, matching, palette=None
+        ctx,
+        image_url=None,
+        title=None,
+        style_name="custom",
+        glow=False,
+        ox=None,
+        oy=None,
+        host="discord",
+        nocrop=False,
+        matching="fast",
+        palette=None,
     ):
         # get the image from the message
         try:
@@ -292,7 +310,8 @@ class Template(commands.Cog):
                     palette, accept_colors=True, accept_palettes=True
                 )
             except ValueError as e:
-                return await ctx.send(f":x: {e}")
+                await ctx.send(f":x: {e}")
+                return False
 
         # crop the white space around the image
         if not (nocrop):
@@ -312,7 +331,7 @@ class Template(commands.Cog):
         )
         template_image = Image.fromarray(template_array)
         total_amount = int(np.sum(reduced_array != 255))
-        end = time.time()
+        processing_time = round(time.time() - start, 3)
 
         # Calculate an ETA
         estimate = None
@@ -324,8 +343,10 @@ class Template(commands.Cog):
                 canvas_stats = stats.get_canvas_stat(pxls_name) or 0
                 canvas_code = await stats.get_canvas_code()
                 canvas_start = await db_stats.get_canvas_start_date(canvas_code)
-                if canvas_start:
-                    canvas_duration = datetime.utcnow() - canvas_start
+                last_updated = stats.last_updated_to_date(stats.get_last_updated())
+                last_updated = last_updated.replace(tzinfo=None)
+                if canvas_start and last_updated:
+                    canvas_duration = last_updated - canvas_start
                     canvas_duration = canvas_duration / timedelta(days=1)
                     if canvas_duration > 0:
                         canvas_speed = canvas_stats / canvas_duration
@@ -338,54 +359,95 @@ class Template(commands.Cog):
             except Exception:
                 pass
 
-        # create and send the image
+        # create the embed
         embed = disnake.Embed(title="**Template**", color=0x66C5CC)
+        embed.set_author(name=ctx.author, icon_url=ctx.author.display_avatar)
+
         template_info = f"Title: `{title if title else 'N/A'}`\n"
         template_info += f"Style: {style_name}\n"
+        template_info += f"Host: `{host}`\n"
 
         if palette:
             template_info += f"Palette: {', '.join(palette_names)}\n"
         embed.add_field(name="**Template Info**", value=template_info)
         template_size = f"Size: `{format_number(total_amount)}` pixels\n"
         template_size += f"Dimensions: `{img.width} x {img.height}`\n"
-
         embed.add_field(name="**Template Size**", value=template_size)
+
         if estimate:
             embed.add_field(name="Estimate", value=estimate, inline=False)
-        embed.set_footer(
-            text=f"⏲️ Generated in {round((end-start),3)}s\n⚠️ Warning: if you delete this message the template WILL break."
-        )
-        embed.set_author(name=ctx.author, icon_url=ctx.author.display_avatar)
-        embed.set_thumbnail(url="attachment://template.png")
-        file = await image_to_file(template_image, "template.png")
 
-        m = await ctx.send(embed=embed, file=file)
-        if isinstance(ctx, (disnake.AppCmdInter, disnake.MessageInteraction)):
-            m = await ctx.original_message()
+        # upload and send the image
+        if host != "discord":
+            # imgur upload
+            start = time.time()
+            if host == "imgur":
+                try:
+                    template_image_url = await imgur_app.upload_image(template_image)
+                except ValueError as e:
+                    await ctx.send(f":x: {e}")
+                    return False
+                except Exception as e:
+                    print(e)
+                    await ctx.send(
+                        ":x: An error occurred while uploading the image to imgur, please try again with an other host."
+                    )
+                    return False
+            else:
+                await ctx.send(f":x: Unkown host `{host}`.")
+                return False
+            upload_time = round(time.time() - start, 3)
 
-        # create a template link with the sent image
-        template_title = f"&title={urllib.parse.quote(title, safe='')}" if title else ""
-        template_image_url = m.embeds[0].thumbnail.url
-        if ox or oy:
-            t_ox = int(ox) if (ox and str(ox).isdigit()) else 0
-            t_oy = int(oy) if (oy and str(oy).isdigit()) else 0
-            x = int(t_ox + img.width / 2)
-            y = int(t_oy + img.height / 2)
+            # create a template link with the uploaded image
+            template_url = make_template_url(
+                template_image_url, img.width, img.height, ox, oy, title
+            )
+            # update the embed with the link in a new field
+            embed.set_thumbnail(url=template_image_url)
+            embed.add_field(name="**Template Link**", value=template_url, inline=False)
+            embed.set_footer(
+                text="⏲️ Generated in {}s | Uploaded in {}s".format(
+                    processing_time, upload_time
+                )
+            )
+            # send the embed and view
+            view = TemplateView(ctx.author, template_url, None, embed, bool(title))
+            m = await ctx.send(embed=embed, view=view)
+            if isinstance(ctx, (disnake.AppCmdInter, disnake.MessageInteraction)):
+                m = await ctx.original_message()
+            view.message = m
+            return True
+
+        # discord upload
         else:
-            try:  # we're using a try/except block so we can still make templates if the board info is unreachable
-                x = int(stats.board_info["width"] / 2)
-                y = int(stats.board_info["height"] / 2)
-            except Exception:
-                x = y = 500
-            t_ox = int(x - img.width / 2)
-            t_oy = int(y - img.height / 2)
-        template_url = f"https://pxls.space/#x={x}&y={y}&scale=5&template={urllib.parse.quote(template_image_url, safe='')}&ox={t_ox}&oy={t_oy}&tw={img.width}{template_title}"
+            # upload the template image in the embed thumbnail
+            start = time.time()
+            file = await image_to_file(template_image, "template.png")
+            embed.set_thumbnail(url="attachment://template.png")
+            m = await ctx.send(embed=embed, file=file)
+            if isinstance(ctx, (disnake.AppCmdInter, disnake.MessageInteraction)):
+                m = await ctx.original_message()
+            upload_time = round(time.time() - start, 3)
 
-        # update the embed with the link in a new field
-        embed.add_field(name="**Template Link**", value=template_url, inline=False)
-        view = TemplateView(ctx.author, template_url, m, embed, bool(title))
-        await m.edit(embed=embed, view=view)
-        return True
+            # create a template link with the sent image
+            template_image_url = m.embeds[0].thumbnail.url
+            template_url = make_template_url(
+                template_image_url, img.width, img.height, ox, oy, title
+            )
+
+            # update the embed with the link in a new field
+            embed.add_field(name="**Template Link**", value=template_url, inline=False)
+            warning = "⚠️ Warning: if you delete this message the template WILL break."
+            embed.set_footer(
+                text="⏲️ Generated in {}s | Uploaded in {}s\n{}".format(
+                    processing_time, upload_time, warning
+                )
+            )
+
+            # update the embed and view
+            view = TemplateView(ctx.author, template_url, m, embed, bool(title))
+            await m.edit(embed=embed, view=view)
+            return True
 
     @commands.command(
         name="styles",
@@ -397,6 +459,35 @@ class Template(commands.Cog):
         for s in STYLES:
             styles_available += ("\t• {0} ({1}x{1})\n").format(s["name"], s["size"])
         return await ctx.send(styles_available)
+
+
+def make_template_url(template_image_url, width, height, ox=None, oy=None, title=None):
+    """Make a template URL from the given parameters
+    Place the template at the center of the canvas if ox and oy are None
+    Place the template at (500, 500) if ox and oy are None and the canvas info aren't available"""
+
+    if ox or oy:
+        t_ox = int(ox) if (ox and str(ox).isdigit()) else 0
+        t_oy = int(oy) if (oy and str(oy).isdigit()) else 0
+        x = int(t_ox + width / 2)
+        y = int(t_oy + height / 2)
+    else:
+        try:  # we're using a try/except block so we can still make templates if the board info is unreachable
+            x = int(stats.board_info["width"] / 2)
+            y = int(stats.board_info["height"] / 2)
+        except Exception:
+            x = y = 500
+        t_ox = int(x - width / 2)
+        t_oy = int(y - height / 2)
+    return "https://pxls.space/#x={}&y={}&scale=5&template={}&ox={}&oy={}&tw={}{}".format(
+        x,
+        y,
+        urllib.parse.quote(template_image_url, safe=""),
+        t_ox,
+        t_oy,
+        width,
+        f"&title={urllib.parse.quote(title, safe='')}" if title else "",
+    )
 
 
 def setup(bot: commands.Bot):

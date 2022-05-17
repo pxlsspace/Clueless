@@ -3,6 +3,7 @@ import numpy as np
 import time
 from disnake.ext import commands
 from PIL import Image
+from utils.arguments_parser import MyParser
 
 from utils.image.image_utils import (
     get_visible_pixels,
@@ -179,32 +180,70 @@ class Scale(commands.Cog):
         res_file = await image_to_file(res_image, "upscaled.png", embed=embed)
         await ctx.send(embed=embed, file=res_file)
 
+    resamples = {
+        "Nearest": Image.NEAREST,
+        "Lanczos": Image.LANCZOS,
+        "Bilinear": Image.BILINEAR,
+        "Bicubic": Image.BICUBIC,
+        "Box": Image.BOX,
+        "Hamming": Image.HAMMING,
+    }
+
     @commands.slash_command(name="resize")
-    async def _resize(self, inter: disnake.AppCmdInter, width: int, image: str = None):
+    async def _resize(
+        self,
+        inter: disnake.AppCmdInter,
+        width: int = 100,
+        image: str = None,
+        resample=commands.Param(choices=resamples.keys(), default="Nearest"),
+    ):
         """Change an image's width.
 
         Parameters
         ----------
         width: The new width for the image.
         image: The URL of the image.
+        resample: A resampling filter. (default: Nearest)
         """
         await inter.response.defer()
-        await self.resize(inter, width, image)
+        await self.resize(inter, width, image, resample)
 
     @commands.command(
         name="resize",
-        usage="<width> <image|url>",
+        usage="<image|url> [width] [-resample ...]",
         description="Change an image's width.",
-        help="""- `<width>`: the new width for the image
-                - `<url|image>`: an image URL or an attached image""",
+        help="""
+            - `<url|image>`: an image URL or an attached image
+            - `[width]`: the new width for the image (default: 100)
+            - `[-resample nearest|lanczos|bilinear|bicubic|box|hamming]`: a resampling filter (default: nearest)""",
     )
-    async def p_resize(self, ctx, width, url=None):
+    async def p_resize(self, ctx, *args):
+        parser = MyParser(add_help=False)
+        parser.add_argument("args", type=str, nargs="*")
+        parser.add_argument(
+            "-resample",
+            choices=[r.lower() for r in self.resamples.keys()],
+            default="Nearest",
+            type=lambda s: s.lower(),
+        )
+        try:
+            parsed_args = parser.parse_args(args)
+        except ValueError as e:
+            return await ctx.send(f"❌ {e}")
+
+        texts, urls = get_urls_from_list(parsed_args.args)
+        url = urls[0] if urls else None
+        width = texts[0] if texts else 100
         async with ctx.typing():
-            await self.resize(ctx, width, url)
+            await self.resize(ctx, width, url, parsed_args.resample)
 
-    async def resize(self, ctx, width, url=None):
+    async def resize(self, ctx, width, url=None, resample="Nearest"):
+        # check on the resample
+        if resample.title() not in self.resamples:
+            return await ctx.send(f"Unknown resampling filter ({resample}).")
+        resample_enum = self.resamples.get(resample.title())
+
         # check on the width
-
         def _check_width(width):
             err_msg = f"Invalid width `{width}`: The width must be a positive integer."
             try:
@@ -241,7 +280,7 @@ class Scale(commands.Cog):
                 raise ValueError(err_msg)
 
             # resize the input image
-            res_image = input_image.resize((width, new_height), Image.NEAREST)
+            res_image = input_image.resize((width, new_height), resample_enum)
             visible_pixels = get_visible_pixels(res_image)
             embed = disnake.Embed(title="Resize", color=0x66C5CC)
             embed.description = (
@@ -249,7 +288,9 @@ class Scale(commands.Cog):
                     input_image, res_image
                 )
             )
-            embed.description += "• Pixels: `{}`".format(format_number(visible_pixels))
+            embed.description += "• Pixels: `{}`\n".format(format_number(visible_pixels))
+            embed.description += "• Resample: `{}`".format(resample.title())
+
             res_file = await image_to_file(res_image, "resized.png", embed=embed)
             return embed, res_file
 

@@ -438,9 +438,26 @@ class Utility(commands.Cog):
         invites = Invites(BOT_INVITE, SERVER_INVITE)
         await ctx.send(embed=embed, view=invites)
 
-    @commands.message_command(name="Translate")  # optional
-    async def translate(
+    @commands.message_command(name="Translate (to English)")
+    async def translate_english(
         self, inter: disnake.ApplicationCommandInteraction, message: disnake.Message
+    ):
+        await self.translate(inter, message, "en")
+
+    @commands.message_command(name="Translate (to Locale)")
+    async def translate_locale(
+        self, inter: disnake.ApplicationCommandInteraction, message: disnake.Message
+    ):
+        dest = str(inter.locale)
+        if not (dest.startswith("zh")):
+            dest = dest.replace("-", "_")
+        await self.translate(inter, message, dest)
+
+    async def translate(
+        self,
+        inter: disnake.ApplicationCommandInteraction,
+        message: disnake.Message,
+        dest="en",
     ):
         await inter.response.defer(ephemeral=True)
         text = message.content
@@ -451,7 +468,7 @@ class Utility(commands.Cog):
             )
         try:
             translation = await self.bot.loop.run_in_executor(
-                None, self.translator.translate, text
+                None, self.translator.translate, text, dest
             )
         except Exception:
             return await inter.send(

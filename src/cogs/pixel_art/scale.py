@@ -10,7 +10,7 @@ from utils.image.image_utils import (
     remove_white_space,
     get_image_scale,
 )
-from utils.pxls.template_manager import detemplatize
+from utils.pxls.template_manager import detemplatize, parse_template
 from utils.discord_utils import (
     ResizeView,
     format_number,
@@ -341,6 +341,7 @@ class Scale(commands.Cog):
 
     async def size(self, ctx, url=None):
         # get the input image
+        send_file = url and parse_template(url)
         try:
             image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
@@ -362,9 +363,13 @@ class Scale(commands.Cog):
             format_number(height),
             format_number(total_size),
         )
-        file = await image_to_file(image, "input.png")
-        embed.set_thumbnail(url="attachment://input.png")
-        await ctx.send(embed=embed, file=file)
+        if send_file:
+            file = await image_to_file(image, "input.png")
+            embed.set_thumbnail(url="attachment://input.png")
+            await ctx.send(embed=embed, file=file)
+        else:
+            embed.set_thumbnail(url=url)
+            await ctx.send(embed=embed)
 
 
 def setup(bot: commands.Bot):

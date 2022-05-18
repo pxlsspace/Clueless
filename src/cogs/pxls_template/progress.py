@@ -1177,6 +1177,7 @@ class Progress(commands.Cog):
                 speed_px_d = delta_progress / (delta_time / timedelta(days=1))
 
         # make the graph
+        template_size = template.total_placeable
         if not groupby:
             graph_fig = await get_stats_graph(
                 [[template.name, dates, values]],
@@ -1184,6 +1185,16 @@ class Progress(commands.Cog):
                 theme,
                 user_timezone_name,
             )
+            # add a line with the size if the max point of the graph is above 80% of the size
+            if max([v for v in values if v is not None]) > 0.8 * template_size:
+                graph_fig.add_hline(
+                    y=template_size,
+                    line_dash="dash",
+                    annotation_text=f"     Size ({format_number(template_size)})",
+                    annotation_position="top left",
+                    annotation_font_color=theme.off_color,
+                    line=dict(color=theme.off_color, width=3),
+                )
         else:
             nb_bars = len(values)
             if nb_bars > 10000:
@@ -1203,7 +1214,7 @@ class Progress(commands.Cog):
             table_data = [
                 [
                     template.name,
-                    template.total_placeable,
+                    template_size,
                     delta_progress,
                     average_speed,
                     min_value,
@@ -1216,7 +1227,7 @@ class Progress(commands.Cog):
             table_data = [
                 [
                     template.name,
-                    template.total_placeable,
+                    template_size,
                     delta_progress,
                     speed_px_h,
                     speed_px_d,
@@ -1236,7 +1247,10 @@ class Progress(commands.Cog):
         )
 
         # make the embed
-        embed = disnake.Embed(title="**Template Speed**", color=0x66C5CC)
+        embed = disnake.Embed(
+            title=f"**Template Speed for '{template.name}'**", color=0x66C5CC
+        )
+        embed.url = template.generate_url()
         embed.description = "• Between {} and {}\n".format(
             format_datetime(oldest_time),
             format_datetime(latest_time),

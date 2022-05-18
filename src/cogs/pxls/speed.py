@@ -194,9 +194,16 @@ class PxlsSpeed(commands.Cog):
             )
 
         # check that we found data
+        err_embed = disnake.Embed(
+            title=f"❌ User{'s' if len(usernames) > 1 else ''} Not Found",
+            color=disnake.Color.red(),
+        )
+        err_embed.description = f"The users need to be in the **top 1000 of {'the canvas' if canvas else 'all-time'}** for this command to work.\n"
+        err_embed.description += (
+            "Also **names are case sensitive** so make sure you spelled them correctly.\n"
+        )
         if len(stats) == 0:
-            msg = "❌ User{} not found.".format("s" if len(usernames) > 1 else "")
-            return await ctx.send(msg)
+            return await ctx.send(embed=err_embed)
 
         # check that we can calculate the speed
         if past_time == now_time:
@@ -336,13 +343,19 @@ class PxlsSpeed(commands.Cog):
 
         if len(formatted_data) == 0:
             if found_but_no_data and not canvas:
-                if is_slash:
-                    msg = f"❌ User{'s' if len(usernames) > 1 else ''} not found in the all-time leaderboard.\n(try using `/speed alltime:False` to use the canvas data instead.)"
-                else:
-                    msg = f"❌ User{'s' if len(usernames) > 1 else ''} not found in the all-time leaderboard.\n(try using `{prefix}speed` without `-alltime` to use the canvas data instead.)"
-            else:
-                msg = f"❌ User{'s' if len(usernames) > 1 else ''} not found."
-            return await ctx.send(msg)
+                command_name = (
+                    "`/speed alltime:False`"
+                    if is_slash
+                    else f"`{prefix}speed` without `-alltime`"
+                )
+                err_embed.description = (
+                    f'The user{"s were not" if len(usernames) > 1 else " was not"} found in the all-time leadeboard.\n'
+                )
+                err_embed.description += (
+                    f"You can use {command_name} to use the canvas data instead.\n"
+                )
+
+            return await ctx.send(embed=err_embed)
 
         # sort the data by the 3rd column (progress in the time frame)
         formatted_data.sort(key=lambda x: x[2], reverse=True)

@@ -1161,10 +1161,11 @@ class Progress(commands.Cog):
 
         if groupby:
             # calculate the speed as px/<groupby>
-            delta_progress = sum(values)
-            average_speed = sum(values) / len(values)
-            min_value = min(values)
-            max_value = max(values)
+            values_without_last = values[:-1] if len(values) > 1 else values
+            delta_progress = sum(values_without_last)
+            average_speed = sum(values_without_last) / len(values_without_last)
+            min_value = min(values_without_last)
+            max_value = max(values_without_last)
         else:
             # calculate the speed (between the given dates)
             delta_progress = latest_progress - oldest_progress

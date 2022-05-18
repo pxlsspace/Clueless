@@ -297,8 +297,10 @@ class PxlsSpeed(commands.Cog):
                     user_timezone = None
 
                 pixels = [stat["placed"] for stat in data]
-                # remove the "None" values to calculate the min, max, avg
+                # remove the "None" and last values to calculate the min, max, avg
                 pixels_int_only = [p for p in pixels if p is not None]
+                if len(pixels_int_only) > 1 and pixels[-1] is not None:
+                    pixels_int_only = pixels_int_only[:-1]
                 if len(pixels_int_only) > 0:
                     min_pixels = min(pixels_int_only)
                     max_pixels = max(pixels_int_only)
@@ -584,6 +586,8 @@ def get_grouped_graph(stats_list: list, title, theme, user_timezone=None):
         name = '<span style="color:{};font-size:40;"><b>{}</b></span>'.format(
             colors[i], user[0]
         )
+        bar_colors = [colors[i] for _ in pixels]
+        bar_colors[-1] = theme.off_color
         # trace the user data
         if theme.has_underglow:
             # different style if the theme has underglow
@@ -594,10 +598,10 @@ def get_grouped_graph(stats_list: list, title, theme, user_timezone=None):
                     y=pixels,
                     text=text,
                     textposition="outside",
-                    marker_color=hex_to_rgba_string(colors[i], 0.15),
-                    marker_line_color=colors[i],
+                    marker_color=[hex_to_rgba_string(c, 0.15) for c in bar_colors],
+                    marker_line_color=bar_colors,
                     marker_line_width=2.5,
-                    textfont=dict(color=colors[i], size=40),
+                    textfont=dict(color=bar_colors, size=40),
                     cliponaxis=False,
                 )
             )
@@ -609,8 +613,8 @@ def get_grouped_graph(stats_list: list, title, theme, user_timezone=None):
                     y=pixels,
                     text=text,
                     textposition="outside",
-                    marker=dict(color=colors[i], opacity=0.9),
-                    textfont=dict(color=colors[i], size=40),
+                    marker=dict(color=bar_colors, opacity=0.9),
+                    textfont=dict(color=bar_colors, size=40),
                     cliponaxis=False,
                 )
             )

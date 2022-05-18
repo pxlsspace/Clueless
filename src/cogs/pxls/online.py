@@ -133,6 +133,8 @@ class Online(commands.Cog):
             dates = dates[:-1]
             online_counts = online_counts[:-1]
             online_counts_without_none = online_counts
+            if len(online_counts_without_none) > 1 and online_counts[0] is not None:
+                online_counts_without_none = online_counts_without_none[1:]
         else:
             online_counts = [(int(e[0]) if e[0] is not None else 0) for e in data]
             dates = [e[1] for e in data if e[0]]
@@ -257,7 +259,6 @@ def make_grouped_graph(dates, values, theme, user_timezone=None):
     dates = [datetime.astimezone(d.replace(tzinfo=timezone.utc), tz) for d in dates]
 
     # create the graph and style
-    color = theme.get_palette(1)[0]
     fig = go.Figure(layout=theme.get_layout(annotation_text=annotation_text))
     fig.update_yaxes(rangemode="tozero")
 
@@ -280,6 +281,10 @@ def make_grouped_graph(dates, values, theme, user_timezone=None):
         for v in values
     ]
 
+    color = theme.get_palette(1)[0]
+    bar_colors = [color for _ in values]
+    bar_colors[0] = theme.off_color
+
     # trace the user data
     if theme.has_underglow:
         # different style if the theme has underglow
@@ -290,10 +295,10 @@ def make_grouped_graph(dates, values, theme, user_timezone=None):
                 y=values,
                 text=text,
                 textposition="outside",
-                marker_color=hex_to_rgba_string(color, 0.15),
-                marker_line_color=color,
+                marker_color=[hex_to_rgba_string(c, 0.15) for c in bar_colors],
+                marker_line_color=bar_colors,
                 marker_line_width=2.5,
-                textfont=dict(color=color, size=40),
+                textfont=dict(color=bar_colors, size=40),
                 cliponaxis=False,
             )
         )
@@ -305,8 +310,8 @@ def make_grouped_graph(dates, values, theme, user_timezone=None):
                 y=values,
                 text=text,
                 textposition="outside",
-                marker=dict(color=color, opacity=0.9),
-                textfont=dict(color=color, size=40),
+                marker=dict(color=bar_colors, opacity=0.9),
+                textfont=dict(color=bar_colors, size=40),
                 cliponaxis=False,
             )
         )

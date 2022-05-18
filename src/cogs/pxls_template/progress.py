@@ -1190,7 +1190,7 @@ class Progress(commands.Cog):
                 graph_fig.add_hline(
                     y=template_size,
                     line_dash="dash",
-                    annotation_text=f"     Size ({format_number(template_size)})",
+                    annotation_text=f"  Size ({format_number(template_size)})",
                     annotation_position="top left",
                     annotation_font_color=theme.off_color,
                     line=dict(color=theme.off_color, width=3),
@@ -1201,11 +1201,25 @@ class Progress(commands.Cog):
                 return await ctx.send(
                     f":x: That's too many bars too show (**{nb_bars}**). <:bruhkitty:943594789532737586>"
                 )
+            pos_color = theme.get_palette(1)[0]
+            neg_color = theme.red_color
+            zero_color = theme.font_color
+            bar_colors = []
+            for v in values:
+                if v is None or v == 0:
+                    bar_colors.append(zero_color)
+                elif v > 0:
+                    bar_colors.append(pos_color)
+                elif v < 0:
+                    bar_colors.append(neg_color)
+
+            # bar_colors = [get_speed_color(v) for v in values]
             graph_fig = await get_grouped_graph(
                 [[template.name, dates, values]],
                 f"Template speed (grouped by {groupby})",
                 theme,
                 user_timezone_name,
+                bar_colors,
             )
         graph_image = await fig2img(graph_fig)
 

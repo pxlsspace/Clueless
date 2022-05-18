@@ -540,7 +540,9 @@ def get_stats_graph(stats_list: list, title, theme, user_timezone=None):
 
 
 @in_executor()
-def get_grouped_graph(stats_list: list, title, theme, user_timezone=None):
+def get_grouped_graph(
+    stats_list: list, title, theme, user_timezone=None, input_bar_colors=None
+):
 
     # get the timezone information
     tz = get_timezone(user_timezone)
@@ -586,7 +588,10 @@ def get_grouped_graph(stats_list: list, title, theme, user_timezone=None):
         name = '<span style="color:{};font-size:40;"><b>{}</b></span>'.format(
             colors[i], user[0]
         )
-        bar_colors = [colors[i] for _ in pixels]
+        if input_bar_colors is None:
+            bar_colors = [colors[i] for _ in pixels]
+        else:
+            bar_colors = input_bar_colors
         bar_colors[-1] = theme.off_color
         # trace the user data
         if theme.has_underglow:
@@ -616,6 +621,7 @@ def get_grouped_graph(stats_list: list, title, theme, user_timezone=None):
                     marker=dict(color=bar_colors, opacity=0.9),
                     textfont=dict(color=bar_colors, size=40),
                     cliponaxis=False,
+                    marker_line_width=0,
                 )
             )
 

@@ -180,6 +180,7 @@ class Theme:
         outline_dark,
         odd_row_color,
         table_outline_width,
+        red_color,
     ):
 
         self.name = name
@@ -196,6 +197,7 @@ class Theme:
         self.outline_dark = outline_dark
         self.odd_row_color = odd_row_color
         self.table_outline_width = table_outline_width
+        self.red_color = red_color
 
     def get_palette(self, nb_colors):
         if self.palette == "synthwave":
@@ -337,6 +339,7 @@ default_theme = Theme(
     outline_dark=True,
     odd_row_color="#000000",
     table_outline_width=3,
+    red_color="#d13030",
 )
 
 synthwave_theme = Theme(
@@ -352,8 +355,9 @@ synthwave_theme = Theme(
     has_underglow=True,
     palette="synthwave",
     outline_dark=True,
-    odd_row_color="#000000",  # TO CHANGE
+    odd_row_color="#000000",
     table_outline_width=3,
+    red_color="#f20055",
 )
 
 synthwave_noglow_theme = Theme(
@@ -369,8 +373,9 @@ synthwave_noglow_theme = Theme(
     has_underglow=False,
     palette="synthwave",
     outline_dark=True,
-    odd_row_color="#000000",  # TO CHANGE
+    odd_row_color="#000000",
     table_outline_width=3,
+    red_color="#f20055",
 )
 
 pxls_theme = Theme(
@@ -388,6 +393,7 @@ pxls_theme = Theme(
     outline_dark=False,
     odd_row_color="#341943",
     table_outline_width=3,
+    red_color="#f02523",
 )
 
 pastel_theme = Theme(
@@ -405,6 +411,7 @@ pastel_theme = Theme(
     outline_dark=True,
     odd_row_color="#7f65b1",
     table_outline_width=3,
+    red_color="#fbb4ae",
 )
 
 red_theme = Theme(
@@ -422,6 +429,7 @@ red_theme = Theme(
     outline_dark=False,
     odd_row_color="#000000",
     table_outline_width=3,
+    red_color="#d00200",
 )
 
 light_theme = Theme(
@@ -439,6 +447,7 @@ light_theme = Theme(
     outline_dark=False,
     odd_row_color="#adbbce",
     table_outline_width=0,
+    red_color="#ec4145",
 )
 
 theme_list = [

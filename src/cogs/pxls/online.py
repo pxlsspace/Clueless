@@ -313,6 +313,7 @@ def make_grouped_graph(dates, values, theme, user_timezone=None):
                 marker=dict(color=bar_colors, opacity=0.9),
                 textfont=dict(color=bar_colors, size=40),
                 cliponaxis=False,
+                marker_line_width=0,
             )
         )
     return fig

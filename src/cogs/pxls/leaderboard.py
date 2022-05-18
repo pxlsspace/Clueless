@@ -583,6 +583,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                     marker=dict(color=colors, opacity=0.95),
                     textfont=dict(color=colors, size=40),
                     cliponaxis=False,
+                    marker_line_width=0,
                 )
             )
         return fig

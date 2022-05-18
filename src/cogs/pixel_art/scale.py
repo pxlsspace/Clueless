@@ -85,9 +85,23 @@ class Scale(commands.Cog):
             scale = pixel_size
 
         if not scale or scale == 1:
-            msg = "Make sure that:\n"
+            resize_command = (
+                "/resize"
+                if isinstance(ctx, disnake.AppCmdInter)
+                else f"{ctx.prefix}resize"
+            )
+            msg = f"If your image is NOT a pixel art, use `{resize_command}` instead.\n\n"
+            msg += "If it is, make sure that:\n"
             msg += "- The image doesn't have artifacts (it needs to be a good quality image)\n"
-            msg += "- The image isn't already at its smallest possible scale"
+            msg += "- The image isn't already at its smallest possible scale\n"
+
+            downscale_command = (
+                "/downscale image:... pixel-size:..."
+                if isinstance(ctx, disnake.AppCmdInter)
+                else f"{ctx.prefix}downscale <image> <pixel size>"
+            )
+            msg += f"\n*Note: If you know the scale factor (how big each pixel is), you can try\n`{downscale_command}`*\n"
+
             error_embed = disnake.Embed(
                 title=":x: **Couldn't downscale that image**",
                 description=msg,

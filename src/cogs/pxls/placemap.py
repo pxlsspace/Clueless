@@ -80,7 +80,7 @@ class PlacemapView(AuthorView):
 class Placemap(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot: commands.Bot = bot
-        self.cd = commands.CooldownMapping.from_cooldown(1, 20, commands.BucketType.user)
+        self.cd = commands.CooldownMapping.from_cooldown(1, 30, commands.BucketType.user)
 
     @commands.slash_command(name="placemap")
     async def _placemap(
@@ -234,6 +234,7 @@ class Placemap(commands.Cog):
         view.message = await m.edit(embed=embed, file=placemap_file, view=view)
         if view.message is None:
             view.message = await ctx.original_message()
+        self.cd.get_bucket(ctx).reset()
 
     @commands.slash_command(name="canvas")
     async def _canvas(

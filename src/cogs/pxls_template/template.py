@@ -27,6 +27,7 @@ from utils.pxls.template import (
     reduce,
     get_rgba_palette,
 )
+from utils.pxls.template_manager import parse_template
 from utils.setup import stats, db_users, db_stats, imgur_app
 from utils.time_converter import td_format
 from utils.utils import get_content
@@ -142,7 +143,7 @@ class Template(commands.Cog):
 
         Parameters
         ----------
-        image: The URL of the image you want to templatize.
+        image: The URL of the image you want to templatize (can be a template link).
         style: The name or URL of a template style. (default: custom)
         glow: To add glow to the template. (default: False)
         title: The template title.
@@ -167,7 +168,7 @@ class Template(commands.Cog):
         name="template",
         description="Generate a template link from an image.",
         usage="<image|url> [-style <style>] [-title <title>] [-glow] [-ox <ox>] [-oy <oy>] [-nocrop] [-matching fast|accurate] [-palette ...]",
-        help="""- `<image|url>`: an image URL or an attached file
+        help="""- `<image|url>`: an image URL, attached file or template link
               - `[-title <title>]`: the template title
               - `[-style <style>]`: the name or URL of a template style (use `>styles` to see the list)
               - `[-glow]`: add glow to the template
@@ -234,6 +235,15 @@ class Template(commands.Cog):
         except ValueError as e:
             await ctx.send(f"❌ {e}")
             return False
+
+        # check if the input is a template and use its parameters
+        parsed_template = parse_template(image_url) if image_url else None
+        if parsed_template:
+            title = title or parsed_template.get("title")
+            if ox is None or oy is None:
+                nocrop = True
+            ox = ox or parsed_template["ox"]
+            oy = oy or parsed_template["oy"]
 
         start = time.time()
         # check on the style

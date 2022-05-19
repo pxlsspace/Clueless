@@ -253,6 +253,9 @@ class Progress(commands.Cog):
             footer_text = f"Displaying: {[name for name,val in self.display_options.items() if val == display][0]}"
         else:
             footer_text = ""
+        if is_tracked:
+            footer_text += "\nLast updated"
+            embed.timestamp = disnake.utils.utcnow()
 
         # INFO #
         info_text = f"• Title: `{title}`\n"
@@ -286,8 +289,21 @@ class Progress(commands.Cog):
         )
         progress_text += f"• Progress:\n**|`{bar}`|** `{correct_percentage}%`\n"
         if is_tracked:
-            eta = await template.get_eta()
-            progress_text += f"• ETA: `{eta or 'N/A'}`\n"
+            eta, eta_speed = await template.get_eta()
+            if eta == "done" and nb_virgin_abuse == 0:
+                embed.color = 0x1EC31E
+                clap_emoji = "<a:HyperClapCat:976892768209219624>"
+                progress_text += f"• ETA: {clap_emoji} `Done!` {clap_emoji}\n"
+            elif eta == "done":
+                embed.color = 0x00A500
+                clap_emoji = "<a:clapcat:976892767705903155>"
+                progress_text += f"• ETA: {clap_emoji} `Done!` {clap_emoji}\n"
+            else:
+                progress_text += "• ETA: `{}`{}\n".format(
+                    eta or "N/A",
+                    f" *(at `{format_number(eta_speed)}` px/h)*" if eta_speed else "",
+                )
+
         embed.add_field(name="**Current Progress**", value=progress_text, inline=False)
 
         # ACTIVITY #
@@ -337,7 +353,7 @@ class Progress(commands.Cog):
                 last_updated = format_datetime(last_progress_dt, "R")
             else:
                 last_updated = "-"
-            activity_text += f"\nLast Updated: {last_updated}"
+            activity_text += f"\nStats Updated: {last_updated}"
 
         files = []
         if display != "none":

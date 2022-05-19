@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 import disnake
 import re
@@ -873,9 +874,10 @@ class AddTemplateView(AuthorView):
         self, button: disnake.ui.Button, button_inter: disnake.MessageInteraction
     ):
         # send a modal
+        modal_id = os.urandom(16).hex()
         await button_inter.response.send_modal(
             title="Add a template to the tracker.",
-            custom_id="add_template",
+            custom_id=modal_id,
             components=[
                 disnake.ui.TextInput(
                     label="Name",
@@ -892,7 +894,7 @@ class AddTemplateView(AuthorView):
             # wait until the user submits the modal.
             modal_inter: disnake.ModalInteraction = await button_inter.bot.wait_for(
                 "modal_submit",
-                check=lambda i: i.custom_id == "add_template"
+                check=lambda i: i.custom_id == modal_id
                 and i.author.id == button_inter.author.id,
                 timeout=300,
             )

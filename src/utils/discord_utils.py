@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import disnake
 import re
 import asyncio
@@ -513,7 +514,7 @@ class CooldownView(disnake.ui.View):
             # rate limited
             embed = disnake.Embed(
                 title="You're doing this too quick!",
-                description=f"You're on cooldown for this interaction, try again in {round(retry_after,2)}s.",
+                description=f"You are on cooldown for this interaction, try again in **{round(retry_after,2)}s**.",
                 color=disnake.Color.red(),
             )
             await inter.send(ephemeral=True, embed=embed)
@@ -704,7 +705,7 @@ class DropdownView(PaginatorView):
             # rate limited
             embed = disnake.Embed(
                 title="You're doing this too quick!",
-                description=f"You're on cooldown for this interaction, try again in {round(retry_after,2)}s.",
+                description=f"You are on cooldown for this interaction, try again in **{round(retry_after,2)}s**.",
                 color=0xFF3621,
             )
             await inter.send(ephemeral=True, embed=embed)
@@ -718,70 +719,133 @@ class DropdownView(PaginatorView):
         await self.message.edit(view=self)
 
 
-class MoreInfoView(disnake.ui.View):
+class MoreInfoView(AuthorView):
     """A view used to add:
     - a Link button that opens `url`
-    - a "More Info" button that switches the view message between "embed" and "embed_expaneded"
-    - a "speed graph`" buttons that runs the `speed function` on `template_name`"""
+    - a "more Info" button that switches the view message between "embed" and "embed_expaneded"
+    - a "speed graph`" buttons that runs the `speed function` on `template_name`
+    - a "groupped speed graph`" buttons that runs the `speed function` on `template_name`
+      with the groupy option to:
+          - day if the tracking time > 2 days
+          - hours if the tracking day is between 2 hours and 2 days
+          - 5min if the tracking time is under 2 hours
+    - a refresh button"""
 
     message: disnake.Message
 
     def __init__(
-        self, author, embed, embed_expanded, url, speed_function, template_name
+        self,
+        author,
+        embed,
+        embed_expanded,
+        url,
+        speed_function,
+        template_name,
+        tracking_since,
+        add_refresh=True,
+        display=0,
+        state=0,
     ) -> None:
-        super().__init__(timeout=300)
-        self.author = author
-        self.state = 0  # 0: collapsed, 1: expanded
+        super().__init__(author=author, timeout=300)
+        self.state = state  # 0: collapsed, 1: expanded
         self.embeds = [embed, embed_expanded]
-        self.labels = ["More Info", "Less Info"]
         self.emojis = ["<:arrowdown:955585658787885077>", "<:arrowup:955585658758516797>"]
-        self.children.insert(0, disnake.ui.Button(label="Open Template", url=url))
-
         self.speed_function = speed_function
         self.template_name = template_name
+        self.tracking_since = tracking_since
+        self.display = display
+        self.add_refresh = add_refresh
 
-    async def interaction_check(self, inter: disnake.MessageInteraction) -> bool:
-        # check that the command author is the user who interracted
-        if inter.author != self.author:
-            embed = disnake.Embed(
-                title="This isn't your command!",
-                description="You cannot interact with a command you did not call.",
-                color=0xFF3621,
-            )
-            await inter.send(ephemeral=True, embed=embed)
-            return False
-        return True
+        self.children.insert(0, disnake.ui.Button(label="Template", url=url))
+        self.switch.emoji = self.emojis[self.state]
+        if add_refresh:
+            self.update_refresh_btn_id()
+        else:
+            self.remove_item(self.refresh_button)
 
     async def on_timeout(self) -> None:
-        # disable all the buttons except the url one
-        for c in self.children[1:]:
+        # disable all the buttons except the url and refresh ones
+        if all([c.custom_id == self.children[1].custom_id for c in self.children[1:-1]]):
+            self.stop()
+            return
+        for c in self.children[1:-1]:
             c.disabled = True
+        if not self.add_refresh:
+            self.refresh_button.disabled = True
         await self.message.edit(view=self)
 
+    def update_refresh_btn_id(self):
+        if self.add_refresh:
+            self.refresh_button.custom_id = f"prog_refresh:{self.template_name},{self.display},{self.state},{self.author.id}"
+
     @disnake.ui.button(
-        label="More Info",
         style=disnake.ButtonStyle.blurple,
         emoji="<:arrowdown:955585658787885077>",
     )
     async def switch(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
         self.state = 1 - self.state
         emb = self.embeds[self.state]
-        button.label = self.labels[self.state]
         button.emoji = self.emojis[self.state]
+        self.update_refresh_btn_id()
         await inter.response.edit_message(embed=emb, view=self)
 
     @disnake.ui.button(
-        label="Speed Graph",
         style=disnake.ButtonStyle.blurple,
         emoji="<:graph:955585658888544337>",
     )
     async def progress_speed(
         self, button: disnake.ui.Button, inter: disnake.MessageInteraction
     ):
+        if not await self.check_tracking_time(inter):
+            return
         button.disabled = True
         await inter.message.edit(view=self)
         await inter.response.defer(with_message=True)
         await self.speed_function(inter, self.template_name)
+
+    @disnake.ui.button(
+        style=disnake.ButtonStyle.blurple,
+        emoji="<:graph_bars:974811872471691314>",
+    )
+    async def progress_speed_grouped(
+        self, button: disnake.ui.Button, inter: disnake.MessageInteraction
+    ):
+        if not await self.check_tracking_time(inter):
+            return
+        tracking_time = datetime.utcnow() - self.tracking_since
+        if tracking_time > timedelta(days=2):
+            groupby = "day"
+        elif tracking_time > timedelta(hours=2):
+            groupby = "hour"
+        else:
+            groupby = "5min"
+        button.disabled = True
+        await inter.message.edit(view=self)
+        await inter.response.defer(with_message=True)
+        await self.speed_function(inter, self.template_name, groupby=groupby)
+
+    @disnake.ui.button(
+        style=disnake.ButtonStyle.green, emoji="<:refresh:976870681729962017>"
+    )
+    async def refresh_button(
+        self, button: disnake.ui.Button, inter: disnake.MessageInteraction
+    ):
+        pass
+
+    async def check_tracking_time(self, inter):
+        if (
+            self.tracking_since is None
+            or datetime.utcnow() - self.tracking_since < timedelta(minutes=5)
+        ):
+            await inter.send(
+                embed=disnake.Embed(
+                    color=disnake.Color.red(),
+                    description="Not enough data to make graphs yet, try again in ~5 minutes.",
+                ),
+                ephemeral=True,
+            )
+            return False
+        return True
 
 
 class AddTemplateView(AuthorView):

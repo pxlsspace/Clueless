@@ -43,6 +43,9 @@ from utils.image.image_utils import v_concatenate
 class Progress(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot: commands.Bot = bot
+        self.refresh_cooldown = commands.CooldownMapping.from_cooldown(
+            1, 10, commands.BucketType.user
+        )
 
     @commands.slash_command(name="progress")
     async def _progress(self, inter):
@@ -124,11 +127,26 @@ class Progress(commands.Cog):
 
     async def check(self, ctx, template_input, display):
         # check if the input is an URL or template name
+        try:
+            check_values = await self.make_check_embed(ctx, template_input, display)
+        except ValueError as e:
+            return await ctx.send(
+                embed=disnake.Embed(color=disnake.Color.red(), description=f":x: {e}")
+            )
+        if check_values is None:
+            return
+        embed, files, view = check_values
+        m = await ctx.send(files=files, embed=embed, view=view)
+        if isinstance(ctx, disnake.AppCmdInter):
+            ctx.send
+            m = await ctx.original_message()
+        if view:
+            view.message = m
+
+    async def make_check_embed(self, ctx, template_input, display, state=0):
         if parse_template(template_input) is not None:
-            try:
-                template = await get_template_from_url(template_input)
-            except ValueError as e:
-                return await ctx.send(f":x: {e}")
+            template = await get_template_from_url(template_input)
+
             # check if we have a tracked template with the same image and coords
             template_with_same_image = tracked_templates.check_duplicate_template(
                 template
@@ -141,8 +159,8 @@ class Progress(commands.Cog):
         else:
             template = tracked_templates.get_template(template_input, None, False)
             if template is None:
-                return await ctx.send(
-                    f":x: There is no template with the name `{template_input}` in the tracker."
+                raise ValueError(
+                    f"There is no template with the name `{template_input}` in the tracker."
                 )
             is_tracked = True
 
@@ -151,7 +169,7 @@ class Progress(commands.Cog):
         total_placeable = template.total_placeable
         correct_pixels = template.update_progress()
         if total_placeable == 0:
-            return await ctx.send(
+            raise ValueError(
                 ":x: The template seems to be outside the canvas, make sure it's correctly positioned."
             )
         correct_percentage = round((correct_pixels / total_placeable) * 100, 2)
@@ -352,9 +370,12 @@ class Progress(commands.Cog):
                 template_url,
                 self.speed,
                 template.name,
+                oldest_record["datetime"] or datetime.utcnow(),
+                add_refresh=False,
             )
             view.message = m
             await m.edit(view=view)
+            return None
         else:
             template_url = template.generate_url(open_on_togo=True)
             if is_tracked:
@@ -365,6 +386,10 @@ class Progress(commands.Cog):
                     template_url,
                     self.speed,
                     template.name,
+                    oldest_record["datetime"] or datetime.utcnow(),
+                    add_refresh=True,
+                    display=display,
+                    state=state,
                 )
             else:
                 if template.stylized_url.startswith("data:image"):
@@ -375,12 +400,61 @@ class Progress(commands.Cog):
                     )
                 else:
                     view = AddTemplateView(ctx.author, template_url, self.add)
-            m = await ctx.send(files=files, embed=embed, view=view)
-            if isinstance(ctx, disnake.AppCmdInter):
-                ctx.send
-                m = await ctx.original_message()
-            if view:
-                view.message = m
+            return embed if state == 0 else embed_expanded, files, view
+
+    @commands.Cog.listener()
+    async def on_button_click(self, inter: disnake.MessageInteraction):
+        """Handle what to do when the "add key" or "list keys" button is pressed."""
+        custom_id = inter.component.custom_id
+        parsed_id = custom_id.split(":")
+        if parsed_id[0] != "prog_refresh":
+            return
+
+        # check the author
+        template_name, display, state, button_author_id = parsed_id[1].split(",")
+        if inter.author.id != int(button_author_id):
+            return await inter.send(
+                embed=disnake.Embed(
+                    title="This isn't your command!",
+                    color=0xFF3621,
+                    description="You cannot interact with a command you did not call.",
+                ),
+                ephemeral=True,
+            )
+
+        # check the cooldown
+        retry_after = self.refresh_cooldown.update_rate_limit(inter)
+        if retry_after:
+            # rate limited
+            embed = disnake.Embed(
+                title="You're doing this too quick!",
+                description=f"You are on cooldown for refresh buttons, try again in **{round(retry_after,2)}s**.",
+                color=0xFF3621,
+            )
+            return await inter.send(ephemeral=True, embed=embed)
+
+        # get the new embed, files, view
+        await inter.response.defer()
+        try:
+            check_values = await self.make_check_embed(
+                inter, template_name, display, int(state)
+            )
+        except ValueError:
+            check_values = None
+
+        if check_values is None:
+            return await inter.send(
+                embed=disnake.Embed(
+                    color=disnake.Color.red(),
+                    description=":x: An error occurred, couldn't refresh the progress.",
+                ),
+                ephemeral=True,
+            )
+        embed, files, view = check_values
+        m = await inter.edit_original_message(embed=embed, files=files, view=view)
+        view.message = m
+        self.refresh_cooldown.get_bucket(inter).reset()
+        self.refresh_cooldown.update_rate_limit(inter)
 
     @_progress.sub_command(name="add")
     async def _add(self, inter: disnake.AppCmdInter, name: str, url: str):
@@ -1264,7 +1338,7 @@ class Progress(commands.Cog):
         embed = disnake.Embed(
             title=f"**Template Speed for '{template.name}'**", color=0x66C5CC
         )
-        embed.url = template.generate_url()
+        embed.url = template.generate_url() if template.url else None
         embed.description = "• Between {} and {}\n".format(
             format_datetime(oldest_time),
             format_datetime(latest_time),

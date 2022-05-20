@@ -6,6 +6,7 @@ from io import BytesIO
 from disnake.ext import commands
 
 from utils.discord_utils import (
+    InterImage,
     UserConverter,
     get_image_from_message,
     get_url,
@@ -22,8 +23,8 @@ class Pet(commands.Cog):
     async def _pet(
         self,
         inter: disnake.AppCmdInter,
+        image: InterImage,
         target: disnake.User = None,
-        image: str = None,
     ):
         """
         Pet someone or something.
@@ -31,11 +32,10 @@ class Pet(commands.Cog):
         Parameters
         ----------
         target: The user to pet.
-        image: The image or emote to pet.
         """
         url = None
-        if image:
-            url = image
+        if image.url:
+            url = image.url
         if target:
             url = target.display_avatar.url
         await inter.response.defer()

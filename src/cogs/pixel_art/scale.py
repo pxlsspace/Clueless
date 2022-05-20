@@ -12,6 +12,7 @@ from utils.image.image_utils import (
 )
 from utils.pxls.template_manager import detemplatize, parse_template
 from utils.discord_utils import (
+    InterImage,
     ResizeView,
     format_number,
     get_image_from_message,
@@ -28,18 +29,17 @@ class Scale(commands.Cog):
     async def _downscale(
         self,
         inter: disnake.AppCmdInter,
-        image: str = None,
+        image: InterImage,
         pixel_size: int = commands.Param(name="pixel-size", default=None, gt=1),
     ):
         """Downscale an upscaled pixel art.
 
         Parameters
         ----------
-        image: The URL of the image.
         pixel_size: The current size of the pixels (e.g. "2" means  the pixels are 2x2).
         """
         await inter.response.defer()
-        await self.downscale(inter, image, pixel_size)
+        await self.downscale(inter, image.url, pixel_size)
 
     @commands.command(
         name="downscale",
@@ -131,16 +131,15 @@ class Scale(commands.Cog):
         await ctx.send(embed=embed, file=downscaled_file)
 
     @commands.slash_command(name="upscale")
-    async def _upscale(self, inter: disnake.AppCmdInter, scale: int, image: str = None):
+    async def _upscale(self, inter: disnake.AppCmdInter, scale: int, image: InterImage):
         """Upscale an image to the desired scale.
 
         Parameters
         ----------
         scale: The new scale for the image (ex: 2 means the image will be 2x bigger).
-        image: The URL of the image.
         """
         await inter.response.defer()
-        await self.upscale(inter, scale, image)
+        await self.upscale(inter, scale, image.url)
 
     @commands.command(
         name="upscale",
@@ -207,8 +206,8 @@ class Scale(commands.Cog):
     async def _resize(
         self,
         inter: disnake.AppCmdInter,
+        image: InterImage,
         width: int = 100,
-        image: str = None,
         resample=commands.Param(choices=resamples.keys(), default="Nearest"),
     ):
         """Change an image's width.
@@ -220,7 +219,7 @@ class Scale(commands.Cog):
         resample: A resampling filter. (default: Nearest)
         """
         await inter.response.defer()
-        await self.resize(inter, width, image, resample)
+        await self.resize(inter, width, image.url, resample)
 
     @commands.command(
         name="resize",
@@ -319,15 +318,10 @@ class Scale(commands.Cog):
             view.message = await ctx.original_message()
 
     @commands.slash_command(name="size")
-    async def _size(self, inter: disnake.AppCmdInter, image: str = None):
-        """To quickly get the size of an image.
-
-        Parameters
-        ----------
-        image: The URL of the image.
-        """
+    async def _size(self, inter: disnake.AppCmdInter, image: InterImage):
+        """To quickly get the size of an image."""
         await inter.response.defer()
-        await self.size(inter, image)
+        await self.size(inter, image.url)
 
     @commands.command(
         name="size",

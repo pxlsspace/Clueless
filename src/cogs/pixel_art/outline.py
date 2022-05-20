@@ -4,6 +4,7 @@ from disnake.ext import commands
 
 from utils.arguments_parser import parse_outline_args
 from utils.discord_utils import (
+    InterImage,
     autocomplete_palette,
     format_number,
     get_image_from_message,
@@ -21,8 +22,8 @@ class Outline(commands.Cog):
     async def _outline(
         self,
         inter: disnake.AppCmdInter,
+        image: InterImage,
         color: str = commands.Param(autocomplete=autocomplete_palette),
-        image: str = None,
         sparse: bool = False,
         width: int = commands.Param(default=1, gt=0, le=32),
     ):
@@ -31,12 +32,11 @@ class Outline(commands.Cog):
         Parameters
         ----------
         color: Color of the outline, can be the name of a pxlsColor or a hexcolor.
-        image: The URL of the image you want to outline.
         sparse: To have a sparse outline (outline without the corners) (default: False).
         width: The width of the outline in pixels. (default: 1)
         """
         await inter.response.defer()
-        await self.outline(inter, color, image, sparse, width)
+        await self.outline(inter, color, image.url, sparse, width)
 
     @commands.command(
         name="outline",
@@ -94,15 +94,14 @@ class Outline(commands.Cog):
         await ctx.send(file=file)
 
     @commands.slash_command(name="crop")
-    async def _crop(self, inter: disnake.AppCmdInter, image: str = None):
-        """Remove the 'white space' from a PNG image.
-
-        Parameters
-        ----------
-        image: The URL of the image.
-        """
+    async def _crop(
+        self,
+        inter: disnake.AppCmdInter,
+        image: InterImage,
+    ):
+        """Remove the 'white space' from a PNG image."""
         await inter.response.defer()
-        await self.crop(inter, image)
+        await self.crop(inter, image.url)
 
     @commands.command(
         name="crop",

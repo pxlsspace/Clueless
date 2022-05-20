@@ -119,7 +119,8 @@ class Template(commands.Cog):
     async def _template(
         self,
         inter: disnake.AppCmdInter,
-        image: str = None,
+        image_link: str = commands.Param(name="image-link", default=None),
+        image_file: disnake.Attachment = commands.Param(name="image-file", default=None),
         title: str = None,
         style: str = None,
         glow: bool = False,
@@ -143,7 +144,8 @@ class Template(commands.Cog):
 
         Parameters
         ----------
-        image: The URL of the image you want to templatize (can be a template link).
+        image_link: The URL of the image you want to templatize (can be a template link).
+        image_file: An image file you want to templatize.
         style: The name or URL of a template style. (default: custom)
         glow: To add glow to the template. (default: False)
         title: The template title.
@@ -154,9 +156,11 @@ class Template(commands.Cog):
         matching: The color matching algorithm to use.
         palette: A palette name or list of colors (name or hex) seprated by a comma. (default: pxls)
         """
+        if image_file:
+            image_link = image_file.url
         await inter.response.defer()
         await self.template(
-            inter, image, title, style, glow, ox, oy, host, nocrop, matching, palette
+            inter, image_link, title, style, glow, ox, oy, host, nocrop, matching, palette
         )
 
     @_template.autocomplete("style")

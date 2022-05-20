@@ -27,7 +27,8 @@ class Reduce(commands.Cog):
     async def _reduce(
         self,
         inter: disnake.AppCmdInter,
-        image: str = None,
+        image_link: str = commands.Param(name="image-link", default=None),
+        image_file: disnake.Attachment = commands.Param(name="image-file", default=None),
         palette: str = commands.Param(
             default=None, autocomplete=autocomplete_builtin_palettes
         ),
@@ -40,12 +41,15 @@ class Reduce(commands.Cog):
 
         Parameters
         ----------
-        image: The URL of the image you want to templatize.
+        image_link: The URL of the image you want to templatize (can be a template link).
+        image_file: An image file you want to templatize.
         palette: A list of colors (name or hex) seprated by a comma (!<color> = remove color). (default: pxls)
         matching: The color matching algorithm to use. (default: accurate)
         """
+        if image_file:
+            image_link = image_file.url
         await inter.response.defer()
-        await self.reduce(inter, image, palette, matching)
+        await self.reduce(inter, image_link, palette, matching)
 
     @commands.command(
         name="reduce",

@@ -14,6 +14,7 @@ from utils.image.image_utils import (
     highlight_image,
 )
 from utils.discord_utils import (
+    InterImage,
     format_number,
     get_image_from_message,
     get_urls_from_list,
@@ -33,7 +34,7 @@ class Highlight(commands.Cog):
         self,
         inter: disnake.AppCmdInter,
         colors: str,
-        image: str = None,
+        image: InterImage,
         bgcolor: str = None,
     ):
         """Highlight the selected colors in an image.
@@ -41,15 +42,14 @@ class Highlight(commands.Cog):
         Parameters
         ----------
         colors: List of pxls colors or hex colors or palettes separated by a comma.
-        image: The URL of the image you want to highlight.
         bgcolor: To display behind the selected colors (can be a color name, hex color, 'none', 'light' or 'dark').
         """
-        await inter.response.defer()
         args = (colors,)
-        if image:
-            args += (image,)
+        if image.url:
+            args += (image.url,)
         if bgcolor:
             args += ("-bgcolor", bgcolor)
+        await inter.response.defer()
         await self.highlight(inter, *args)
 
     @commands.command(

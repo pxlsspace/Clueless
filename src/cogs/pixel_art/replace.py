@@ -4,6 +4,7 @@ from disnake.ext import commands
 from PIL import Image
 
 from utils.discord_utils import (
+    InterImage,
     autocomplete_palette_with_none,
     get_image_from_message,
     get_urls_from_list,
@@ -22,17 +23,16 @@ class Replace(commands.Cog):
         inter: disnake.AppCmdInter,
         color1: str = commands.Param(autocomplete=autocomplete_palette_with_none),
         color2: str = commands.Param(autocomplete=autocomplete_palette_with_none),
-        image: str = None,
+        image: InterImage = None,
     ):
         """Replace a color by an other in an image.
         Parameters
         ----------
         color1: The name/hex/index of the color to replace (none = transparent).
         color2: The name/hex/index of the new color (none = transparent).
-        image: The URL or attached image.
         """
         await inter.response.defer()
-        await self.replace(inter, color1, color2, image)
+        await self.replace(inter, color1, color2, image.url)
 
     @commands.command(
         name="replace",

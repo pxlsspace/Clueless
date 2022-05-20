@@ -7,6 +7,7 @@ from disnake.ext import commands
 from blend_modes import hard_light
 
 from utils.discord_utils import (
+    InterImage,
     get_urls_from_list,
     image_to_file,
     get_image_from_message,
@@ -27,18 +28,17 @@ class Colorify(commands.Cog):
     async def _colorify(
         self,
         inter: disnake.AppCmdInter,
+        image: InterImage,
         color: str = commands.Param(autocomplete=autocomplete_palette),
-        image: str = None,
     ):
         """Turn an image to a different color.
 
         Parameters
         ----------
         color: A pxlsColor name or hex color.
-        image: Can be an image URL or a custom emoji.
         """
         await inter.response.defer()
-        await self.colorify(inter, color, image)
+        await self.colorify(inter, color, image.url)
 
     @commands.command(
         name="colorify",
@@ -107,26 +107,25 @@ class Colorify(commands.Cog):
         await ctx.send(file=file)
 
     @commands.slash_command(name="pinkify")
-    async def _pinkify(self, inter: disnake.AppCmdInter, image: str = None):
-        """Turn an image pink.
-
-        Parameters
-        ----------
-        image: Can be an image URL or a custom emoji.
-        """
+    async def _pinkify(
+        self,
+        inter: disnake.AppCmdInter,
+        image: InterImage = None,
+    ):
+        """Turn an image pink."""
         await inter.response.defer()
-        await self.colorify(inter, "pink", image)
+        await self.colorify(inter, "pink", image.url)
 
     @commands.command(description="Turn an image pink.", usage="<image|url|emoji>")
     async def pinkify(self, ctx, url=None):
         async with ctx.typing():
-            await self.colorify(ctx, "pink", url)
+            await self.colorify(ctx, "#FFA9D9", url)
 
     @commands.slash_command(name="rainbowfy")
     async def _rainbowfy(
         self,
         inter: disnake.AppCmdInter,
-        image: str = None,
+        image: InterImage = None,
         saturation: int = None,
         lightness: int = None,
     ):
@@ -135,19 +134,18 @@ class Colorify(commands.Cog):
 
         Parameters
         ----------
-        image: Can be an image URL or a custom emoji.
         saturation: he rainbow saturation value between 0 and 100 (default: 50).
         lightness: The rainbow lightness value between 0 and 100 (default: 60).
         """
-        await inter.response.defer()
         args = ()
-        if image:
-            args += (image,)
+        if image.url:
+            args += (image.url,)
         if saturation:
             args += ("-saturation", str(saturation))
         if lightness:
             args += ("-lightness", str(lightness))
 
+        await inter.response.defer()
         await self.rainbowfy(inter, *args)
 
     @commands.command(

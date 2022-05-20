@@ -2,7 +2,7 @@ import disnake
 from disnake.ext import commands
 from PIL import ImageOps
 
-from utils.discord_utils import get_image_from_message, image_to_file
+from utils.discord_utils import InterImage, get_image_from_message, image_to_file
 
 
 class Transform(commands.Cog):
@@ -10,7 +10,12 @@ class Transform(commands.Cog):
         self.bot: commands.Bot = bot
 
     @commands.slash_command(name="flip")
-    async def _flip(self, inter: disnake.AppCmdInter, image: str = None):
+    async def _flip(self, inter):
+        """Flip images."""
+        pass
+
+    @_flip.sub_command(name="vertically")
+    async def _vertically(self, inter: disnake.AppCmdInter, image: InterImage):
         """Flip an image vertically.
 
         Parameters
@@ -18,7 +23,7 @@ class Transform(commands.Cog):
         image: The URL of the image.
         """
         await inter.response.defer()
-        await self.flip(inter, image)
+        await self.flip(inter, image.url)
 
     @commands.command(
         name="flip",
@@ -44,16 +49,11 @@ class Transform(commands.Cog):
         file = await image_to_file(flipped, "flipped.png", embed)
         await ctx.send(embed=embed, file=file)
 
-    @commands.slash_command(name="hflip")
-    async def _hflip(self, inter: disnake.AppCmdInter, image: str = None):
-        """Flip an image horizontally.
-
-        Parameters
-        ----------
-        image: The URL of the image.
-        """
+    @_flip.sub_command(name="horizontally")
+    async def _horizontally(self, inter: disnake.AppCmdInter, image: InterImage):
+        """Flip an image horizontally."""
         await inter.response.defer()
-        await self.hflip(inter, image)
+        await self.hflip(inter, image.url)
 
     @commands.command(
         name="hflip",

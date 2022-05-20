@@ -3,7 +3,12 @@ import inspect
 import plotly.graph_objects as go
 from disnake.ext import commands
 
-from utils.discord_utils import format_number, get_image_from_message, image_to_file
+from utils.discord_utils import (
+    InterImage,
+    format_number,
+    get_image_from_message,
+    image_to_file,
+)
 from utils.table_to_image import table_to_image
 from utils.image.image_utils import h_concatenate, hex_to_rgb, rgb_to_hex, hex_str_to_int
 from utils.plot_utils import fig2img
@@ -16,14 +21,14 @@ class ColorBreakdown(commands.Cog):
         self.bot: commands.Bot = bot
 
     @commands.slash_command(name="colors")
-    async def _colors(self, inter: disnake.AppCmdInter, image: str = None):
-        """Get the amount of pixels for each color in an image.
-
-        Parameters
-        ----------
-        image: The URL of the image you want to see the colors."""
+    async def _colors(
+        self,
+        inter: disnake.AppCmdInter,
+        image: InterImage,
+    ):
+        """Get the amount of pixels for each color in an image."""
         await inter.response.defer()
-        await self.colors(inter, image)
+        await self.colors(inter, image.url)
 
     @commands.command(
         name="colors",

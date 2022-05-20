@@ -4,6 +4,7 @@ from disnake.ext import commands
 from PIL import Image
 
 from utils.discord_utils import (
+    InterImage,
     autocomplete_palette,
     format_number,
     get_image_from_message,
@@ -23,7 +24,7 @@ class Grid(commands.Cog):
     async def _grid(
         self,
         inter: disnake.AppCmdInter,
-        image: str = None,
+        image: InterImage = None,
         x: int = 0,
         y: int = 0,
         color: str = commands.Param(autocomplete=autocomplete_palette, default=None),
@@ -32,13 +33,12 @@ class Grid(commands.Cog):
 
         Parameters
         ----------
-        image: The URL of the image.
         x: the x coordinate of the top left pixel
         y: the y coordinate of the top left pixel
         color: The color of the grid (default: black)
         """
         await inter.response.defer()
-        await self.grid(inter, image, x, y, color)
+        await self.grid(inter, image.url, x, y, color)
 
     @commands.command(
         name="grid",
@@ -110,6 +110,7 @@ class Grid(commands.Cog):
 
 
 def setup(bot: commands.Bot):
+    return
     bot.add_cog(Grid(bot))
 
 

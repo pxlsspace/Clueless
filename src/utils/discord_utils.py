@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import os
 from datetime import datetime, timedelta
 import disnake
@@ -407,6 +408,32 @@ async def get_embed_author(inter: disnake.MessageInteraction) -> disnake.User:
         return result
     except Exception:
         return None
+
+
+# --- Injections --- #
+@dataclass
+class InterImage:
+    """A data class to store image links from application commmands"""
+
+    url: str
+
+
+@commands.register_injection
+async def get_image_from_inter(
+    inter: disnake.CommandInteraction,
+    image_link: str = commands.Param(name="image-link", default=None),
+    image_file: disnake.Attachment = commands.Param(name="image-file", default=None),
+) -> InterImage:
+    """Get an image either from a link or attachment.
+
+    Parameters
+    ----------
+    image_link: Can be an image URL/link or a custom emoji or template link.
+    image_file: An image attachment.
+    """
+    if image_file:
+        image_link = image_file.url
+    return InterImage(image_link)
 
 
 # --- Autocompletes --- #

@@ -172,6 +172,7 @@ class Clock(commands.Cog):
             canvas_code = await stats.get_canvas_code()
             await tracked_templates.load_all_templates(canvas_code, update=True)
         except Exception:
+            tracked_templates.is_loading = False
             logger.exception("Unexpected error in 'load_all_templates'")
 
         # update template stats

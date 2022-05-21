@@ -480,7 +480,7 @@ async def autocomplete_templates(inter: disnake.AppCmdInter, user_input: str):
 async def autocomplete_user_templates(inter: disnake.AppCmdInter, user_input: str):
     """Get all the user-owned template names."""
     author_id = inter.author.id
-    if author_id == tracked_templates.bot_owner_id:
+    if author_id in tracked_templates.progress_admins:
         return await autocomplete_templates(inter, user_input)
     else:
         template_names = [

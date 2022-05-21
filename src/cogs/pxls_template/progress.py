@@ -1071,7 +1071,7 @@ class Progress(commands.Cog):
                 raise ValueError(f"No template named `{template_name}` found.")
             if (
                 temp.owner_id != ctx.author.id
-                and ctx.author.id != tracked_templates.bot_owner_id
+                and ctx.author.id not in tracked_templates.progress_admins
             ):
                 raise ValueError("You cannot delete a template that you don't own.")
             if isinstance(temp, Combo):
@@ -1368,6 +1368,21 @@ class Progress(commands.Cog):
         res_file = await image_to_file(res_image, "template_speed.png", embed)
 
         await ctx.send(embed=embed, file=res_file)
+
+    @progress.command(
+        hidden=True,
+        description="Update the list of progress admins (owner only)",
+        aliases=["rladmins", "updateadmins"],
+    )
+    @commands.is_owner()
+    async def reload_admins(self, ctx: commands.Context):
+        app_info = await self.bot.application_info()
+        bot_owner_id = app_info.owner.id
+        admins = tracked_templates.load_progress_admins(bot_owner_id)
+        msg = "✅ **Progress admin list updated**\nCurrent template admins:\n"
+        for admin_id in admins:
+            msg += f"- <@{admin_id}>\n"
+        await ctx.send(embed=disnake.Embed(description=msg, color=0x66C5CC))
 
 
 pos_speed_palette = get_gradient_palette(["#ffffff", "#70dd13", "#31a117"], 101)

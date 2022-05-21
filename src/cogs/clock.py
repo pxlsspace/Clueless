@@ -56,11 +56,11 @@ class Clock(commands.Cog):
 
         # load the templates from the database
         try:
+            logger.info("Loading templates...")
             canvas_code = await stats.get_canvas_code()
             app_info = await self.bot.application_info()
             bot_owner_id = app_info.owner.id
-            tracked_templates.bot_owner_id = bot_owner_id
-            logger.info("Loading templates...")
+            tracked_templates.load_progress_admins(bot_owner_id)
             await tracked_templates.load_all_templates(canvas_code)
 
         except Exception:

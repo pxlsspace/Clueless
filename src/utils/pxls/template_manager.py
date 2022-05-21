@@ -1,4 +1,6 @@
 from __future__ import annotations
+import os
+from dotenv import load_dotenv
 import sqlite3
 from typing import Iterable, Optional
 import numpy as np
@@ -401,9 +403,20 @@ class TemplateManager:
 
     def __init__(self) -> None:
         self.list: list[Template] = []
-        self.bot_owner_id: int = None
+        self.progress_admins = []
         self.combo: Combo = None
         self.is_loading = False
+
+    def load_progress_admins(self, bot_owner_id: int):
+        """Update the current `progress_admins` list with the PROGRESS_ADMINS env variable
+        and add the bot owner to it."""
+        self.progress_admins = [bot_owner_id]
+        load_dotenv(override=True)
+        progress_admins = os.environ.get("PROGRESS_ADMINS").split(",")
+        for admin_id in progress_admins:
+            if admin_id.isdigit():
+                self.progress_admins.append(int(admin_id))
+        return self.progress_admins
 
     def check_duplicate_template(self, template: Template):
         """Check if there is already a template with the same image and same coordinates.
@@ -513,7 +526,10 @@ class TemplateManager:
         temp = self.get_template(name, command_user_id, hidden)
         if not temp:
             raise ValueError(f"No template named `{name}` found.")
-        if temp.owner_id != command_user_id and command_user_id != self.bot_owner_id:
+        if (
+            temp.owner_id != command_user_id
+            and command_user_id not in self.progress_admins
+        ):
             raise ValueError("You cannot delete a template that you don't own.")
         if isinstance(temp, Combo):
             raise ValueError("You cannot delete the combo.")
@@ -533,7 +549,10 @@ class TemplateManager:
         old_temp = self.get_template(current_name, command_user_id, False)
         if not old_temp:
             raise ValueError(f"No template named `{current_name}` found.")
-        if old_temp.owner_id != command_user_id and command_user_id != self.bot_owner_id:
+        if (
+            old_temp.owner_id != command_user_id
+            and command_user_id not in self.progress_admins
+        ):
             raise ValueError("You cannot edit a template that you don't own.")
         if isinstance(old_temp, Combo):
             raise ValueError("You cannot edit the combo.")

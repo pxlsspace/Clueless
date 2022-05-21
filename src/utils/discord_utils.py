@@ -25,7 +25,7 @@ STATUS_EMOJIS = {
 }
 
 
-def format_table(table, column_names, alignments=None, name=None):
+def format_table(table, column_names, alignments=None, name=None, autoformat=False):
     """Format the leaderboard in a string to be printed
     - :param table: a 2D array to format
     - :param column_names: a list of column names, must be the same lengh as the table rows
@@ -33,7 +33,10 @@ def format_table(table, column_names, alignments=None, name=None):
         - '^': centered
         - '<': aligned on the left
         - '>': aligned on the right
-    - :name: add a '+' in front of of the row containing 'name' in the 2nd column"""
+    - :name: add a '+' in front of of the row containing 'name' in the 2nd column
+    - :autoformat: format the text with format_number automatically
+    """
+
     if not table:
         return
     if len(table[0]) != len(column_names):
@@ -41,7 +44,11 @@ def format_table(table, column_names, alignments=None, name=None):
     if alignments and len(table[0]) != len(alignments):
         raise ValueError("The number of column in table and alignments don't match.")
 
+    if autoformat:
+        table = [[format_number(c) for c in row] for row in table]
+
     # find the longest columns
+    table = table.copy()
     table.insert(0, column_names)
     longest_cols = [
         (max([len(str(row[i])) for row in table])) for i in range(len(table[0]))
@@ -72,6 +79,8 @@ def format_table(table, column_names, alignments=None, name=None):
 
     # format the body
     for row in table[1:]:
+        # replace None values with an empty string
+        row = ["" if r is None else str(r) for r in row]
         if name:
             str_table += (
                 ("+ " if row[1] == name else "  ") + row_format.format(*row) + "\n"

@@ -20,6 +20,7 @@ from utils.discord_utils import (
     PaginatorView,
     UserConverter,
     format_number,
+    format_table,
     image_to_file,
 )
 from utils.table_to_image import table_to_image
@@ -201,31 +202,55 @@ class Utility(commands.Cog):
             )
         await ctx.send(embed=disnake.Embed(description=msg, color=0x66C5CC))
 
-    @commands.group(hidden=True, usage="<sql expression>")
+    @commands.command(name="sql", hidden=True, usage="<sql expression>")
     @commands.is_owner()
-    async def sql(self, ctx, *, sql_expression):
+    async def sqlimage(self, ctx, *, sql_expression, as_text=True):
+        await self.sql(ctx, sql_expression=sql_expression, as_text=False)
+
+    @commands.command(name="sqltext", hidden=True, usage="<sql expression>")
+    @commands.is_owner()
+    async def sqltext(self, ctx, *, sql_expression):
+        await self.sql(ctx, sql_expression=sql_expression, as_text=True)
+
+    async def sql(self, ctx, *, sql_expression, as_text=True):
         async with ctx.typing():
             start = time.time()
             try:
                 rows = await db_servers.db.sql_select(sql_expression)
             except Exception as e:
                 return await ctx.send(f"❌ SQL error: ```{e}```")
-        end = time.time()
+        query_time = round(time.time() - start, 3)
+
+        embed = disnake.Embed(
+            color=0x66C5CC,
+            title="SQL",
+            description=f"Nb lines: `{len(rows)}`\nTime: `{query_time}s`\n",
+        )
+
         if len(rows) == 0:
-            return await ctx.send("No match found.")
-        elif len(rows) > 100:
-            return await ctx.send(f"❌ Too many lines to show ({len(rows)})")
+            return await ctx.send("❌ No match found.")
+        elif len(rows) > 100 and not as_text:
+            embed.description = f"❌ Too many lines to show ({len(rows)})"
+            return await ctx.send(embed=embed)
 
         discord_user = await db_users.get_discord_user(ctx.author.id)
         theme = get_theme(discord_user["color"])
         font = discord_user["font"]
-
         titles = rows[0].keys()
         rows = [list(row) for row in rows]
-        img = await table_to_image(rows, titles, theme=theme, font=font)
-        file = await image_to_file(img, "table.png")
-        content = f"Nb lines: {len(rows)}\nTime: {round(end-start,3)}s"
-        await ctx.send(file=file, content=content)
+
+        if as_text:
+            table = format_table(rows, titles, ["^"] * len(titles), autoformat=True)
+            content = f"```{table}```"
+            if len(embed.description + content) > 4096:
+                content = content[: (4096 - len(embed.description)) - 6]
+                content += "...```"
+            embed.description += content
+            return await ctx.send(embed=embed)
+        else:
+            img = await table_to_image(rows, titles, theme=theme, font=font)
+            file = await image_to_file(img, "table.png", embed)
+            return await ctx.send(file=file, embed=embed)
 
     @commands.command(hidden=True, usage="<sql expression>")
     @commands.is_owner()

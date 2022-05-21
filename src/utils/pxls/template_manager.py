@@ -572,7 +572,15 @@ class TemplateManager:
                     "The template seems to be outside the canvas, make sure it's correctly positioned."
                 )
             temp_same_image = self.check_duplicate_template(new_temp)
-            if temp_same_image:
+            if temp_same_image == old_temp:
+                if (
+                    temp_same_image.title == new_temp.title
+                    and temp_same_image.stylized_url == new_temp.stylized_url
+                ):
+                    raise ValueError(
+                        "The new template has no changes (same image, coords, title, image link)."
+                    )
+            elif temp_same_image is not None:
                 raise ValueError(
                     f"There is already a template with the same image and coords named `{temp_same_image.name}`."
                 )

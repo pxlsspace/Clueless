@@ -939,6 +939,7 @@ class Progress(commands.Cog):
             )
 
         # Show all the template info updated
+        files = []
         if new_url is not None:
             info = "__**Info**__\n"
             # title
@@ -976,67 +977,70 @@ class Progress(commands.Cog):
             else:
                 info += f"• **Size**: {format_number(new_size)} *(unchanged)*\n"
 
-            # progress
-            progress = "\n__**Progress**__\n"
-            new_prog = new_temp.update_progress()
-            old_prog = old_temp.update_progress()
-            if old_prog != new_prog:
-                diff_prog = new_prog - old_prog
-                progress += "• **Correct Pixels**: {} → {} `[{}{}]`\n".format(
-                    format_number(old_prog),
-                    format_number(new_prog),
-                    "+" if diff_prog > 0 else "",
-                    format_number(diff_prog),
-                )
+            # Only show the diff in progress/image if the image or coords changed
+            if (
+                np.all(old_temp.palettized_array != new_temp.palettized_array)
+                or old_temp.ox != new_temp.ox
+                or old_temp.oy != new_temp.oy
+            ):
+                # progress
+                progress = "\n__**Progress**__\n"
+                new_prog = new_temp.update_progress()
+                old_prog = old_temp.update_progress()
+                if old_prog != new_prog:
+                    diff_prog = new_prog - old_prog
+                    progress += "• **Correct Pixels**: {} → {} `[{}{}]`\n".format(
+                        format_number(old_prog),
+                        format_number(new_prog),
+                        "+" if diff_prog > 0 else "",
+                        format_number(diff_prog),
+                    )
+                else:
+                    progress += (
+                        f"• **Correct Pixels**: {format_number(new_prog)} *(unchanged)*\n"
+                    )
+                old_togo = old_temp.total_placeable - old_prog
+                new_togo = new_temp.total_placeable - new_prog
+                # to go
+                if old_togo != new_togo:
+                    diff_togo = new_togo - old_togo
+                    progress += "• **Pixels to go**: {} → {} `[{}{}]`\n".format(
+                        format_number(old_togo),
+                        format_number(new_togo),
+                        "+" if diff_togo > 0 else "",
+                        format_number(diff_togo),
+                    )
+                else:
+                    progress += (
+                        f"• **Pixels to go**: {format_number(new_togo)} *(unchanged)*\n"
+                    )
+                # percentage
+                old_percentage = old_prog / old_temp.total_placeable
+                new_percentage = new_prog / new_temp.total_placeable
+                if old_percentage != new_percentage:
+                    diff_percentage = new_percentage - old_percentage
+                    progress += "• **Percentage**: {}% → {}% `[{}{}%]`\n".format(
+                        format_number(old_percentage * 100),
+                        format_number(new_percentage * 100),
+                        "+" if diff_percentage > 0 else "",
+                        format_number(diff_percentage * 100),
+                    )
+                else:
+                    progress += f"• **Percentage**: {format_number(new_percentage)}% *(unchanged)*\n"
+                progress += "\n__**Image Difference**__\n"
+                # make the image
+                try:
+                    diff_gif = await make_before_after_gif(old_temp, new_temp)
+                    filename = "diff.gif"
+                    files.append(disnake.File(fp=diff_gif, filename=filename))
+                    embed.set_image(url=f"attachment://{filename}")
+                except Exception:
+                    progress += (
+                        "**[An error occurred while generating the diff GIF image.]**\n"
+                    )
             else:
-                progress += (
-                    f"• **Correct Pixels**: {format_number(new_prog)} *(unchanged)*\n"
-                )
-            old_togo = old_temp.total_placeable - old_prog
-            new_togo = new_temp.total_placeable - new_prog
-            # to go
-            if old_togo != new_togo:
-                diff_togo = new_togo - old_togo
-                progress += "• **Pixels to go**: {} → {} `[{}{}]`\n".format(
-                    format_number(old_togo),
-                    format_number(new_togo),
-                    "+" if diff_togo > 0 else "",
-                    format_number(diff_togo),
-                )
-            else:
-                progress += (
-                    f"• **Pixels to go**: {format_number(new_togo)} *(unchanged)*\n"
-                )
-            # percentage
-            old_percentage = old_prog / old_temp.total_placeable
-            new_percentage = new_prog / new_temp.total_placeable
-            if old_percentage != new_percentage:
-                diff_percentage = new_percentage - old_percentage
-                progress += "• **Percentage**: {}% → {}% `[{}{}%]`\n".format(
-                    format_number(old_percentage * 100),
-                    format_number(new_percentage * 100),
-                    "+" if diff_percentage > 0 else "",
-                    format_number(diff_percentage * 100),
-                )
-            else:
-                progress += (
-                    f"• **Percentage**: {format_number(new_percentage)}% *(unchanged)*\n"
-                )
-            progress += "\n__**Image Difference**__\n"
-            # make the image
-            try:
-                diff_gif = await make_before_after_gif(old_temp, new_temp)
-                filename = "diff.gif"
-                files = [disnake.File(fp=diff_gif, filename=filename)]
-                embed.set_image(url=f"attachment://{filename}")
-            except Exception:
-                progress += (
-                    "**[An error occurred while generating the diff GIF image.]**\n"
-                )
-                files = []
+                progress = "\n__**Image Difference**__\n*(Template image unchanged)*"
             embed.add_field(name="URL Changed", value=info + progress)
-        else:
-            files = []
 
         return await ctx.send(embed=embed, files=files)
 

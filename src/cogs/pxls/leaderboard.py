@@ -6,7 +6,7 @@ from utils.image.image_utils import hex_str_to_int
 
 from utils.setup import db_stats, db_users
 from utils.time_converter import (
-    str_to_td,
+    get_datetimes_from_input,
     round_minutes_down,
     td_format,
     format_datetime,
@@ -14,7 +14,6 @@ from utils.time_converter import (
 from utils.arguments_parser import (
     check_ranks,
     parse_leaderboard_args,
-    valid_datetime_type,
 )
 from utils.discord_utils import format_number, image_to_file
 from utils.table_to_image import table_to_image
@@ -61,10 +60,6 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         await inter.response.defer()
         if username:
             username = username.split(" ")
-        if before:
-            before = before.split(" ")
-        if after:
-            after = after.split(" ")
         if ranks:
             try:
                 ranks = check_ranks(ranks)
@@ -156,33 +151,14 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         if before or after or last:
             speed_opt = True
             sort_opt = "speed"
-            if before is None and after is None:
-                input_time = str_to_td(last)
-                if not input_time:
-                    return await ctx.send(
-                        "❌ Invalid `last` parameter, format must be `?y?mo?w?d?h?m?s`."
-                    )
-                input_time = input_time + timedelta(minutes=1)
-                date2 = datetime.now(timezone.utc)
-                date1 = round_minutes_down(datetime.now(timezone.utc) - input_time)
-            else:
+            if before or after:
                 last = None
-                try:
-                    # Convert the dates to datetime object and check if they are valid
-                    if after:
-                        after = valid_datetime_type(after, get_timezone(user_timezone))
-                    if before:
-                        before = valid_datetime_type(before, get_timezone(user_timezone))
-                except ValueError as e:
-                    return await ctx.send(f"❌ {e}")
-
-                if after and before and before < after:
-                    return await ctx.send(
-                        ":x: The 'before' date can't be earlier than the 'after' date."
-                    )
-
-                date1 = after or datetime.min
-                date2 = before or datetime.max
+            try:
+                date1, date2 = get_datetimes_from_input(
+                    get_timezone(user_timezone), last, before, after
+                )
+            except ValueError as e:
+                return await ctx.send(f":x: {e}")
         else:
             date1 = datetime.now(timezone.utc)
             date2 = datetime.now(timezone.utc)

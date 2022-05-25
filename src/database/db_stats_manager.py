@@ -208,10 +208,12 @@ class DbStatsManager:
             JOIN pxls_name ON pxls_name.pxls_name_id = pxls_user_stat.pxls_name_id
             WHERE name IN ({1})
             AND pxls_user_stat.record_id IN ({2})
+            {3}
             ORDER BY {0} """.format(
             "canvas_count" if canvas_opt else "alltime_count",
             ", ".join("?" for u in user_list),
             ", ".join("?" for r in records),
+            "AND alltime_count is not NULL" if not canvas_opt else "",
         )
 
         rows = await self.db.sql_select(sql, tuple(user_list) + tuple(records))
@@ -224,8 +226,13 @@ class DbStatsManager:
             except KeyError:
                 users_dict[row["name"]] = [row]
 
+        if rows:
+            past_time = rows[0]["datetime"]
+            recent_time = rows[-1]["datetime"]
+        else:
+            past_time = recent_time = None
         users_list = list(users_dict.items())
-        return (record1["datetime"], record2["datetime"], users_list)
+        return (past_time, recent_time, users_list)
 
     async def get_grouped_stats_history(
         self, user_list, dt1, dt2, groupby_opt, canvas_opt

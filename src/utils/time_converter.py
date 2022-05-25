@@ -3,6 +3,8 @@ import re
 import time
 from typing import Iterable
 
+from utils.arguments_parser import valid_datetime_type
+
 """ Helper functions to convert datetime objects """
 
 
@@ -182,3 +184,42 @@ def format_timezone(tz: timezone) -> str:
             utc_offset += ":{:02d}".format(offset_minutes)
         utc_offset = f" ({utc_offset})"
     return f"{str(tz)}{utc_offset}"
+
+
+def get_datetimes_from_input(
+    user_timezone: timezone, last=None, before=None, after=None, rounding_step=15
+):
+    """Get a tuple of 2 timezone aware datetimes corresponding to the user's input.
+    Raise ValueError if any error occurrs"""
+    if before is None and after is None:
+        if last:
+            input_time = str_to_td(last)
+            if not input_time:
+                raise ValueError(
+                    "Invalid `last` parameter, format must be `?y?mo?w?d?h?m?s`."
+                )
+            input_time = input_time + timedelta(minutes=1)
+            lower_dt = round_minutes_down(
+                datetime.now(timezone.utc) - input_time, step=rounding_step
+            )
+            higher_dt = datetime.now(timezone.utc)
+        else:
+            lower_dt = datetime.min.replace(tzinfo=timezone.utc)
+            higher_dt = datetime.now(timezone.utc)
+    else:
+        # Convert the dates to datetime object and check if they are valid
+        if after:
+            after = valid_datetime_type(
+                after.split(" ") if isinstance(after, str) else after, user_timezone
+            )
+        if before:
+            before = valid_datetime_type(
+                before.split(" ") if isinstance(before, str) else before, user_timezone
+            )
+
+        if after and before and before < after:
+            raise ValueError("The 'before' date can't be earlier than the 'after' date.")
+        lower_dt = after or datetime.min.replace(tzinfo=timezone.utc)
+        higher_dt = before or datetime.now(timezone.utc)
+
+    return (lower_dt, higher_dt)

@@ -101,6 +101,8 @@ def valid_datetime_type(arg_datetime_str, user_timezone: timezone = None):
         " ".join(arg_datetime_str)
     )
     user_timezone = user_timezone or timezone.utc
+    if isinstance(arg_datetime_str, str):
+        arg_datetime_str = arg_datetime_str.split(" ")
 
     if len(arg_datetime_str) == 1:
         if ":" in arg_datetime_str[0]:

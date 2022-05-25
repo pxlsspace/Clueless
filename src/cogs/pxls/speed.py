@@ -5,13 +5,13 @@ from disnake.ext import commands
 
 from utils.discord_utils import image_to_file, format_number
 from utils.setup import db_stats, db_users, stats as stats_manager
-from utils.arguments_parser import parse_speed_args, valid_datetime_type
+from utils.arguments_parser import parse_speed_args
 from utils.table_to_image import table_to_image
 from utils.time_converter import (
     format_datetime,
     format_timezone,
+    get_datetimes_from_input,
     round_minutes_down,
-    str_to_td,
     td_format,
 )
 from utils.plot_utils import add_glow, get_theme, fig2img, hex_to_rgba_string
@@ -144,38 +144,12 @@ class PxlsSpeed(commands.Cog):
                 usernames = [name if u == "!" else u for u in usernames]
 
         # check on date arguments
-        if before is None and after is None:
-            # if no date argument and -canvas : show the whole canvas
-            if last is None and canvas:
-                old_time = datetime.min
-                recent_time = datetime.now(timezone.utc)
-            else:
-                date = last or "1d"
-                input_time = str_to_td(date)
-                if not input_time:
-                    return await ctx.send(
-                        "❌ Invalid `last` parameter, format must be `?y?mo?w?d?h?m?s`."
-                    )
-                input_time = input_time + timedelta(minutes=1)
-                recent_time = datetime.now(timezone.utc)
-                old_time = round_minutes_down(datetime.now(timezone.utc) - input_time)
-        else:
-            try:
-                # Convert the dates to datetime object and check if they are valid
-                if after:
-                    after = valid_datetime_type(after, get_timezone(user_timezone))
-                if before:
-                    before = valid_datetime_type(before, get_timezone(user_timezone))
-            except ValueError as e:
-                return await ctx.send(f"❌ {e}")
-
-            if after and before and before < after:
-                return await ctx.send(
-                    ":x: The 'before' date can't be earlier than the 'after' date."
-                )
-
-            old_time = after or datetime.min
-            recent_time = before or datetime.max
+        try:
+            old_time, recent_time = get_datetimes_from_input(
+                get_timezone(user_timezone), last, before, after
+            )
+        except ValueError as e:
+            return await ctx.send(f":x: {e}")
 
         # get the data we need
         if groupby and groupby != "canvas":
@@ -348,9 +322,7 @@ class PxlsSpeed(commands.Cog):
                     if is_slash
                     else f"`{prefix}speed` without `-alltime`"
                 )
-                err_embed.description = (
-                    f'The user{"s were not" if len(usernames) > 1 else " was not"} found in the all-time leadeboard.\n'
-                )
+                err_embed.description = f'The user{"s were not" if len(usernames) > 1 else " was not"} found in the all-time leadeboard.\n'
                 err_embed.description += (
                     f"You can use {command_name} to use the canvas data instead.\n"
                 )
@@ -438,7 +410,7 @@ class PxlsSpeed(commands.Cog):
             )
             if (
                 canvas_start
-                and old_time != datetime.min
+                and old_time != datetime.min.replace(tzinfo=timezone.utc)
                 and old_time < canvas_start.replace(tzinfo=timezone.utc)
             ):
                 emb.set_footer(

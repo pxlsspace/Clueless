@@ -82,8 +82,8 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                   - `[-bars|-b]`: show a bar graph of the leaderboard
                   - `[-ranks ?-?]`: show the leaderboard between 2 ranks
                   - `[-eta]`: add an ETA column showing the estimated time to pass the user above
-                  - `[-before <date time>]`: show the speed before a date and time (format YYYY-mm-dd HH:MM)
-                  - `[-after <date time>]`: show the speed after a date and time (format YYYY-mm-dd HH:MM)
+                  - `[-before <date time>]`: show the leaderboard before a date and time (format YYYY-mm-dd HH:MM)
+                  - `[-after <date time>]`: show the leaderboard after a date and time (format YYYY-mm-dd HH:MM)
                   """,
     )
     async def p_leaderboard(self, ctx, *args):
@@ -297,12 +297,13 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                 )
                 if eta_record:
                     diff_time = (datetime2 - eta_record_time) / timedelta(days=1)
-                    if ldb[i][2] is not None:
-                        if canvas:
-                            eta_pixels = ldb[i][2] - eta_record["canvas_count"]
-                        else:
-                            eta_pixels = ldb[i][2] - eta_record["alltime_count"]
+                    if canvas:
+                        eta_record_pixels = eta_record["canvas_count"]
+                    else:
+                        eta_record_pixels = eta_record["alltime_count"]
 
+                    if ldb[i][2] is not None and eta_record_pixels is not None:
+                        eta_pixels = ldb[i][2] - eta_record_pixels
                         eta_speed = eta_pixels / diff_time  # in px/d
                     else:
                         eta_speed = None
@@ -311,28 +312,28 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
                 # add the eta time
                 if i == 0:
-                    eta = "N/A (first)"
+                    eta_text = "N/A (first)"
                 else:
                     eta_speed_above = res_ldb[i - 1][-2]
                     if eta_speed_above is not None and eta_speed is not None:
                         diff_speed = eta_speed - eta_speed_above
                         if diff_speed == 0:
-                            eta = "Never."
+                            eta_text = "Never."
                         elif diff_speed < 0:
-                            eta = "N/A (slower)"
+                            eta_text = "N/A (slower)"
                         else:
                             goal = ldb[i - 1][2] - ldb[i][2]
                             if goal == 0:
-                                eta = "N/A (same count)"
+                                eta_text = "N/A (same count)"
                             else:
                                 eta_time = goal / diff_speed  # in days
-                                eta = td_format(
+                                eta_text = td_format(
                                     timedelta(days=eta_time), short_format=True
                                 )
                     else:
-                        eta = None
+                        eta_text = None
                 res_ldb[i].append(eta_speed)
-                res_ldb[i].append(eta)
+                res_ldb[i].append(eta_text)
 
         # create the image with the leaderboard data
         colors = None

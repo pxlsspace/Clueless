@@ -1,6 +1,4 @@
-import os
 import disnake
-import re
 import platform
 import time
 from datetime import datetime, timedelta, timezone
@@ -11,7 +9,7 @@ from googletrans.constants import LANGUAGES
 from utils.arguments_parser import valid_datetime_type
 from utils.plot_utils import get_theme
 
-from utils.setup import BOT_INVITE, SERVER_INVITE, VERSION, db_servers, db_users
+from utils.setup import BOT_INVITE, SERVER_INVITE, VERSION, db_servers, db_users, stats
 from utils.time_converter import format_datetime, format_timezone, str_to_td, td_format
 from utils.timezoneslib import get_timezone
 from utils.utils import get_lang_emoji, ordinal
@@ -261,75 +259,6 @@ class Utility(commands.Cog):
             except Exception as e:
                 return await ctx.send(f"❌ SQL error: ```{e}```")
         return await ctx.send(f"Done! ({nb_lines} lines affected)")
-
-    # Populate the command usage database with logs sent in the log channel
-    # (This is meant to be used only once)
-    @commands.command(hidden=True, enabled=False)
-    @commands.is_owner()
-    async def log2db(self, ctx):
-        log_channel_id = os.environ.get("COMMAND_LOG_CHANNEL")
-        try:
-            log_channel = await self.bot.fetch_channel(log_channel_id)
-        except Exception:
-            return await ctx.send(":x: log channel not set.")
-        await ctx.send("parsing log messages ...")
-        async with ctx.typing():
-            count = 0
-            async for log in log_channel.history(limit=None, oldest_first=True):
-                count += 1
-
-                # command name
-                title = log.embeds[0].title
-                command_name_match = re.findall("Command '(.*)' used.", title)
-                if command_name_match:
-                    command_name = command_name_match[0]
-                else:
-                    continue
-
-                # context
-                context = log.embeds[0].fields[0].value
-                context_regex = r"(?P<DM>DM)|• \*\*Server\*\*\:(?P<server_name>.*) • \*\*Channel\*\*\: <#(?P<channel_id>\d*)>"
-                context_match = re.search(context_regex, context).groupdict()
-                dm = True if context_match["DM"] else False
-                server_name = context_match["server_name"]
-                channel_id = context_match["channel_id"]
-
-                content = log.embeds[0].fields[1].value
-                # remove new lines to make it easier for regex
-                content = content.replace("\n", " ")
-                # author and date
-                author_and_date_regex = (
-                    r"By <@(?P<user_id>\d*)> on <t:(?P<timestamp>\d*)>"
-                )
-                author_and_date_match = re.search(
-                    author_and_date_regex, content
-                ).groupdict()
-                user_id = author_and_date_match["user_id"]
-                timestamp = author_and_date_match["timestamp"]
-                dt = datetime.fromtimestamp(int(timestamp), tz=timezone.utc)
-                dt = dt.replace(tzinfo=None)
-
-                # message content
-                message_regex = r"```(?P<command>.*)`\`\`"
-                message_match = re.search(message_regex, content).groupdict()
-                args = message_match["command"]
-                is_slash = "/" == args[0]
-
-                await db_servers.create_command_usage(
-                    command_name,
-                    dm,
-                    server_name,
-                    channel_id,
-                    user_id,
-                    dt,
-                    args,
-                    is_slash,
-                )
-            await ctx.send(
-                ":white_check_mark: finished parsing {} messages from {}".format(
-                    count, log_channel.mention
-                )
-            )
 
     @commands.slash_command(name="botinfo")
     async def _botinfo(self, inter: disnake.AppCmdInter):
@@ -726,6 +655,60 @@ class Utility(commands.Cog):
 
         view = ServerPagesView(ctx.author, embeds=embeds)
         await ctx.send(embed=embeds[0], view=view)
+
+    # Populate the snapshot database with snapshot URLs sent in the snapshots channel
+    # (This is meant to be used only once)
+    @commands.command(hidden=True, enabled=True, usage="<channel_id> <datetime>")
+    @commands.is_owner()
+    async def snapshots2db(self, ctx, snapshot_channel_id, *, dt):
+        try:
+            snapshot_channel = await self.bot.fetch_channel(snapshot_channel_id)
+        except Exception:
+            return await ctx.send(":x: invalid channel ID")
+        discord_user = await db_users.get_discord_user(ctx.author.id)
+        timezone = get_timezone(discord_user["timezone"])
+        try:
+            dt = valid_datetime_type(dt.split(" "), timezone)
+        except Exception:
+            return await ctx.send(":x: invalid datetime")
+
+        canvas_code = await stats.get_canvas_code()
+        await ctx.send("parsing snapshot messages ...")
+        async with ctx.typing():
+            count = 0
+            values = []
+            async for msg in snapshot_channel.history(
+                limit=None, oldest_first=True, after=dt
+            ):
+                if (
+                    not msg.embeds
+                    or not msg.embeds[0].image.url
+                    or not msg.embeds[0].timestamp
+                ):
+                    continue
+                snapshot_url = msg.embeds[0].image.url
+                datetime = msg.embeds[0].timestamp.replace(tzinfo=None)
+                values.append((datetime, canvas_code, snapshot_url))
+                count += 1
+            await ctx.send(
+                ":white_check_mark: finished parsing {} messages from {}".format(
+                    count, snapshot_channel.mention
+                )
+            )
+            sql = "INSERT or IGNORE INTO snapshot (datetime, canvas_code, url) VALUES (?, ?, ?)"
+            await db_users.db.create_connection()
+            try:
+                async with db_users.db.conn.cursor() as cur:
+                    await cur.execute("BEGIN TRANSACTION;")
+                    await cur.executemany(sql, values)
+                    await cur.execute("COMMIT;")
+            except Exception as e:
+                await db_users.db.close_connection()
+                return await ctx.send(f":x: {e}")
+
+            await db_users.db.conn.commit()
+            await db_users.db.close_connection()
+            await ctx.send(":white_check_mark: saved in the database.")
 
 
 def setup(bot: commands.Bot):

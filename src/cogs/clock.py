@@ -228,20 +228,31 @@ class Clock(commands.Cog):
     async def send_snapshots(self):
         """Send snapshots for the servers where a channel is set"""
         channels = await db_servers.get_all_snapshots_channels()
-        if channels:
-            array = stats.palettize_array(stats.board_array)
-            board_img = Image.fromarray(array)
-            filename = f"snapshot_{datetime.now(timezone.utc).strftime('%FT%H%M')}.png"
+        if not channels:
+            return
+        snapshot_saved = False
+        array = stats.palettize_array(stats.board_array)
+        board_img = Image.fromarray(array)
+        snapshot_time = datetime.now(timezone.utc)
+        filename = f"snapshot_{snapshot_time.strftime('%FT%H%M')}.png"
 
         for channel_id in channels:
             try:
                 channel = self.bot.get_channel(int(channel_id))
                 embed = disnake.Embed(title="Canvas Snapshot", color=0x66C5CC)
-                embed.timestamp = datetime.now(timezone.utc)
+                embed.timestamp = snapshot_time
                 file = await image_to_file(board_img, filename, embed)
-                await channel.send(file=file, embed=embed)
+                m = await channel.send(file=file, embed=embed)
             except Exception:
-                pass
+                continue
+            else:
+                if not snapshot_saved:
+                    await db_stats.save_snapshot(
+                        snapshot_time.replace(tzinfo=None),
+                        await stats.get_canvas_code(),
+                        m.embeds[0].image.url,
+                    )
+                    snapshot_saved = True
 
     async def create_record(self):
         # get the 'last updated' datetime and its timezone

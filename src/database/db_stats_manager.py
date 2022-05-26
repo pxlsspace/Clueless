@@ -58,11 +58,19 @@ class DbStatsManager:
                 PRIMARY KEY (record_id,color_id)
             );"""
 
+        create_snapshot_table = """
+            CREATE TABLE IF NOT EXISTS snapshot(
+                datetime TIMESTAMP PRIMARY KEY,
+                canvas_code TEXT,
+                url TEXT
+            );"""
+
         await self.db.sql_update(create_pxls_general_stats_table)
         await self.db.sql_update(create_record_table)
         await self.db.sql_update(create_pxls_user_stat_table)
         await self.db.sql_update(create_palette_color_table)
         await self.db.sql_update(create_color_stat_table)
+        await self.db.sql_update(create_snapshot_table)
 
     # pxls user stats functions #
     async def create_record(self, last_updated, canvas_code):
@@ -741,3 +749,31 @@ class DbStatsManager:
             return start_date[0]["datetime"]
         else:
             return None
+
+    async def save_snapshot(self, datetime: datetime, canvas_code: str, url: str):
+        sql = "INSERT INTO snapshot (datetime, canvas_code, url) VALUES (?, ?, ?)"
+        return await self.db.sql_insert(sql, (datetime, canvas_code, url))
+
+    async def get_snapshots_between(self, dt1, dt2, canvas_code):
+        """Get all the snapshots between 2 datetimes"""
+
+        sql = """
+            SELECT *
+            FROM snapshot
+            WHERE datetime BETWEEN ? and ?
+            AND canvas_code = ?
+            ORDER BY datetime
+        """
+        return await self.db.sql_select(sql, (dt1, dt2, canvas_code))
+
+    async def get_snapshot_at(self, dt, canvas_code):
+        """Get the snapshot closest to the given datetime (dt)"""
+        sql = """
+            SELECT
+                *,
+                min(abs(JulianDay(datetime) - JulianDay(?)))*24*3600 as diff_with_time
+            FROM snapshot
+            WHERE canvas_code = ?
+            """
+        res = await self.db.sql_select(sql, (dt, canvas_code))
+        return res[0] if res else None

@@ -74,20 +74,17 @@ class Imgur:
         response_data = await self.make_request("GET", API_URL + f"image/{image_hash}")
         return response_data["data"]
 
-    async def upload_image(
-        self, image: Image.Image = None, image_url: str = None, force_anon=False
-    ):
+    async def upload_image(self, image, force_anon=False):
         """Upload the input image to imgur, return the image URL.
 
         - Raises `BadResponseError` if the image is not found
         - Raises `ValueError` if the image is bigger than 5MB"""
-        assert image or image_url
-        if image:
+        if isinstance(image, Image.Image):
             payload_image = await self.image_to_bytes(image)
             if len(payload_image) > IMGUR_SIZE_LIMIT:
                 raise ValueError("This image is too big to be uploaded on imgur.")
-        elif image_url:
-            payload_image = image_url
+        else:
+            payload_image = image
         payload = {
             "image": payload_image,
         }

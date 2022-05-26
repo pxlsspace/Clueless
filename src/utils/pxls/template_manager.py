@@ -83,19 +83,21 @@ class Template:
         placeable_mask[cropped_placemap == 255] = False
         return placeable_mask
 
-    def make_placed_mask(self) -> np.ndarray:
+    def make_placed_mask(self, board_array=None) -> np.ndarray:
         """Make a mask of the template shape where the correct pixels are True."""
         # get the current board cropped to the template size
-        cropped_board = self.crop_array_to_template(stats.board_array)
+        if board_array is None:
+            board_array = stats.board_array
+        cropped_board = self.crop_array_to_template(board_array)
         # create a mask with the pixels of the template matching the board
         placed_mask = self.palettized_array == cropped_board
         # exclude the pixels outside of the placemap
         placed_mask[~self.placeable_mask] = False
         return placed_mask
 
-    def update_progress(self) -> int:
+    def update_progress(self, board_array=None) -> int:
         """Update the mask with the correct pixels and the number of correct pixels."""
-        self.placed_mask = self.make_placed_mask()
+        self.placed_mask = self.make_placed_mask(board_array)
         self.current_progress = int(np.sum(self.placed_mask))
         return self.current_progress
 
@@ -118,7 +120,7 @@ class Template:
 
         return cropped_array
 
-    def get_progress_image(self, opacity=0.65) -> Image.Image:
+    def get_progress_image(self, opacity=0.65, board_array=None) -> Image.Image:
         """
         Get an image with the canvas progress colored as such:
         - Green = correct
@@ -129,7 +131,7 @@ class Template:
         If the `opacity` is < 1, layer this progress image with the chosen opacity
         """
         if self.placed_mask is None:
-            self.update_progress()
+            self.update_progress(board_array)
         progress_array = np.zeros((self.height, self.width, 4), dtype=np.uint8)
         # correct pixels = green
         progress_array[self.placed_mask] = [0, 255, 0, 255 * opacity]
@@ -143,7 +145,9 @@ class Template:
 
         # layer the board under the progress image if the progress opacity is less than 1
         if opacity < 1:
-            cropped_board = self.crop_array_to_template(stats.board_array)
+            if board_array is None:
+                board_array = stats.board_array
+            cropped_board = self.crop_array_to_template(board_array)
             # remove the pixels outside of the template visible pixels area
             cropped_board[self.palettized_array == 255] = 255
             board_image = Image.fromarray(stats.palettize_array(cropped_board))
@@ -506,7 +510,7 @@ class TemplateManager:
         # log
         tracker_logger.info(f"Template added: '{template.name}' by {owner} ({owner.id})")
 
-    def get_template(self, name, owner_id=None, hidden=False):
+    def get_template(self, name, owner_id=None, hidden=False) -> Template:
         """Get a template from its name, get the owner's hidden Template if hidden is True,
         Return None if not found."""
         if name.lower() in ["@combo", "combo", "global"] and self.combo is not None:

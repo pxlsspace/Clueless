@@ -1,3 +1,5 @@
+import time
+from io import BytesIO
 import disnake
 import pandas as pd
 import numpy as np
@@ -5,6 +7,8 @@ from PIL import Image
 from datetime import datetime, timedelta, timezone
 from copy import deepcopy
 from disnake.ext import commands
+import aiohttp
+import asyncio
 
 from main import tracked_templates
 from utils.discord_utils import (
@@ -24,10 +28,16 @@ from utils.pxls.template_manager import (
     make_before_after_gif,
     parse_template,
 )
-from utils.setup import db_templates, db_users, stats
+from utils.setup import db_templates, db_users, stats, db_stats, imgur_app
 from utils.timezoneslib import get_timezone
-from utils.utils import make_progress_bar
-from utils.time_converter import round_minutes_down, str_to_td, td_format, format_datetime
+from utils.utils import BadResponseError, make_progress_bar, shorten_list
+from utils.time_converter import (
+    get_datetimes_from_input,
+    round_minutes_down,
+    str_to_td,
+    td_format,
+    format_datetime,
+)
 from utils.table_to_image import table_to_image
 from utils.arguments_parser import MyParser
 from utils.plot_utils import (
@@ -38,6 +48,7 @@ from utils.plot_utils import (
 )
 from cogs.pxls.speed import get_grouped_graph, get_stats_graph
 from utils.image.image_utils import v_concatenate
+from utils.pxls.template import reduce, get_rgba_palette
 
 
 class Progress(commands.Cog):
@@ -45,6 +56,9 @@ class Progress(commands.Cog):
         self.bot: commands.Bot = bot
         self.refresh_cooldown = commands.CooldownMapping.from_cooldown(
             1, 10, commands.BucketType.user
+        )
+        self.timelapse_cd = commands.CooldownMapping.from_cooldown(
+            1, 20, commands.BucketType.user
         )
 
     @commands.slash_command(name="progress")
@@ -1383,10 +1397,308 @@ class Progress(commands.Cog):
         app_info = await self.bot.application_info()
         bot_owner_id = app_info.owner.id
         admins = tracked_templates.load_progress_admins(bot_owner_id)
-        msg = "✅ **Progress admin list updated**\nCurrent template admins:\n"
+        msg = "✅ **Progress admin list updated**\nCurrent progress admins:\n"
         for admin_id in admins:
             msg += f"- <@{admin_id}>\n"
         await ctx.send(embed=disnake.Embed(description=msg, color=0x66C5CC))
+
+    @_progress.sub_command(name="timelapse")
+    async def _timelapse(
+        self,
+        inter: disnake.AppCmdInter,
+        template: str = commands.Param(autocomplete=autocomplete_templates),
+        # display=commands.Param(default="canvas", choices=["canvas", "progress"]),
+        last: str = None,
+        before=None,
+        after=None,
+        frames: int = commands.Param(default=40, lt=50, gt=2),
+        duration: int = commands.Param(name="frame-duration", default=100, lt=1000, gt=0),
+    ):
+        """Make a timelapse of the template in a given time frame.
+
+        Parameters
+        ----------
+        template: The name of the template.
+        last: Makes the timelapse in the last x week/day/hour/minute. (format: ?w?d?h?m)
+        before: To get the timelapse before a specific date. (format: YYYY-mm-dd HH:MM)
+        after: To show the timelapse after a specific date. (format: YYYY-mm-dd HH:MM)
+        frames: The number of frames in the timelapse. (default: 40)
+        duration: The duration of each frame in milliseconds. (default: 100)
+        """
+        await inter.response.defer()
+        await self.timelapse(inter, template, last, before, after, frames, duration)
+
+    @progress.command(
+        name="timelapse",
+        description="Make a timelapse of the template in the given time frame.",
+        usage="<template> [-last ?w?d?h?m] [-before YYYY-mm-dd HH:MM] [-after YYYY-mm-dd HH:MM] [-frames <frames>] [-duration <duration>]",
+        aliases=["tl"],
+        help="""
+        `<template>`: the name of a template you want to check
+        `[-last ?w?d?h?m]`: makes the timelapse in the last x week/day/hour/minute (format: ?w?d?h?m)
+        `[-before ...]`: to get the timelapse before a specific date (format: YYYY-mm-dd HH:MM)
+        `[-after ...]`: to show the timelapse after a specific date (format: YYYY-mm-dd HH:MM)
+        `[-frames <frames>]`: the number of frames in the timelapse (default: 40)
+        `[-duration <duration>]`: The duration of each frame in milliseconds. (default: 100)
+        """,
+    )
+    async def p_timelapse(self, ctx, *args):
+        # parse the arguemnts
+        parser = MyParser(add_help=False)
+        parser.add_argument("template", action="store")
+        # parser.add_argument(
+        #     "-display",
+        #     action="store",
+        #     default="canvas",
+        #     choices=["canvas", "progress"],
+        # )
+        parser.add_argument("-last", "-l", nargs="+", default=None)
+        parser.add_argument("-after", nargs="+", default=None)
+        parser.add_argument("-before", nargs="+", default=None)
+        parser.add_argument("-frames", "-nbframes", type=int, default=40)
+        parser.add_argument("-duration", type=int, default=100)
+
+        try:
+            parsed_args = parser.parse_args(args)
+        except ValueError as e:
+            return await ctx.send(f"❌ {e}")
+
+        async with ctx.typing():
+            await self.timelapse(
+                ctx,
+                parsed_args.template,
+                parsed_args.last,
+                parsed_args.before,
+                parsed_args.after,
+                parsed_args.frames,
+                parsed_args.duration,
+            )
+
+    async def timelapse(
+        self,
+        ctx,
+        template_name,
+        last=None,
+        before=None,
+        after=None,
+        nb_frames=40,
+        frame_duration=100,
+        display="canvas",
+    ):
+
+        # check cooldown
+        bucket = self.timelapse_cd.get_bucket(ctx)
+        retry_after = bucket.get_retry_after()
+        if retry_after:
+            raise commands.CommandOnCooldown(bucket, retry_after, self.timelapse_cd.type)
+
+        # get the template
+        template = tracked_templates.get_template(template_name)
+        if template is None:
+            return await ctx.send(f"No template named `{template_name}` found.")
+
+        min_frames = 2
+        max_frames = 50
+        if nb_frames > max_frames or nb_frames < min_frames:
+            return await ctx.send(
+                f":x: The number of frame must be between `{min_frames}` and `{max_frames}`."
+            )
+
+        min_duration = 1
+        max_duration = 1000
+        if frame_duration > max_duration or frame_duration < min_duration:
+            return await ctx.send(
+                f":x: The frame duration must be between `{min_duration}` `{max_duration}`."
+            )
+        last_duration = 1000  # duration for the last frame (in ms)
+
+        # get the user's timezone
+        discord_user = await db_users.get_discord_user(ctx.author.id)
+        user_timezone = get_timezone(discord_user["timezone"])
+
+        # check on date arguments
+        if before is None and after is None and last is None:
+            # default to tracking time if no input time is given
+            lower_dt, lower_progress = await template.get_progress_at(datetime.min)
+            higher_dt, higher_progress = await template.get_progress_at(datetime.utcnow())
+            if lower_dt is None or higher_dt is None:
+                return await ctx.send(
+                    ":x: Not enough data to find the start-tracking date, input dates manually with the 'before/after/last' options."
+                )
+            lower_dt = lower_dt.replace(tzinfo=timezone.utc)
+            higher_dt = higher_dt.replace(tzinfo=timezone.utc)
+        else:
+            try:
+                lower_dt, higher_dt = get_datetimes_from_input(
+                    user_timezone, last, before, after, 15
+                )
+            except ValueError as e:
+                return await ctx.send(f":x: {e}")
+            canvas_start_date = await db_stats.get_canvas_start_date(
+                await stats.get_canvas_code()
+            )
+            canvas_start_date = canvas_start_date.replace(tzinfo=timezone.utc)
+            lower_dt = max(canvas_start_date, lower_dt)
+
+        # get the snapshots URLs
+        canvas_code = await stats.get_canvas_code()
+        snapshot_urls = await db_stats.get_snapshots_between(
+            lower_dt, higher_dt, canvas_code
+        )
+        if len(snapshot_urls) < 2:
+            return await ctx.send(":x: The Time Frame Given is too short.")
+        snapshot_urls = shorten_list(snapshot_urls, min(nb_frames, len(snapshot_urls)))
+        nb_frames = len(snapshot_urls)
+
+        # enable the cooldown
+        self.timelapse_cd.update_rate_limit(ctx)
+
+        # download the snapshots
+        embed = disnake.Embed(color=0x66C5CC, title="Timelapse")
+        embed.description = "<a:typing:675416675591651329> **Downloading snapshots**...\n"
+        m = await ctx.send(embed=embed)
+        if m is None:
+            m = await ctx.original_message()
+
+        MAX_TASKS = 5  # number of simultaneous downloads
+        MAX_TIME = 120  # timeout before error
+        start = time.time()
+
+        async def download_frame(url, sess, sem):
+            async with sem:
+                async with sess.get(url) as res:
+                    content = await res.read()
+                if res.status != 200:
+                    return None
+                else:
+                    return Image.open(BytesIO(content))
+
+        tasks = []
+        sem = asyncio.Semaphore(MAX_TASKS)
+        try:
+            async with aiohttp.client.ClientSession() as sess:
+                for url in snapshot_urls:
+                    tasks.append(
+                        asyncio.wait_for(
+                            download_frame(url[2], sess, sem),
+                            timeout=MAX_TIME,
+                        )
+                    )
+                snapshot_images = await asyncio.gather(*tasks)
+        except Exception:
+            embed.description = "**:x: Downloading snapshots**... error\n"
+            embed.description += "An error occurred while downloading the snapshots."
+            embed.color = disnake.Color.red()
+            await m.edit(embed=embed)
+            return
+
+        # crop the template area
+        embed.description = "✅ **Downloading the snapshots**... done!\n\n<a:typing:675416675591651329> **Cropping the snapshots**..."
+        await m.edit(embed=embed)
+        frames = []
+        for snapshot_image in snapshot_images:
+            if display == "canvas":
+                offset = 5  # offset around the template area
+                ss_frame = snapshot_image.crop(
+                    (
+                        template.ox - offset,
+                        template.oy - offset,
+                        template.ox + template.width + offset,
+                        template.oy + template.height + offset,
+                    )
+                )
+                snapshot_image.close()
+            elif display == "progress":
+                snapshot_array = reduce(snapshot_image, get_rgba_palette())
+                template.update_progress(snapshot_array)
+                ss_frame = template.get_progress_image(board_array=snapshot_array)
+
+            # upscale the images if they're too big
+            scale = find_upscale(ss_frame, max_scale=8)
+            if scale > 1:
+                ss_frame_resized = ss_frame.resize(
+                    (ss_frame.width * scale, ss_frame.height * scale), Image.NEAREST
+                )
+                ss_frame.close()
+            else:
+                ss_frame_resized = ss_frame
+            frames.append(ss_frame_resized)
+
+        embed.description = "✅ **Downloading the snapshots**... done!\n\n✅ **Cropping the snapshots**... done!"
+        embed.description += (
+            "\n\n<a:typing:675416675591651329> **Saving and sending the GIF**..."
+        )
+        await m.edit(embed=embed)
+        # combine the frames to make a GIF
+        animated_img = BytesIO()
+        frames[0].save(
+            animated_img,
+            format="GIF",
+            append_images=frames[1:],
+            save_all=True,
+            duration=[frame_duration] * (len(frames) - 1) + [last_duration],
+            loop=0,
+        )
+        animated_img.seek(0)
+
+        # prepare the embed with the informations
+        t0 = snapshot_urls[0][0]
+        t1 = snapshot_urls[-1][0]
+        diff_time = t1 - t0
+        time_per_frame = diff_time / nb_frames
+        description = "• Between {} and {}\n• Total time: `{}`\n• 1 frame = `{}`\n• Number of frames: `{}`\n• Frame duration: `{}ms` `({}fps)`".format(
+            format_datetime(t0),
+            format_datetime(t1),
+            td_format(diff_time, short_format=True, hide_seconds=True),
+            td_format(time_per_frame, short_format=True, hide_seconds=True),
+            nb_frames,
+            frame_duration,
+            format_number(1 / (frame_duration / 1000)),
+        )
+        embed.description = description
+        embed.set_footer(text=f"Done in {format_number(time.time()-start)}s")
+        file = disnake.File(fp=animated_img, filename="timelapse.gif")
+        embed.set_image(url="attachment://timelapse.gif")
+
+        # send the final GIF
+        try:
+            await m.edit(embed=embed, file=file)
+        except Exception:
+            embed.set_footer(text="")
+            embed.description = "✅ **Downloading the snapshots**... done!\n\n✅ **Cropping the snapshots**... done!"
+            embed.description += "\n\n:x: **Saving and sending the GIF**... error\n(most likely the GIF is too big for discord's limit of 8MB)"
+            embed.description += (
+                "\n\n<a:typing:675416675591651329> **Uploading to imgur**..."
+            )
+            await m.edit(embed=embed)
+            try:
+                animated_img.seek(0)
+                imgur_link = await imgur_app.upload_image(animated_img.read(), True)
+            except Exception as e:
+                print(e)
+                if isinstance(e, BadResponseError) and "400" in str(e):
+                    cmd = (
+                        "frames:<nb frames>"
+                        if isinstance(ctx, disnake.AppCmdInter)
+                        else "-frames <nb frames>"
+                    )
+                    msg = "error\nMaybe the image was too big for imgur too??\n"
+                    msg += f"Try making the timelapse with less than {nb_frames} frames\n"
+                    msg += f"(add `{cmd}` to the command)."
+                else:
+                    msg = "unexpected error"
+                embed.description = "✅ **Downloading the snapshots**... done!\n\n✅ **Cropping the snapshots**... done!"
+                embed.description += "\n\n:x: **Saving and sending the GIF**... error\n(most likely the GIF is too big for discord's limit of 8MB)"
+                embed.description += f"\n\n:x: **Uploading to imgur**... {msg}"
+                embed.color = disnake.Color.red()
+                await m.edit(embed=embed)
+            else:
+                embed.description = description
+                embed.set_footer(text=f"Done in {format_number(time.time()-start)}s")
+                embed.set_image(url=imgur_link)
+                await m.edit(embed=embed)
+        for frame in frames:
+            frame.close()
 
 
 pos_speed_palette = get_gradient_palette(["#ffffff", "#70dd13", "#31a117"], 101)
@@ -1424,3 +1736,16 @@ def get_eta_color(eta_hours, max_days=40):
 
 def setup(bot: commands.Bot):
     bot.add_cog(Progress(bot))
+
+
+def find_upscale(image, target=250000, max_scale=4):
+    """Find the smallest scale to be the closet to the target in image size"""
+    min_dist = int(1e9)
+    scale = 1
+    for i in range(1, max_scale + 1):
+        size = image.width * image.height * i**2
+        diff = abs(size - target)
+        if diff < min_dist:
+            scale = i
+            min_dist = diff
+    return scale

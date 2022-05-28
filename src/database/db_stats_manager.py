@@ -459,33 +459,36 @@ class DbStatsManager:
 
         # general stats functions #
 
-    async def get_general_stat(self, name, dt1, dt2, canvas=False):
+    async def get_general_stat(self, name, dt1, dt2, canvas_code=None):
         """get all the values of a general stat after a datetime
         (this is used to plot the stat)"""
 
-        if not canvas:
-            canvas_code = "NOT NULL"
+        if canvas_code is None:
+            sql = """
+                SELECT datetime, min(abs(JulianDay(datetime) - JulianDay(?)))*24*3600 as diff_with_time
+                FROM pxls_general_stat"""
         else:
-            current_canvas = await self.stats_manager.get_canvas_code()
-            canvas_code = f"'{str(current_canvas)}'"
+            sql = """
+                SELECT datetime, min(abs(JulianDay(datetime) - JulianDay(?)))*24*3600 as diff_with_time
+                FROM pxls_general_stat
+                WHERE canvas_code = ?"""
 
-        sql = f"""
-            SELECT datetime, min(abs(JulianDay(datetime) - JulianDay(?)))*24*3600 as diff_with_time
-            FROM pxls_general_stat
-            WHERE canvas_code IS {canvas_code}
-            """
-
-        closest_data1 = await self.db.sql_select(sql, dt1)
+        closest_data1 = await self.db.sql_select(
+            sql, (dt1,) + ((canvas_code,) if canvas_code else ())
+        )
         closest_dt1 = closest_data1[0][0]
-        closest_data2 = await self.db.sql_select(sql, dt2)
+        closest_data2 = await self.db.sql_select(
+            sql, (dt2,) + ((canvas_code,) if canvas_code else ())
+        )
         closest_dt2 = closest_data2[0][0]
 
         sql = """
-            SELECT value,datetime from pxls_general_stat
+            SELECT value, datetime, canvas_code
+            FROM pxls_general_stat
             WHERE stat_name = ?
             AND datetime >= ?
             AND datetime <= ?
-            ORDER BY datetime DESC"""
+            ORDER BY datetime"""
 
         return await self.db.sql_select(sql, (name, closest_dt1, closest_dt2))
 

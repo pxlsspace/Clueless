@@ -6,7 +6,13 @@ from datetime import timezone
 
 from utils.arguments_parser import MyParser
 from utils.image.image_utils import hex_str_to_int
-from utils.time_converter import format_datetime, str_to_td, format_timezone
+from utils.pxls.archives import check_canvas_code
+from utils.time_converter import (
+    format_datetime,
+    get_datetimes_from_input,
+    format_timezone,
+    td_format,
+)
 from utils.discord_utils import format_number, image_to_file
 from utils.plot_utils import add_glow, get_theme, fig2img, hex_to_rgba_string
 from utils.setup import stats, db_stats, db_users
@@ -22,87 +28,137 @@ class Online(commands.Cog):
     async def _online(
         self,
         inter: disnake.AppCmdInter,
-        cooldown: bool = False,
         last: str = None,
-        canvas: bool = False,
-        groupby: str = commands.Param(default=None, choices=["day", "hour"]),
+        cooldown: bool = False,
+        canvas_code: str = commands.param(default=None, name="canvas-code"),
+        groupby: str = commands.Param(
+            default=None, choices=["hour", "day", "month", "canvas"]
+        ),
+        before: str = None,
+        after: str = None,
     ):
         """
         Show the online count history.
 
         Parameters
         ----------
-        cooldown: To show the cooldown instead of the online count.
         last: A time duration in the format ?y?mo?w?d?h?m?s.
-        canvas: To show the count during the whole current canvas.
-        groupby: To show a bar graph with the average of each day or hour.
+        cooldown: To show the cooldown instead of the online count.
+        canvas_code: To show the count during a selected canvas. (default: current)
+        groupby: To show a bar graph with the average of each hour, day, month or canvas.
+        before: To show the online count before a specific date. (format: YYYY-mm-dd HH:MM)
+        after: To show the online count after a specific date. (format: YYYY-mm-dd HH:MM)
         """
         await inter.response.defer()
-        args = ()
-        if cooldown:
-            args += ("-cooldown",)
-        if last:
-            args += ("-last", last)
-        if canvas:
-            args += ("-canvas",)
-        if groupby:
-            args += ("-groupby", groupby)
-        await self.online(inter, *args)
+        await self.online(inter, last, cooldown, canvas_code, groupby, before, after)
 
     @commands.command(
         name="online",
         description="Show the online count history.",
-        usage="[-cooldown] [-canvas] [-groupby day/hour] [-last ?y?mo?w?d?h?m?s]",
-        help="""- `[-cooldown|-cd]`: show the cooldown instead of online count
-                - `[-canvas|-c]`: show the count during the whole canvas
-                - `[-groupby|-g]`: show a bar graph with the average of each `day` or `hour`
-                - `[-last|-l ?y?mo?w?d?h?m?s]` Show the count in the last x years/months/weeks/days/hours/minutes/seconds (default: 1d)""",
+        usage="[-last ?y?mo?w?d?h?m?s] [-cooldown] [-canvas <canvas code>] [-groupby hour|day|month|canvas] [-before <date time>] [-after <date time>]",
+        help="""- `[-last|-l ?y?mo?w?d?h?m?s]` Show the count in the last x years/months/weeks/days/hours/minutes/seconds
+                - `[-cooldown|-cd]`: show the cooldown instead of online count
+                - `[-canvas|-c <canvas code>]`: show the count during a selected canvas (default: current)
+                - `[-groupby|-g]`: show a bar graph with the average of each `hour`, `day`, `month` or `canvas`
+                - `[-before <date time>]`: show the online count after a specific date (format YYYY-mm-dd HH:MM)
+                - `[-after <date time>]`: show the online count after a specific date (format YYYY-mm-dd HH:MM)
+            """,
     )
     async def p_online(self, ctx, *args):
-        async with ctx.typing():
-            await self.online(ctx, *args)
-
-    async def online(self, ctx, *args):
         # parse the arguemnts
         parser = MyParser(add_help=False)
         parser.add_argument("-last", "-l", nargs="+", default=None)
         parser.add_argument("-cooldown", "-cd", action="store_true", default=False)
-        parser.add_argument("-canvas", "-c", action="store_true", default=False)
-        parser.add_argument("-groupby", "-g", choices=["day", "hour"], required=False)
+        parser.add_argument("-canvas", "-c", action="store", nargs="*", default=None)
+        parser.add_argument(
+            "-groupby",
+            "-g",
+            type=str.lower,
+            choices=["hour", "day", "month", "canvas"],
+            required=False,
+        )
+        parser.add_argument("-after", dest="after", nargs="+", default=None)
+        parser.add_argument("-before", dest="before", nargs="+", default=None)
         try:
             parsed_args = parser.parse_args(args)
         except ValueError as e:
             return await ctx.send(f"❌ {e}")
 
-        if parsed_args.last is None and parsed_args.canvas:
-            last = "10000d"
-        elif parsed_args.last is None:
-            last = "1d"
-        else:
-            last = parsed_args.last
+        async with ctx.typing():
+            await self.online(
+                ctx,
+                parsed_args.last,
+                parsed_args.cooldown,
+                parsed_args.canvas[0] if parsed_args.canvas else None,
+                parsed_args.groupby,
+                parsed_args.before,
+                parsed_args.after,
+            )
 
-        # get the user theme
+    async def online(
+        self,
+        ctx,
+        last=None,
+        cooldown=False,
+        canvas_input=None,
+        groupby=None,
+        before=None,
+        after=None,
+    ):
+
+        # get the user theme and timezone
         discord_user = await db_users.get_discord_user(ctx.author.id)
         user_timezone = discord_user["timezone"]
         current_user_theme = discord_user["color"] or "default"
         theme = get_theme(current_user_theme)
 
-        input_time = str_to_td(last)
-        if not input_time:
-            return await ctx.send(
-                "❌ Invalid `last` parameter, format must be `?y?mo?w?d?h?m?s`."
-            )
+        # check on time inputs
+        if groupby in ["month", "canvas"] and not any([last, before, after]):
+            dt1 = datetime.min.replace(tzinfo=timezone.utc)
+            dt2 = datetime.now(timezone.utc)
+        else:
+            try:
+                dt1, dt2 = get_datetimes_from_input(
+                    get_timezone(user_timezone), last, before, after, 5
+                )
+            except ValueError as e:
+                return await ctx.send(f":x: {e}")
+        if dt2 == datetime.now(timezone.utc):
+            last_bar_darker = True
+        else:
+            last_bar_darker = False
+
+        # check on canvas code input
+        current_canvas = await stats.get_canvas_code()
+        if canvas_input is None:
+            if not any([last, before, after]) and groupby not in ["month", "canvas"]:
+                canvas = current_canvas
+            else:
+                canvas = None
+        else:
+            canvas = check_canvas_code(canvas_input)
+            if canvas is None:
+                return await ctx.send(
+                    f":x: The given canvas code `{canvas_input}` is invalid."
+                )
+            if canvas != current_canvas:
+                last_bar_darker = False
 
         data = await db_stats.get_general_stat(
             "online_count",
-            datetime.utcnow() - input_time,
-            datetime.utcnow(),
-            parsed_args.canvas,
+            dt1,
+            dt2,
+            canvas,
         )
-        current_count = stats.online_count
+        if not data:
+            return await ctx.send(":x: No data found for this canvas.")
+        t0 = data[0]["datetime"]
+        t1 = data[-1]["datetime"]
 
-        if parsed_args.groupby:
-            groupby = parsed_args.groupby
+        if groupby:
+            if groupby == "month":
+                format = "%Y-%m"
+                user_timezone = None
             if groupby == "day":
                 format = "%Y-%m-%d"
                 user_timezone = None
@@ -113,12 +169,15 @@ class Online(commands.Cog):
             data_dict = {}
             for d in data:
                 if d[0] is not None:
-                    date_str = d["datetime"].strftime(format)
-                    key = datetime.strptime(date_str, format)
-                    if key in data_dict:
-                        data_dict[key].append(int(d[0]))
+                    if groupby == "canvas":
+                        key = "C" + d["canvas_code"]
                     else:
-                        data_dict[key] = [int(d[0])]
+                        date_str = d["datetime"].strftime(format)
+                        key = datetime.strptime(date_str, format)
+                    if key in data_dict:
+                        data_dict[key].append(int(d["value"]))
+                    else:
+                        data_dict[key] = [int(d["value"])]
 
             # get the average for each date
             dates = []
@@ -130,60 +189,86 @@ class Online(commands.Cog):
                 online_counts.append(average)
             if len(dates) <= 1:
                 return await ctx.send("❌ The time frame given is too short.")
-            dates = dates[:-1]
-            online_counts = online_counts[:-1]
+            dates = dates[1:]
+            t0 = dates[0]
+            if groupby == "canvas":
+                t1 = dates[-1]
+
+            online_counts = online_counts[1:]
             online_counts_without_none = online_counts
-            if len(online_counts_without_none) > 1 and online_counts[0] is not None:
-                online_counts_without_none = online_counts_without_none[1:]
+            # remove the last bar if it's the current one
+            if (
+                len(online_counts_without_none) > 1
+                and online_counts[0] is not None
+                and last_bar_darker
+            ):
+                online_counts_without_none = online_counts_without_none[:-1]
         else:
-            online_counts = [(int(e[0]) if e[0] is not None else 0) for e in data]
-            dates = [e[1] for e in data if e[0]]
-            online_counts_without_none = [int(e[0]) for e in data if e[0] is not None]
-            if current_count:
-                online_counts.insert(0, int(current_count))
-                dates.insert(0, datetime.utcnow())
+            online_counts = [
+                (int(e["value"]) if e["value"] is not None else 0) for e in data
+            ]
+            dates = [e["datetime"] for e in data if e["datetime"]]
+            online_counts_without_none = [
+                int(e["value"]) for e in data if e["value"] is not None
+            ]
 
         # make graph title
-        if parsed_args.cooldown:
+        if cooldown:
             title = "Pxls Cooldown"
         else:
             title = "Online Count"
 
         # get the cooldown for each online value if we have the cooldown arg
-        if parsed_args.cooldown:
+        if cooldown:
             online_counts = [stats.get_cd(count) for count in online_counts]
             online_counts_without_none = [
                 stats.get_cd(count) for count in online_counts_without_none
             ]
 
-            if current_count:
-                current_count = round(stats.get_cd(current_count), 2)
-
         # make graph
-        if parsed_args.groupby:
+        if groupby:
             # check that we arent plotting too many bars (limit: 10000 bars)
             nb_bars = len(online_counts)
             if nb_bars > 10000:
                 return await ctx.send(
                     f":x: That's too many bars too show (**{nb_bars}**). <:bruhkitty:943594789532737586>"
                 )
-            fig = await make_grouped_graph(dates, online_counts, theme, user_timezone)
+            online_counts_formatted = [
+                round(o, 2) if o is not None else None for o in online_counts
+            ]
+            fig = await make_grouped_graph(
+                dates, online_counts_formatted, theme, user_timezone, last_bar_darker
+            )
         else:
             fig = await make_graph(dates, online_counts, theme, user_timezone)
         fig.update_layout(
             title="<span style='color:{};'>{}</span>".format(
                 theme.get_palette(1)[0],
-                title + (f" (average per {groupby})" if parsed_args.groupby else ""),
+                title + (f" (average per {groupby})" if groupby else ""),
             )
         )
         img = await fig2img(fig)
 
         # make embed
-        description = "• Between {} and {}\n• Current {}: `{}`\n• Average: `{}`\n• Min: `{}` • Max: `{}`".format(
-            format_datetime(dates[-1]),
-            format_datetime(dates[0]),
+        if groupby == "canvas":
+            diff = ""
+            t0 = f"`{t0}`"
+            t1 = f"`{t1}`"
+
+        else:
+            if t1 == t0:
+                diff = "\n• Time `0m`"
+            else:
+                diff = f"\n• Time `{td_format(t1 - t0, hide_seconds=True)}`"
+            t0 = format_datetime(t0)
+            t1 = format_datetime(t1)
+
+        description = "• Between {} and {}{}\n• Current {}: `{}`\n• Average: `{}`\n• Min: `{}` • Max: `{}`".format(
+            t0,
+            t1,
+            diff,
             title,
-            format_number(current_count),
+            format_number(stats.online_count),
             format_number(
                 sum(online_counts_without_none) / len(online_counts_without_none)
             ),
@@ -246,7 +331,7 @@ def make_graph(dates, values, theme, user_timezone=None):
 
 
 @in_executor()
-def make_grouped_graph(dates, values, theme, user_timezone=None):
+def make_grouped_graph(dates, values, theme, user_timezone=None, last_bar_darker=True):
 
     # get the timezone information
     tz = get_timezone(user_timezone)
@@ -256,7 +341,7 @@ def make_grouped_graph(dates, values, theme, user_timezone=None):
     else:
         annotation_text = f"Timezone: {format_timezone(tz)}"
 
-    dates = [datetime.astimezone(d.replace(tzinfo=timezone.utc), tz) for d in dates]
+    # dates = [datetime.astimezone(d.replace(tzinfo=timezone.utc), tz) for d in dates]
 
     # create the graph and style
     fig = go.Figure(layout=theme.get_layout(annotation_text=annotation_text))
@@ -283,7 +368,8 @@ def make_grouped_graph(dates, values, theme, user_timezone=None):
 
     color = theme.get_palette(1)[0]
     bar_colors = [color for _ in values]
-    bar_colors[0] = theme.off_color
+    if last_bar_darker:
+        bar_colors[-1] = theme.off_color
 
     # trace the user data
     if theme.has_underglow:

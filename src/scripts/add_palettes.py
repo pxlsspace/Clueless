@@ -1,13 +1,11 @@
+import asyncio
 import os
 import sys
-import asyncio
-
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from utils.setup import DbStatsManager, DbConnection  # noqa: E402
 from utils.pxls.pxls_stats_manager import PxlsStatsManager  # noqa: E402
-
+from utils.setup import DbConnection, DbStatsManager  # noqa: E402
 
 """ Script to populate the database with canvas palettes."""
 

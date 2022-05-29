@@ -1,14 +1,14 @@
-import plotly.graph_objects as go
-import plotly.express as px
 from io import BytesIO
-from PIL import Image
 from itertools import cycle
+
+import plotly.express as px
+import plotly.graph_objects as go
 from matplotlib import cm as cm
 from matplotlib.colors import LinearSegmentedColormap
+from PIL import Image
 
-from utils.image.image_utils import is_dark, rgb_to_hex, hex_to_rgb, lighten_color
+from utils.image.image_utils import hex_to_rgb, is_dark, lighten_color, rgb_to_hex
 from utils.utils import in_executor
-
 
 """ Themes and util functions for the plotly plots """
 

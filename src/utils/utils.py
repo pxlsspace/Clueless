@@ -1,13 +1,15 @@
 from __future__ import annotations
-import numpy as np
-import base64
-import re
-import aiohttp
+
 import asyncio
+import base64
 import functools
+import re
 import timeit
-from aiohttp.client_exceptions import InvalidURL, ClientConnectionError
 from typing import Awaitable, Callable, Optional, TypeVar
+
+import aiohttp
+import numpy as np
+from aiohttp.client_exceptions import ClientConnectionError, InvalidURL
 from typing_extensions import ParamSpec
 
 T = TypeVar("T")

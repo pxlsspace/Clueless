@@ -1,18 +1,16 @@
 from __future__ import annotations
+
 import time
+
 import disnake
 from disnake.ext import commands
-
 from PIL import Image
 
 from main import tracked_templates
 from utils.arguments_parser import MyParser
-from utils.pxls.template_manager import (
-    Combo,
-    layer,
-)
+from utils.discord_utils import CreateTemplateView, image_to_file
+from utils.pxls.template_manager import Combo, layer
 from utils.setup import stats
-from utils.discord_utils import image_to_file, CreateTemplateView
 
 
 class Layer(commands.Cog):

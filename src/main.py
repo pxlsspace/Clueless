@@ -1,22 +1,22 @@
 import os
-import disnake
 import traceback
-from disnake.ext import commands
-from dotenv import load_dotenv
 from datetime import timezone
 
+import disnake
+from disnake.ext import commands
+from dotenv import load_dotenv
+
+from utils.log import close_loggers, get_logger, setup_loggers
 from utils.pxls.template_manager import TemplateManager
 from utils.setup import (
     DEFAULT_PREFIX,
-    db_stats,
-    db_servers,
-    db_users,
-    db_templates,
-    db_canvas,
     GUILD_IDS,
+    db_canvas,
+    db_servers,
+    db_stats,
+    db_templates,
+    db_users,
 )
-from utils.log import get_logger, setup_loggers, close_loggers
-
 
 load_dotenv()
 intents = disnake.Intents.all()

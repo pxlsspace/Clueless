@@ -1,5 +1,6 @@
-import disnake
 import inspect
+
+import disnake
 import plotly.graph_objects as go
 from disnake.ext import commands
 
@@ -9,10 +10,10 @@ from utils.discord_utils import (
     get_image_from_message,
     image_to_file,
 )
-from utils.table_to_image import table_to_image
-from utils.image.image_utils import h_concatenate, hex_to_rgb, rgb_to_hex, hex_str_to_int
+from utils.image.image_utils import h_concatenate, hex_str_to_int, hex_to_rgb, rgb_to_hex
 from utils.plot_utils import fig2img
-from utils.setup import stats, db_users
+from utils.setup import db_users, stats
+from utils.table_to_image import table_to_image
 from utils.utils import in_executor
 
 

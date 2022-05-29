@@ -1,10 +1,11 @@
-import disnake
-from disnake.ext import commands
-from disnake import Spotify
 from difflib import SequenceMatcher
 
-from utils.genius import search_song
+import disnake
+from disnake import Spotify
+from disnake.ext import commands
+
 from utils import azlyrics
+from utils.genius import search_song
 
 
 class Lyrics(commands.Cog):

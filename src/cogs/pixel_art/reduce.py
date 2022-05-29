@@ -1,8 +1,9 @@
+import time
+
 import disnake
 import numpy as np
-import time
-from PIL import Image
 from disnake.ext import commands
+from PIL import Image
 
 from utils.arguments_parser import MyParser
 from utils.discord_utils import (
@@ -12,10 +13,8 @@ from utils.discord_utils import (
     get_urls_from_list,
     image_to_file,
 )
-from utils.image.image_utils import (
-    get_colors_from_input,
-)
-from utils.pxls.template import reduce, get_rgba_palette
+from utils.image.image_utils import get_colors_from_input
+from utils.pxls.template import get_rgba_palette, reduce
 from utils.setup import stats
 
 

@@ -1,11 +1,12 @@
 import asyncio
 import re
+import time
+from io import BytesIO
+
 import disnake
 import numpy as np
-import time
-from PIL import Image
-from io import BytesIO
 from disnake.ext import commands
+from PIL import Image
 
 from utils.arguments_parser import MyParser
 from utils.discord_utils import (
@@ -15,13 +16,7 @@ from utils.discord_utils import (
     image_to_file,
 )
 from utils.image.image_utils import get_builtin_palette
-from utils.pxls.template import (
-    STYLES,
-    get_style,
-    parse_style_image,
-    templatize,
-    reduce,
-)
+from utils.pxls.template import STYLES, get_style, parse_style_image, reduce, templatize
 from utils.setup import stats
 from utils.utils import get_content
 

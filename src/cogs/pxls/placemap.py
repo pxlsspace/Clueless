@@ -3,26 +3,26 @@ import os
 import time
 
 import disnake
-from disnake.ext import commands
 import numpy as np
+from disnake.ext import commands
 from PIL import Image
 
 from utils.discord_utils import (
     AuthorView,
-    autocomplete_log_canvases,
     autocomplete_canvases,
+    autocomplete_log_canvases,
     format_number,
     image_to_file,
 )
-from utils.setup import db_canvas, db_users, stats
+from utils.image.image_utils import highlight_image
+from utils.log import get_logger
 from utils.pxls.archives import (
+    check_canvas_code,
     check_key,
     get_canvas_image,
     get_user_placemap,
-    check_canvas_code,
 )
-from utils.image.image_utils import highlight_image
-from utils.log import get_logger
+from utils.setup import db_canvas, db_users, stats
 
 logger = get_logger(__name__)
 

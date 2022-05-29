@@ -1,7 +1,8 @@
 import json
 import os
-from PIL import Image
+
 import numpy as np
+from PIL import Image
 
 from utils.log import get_logger
 

@@ -1,18 +1,11 @@
+from datetime import datetime, timezone
+
 import disnake
 import numpy as np
-from datetime import datetime, timezone
 from disnake.ext import commands
 from PIL import Image
 
-
-from utils.image.image_utils import (
-    get_builtin_palette,
-    get_color,
-    hex_str_to_int,
-    rgb_to_hex,
-    is_dark,
-    highlight_image,
-)
+from utils.arguments_parser import MyParser
 from utils.discord_utils import (
     InterImage,
     format_number,
@@ -20,9 +13,16 @@ from utils.discord_utils import (
     get_urls_from_list,
     image_to_file,
 )
-from utils.arguments_parser import MyParser
-from utils.table_to_image import table_to_image
+from utils.image.image_utils import (
+    get_builtin_palette,
+    get_color,
+    hex_str_to_int,
+    highlight_image,
+    is_dark,
+    rgb_to_hex,
+)
 from utils.setup import db_users
+from utils.table_to_image import table_to_image
 
 
 class Highlight(commands.Cog):

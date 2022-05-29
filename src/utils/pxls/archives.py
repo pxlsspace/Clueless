@@ -1,11 +1,12 @@
-import re
 import os
-import numpy as np
+import re
 from hashlib import sha256
+
+import numpy as np
 from PIL import Image
 
-from utils.utils import in_executor
 from utils.setup import db_stats, stats
+from utils.utils import in_executor
 
 basepath = os.path.dirname(__file__)
 CANVASES_FOLDER = os.path.abspath(

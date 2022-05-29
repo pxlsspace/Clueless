@@ -1,10 +1,11 @@
 # https://github.com/akirbaes/Pixel-Font/blob/master/font_to_data.py
 
 import io
-from PIL import Image
-from os import path
 import json
+from os import path
+
 import numpy as np
+from PIL import Image
 
 """ This file contains function to create font usable by font_manager.py
 INPUT: filename of the characters list

@@ -1,7 +1,9 @@
-from bs4 import BeautifulSoup
-import urllib
 import re
+import urllib
 from difflib import SequenceMatcher
+
+from bs4 import BeautifulSoup
+
 from utils.utils import get_content
 
 headers = {

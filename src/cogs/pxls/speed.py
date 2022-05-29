@@ -151,7 +151,7 @@ class PxlsSpeed(commands.Cog):
         except ValueError as e:
             return await ctx.send(f":x: {e}")
         last_bar_darker = True
-        if recent_time != datetime.now(timezone.utc):
+        if datetime.now(timezone.utc) - recent_time > timedelta(minutes=15):
             last_bar_darker = False
 
         # get the data we need

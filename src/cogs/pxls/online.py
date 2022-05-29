@@ -1,5 +1,5 @@
 import disnake
-from datetime import datetime
+from datetime import datetime, timedelta
 from disnake.ext import commands
 import plotly.graph_objects as go
 from datetime import timezone
@@ -123,7 +123,7 @@ class Online(commands.Cog):
                 )
             except ValueError as e:
                 return await ctx.send(f":x: {e}")
-        if dt2 == datetime.now(timezone.utc):
+        if datetime.now(timezone.utc) - dt2 < timedelta(minutes=5):
             last_bar_darker = True
         else:
             last_bar_darker = False

@@ -471,6 +471,7 @@ class Utility(commands.Cog):
         date: str = "",
         time: str = "",
         timezone: str = None,
+        relative_time: str = commands.Param(default=None, name="relative-time"),
     ):
         """Generate discord timestamps from a date, time and timezone.
 
@@ -478,12 +479,17 @@ class Utility(commands.Cog):
         ----------
         date: A date in the format 'YYYY-mm-dd'.
         time: A time in the format 'HH:MM'.
-        timezone: A timezone (ex: 'UTC+8', US/Pacific, PST) (default: your set timezone or UTC)."""
+        timezone: A timezone (ex: 'UTC+8', US/Pacific, PST). (default: your set timezone or UTC).
+        relative_time: format: '(+/-) ?y?m?w?d?h?m?s' (ex: '-3d' = 3 days ago)
+        """
         dt_list = []
-        if date:
-            dt_list.append(date)
-        if time:
-            dt_list.append(time)
+        if date or time:
+            if date:
+                dt_list.append(date)
+            if time:
+                dt_list.append(time)
+        elif relative_time:
+            dt_list.append(relative_time)
         dt_str = " ".join(dt_list)
         await self.timestamp(inter, dt_str, timezone)
 
@@ -491,34 +497,29 @@ class Utility(commands.Cog):
         name="timestamp",
         aliases=["ts"],
         description="Generate discord timestamps from a date, time and timezone.",
-        usage="[date (YYYY-mm-dd)] [time (HH:MM)] [timezone]",
+        usage="[date (YYYY-mm-dd)] [time (HH:MM)] [timezone] | [+|-] [?y?m?w?d?h?m?s]",
         help="""
             - `[date]`: a date in the format `YYYY-mm-dd`
             - `[time]`: a time in the format `HH:MM`
             - `[timezone]`: a timezone (ex: 'UTC+8', US/Pacific, PST)\n(default: your set timezone or UTC)
+            - `[+|-] [?y?m?w?d?h?m?s]`: a relative time (example: -3d = 3 days ago)
         """,
     )
     async def p_timestamp(self, ctx, *, args: str = None):
 
         args = args.split(" ") if args else []
-        if len(args) == 1:
+        tz_str = None
+        if len(args) == 0:
+            dt_str = None
+        elif len(args) == 1:
             dt_str = args[0]
-            tz_str = None
-        elif len(args) == 2:
+        else:
             # check if the last arg is a timezone
-            if get_timezone(args[1]):
-                dt_str = args[0]
-                tz_str = args[1]
+            if get_timezone(args[-1]):
+                dt_str = " ".join(args[:-1])
+                tz_str = args[-1]
             else:
                 dt_str = " ".join(args)
-                tz_str = None
-        elif len(args) == 3:
-            dt_str = " ".join(args[0:2])
-            tz_str = args[2]
-        else:
-            return await ctx.send(
-                f"❌ Incorrect arguments\nusage: `{ctx.prefix}timestamp {ctx.command.usage}`"
-            )
 
         await self.timestamp(ctx, dt_str, tz_str)
 
@@ -531,13 +532,38 @@ class Utility(commands.Cog):
         tz = get_timezone(tz_str)
         if tz is None:
             return await ctx.send(f"❌ Invalid timezone `{tz_str}`.")
-        if "now" in dt_str:
+        if dt_str and "now" in dt_str:
             dt = datetime.now(tz)
         else:
             try:
-                dt = valid_datetime_type(dt_str.split(" "), tz)
-            except ValueError as e:
-                return await ctx.send(f"❌ {e}")
+                dt = valid_datetime_type(dt_str, tz)
+            except Exception:
+                err_msg = "The input must be either:\n"
+                err_msg += "**A date/time**\nformat: `[date (YYYY-mm-dd)] [time (HH:MM)] [timezone]`\n"
+                err_msg += "*example: `2021-06-20 18:20 UTC+2`*\n\n"
+
+                err_msg += "**A relative time**\nformat: `[+|-] [?y?m?w?d?h?m?s]` (where `?` is a number)\n"
+                err_msg += "*example: `-300d 2h 20m`*\n\n"
+
+                err_embed = disnake.Embed(
+                    color=disnake.Color.red(),
+                    description=err_msg,
+                    title="Invalid Input",
+                )
+                if dt_str is None:
+                    return await ctx.send(embed=err_embed)
+                dt_str = dt_str.replace("+", "")
+                if "-" in dt_str:
+                    dt_str = dt_str.replace("-", "")
+                    td = str_to_td(dt_str)
+                    if td is None:
+                        return await ctx.send(embed=err_embed)
+                    dt = datetime.now(tz) - td
+                else:
+                    td = str_to_td(dt_str)
+                    if td is None:
+                        return await ctx.send(embed=err_embed)
+                    dt = datetime.now(tz) + td
 
         timestamps = ""
         for f in ["t", "T", "d", "D", "f", "F", "R"]:

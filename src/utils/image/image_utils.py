@@ -366,6 +366,19 @@ def get_visible_pixels(image: Union[Image.Image, np.ndarray]) -> int:
         return int(np.sum(alpha_mask))
 
 
+def find_upscale(image: Image.Image, target=250000, max_scale=10):
+    """Find the smallest scale to be the closet to the target in image size"""
+    min_dist = int(1e6)
+    scale = 1
+    for i in range(1, max_scale + 1):
+        size = image.width * image.height * i**2
+        diff = abs(size - target)
+        if diff < min_dist:
+            scale = i
+            min_dist = diff
+    return scale
+
+
 # --- Palettes --- #
 
 PXLS_COLORS = [

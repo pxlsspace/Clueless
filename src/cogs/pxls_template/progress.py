@@ -47,7 +47,7 @@ from utils.plot_utils import (
     matplotlib_to_plotly,
 )
 from cogs.pxls.speed import get_grouped_graph, get_stats_graph
-from utils.image.image_utils import v_concatenate
+from utils.image.image_utils import v_concatenate, find_upscale
 from utils.pxls.template import reduce, get_rgba_palette
 
 
@@ -305,11 +305,9 @@ class Progress(commands.Cog):
         if is_tracked:
             eta, eta_speed = await template.get_eta()
             if eta == "done" and nb_virgin_abuse == 0:
-                embed.color = 0x1EC31E
                 clap_emoji = "<a:HyperClapCat:976892768209219624>"
                 progress_text += f"• ETA: {clap_emoji} `Done!` {clap_emoji}\n"
             elif eta == "done":
-                embed.color = 0x00A500
                 clap_emoji = "<a:clapcat:976892767705903155>"
                 progress_text += f"• ETA: {clap_emoji} `Done!` {clap_emoji}\n"
             else:
@@ -317,6 +315,9 @@ class Progress(commands.Cog):
                     eta or "N/A",
                     f" *(at `{format_number(eta_speed)}` px/h)*" if eta_speed else "",
                 )
+
+        if togo_pixels == 0:
+            embed.color = 0x1EC31E
 
         embed.add_field(name="**Current Progress**", value=progress_text, inline=False)
 
@@ -1508,7 +1509,7 @@ class Progress(commands.Cog):
         max_duration = 1000
         if frame_duration > max_duration or frame_duration < min_duration:
             return await ctx.send(
-                f":x: The frame duration must be between `{min_duration}` `{max_duration}`."
+                f":x: The frame duration must be between `{min_duration}` and `{max_duration}`."
             )
         last_duration = 1000  # duration for the last frame (in ms)
 
@@ -1543,7 +1544,9 @@ class Progress(commands.Cog):
         # get the snapshots URLs
         canvas_code = await stats.get_canvas_code()
         snapshot_urls = await db_stats.get_snapshots_between(
-            lower_dt, higher_dt, canvas_code
+            lower_dt.astimezone(timezone.utc),
+            higher_dt.astimezone(timezone.utc),
+            canvas_code,
         )
         if len(snapshot_urls) < 2:
             return await ctx.send(":x: The Time Frame Given is too short.")
@@ -1614,7 +1617,7 @@ class Progress(commands.Cog):
                 ss_frame = template.get_progress_image(board_array=snapshot_array)
 
             # upscale the images if they're too big
-            scale = find_upscale(ss_frame, max_scale=8)
+            scale = find_upscale(ss_frame)
             if scale > 1:
                 ss_frame_resized = ss_frame.resize(
                     (ss_frame.width * scale, ss_frame.height * scale), Image.NEAREST
@@ -1736,16 +1739,3 @@ def get_eta_color(eta_hours, max_days=40):
 
 def setup(bot: commands.Bot):
     bot.add_cog(Progress(bot))
-
-
-def find_upscale(image, target=250000, max_scale=4):
-    """Find the smallest scale to be the closet to the target in image size"""
-    min_dist = int(1e9)
-    scale = 1
-    for i in range(1, max_scale + 1):
-        size = image.width * image.height * i**2
-        diff = abs(size - target)
-        if diff < min_dist:
-            scale = i
-            min_dist = diff
-    return scale

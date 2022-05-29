@@ -33,7 +33,7 @@ class PxlsCooldown(commands.Cog):
         aliases=["cd", "timer"],
     )
     async def cooldown(self, ctx, number=None, cd_mult=None):
-        if number:
+        if number is not None:
             try:
                 online = int(number)
             except ValueError:

@@ -150,6 +150,9 @@ class PxlsSpeed(commands.Cog):
             )
         except ValueError as e:
             return await ctx.send(f":x: {e}")
+        last_bar_darker = True
+        if recent_time != datetime.now(timezone.utc):
+            last_bar_darker = False
 
         # get the data we need
         if groupby and groupby != "canvas":
@@ -280,7 +283,11 @@ class PxlsSpeed(commands.Cog):
                 pixels = [stat["placed"] for stat in data]
                 # remove the "None" and last values to calculate the min, max, avg
                 pixels_int_only = [p for p in pixels if p is not None]
-                if len(pixels_int_only) > 1 and pixels[-1] is not None:
+                if (
+                    len(pixels_int_only) > 1
+                    and pixels[-1] is not None
+                    and last_bar_darker
+                ):
                     pixels_int_only = pixels_int_only[:-1]
                 if len(pixels_int_only) > 0:
                     min_pixels = min(pixels_int_only)
@@ -384,7 +391,9 @@ class PxlsSpeed(commands.Cog):
                 return await ctx.send(
                     f":x: That's too many bars too show (**{nb_bars}**). <:bruhkitty:943594789532737586>"
                 )
-            graph_fig = await get_grouped_graph(graph_data, title, theme, user_timezone)
+            graph_fig = await get_grouped_graph(
+                graph_data, title, theme, user_timezone, last_bar_darker=last_bar_darker
+            )
         else:
             graph_fig = await get_stats_graph(graph_data, title, theme, user_timezone)
         graph_image = await fig2img(graph_fig)
@@ -526,7 +535,12 @@ def get_stats_graph(stats_list: list, title, theme, user_timezone=None):
 
 @in_executor()
 def get_grouped_graph(
-    stats_list: list, title, theme, user_timezone=None, input_bar_colors=None
+    stats_list: list,
+    title,
+    theme,
+    user_timezone=None,
+    input_bar_colors=None,
+    last_bar_darker=True,
 ):
 
     # get the timezone information
@@ -577,7 +591,8 @@ def get_grouped_graph(
             bar_colors = [colors[i] for _ in pixels]
         else:
             bar_colors = input_bar_colors
-        bar_colors[-1] = theme.off_color
+        if last_bar_darker and len(stats_list) == 1:
+            bar_colors[-1] = theme.off_color
         # trace the user data
         if theme.has_underglow:
             # different style if the theme has underglow

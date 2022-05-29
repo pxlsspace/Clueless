@@ -416,10 +416,12 @@ class TemplateManager:
         and add the bot owner to it."""
         self.progress_admins = [bot_owner_id]
         load_dotenv(override=True)
-        progress_admins = os.environ.get("PROGRESS_ADMINS").split(",")
-        for admin_id in progress_admins:
-            if admin_id.isdigit():
-                self.progress_admins.append(int(admin_id))
+        progress_admins = os.environ.get("PROGRESS_ADMINS")
+        if progress_admins:
+            progress_admins = progress_admins.split(",")
+            for admin_id in progress_admins:
+                if admin_id.isdigit():
+                    self.progress_admins.append(int(admin_id))
         return self.progress_admins
 
     def check_duplicate_template(self, template: Template):

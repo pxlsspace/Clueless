@@ -68,7 +68,7 @@ class PxlsStats(commands.Cog):
 
         # get average cd/online
         data = await db_stats.get_general_stat(
-            "online_count", datetime.min, datetime.max, canvas=True
+            "online_count", datetime.min, datetime.max, canvas_code=canvas_code
         )
         online_counts = [int(e[0]) for e in data if e[0] is not None]
         cooldowns = [stats.get_cd(count) for count in online_counts]

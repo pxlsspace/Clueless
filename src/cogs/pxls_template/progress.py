@@ -1678,7 +1678,6 @@ class Progress(commands.Cog):
                 animated_img.seek(0)
                 imgur_link = await imgur_app.upload_image(animated_img.read(), True)
             except Exception as e:
-                print(e)
                 if isinstance(e, BadResponseError) and "400" in str(e):
                     cmd = (
                         "frames:<nb frames>"

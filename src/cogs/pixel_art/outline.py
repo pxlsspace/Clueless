@@ -1,4 +1,5 @@
 import functools
+
 import disnake
 from disnake.ext import commands
 
@@ -11,7 +12,7 @@ from utils.discord_utils import (
     get_urls_from_list,
     image_to_file,
 )
-from utils.image.image_utils import add_outline, remove_white_space, get_color
+from utils.image.image_utils import add_outline, get_color, remove_white_space
 
 
 class Outline(commands.Cog):

@@ -1,10 +1,11 @@
-from typing import Union
-from PIL import Image, ImageColor
-import numpy as np
-import re
-import matplotlib.colors as mc
 import colorsys
+import re
+from typing import Union
+
+import matplotlib.colors as mc
+import numpy as np
 from numba import jit
+from PIL import Image, ImageColor
 
 from utils.setup import stats
 from utils.utils import in_executor

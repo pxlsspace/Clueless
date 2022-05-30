@@ -2,8 +2,8 @@ import disnake
 from disnake.ext import commands
 
 from utils.arguments_parser import parse_pixelfont_args
-from utils.font.font_manager import get_all_fonts, PixelText, get_allowed_fonts
-from utils.discord_utils import image_to_file, autocomplete_palette_with_none
+from utils.discord_utils import autocomplete_palette_with_none, image_to_file
+from utils.font.font_manager import PixelText, get_all_fonts, get_allowed_fonts
 from utils.image.image_utils import get_color
 
 

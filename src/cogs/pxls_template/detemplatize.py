@@ -1,6 +1,6 @@
 import disnake
-from PIL import Image
 from disnake.ext import commands
+from PIL import Image
 
 from utils.discord_utils import format_number, image_to_file
 from utils.pxls.template_manager import get_template_from_url

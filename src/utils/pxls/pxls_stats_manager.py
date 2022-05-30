@@ -1,12 +1,13 @@
-import numpy as np
-import pytz
 import math
 import uuid
-from PIL import ImageColor
 from datetime import datetime
 
-from utils.utils import get_content
+import numpy as np
+import pytz
+from PIL import ImageColor
+
 from utils.log import get_logger
+from utils.utils import get_content
 
 logger = get_logger(__name__)
 

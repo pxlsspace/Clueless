@@ -1,16 +1,17 @@
-from dotenv import load_dotenv
 import os
 import sys
 
-from database.db_user_manager import DbUserManager
+from dotenv import load_dotenv
+
+from database.db_canvas_manager import DbCanvasManager
 from database.db_connection import DbConnection
 from database.db_servers_manager import DbServersManager
 from database.db_stats_manager import DbStatsManager
 from database.db_template_manager import DbTemplateManager
-from database.db_canvas_manager import DbCanvasManager
-from utils.pxls.websocket_client import WebsocketClient
-from utils.pxls.pxls_stats_manager import PxlsStatsManager
+from database.db_user_manager import DbUserManager
 from utils.image.imgur import Imgur
+from utils.pxls.pxls_stats_manager import PxlsStatsManager
+from utils.pxls.websocket_client import WebsocketClient
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 load_dotenv()

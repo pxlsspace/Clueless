@@ -1,22 +1,23 @@
+from io import BytesIO
+
 import disnake
 import numpy as np
+from blend_modes import hard_light
+from disnake.ext import commands
 from matplotlib.colors import hsv_to_rgb
 from PIL import Image
-from io import BytesIO
-from disnake.ext import commands
-from blend_modes import hard_light
 
+from utils.arguments_parser import MyParser
 from utils.discord_utils import (
     InterImage,
+    autocomplete_palette,
+    get_image_from_message,
     get_urls_from_list,
     image_to_file,
-    get_image_from_message,
-    autocomplete_palette,
 )
 from utils.image.gif_saver import save_transparent_gif
 from utils.image.image_utils import get_color
 from utils.image.img_to_gif import img_to_animated_gif
-from utils.arguments_parser import MyParser
 from utils.utils import in_executor
 
 

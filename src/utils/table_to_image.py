@@ -1,9 +1,10 @@
-from PIL import Image, ImageColor
-import numpy as np
 from copy import deepcopy
 
-from utils.font.font_manager import DEFAULT_FONT, PixelText, get_allowed_fonts
+import numpy as np
+from PIL import Image, ImageColor
+
 from utils import image_utils
+from utils.font.font_manager import DEFAULT_FONT, PixelText, get_allowed_fonts
 from utils.plot_utils import Theme, get_theme
 from utils.utils import in_executor
 

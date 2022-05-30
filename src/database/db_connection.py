@@ -1,5 +1,6 @@
-import asqlite
 import os
+
+import asqlite
 
 DB_FILE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "database.db")
 

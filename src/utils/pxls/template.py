@@ -1,16 +1,17 @@
 # code base by Nanineye#2417
 
 import os
+
 import numpy as np
-from PIL import Image
 from numba import jit
 from numba.core import types
 from numba.typed import Dict
+from PIL import Image
 
-from utils.setup import stats
-from utils.image.image_utils import hex_to_rgb
 from utils.image.ciede2000 import ciede2000, rgb2lab
+from utils.image.image_utils import hex_to_rgb
 from utils.log import get_logger
+from utils.setup import stats
 
 logger = get_logger(__name__)
 

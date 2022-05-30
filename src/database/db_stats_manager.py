@@ -1,5 +1,5 @@
-from sqlite3 import IntegrityError
 from datetime import datetime, timedelta
+from sqlite3 import IntegrityError
 
 from database.db_connection import DbConnection
 from utils.pxls.pxls_stats_manager import PxlsStatsManager

@@ -1,18 +1,14 @@
-import disnake
 import platform
 import time
 from datetime import datetime, timedelta, timezone
+
+import disnake
 from disnake.ext import commands
 from dotenv import load_dotenv
 from googletrans import Translator
 from googletrans.constants import LANGUAGES
-from utils.arguments_parser import valid_datetime_type
-from utils.plot_utils import get_theme
 
-from utils.setup import BOT_INVITE, SERVER_INVITE, VERSION, db_servers, db_users, stats
-from utils.time_converter import format_datetime, format_timezone, str_to_td, td_format
-from utils.timezoneslib import get_timezone
-from utils.utils import get_lang_emoji, ordinal
+from utils.arguments_parser import valid_datetime_type
 from utils.discord_utils import (
     AuthorView,
     PaginatorView,
@@ -21,7 +17,12 @@ from utils.discord_utils import (
     format_table,
     image_to_file,
 )
+from utils.plot_utils import get_theme
+from utils.setup import BOT_INVITE, SERVER_INVITE, VERSION, db_servers, db_users, stats
 from utils.table_to_image import table_to_image
+from utils.time_converter import format_datetime, format_timezone, str_to_td, td_format
+from utils.timezoneslib import get_timezone
+from utils.utils import get_lang_emoji, ordinal
 
 
 class Utility(commands.Cog):

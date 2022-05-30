@@ -1,25 +1,23 @@
-import disnake
-from disnake.ext import commands
 from datetime import datetime, timedelta, timezone
-import plotly.graph_objects as go
-from utils.image.image_utils import hex_str_to_int
 
+import disnake
+import plotly.graph_objects as go
+from disnake.ext import commands
+
+from cogs.pxls.speed import get_stats_graph
+from utils.arguments_parser import check_ranks, parse_leaderboard_args
+from utils.discord_utils import format_number, image_to_file
+from utils.image.image_utils import hex_str_to_int
+from utils.plot_utils import fig2img, get_theme, hex_to_rgba_string
+from utils.pxls.cooldown import get_best_possible
 from utils.setup import db_stats, db_users
+from utils.table_to_image import table_to_image
 from utils.time_converter import (
+    format_datetime,
     get_datetimes_from_input,
     round_minutes_down,
     td_format,
-    format_datetime,
 )
-from utils.arguments_parser import (
-    check_ranks,
-    parse_leaderboard_args,
-)
-from utils.discord_utils import format_number, image_to_file
-from utils.table_to_image import table_to_image
-from utils.plot_utils import fig2img, get_theme, hex_to_rgba_string
-from utils.pxls.cooldown import get_best_possible
-from cogs.pxls.speed import get_stats_graph
 from utils.timezoneslib import get_timezone
 
 

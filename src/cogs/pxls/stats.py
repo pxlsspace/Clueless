@@ -1,25 +1,25 @@
+from datetime import datetime, timedelta, timezone
+
 import disnake
 import numpy as np
-from datetime import datetime, timedelta, timezone
 from disnake.ext import commands
 from PIL import Image, ImageEnhance
 
-
-from utils.pxls.cooldown import get_best_possible
+from cogs.pixel_art.color_breakdown import _colors
+from cogs.pixel_art.highlight import _highlight
+from utils.arguments_parser import MyParser
 from utils.discord_utils import (
+    STATUS_EMOJIS,
     UserinfoView,
     autocomplete_pxls_name,
     format_number,
     image_to_file,
-    STATUS_EMOJIS,
 )
-from utils.setup import stats, db_conn, db_users, db_stats
-from utils.time_converter import format_datetime, round_minutes_down, td_format
-from utils.arguments_parser import MyParser
 from utils.plot_utils import matplotlib_to_plotly
+from utils.pxls.cooldown import get_best_possible
+from utils.setup import db_conn, db_stats, db_users, stats
+from utils.time_converter import format_datetime, round_minutes_down, td_format
 from utils.utils import make_progress_bar
-from cogs.pixel_art.color_breakdown import _colors
-from cogs.pixel_art.highlight import _highlight
 
 
 class PxlsStats(commands.Cog):
@@ -68,7 +68,7 @@ class PxlsStats(commands.Cog):
 
         # get average cd/online
         data = await db_stats.get_general_stat(
-            "online_count", datetime.min, datetime.max, canvas=True
+            "online_count", datetime.min, datetime.max, canvas_code=canvas_code
         )
         online_counts = [int(e[0]) for e in data if e[0] is not None]
         cooldowns = [stats.get_cd(count) for count in online_counts]

@@ -1,7 +1,8 @@
-import disnake
-from disnake.ext import commands
-import plotly.graph_objects as go
 from datetime import datetime, timedelta, timezone
+
+import disnake
+import plotly.graph_objects as go
+from disnake.ext import commands
 
 from utils.arguments_parser import MyParser
 from utils.discord_utils import format_number, image_to_file
@@ -9,15 +10,15 @@ from utils.image.image_utils import (
     get_builtin_palette,
     get_color,
     hex_to_rgb,
-    rgb_to_hex,
-    v_concatenate,
     is_dark,
     lighten_color,
+    rgb_to_hex,
+    v_concatenate,
 )
+from utils.plot_utils import add_glow, fig2img, get_theme
+from utils.setup import db_stats, db_users, stats
 from utils.table_to_image import table_to_image
-from utils.setup import stats, db_stats, db_users
-from utils.plot_utils import fig2img, add_glow, get_theme
-from utils.time_converter import format_timezone, str_to_td, round_minutes_down
+from utils.time_converter import format_timezone, round_minutes_down, str_to_td
 from utils.timezoneslib import get_timezone
 from utils.utils import in_executor, shorten_list
 

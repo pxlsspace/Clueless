@@ -1,18 +1,20 @@
 import re
+from datetime import datetime, timedelta, timezone
 from io import BytesIO
-from PIL import Image
-from datetime import datetime, timezone, timedelta
+
 import disnake
 from disnake.ext import commands
+from PIL import Image
+
+from main import tracked_templates
 from utils.arguments_parser import MyParser, valid_datetime_type
 from utils.discord_utils import AuthorView, get_urls_from_list, image_to_file
 from utils.image.image_utils import find_upscale
 from utils.pxls.template_manager import get_template_from_url, parse_template
-from utils.setup import db_servers, db_users, db_stats, stats
-from utils.timezoneslib import get_timezone
+from utils.setup import db_servers, db_stats, db_users, stats
 from utils.time_converter import format_datetime, str_to_td, td_format
+from utils.timezoneslib import get_timezone
 from utils.utils import get_content
-from main import tracked_templates
 
 
 class SnapshotButton(disnake.ui.Button):

@@ -1,29 +1,31 @@
 from __future__ import annotations
-import os
-from dotenv import load_dotenv
-import sqlite3
-from typing import Iterable, Optional
-import numpy as np
-import re
+
+import asyncio
 import copy
+import os
+import re
+import sqlite3
 import time
 import urllib.parse
-import disnake
-import asyncio
 from datetime import datetime, timedelta
-from PIL import Image
-from numba import jit
-from urllib.parse import parse_qs, urlparse
 from io import BytesIO
+from typing import Iterable, Optional
+from urllib.parse import parse_qs, urlparse
 
-from utils.image.image_utils import highlight_image
+import disnake
+import numpy as np
+from dotenv import load_dotenv
+from numba import jit
+from PIL import Image
+
 from utils.font.font_manager import PixelText
 from utils.image.gif_saver import save_transparent_gif
+from utils.image.image_utils import highlight_image
+from utils.log import get_logger
+from utils.pxls.template import get_rgba_palette, reduce
+from utils.setup import db_templates, stats
 from utils.time_converter import round_minutes_down, td_format
 from utils.utils import get_content, in_executor
-from utils.setup import stats, db_templates
-from utils.pxls.template import get_rgba_palette, reduce
-from utils.log import get_logger
 
 logger = get_logger("template_manager")
 tracker_logger = get_logger("template_tracker", file="templates.log", in_console=False)

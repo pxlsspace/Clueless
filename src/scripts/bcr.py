@@ -1,16 +1,16 @@
+import asyncio
 import os
 import sys
 import time
-import asyncio
-import matplotlib.pyplot as plt
-import bar_chart_race as bcr
-import pandas
 from datetime import datetime
+
+import bar_chart_race as bcr
+import matplotlib.pyplot as plt
+import pandas
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from utils.setup import stats, DbStatsManager, DbConnection  # noqa: E402
-
+from utils.setup import DbConnection, DbStatsManager, stats  # noqa: E402
 
 """ Script to generate a bar chart race video for a given canvas """
 

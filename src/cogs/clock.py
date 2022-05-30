@@ -1,13 +1,14 @@
-import disnake
-from PIL import Image
-from disnake.ext import commands, tasks
 from datetime import datetime, timedelta, timezone
 
-from utils.discord_utils import image_to_file
-from utils.setup import stats, db_stats, db_servers, db_users, ws_client, db_templates
-from utils.time_converter import local_to_utc
+import disnake
+from disnake.ext import commands, tasks
+from PIL import Image
+
 from main import tracked_templates
+from utils.discord_utils import image_to_file
 from utils.log import get_logger
+from utils.setup import db_servers, db_stats, db_templates, db_users, stats, ws_client
+from utils.time_converter import local_to_utc
 
 logger = get_logger("clock")
 

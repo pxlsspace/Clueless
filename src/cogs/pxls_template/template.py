@@ -1,14 +1,16 @@
-from datetime import timedelta
-import os
 import asyncio
+import os
 import re
+import time
+import urllib.parse
+from datetime import timedelta
+from io import BytesIO
+
 import disnake
 import numpy as np
-import urllib.parse
-import time
-from PIL import Image
-from io import BytesIO
 from disnake.ext import commands
+from PIL import Image
+
 from utils.arguments_parser import MyParser
 from utils.discord_utils import (
     IMAGE_URL_REGEX,
@@ -21,14 +23,14 @@ from utils.discord_utils import (
 from utils.image.image_utils import get_colors_from_input, remove_white_space
 from utils.pxls.template import (
     STYLES,
+    get_rgba_palette,
     get_style,
     parse_style_image,
-    templatize,
     reduce,
-    get_rgba_palette,
+    templatize,
 )
 from utils.pxls.template_manager import parse_template
-from utils.setup import stats, db_users, db_stats, imgur_app
+from utils.setup import db_stats, db_users, imgur_app, stats
 from utils.time_converter import td_format
 from utils.utils import get_content
 

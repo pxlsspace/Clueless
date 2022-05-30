@@ -1,11 +1,13 @@
-from database.db_connection import DbConnection
 from datetime import datetime, timezone
 
 # This import is only necessary for type hints
 from typing import TYPE_CHECKING
 
+from database.db_connection import DbConnection
+
 if TYPE_CHECKING:
     from utils.pxls.template_manager import Template, Combo
+
 from utils.log import get_logger
 
 logger = get_logger(__name__)

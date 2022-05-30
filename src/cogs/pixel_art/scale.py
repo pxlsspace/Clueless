@@ -1,24 +1,25 @@
+import time
+
 import disnake
 import numpy as np
-import time
 from disnake.ext import commands
 from PIL import Image
-from utils.arguments_parser import MyParser
 
-from utils.image.image_utils import (
-    get_visible_pixels,
-    remove_white_space,
-    get_image_scale,
-)
-from utils.pxls.template_manager import detemplatize, parse_template
+from utils.arguments_parser import MyParser
 from utils.discord_utils import (
     InterImage,
     ResizeView,
     format_number,
     get_image_from_message,
-    image_to_file,
     get_urls_from_list,
+    image_to_file,
 )
+from utils.image.image_utils import (
+    get_image_scale,
+    get_visible_pixels,
+    remove_white_space,
+)
+from utils.pxls.template_manager import detemplatize, parse_template
 
 
 class Scale(commands.Cog):

@@ -1,11 +1,13 @@
+import json
 import os
 from io import BytesIO
-import json
+
 import aiohttp
+from dotenv import find_dotenv, load_dotenv, set_key
 from PIL import Image
-from utils.utils import BadResponseError, in_executor
-from dotenv import set_key, find_dotenv, load_dotenv
+
 from utils.log import get_logger
+from utils.utils import BadResponseError, in_executor
 
 logger = get_logger(__name__)
 API_URL = "https://api.imgur.com/3/"

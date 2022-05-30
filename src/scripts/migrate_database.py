@@ -1,14 +1,15 @@
-from alive_progress import alive_bar
-import os
-import sys
 import asyncio
+import os
 import sqlite3
+import sys
 import time
+
+from alive_progress import alive_bar
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from database.db_connection import DbConnection  # noqa: E402
-from database.db_stats_manager import DbStatsManager  # noqa: E402
 from database.db_servers_manager import DbServersManager  # noqa: E402
+from database.db_stats_manager import DbStatsManager  # noqa: E402
 from database.db_user_manager import DbUserManager  # noqa: E402
 
 """ Script used to move the old database data to the new format """

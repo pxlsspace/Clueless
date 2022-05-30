@@ -1,5 +1,5 @@
-import numpy as np
 import disnake
+import numpy as np
 from disnake.ext import commands
 from PIL import Image
 

@@ -1,7 +1,6 @@
 import disnake
 from disnake.ext import commands
 
-
 from utils.discord_utils import get_embed_author
 from utils.setup import db_servers
 

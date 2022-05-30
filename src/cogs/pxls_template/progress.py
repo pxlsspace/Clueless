@@ -1,54 +1,55 @@
-import time
-from io import BytesIO
-import disnake
-import pandas as pd
-import numpy as np
-from PIL import Image
-from datetime import datetime, timedelta, timezone
-from copy import deepcopy
-from disnake.ext import commands
-import aiohttp
 import asyncio
+import time
+from copy import deepcopy
+from datetime import datetime, timedelta, timezone
+from io import BytesIO
 
+import aiohttp
+import disnake
+import numpy as np
+import pandas as pd
+from disnake.ext import commands
+from PIL import Image
+
+from cogs.pxls.speed import get_grouped_graph, get_stats_graph
 from main import tracked_templates
+from utils.arguments_parser import MyParser
 from utils.discord_utils import (
+    AddTemplateView,
     Confirm,
-    format_number,
-    image_to_file,
-    UserConverter,
     DropdownView,
     MoreInfoView,
-    AddTemplateView,
+    UserConverter,
     autocomplete_templates,
     autocomplete_user_templates,
+    format_number,
+    image_to_file,
 )
+from utils.image.image_utils import find_upscale, v_concatenate
+from utils.plot_utils import (
+    fig2img,
+    get_gradient_palette,
+    get_theme,
+    matplotlib_to_plotly,
+)
+from utils.pxls.template import get_rgba_palette, reduce
 from utils.pxls.template_manager import (
     Combo,
     get_template_from_url,
     make_before_after_gif,
     parse_template,
 )
-from utils.setup import db_templates, db_users, stats, db_stats, imgur_app
-from utils.timezoneslib import get_timezone
-from utils.utils import BadResponseError, make_progress_bar, shorten_list
+from utils.setup import db_stats, db_templates, db_users, imgur_app, stats
+from utils.table_to_image import table_to_image
 from utils.time_converter import (
+    format_datetime,
     get_datetimes_from_input,
     round_minutes_down,
     str_to_td,
     td_format,
-    format_datetime,
 )
-from utils.table_to_image import table_to_image
-from utils.arguments_parser import MyParser
-from utils.plot_utils import (
-    fig2img,
-    get_theme,
-    get_gradient_palette,
-    matplotlib_to_plotly,
-)
-from cogs.pxls.speed import get_grouped_graph, get_stats_graph
-from utils.image.image_utils import v_concatenate, find_upscale
-from utils.pxls.template import reduce, get_rgba_palette
+from utils.timezoneslib import get_timezone
+from utils.utils import BadResponseError, make_progress_bar, shorten_list
 
 
 class Progress(commands.Cog):

@@ -1,5 +1,6 @@
+from sqlite3 import IntegrityError, OperationalError
+
 from database.db_connection import DbConnection
-from sqlite3 import OperationalError, IntegrityError
 
 
 class DbServersManager:

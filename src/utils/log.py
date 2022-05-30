@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+
 from dotenv import load_dotenv
 
 LOG_DIR = "logs"

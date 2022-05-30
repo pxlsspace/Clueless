@@ -3,8 +3,8 @@ from disnake.ext import commands
 from disnake.ext.commands.converter import RoleConverter
 from disnake.ext.commands.errors import RoleNotFound
 
-from utils.setup import db_users, db_servers
 from utils.discord_utils import UserConverter
+from utils.setup import db_servers, db_users
 
 
 class Blacklist(commands.Cog):

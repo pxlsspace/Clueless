@@ -1,15 +1,21 @@
-import sqlite3
-import disnake
 import asyncio
-from disnake.ext import commands
+import sqlite3
 from datetime import datetime
 
-from utils.discord_utils import STATUS_EMOJIS, UserConverter, autocomplete_log_canvases, autocomplete_pxls_name
+import disnake
+from disnake.ext import commands
+
+from utils.discord_utils import (
+    STATUS_EMOJIS,
+    UserConverter,
+    autocomplete_log_canvases,
+    autocomplete_pxls_name,
+)
 from utils.font.font_manager import DEFAULT_FONT, get_all_fonts, get_allowed_fonts
 from utils.image.image_utils import hex_str_to_int
-from utils.pxls.archives import check_canvas_code, check_key
-from utils.setup import db_users, db_canvas
 from utils.plot_utils import get_theme, theme_list
+from utils.pxls.archives import check_canvas_code, check_key
+from utils.setup import db_canvas, db_users
 from utils.time_converter import format_timezone
 from utils.timezoneslib import get_timezone
 from utils.utils import chunk

@@ -1,19 +1,20 @@
-from dataclasses import dataclass
-import os
-from datetime import datetime, timedelta
-import disnake
-import re
 import asyncio
+import os
+import re
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 from io import BytesIO
-from PIL import Image
-from disnake.ext import commands
-from disnake import ButtonStyle
 
-from utils.utils import get_content, in_executor
-from utils.setup import stats, db_stats, db_canvas
+import disnake
+from disnake import ButtonStyle
+from disnake.ext import commands
+from PIL import Image
+
+from main import tracked_templates
 from utils.image import PALETTES
 from utils.pxls.template_manager import get_template_from_url, parse_template
-from main import tracked_templates
+from utils.setup import db_canvas, db_stats, stats
+from utils.utils import get_content, in_executor
 
 STATUS_EMOJIS = {
     "bot": "<a:status_botting:955632660653408266>",

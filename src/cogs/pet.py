@@ -1,16 +1,12 @@
+from io import BytesIO
+from os import path
+
 import disnake
 import numpy as np
-from os import path
-from PIL import Image
-from io import BytesIO
 from disnake.ext import commands
+from PIL import Image
 
-from utils.discord_utils import (
-    InterImage,
-    UserConverter,
-    get_image_from_message,
-    get_url,
-)
+from utils.discord_utils import InterImage, UserConverter, get_image_from_message, get_url
 from utils.image.gif_saver import save_transparent_gif
 from utils.utils import in_executor
 

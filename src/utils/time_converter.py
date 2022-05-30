@@ -1,6 +1,6 @@
-from datetime import datetime, timedelta, timezone
 import re
 import time
+from datetime import datetime, timedelta, timezone
 from typing import Iterable
 
 from utils.arguments_parser import valid_datetime_type

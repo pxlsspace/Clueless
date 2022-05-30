@@ -1,8 +1,10 @@
 import asyncio
 import json
 import threading
-import websockets
 import uuid
+
+import websockets
+
 from utils.log import get_logger
 
 logger = get_logger("pxls_websocket")

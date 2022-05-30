@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import disnake
 import numpy as np
 from disnake.ext import commands
@@ -6,13 +7,9 @@ from PIL import Image
 
 from main import tracked_templates
 from utils.arguments_parser import MyParser
+from utils.discord_utils import CreateTemplateView, autocomplete_templates, image_to_file
 from utils.pxls.template_manager import get_template_from_url, layer, parse_template
 from utils.setup import stats
-from utils.discord_utils import (
-    autocomplete_templates,
-    image_to_file,
-    CreateTemplateView,
-)
 
 
 class TemplateCrop(commands.Cog):

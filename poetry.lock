@@ -675,7 +675,7 @@ python-versions = ">=3.7"
 name = "typing-extensions"
 version = "4.2.0"
 description = "Backported and Experimental Type Hints for Python 3.7+"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -702,7 +702,7 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.11"
-content-hash = "a157a4b502c1d911ad05e5383e0b10d57a01eeb7aaf623bc36ab6c4e08786436"
+content-hash = "35798b9da5dc5f13f9c47d29c83f651938d2cb93c8d667c77c2255d2d545545d"
 
 [metadata.files]
 about-time = [

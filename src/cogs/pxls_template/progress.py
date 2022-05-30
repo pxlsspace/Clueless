@@ -994,7 +994,7 @@ class Progress(commands.Cog):
 
             # Only show the diff in progress/image if the image or coords changed
             if (
-                np.all(old_temp.palettized_array != new_temp.palettized_array)
+                np.any(old_temp.palettized_array != new_temp.palettized_array)
                 or old_temp.ox != new_temp.ox
                 or old_temp.oy != new_temp.oy
             ):

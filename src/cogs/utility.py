@@ -42,21 +42,6 @@ class Utility(commands.Cog):
     async def ping(self, ctx):
         await ctx.send(f"pong! (bot latency: `{round(self.bot.latency*1000,2)}` ms)")
 
-    @commands.slash_command(name="echo")
-    async def _echo(self, inter: disnake.AppCmdInter, text: str):
-        """Repeat your text.
-
-        Parameters
-        ----------
-        text: The text to repeat."""
-
-        await self.echo(inter, text=text)
-
-    @commands.command(usage="<text>", description="Repeat your text.")
-    async def echo(self, ctx, *, text):
-        allowed_mentions = disnake.AllowedMentions(everyone=False)
-        await ctx.send(text, allowed_mentions=allowed_mentions)
-
     @commands.command(usage="[prefix]", description="Change or display the bot prefix.")
     @commands.has_permissions(administrator=True)
     async def prefix(self, ctx, prefix=None):

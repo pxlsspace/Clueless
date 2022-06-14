@@ -13,6 +13,7 @@ TYPES = {
     8: "@role",
     9: "user|role",
     10: "number",
+    11: "attachment",
 }
 
 EMBED_COLOR = 0x66C5CC

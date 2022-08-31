@@ -18,6 +18,7 @@ from utils.discord_utils import (
     autocomplete_builtin_palettes,
     format_number,
     get_image_from_message,
+    get_image_url,
     image_to_file,
 )
 from utils.image.image_utils import get_colors_from_input, remove_white_space
@@ -446,7 +447,7 @@ class Template(commands.Cog):
             upload_time = round(time.time() - start, 3)
 
             # create a template link with the sent image
-            template_image_url = m.embeds[0].thumbnail.url
+            template_image_url = get_image_url(m.embeds[0].thumbnail)
             template_url = make_template_url(
                 template_image_url, img.width, img.height, ox, oy, title
             )

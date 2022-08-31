@@ -5,7 +5,7 @@ from disnake.ext import commands, tasks
 from PIL import Image
 
 from main import tracked_templates
-from utils.discord_utils import image_to_file
+from utils.discord_utils import get_image_url, image_to_file
 from utils.log import get_logger
 from utils.setup import db_servers, db_stats, db_templates, db_users, stats, ws_client
 from utils.time_converter import local_to_utc
@@ -251,7 +251,7 @@ class Clock(commands.Cog):
                     await db_stats.save_snapshot(
                         snapshot_time.replace(tzinfo=None),
                         await stats.get_canvas_code(),
-                        m.embeds[0].image.url,
+                        get_image_url(m.embeds[0].image),
                     )
                     snapshot_saved = True
 

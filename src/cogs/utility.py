@@ -15,6 +15,7 @@ from utils.discord_utils import (
     UserConverter,
     format_number,
     format_table,
+    get_image_url,
     image_to_file,
 )
 from utils.plot_utils import get_theme
@@ -698,7 +699,7 @@ class Utility(commands.Cog):
                     or not msg.embeds[0].timestamp
                 ):
                     continue
-                snapshot_url = msg.embeds[0].image.url
+                snapshot_url = get_image_url(msg.embeds[0].image)
                 datetime = msg.embeds[0].timestamp.replace(tzinfo=None)
                 values.append((datetime, canvas_code, snapshot_url))
                 count += 1

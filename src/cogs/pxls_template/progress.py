@@ -23,6 +23,7 @@ from utils.discord_utils import (
     autocomplete_templates,
     autocomplete_user_templates,
     format_number,
+    get_image_url,
     image_to_file,
 )
 from utils.image.image_utils import find_upscale, v_concatenate
@@ -393,7 +394,7 @@ class Progress(commands.Cog):
             m = await ctx.send(files=files, embed=embed)
             if isinstance(ctx, disnake.AppCmdInter):
                 m = await ctx.original_message()
-            template_image_url = m.embeds[0].thumbnail.url
+            template_image_url = get_image_url(m.embeds[0].thumbnail)
             template_url = template.generate_url(template_image_url, default_scale=1)
             view = MoreInfoView(
                 ctx.author,

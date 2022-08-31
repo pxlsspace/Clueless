@@ -7,7 +7,12 @@ from PIL import Image
 
 from main import tracked_templates
 from utils.arguments_parser import MyParser
-from utils.discord_utils import CreateTemplateView, autocomplete_templates, image_to_file
+from utils.discord_utils import (
+    CreateTemplateView,
+    autocomplete_templates,
+    get_image_url,
+    image_to_file,
+)
 from utils.pxls.template_manager import get_template_from_url, layer, parse_template
 from utils.setup import stats
 
@@ -212,7 +217,7 @@ class TemplateCrop(commands.Cog):
         # save the URL of the image sent to use it to generate templates later
         if isinstance(ctx, disnake.AppCmdInter):
             m = await ctx.original_message()
-        view.template_image_url = m.embeds[0].image.url
+        view.template_image_url = get_image_url(m.embeds[0].image)
         view.message = m
 
 

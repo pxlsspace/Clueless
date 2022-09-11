@@ -13,6 +13,7 @@ from utils.discord_utils import (
     IMAGE_URL_REGEX,
     format_number,
     get_image_from_message,
+    get_image_url,
     image_to_file,
 )
 from utils.image.image_utils import get_builtin_palette
@@ -219,7 +220,7 @@ class PlaceTemplate(commands.Cog):
             m = await ctx.original_message()
 
         # create a template link with the sent image
-        template_image_url = m.embeds[0].image.url
+        template_image_url = get_image_url(m.embeds[0].image)
 
         text = "**HOW TO USE?**\n"
         text += "1. Install [Tapermonkey (Chrome/Opera)](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo?hl=en) or [Violentmonkey (Firefox)](https://addons.mozilla.org/en-US/firefox/addon/violentmonkey/).\n"

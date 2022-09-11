@@ -213,10 +213,10 @@ async def get_image(
     elif message and len(message.embeds) > 0 and accept_embeds:
         for e in message.embeds:
             if e.image:
-                url = message.embeds[0].image.url
+                url = get_image_url(message.embeds[0].image)
                 break
             elif e.type == "image" and e.url:
-                url = e.url
+                url = get_image_url(e)
 
     # check the message content
     elif url is not None:
@@ -277,12 +277,16 @@ def get_url(content, accept_emojis=True, accept_templates=True):
         if len(results) != 0:
             emoji_id = results[0][2]
             is_animated = results[0][0] == "a"
-            url = "https://cdn.discordapp.com/emojis/{}.{}".format(
+            url = "https://media.discordapp.net/emojis/{}.{}".format(
                 emoji_id, "gif" if is_animated else "png"
             )
             return dict(url=url, type="emoji")
 
     return None
+
+
+def get_image_url(image) -> str:
+    return image.proxy_url or image.url
 
 
 @in_executor()
@@ -442,7 +446,7 @@ async def get_image_from_inter(
     image_file: An image attachment.
     """
     if image_file:
-        image_link = image_file.url
+        image_link = get_image_url(image_file)
     return InterImage(image_link)
 
 

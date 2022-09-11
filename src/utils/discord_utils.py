@@ -1,7 +1,6 @@
 import asyncio
 import os
 import re
-import typing
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from io import BytesIO
@@ -16,9 +15,6 @@ from utils.image import PALETTES
 from utils.pxls.template_manager import get_template_from_url, parse_template
 from utils.setup import db_canvas, db_stats, stats
 from utils.utils import get_content, in_executor
-
-if typing.TYPE_CHECKING:
-    from disnake.embeds import _EmbedMediaProxy
 
 STATUS_EMOJIS = {
     "bot": "<a:status_botting:955632660653408266>",
@@ -289,7 +285,7 @@ def get_url(content, accept_emojis=True, accept_templates=True):
     return None
 
 
-def get_image_url(image: _EmbedMediaProxy) -> str:
+def get_image_url(image) -> str:
     return image.proxy_url or image.url
 
 

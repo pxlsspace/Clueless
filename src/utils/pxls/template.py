@@ -23,7 +23,7 @@ class InvalidStyleException(Exception):
 
 def parse_style_image(style_image: Image.Image):
     try:
-        img_array = np.array(style_image)
+        img_array = np.array(style_image.convert("RGBA"))
         mask = img_array[:, :, 3] != 0
         symbols_per_line = 16
         style_size = int(style_image.width / symbols_per_line)
@@ -95,7 +95,7 @@ bigdotted = {
 }
 
 STYLES = [none, dotted, plus, bigdotted]
-custom_styles = ["custom", "pgcustom", "numbers"]
+custom_styles = ["custom", "pgcustom", "numbers", "custom-60b"]
 
 for s in custom_styles:
     try:

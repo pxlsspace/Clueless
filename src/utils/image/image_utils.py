@@ -565,7 +565,7 @@ PALETTES = [
         ],
     },
     {
-        "names": ["c60b", "60b", "pxls-new", "new"],
+        "names": ["c60a", "60a", "pxls-new", "new"],
         "colors": [
             "000000",
             "1d2025",

@@ -95,7 +95,7 @@ bigdotted = {
 }
 
 STYLES = [none, dotted, plus, bigdotted]
-custom_styles = ["custom", "pgcustom", "numbers", "custom-60b"]
+custom_styles = ["custom", "pgcustom", "numbers", "custom-old"]
 
 for s in custom_styles:
     try:

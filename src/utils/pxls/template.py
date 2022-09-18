@@ -95,7 +95,7 @@ bigdotted = {
 }
 
 STYLES = [none, dotted, plus, bigdotted]
-custom_styles = ["custom", "numbers"]
+custom_styles = ["custom", "kanji", "numbers"]
 
 for s in custom_styles:
     try:

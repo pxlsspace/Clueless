@@ -85,6 +85,14 @@ PALETTE_MAPPING = {
     "53": "p10",
     "54": "p10",
     "55": "p10",
+    "56": "p10",
+    "56a": "g3",
+    "57": "p10",
+    "58": "p10",
+    "59": "p10",
+    "60": "p10",
+    "60a": "p11",
+    "61": "p12",
 }
 
 PALETTES = {
@@ -368,6 +376,78 @@ PALETTES = {
         "Rose": "B11206",
         "Maroon": "740C00",
     },
+    "p11": {
+        "Black": "000000",
+        "Dark Grey": "1d2025",
+        "Deep Grey": "4b4f58",
+        "Medium Grey": "858d98",
+        "Light Grey": "c2cbd4",
+        "White": "ffffff",
+        "Beige": "fee1cf",
+        "Peach": "febf94",
+        "Brown": "bc7541",
+        "Chocolate": "6c422c",
+        "Dark Chocolate": "38271d",
+        "Rust": "ea5b15",
+        "Orange": "fea815",
+        "Yellow": "fae70f",
+        "Pastel Yellow": "ffffaf",
+        "Lime": "beff5d",
+        "Green": "44d120",
+        "Dark Green": "267e41",
+        "Forest": "094449",
+        "Dark Teal": "1f586c",
+        "Light Teal": "17a8a3",
+        "Aqua": "a8f6ff",
+        "Azure": "1caadc",
+        "Blue": "1650a2",
+        "Navy": "1f1f55",
+        "Dark Purple": "492360",
+        "Purple": "9c29bc",
+        "Mauve": "c785f3",
+        "Magenta": "f854cf",
+        "Pink": "feb2d9",
+        "Watermelon": "ff745f",
+        "Red": "e61415",
+        "Rose": "9e1f16",
+        "Maroon": "520400",
+    },
+    "p12": {
+        "White": "FFFFFF",
+        "Light Grey": "C2CBD4",
+        "Medium Grey": "858D98",
+        "Deep Grey": "4B4F58",
+        "Dark Grey": "22272D",
+        "Black": "000000",
+        "Dark Chocolate": "38271D",
+        "Chocolate": "6C422C",
+        "Brown": "BC7541",
+        "Peach": "FFB27F",
+        "Beige": "FFD6BF",
+        "Pink": "FEB2D9",
+        "Magenta": "F854CF",
+        "Mauve": "C785F3",
+        "Purple": "9C29BC",
+        "Dark Purple": "562972",
+        "Navy": "1E1E5B",
+        "Blue": "153FA2",
+        "Azure": "1C95DF",
+        "Aqua": "A0E8FF",
+        "Light Teal": "17A8A3",
+        "Dark Teal": "226677",
+        "Forest": "094C45",
+        "Dark Green": "278242",
+        "Green": "43C91E",
+        "Lime": "B7F954",
+        "Pastel Yellow": "FFFFAF",
+        "Yellow": "FAE70F",
+        "Orange": "FEA815",
+        "Rust": "EA5B15",
+        "Maroon": "5A0400",
+        "Rose": "990700",
+        "Red": "D81515",
+        "Watermelon": "FF635E",
+    },
     "g1": {
         "fiftyShades01": "FFFFFF",
         "fiftyShades02": "FAFAFA",
@@ -454,6 +534,12 @@ PALETTES = {
         "trinitronBlue9": "d1d1ff",
         "trinitronWhite": "ffffff",
     },
+    "g3": {
+        "Darkest": "051620",
+        "Dark": "316950",
+        "Light": "86C06C",
+        "Lightest": "DFF8D1",
+    },
 }
 
 
@@ -466,6 +552,7 @@ async def main():
         INSERT INTO palette_color (canvas_code, color_id, color_name, color_hex)
         VALUES (?,?,?,?) """
 
+    print("adding palettes...")
     for canvas_code, palette_code in PALETTE_MAPPING.items():
         if not await db_stats.get_palette(canvas_code):
             palette = PALETTES[palette_code]
@@ -474,7 +561,7 @@ async def main():
                 values = (canvas_code, idx, color_name, color_hex)
                 await db_conn.sql_insert(sql, values)
                 idx += 1
-
+            print(f"added c{canvas_code} palette")
     print("done!")
 
 

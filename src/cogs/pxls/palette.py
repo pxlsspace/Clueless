@@ -207,7 +207,7 @@ def make_gpl_palette(color_hex, color_names, palette_name) -> disnake.File:
     content = f"GIMP Palette\nName: {palette_name}\nColumns: {len(color_hex)}\n#\n"
     for i in range(len(color_hex)):
         hex = color_hex[i]
-        name = color_names[i] if color_names else "Undefined"
+        name = color_names[i] if color_names else hex
         r, g, b = hex_to_rgb(hex)
         content += f"{r} {g} {b} {name}\n"
 
@@ -218,9 +218,9 @@ def make_gpl_palette(color_hex, color_names, palette_name) -> disnake.File:
 def make_paintnet_palette(color_hex, color_names, palette_name) -> disnake.File:
     content = f"; Paint.NET {palette_name}\n"
     for i in range(len(color_hex)):
-        hex = color_hex[i].replace("#", "").upper()
-        name = color_names[i] if color_names else "Undefined"
-        content += f"FF{hex} ; {name}\n"
+        hex = color_hex[i]
+        name = color_names[i] if color_names else hex
+        content += f"FF{hex.replace('#', '').upper()} ; {name}\n"
 
     buffer = BytesIO(content.encode("utf-8"))
     return disnake.File(buffer, filename=f"{palette_name}.txt")
@@ -238,7 +238,7 @@ def _write_aco_data(buffer, version, color_hex, color_names) -> None:
     buffer.write(struct.pack(">2H", version, len(color_hex)))
     color_space = 0  # RGB
     for i, hex in enumerate(color_hex):
-        name = color_names[i] if color_names else f"Color{i}"
+        name = color_names[i] if color_names else hex
         r, g, b = hex_to_rgb(hex)
         color_data = struct.pack(">5H", color_space, r * 257, g * 257, b * 257, 0)
         buffer.write(color_data)
@@ -254,7 +254,7 @@ def make_csv_palette(color_hex, color_names, palette_name) -> disnake.File:
     for i in range(len(color_hex)):
         hex = color_hex[i]
         r, g, b = hex_to_rgb(hex)
-        name = color_names[i] if color_names else "Undefined"
+        name = color_names[i] if color_names else hex
         content += f"{name},{hex},{r},{g},{b}\n"
 
     buffer = BytesIO(content.encode("utf-8"))
@@ -265,7 +265,7 @@ def make_json_palette(color_hex, color_names, palette_name) -> disnake.File:
     content = "{\n"
     for i in range(len(color_hex)):
         hex = color_hex[i]
-        name = color_names[i] if color_names else f"Color{i}"
+        name = color_names[i] if color_names else hex
         content += f'\t"{name}": "{hex}",\n'
     content += "}"
 

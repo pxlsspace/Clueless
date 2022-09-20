@@ -56,14 +56,6 @@ class PaletteView(disnake.ui.View):
         await inter.send(file=file)
         await self.message.edit(view=self)
 
-    @disnake.ui.button(label="CSS", style=disnake.ButtonStyle.blurple)
-    async def css(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
-        file = make_css_palette(self.color_hex, self.color_names, self.palette_name)
-        button.disabled = True
-        button.style = disnake.ButtonStyle.gray
-        await inter.send(file=file)
-        await self.message.edit(view=self)
-
     @disnake.ui.button(label="CSV", style=disnake.ButtonStyle.blurple)
     async def csv(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
         file = make_csv_palette(self.color_hex, self.color_names, self.palette_name)
@@ -255,17 +247,6 @@ def _write_aco_data(buffer, version, color_hex, color_names) -> None:
             for c in name:
                 buffer.write(struct.pack(">H", ord(c)))
             buffer.write(b"00")  # NULL word
-
-
-def make_css_palette(color_hex, color_names, palette_name) -> disnake.File:
-    content = f"// CSS {palette_name}\n"
-    for i in range(len(color_hex)):
-        hex = color_hex[i]
-        name = color_names[i] if color_names else f"Color{i}"
-        content += f".{name}: {{ color: {hex} }}\n"
-
-    buffer = BytesIO(content.encode("utf-8"))
-    return disnake.File(buffer, filename=f"{palette_name}.css")
 
 
 def make_csv_palette(color_hex, color_names, palette_name) -> disnake.File:

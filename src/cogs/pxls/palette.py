@@ -1,3 +1,4 @@
+import struct
 from io import BytesIO
 
 import disnake
@@ -47,9 +48,9 @@ class PaletteView(disnake.ui.View):
         await inter.send(file=file)
         await self.message.edit(view=self)
 
-    @disnake.ui.button(label="Photoshop (.css)", style=disnake.ButtonStyle.blurple)
-    async def css(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
-        file = make_css_palette(self.color_hex, self.color_names, self.palette_name)
+    @disnake.ui.button(label="Photoshop (.aco)", style=disnake.ButtonStyle.blurple)
+    async def aco(self, button: disnake.ui.Button, inter: disnake.MessageInteraction):
+        file = make_aco_palette(self.color_hex, self.color_names, self.palette_name)
         button.disabled = True
         button.style = disnake.ButtonStyle.gray
         await inter.send(file=file)
@@ -225,15 +226,27 @@ def make_paintnet_palette(color_hex, color_names, palette_name) -> disnake.File:
     return disnake.File(buffer, filename=f"{palette_name}.txt")
 
 
-def make_css_palette(color_hex, color_names, palette_name) -> disnake.File:
-    content = f"// Photoshop {palette_name}\n"
-    for i in range(len(color_hex)):
-        hex = color_hex[i]
-        name = color_names[i] if color_names else f"Color{i}"
-        content += f".{name}: {{ color: {hex} }}\n"
+def make_aco_palette(color_hex, color_names, palette_name) -> disnake.File:
+    buffer = BytesIO()
+    for version in (1, 2):
+        _write_aco_data(buffer, version, color_hex, color_names)
+    buffer.seek(0)
+    return disnake.File(buffer, filename=f"{palette_name}.aco")
 
-    buffer = BytesIO(content.encode("utf-8"))
-    return disnake.File(buffer, filename=f"{palette_name}.css")
+
+def _write_aco_data(buffer, version, color_hex, color_names) -> None:
+    buffer.write(struct.pack(">2H", version, len(color_hex)))
+    color_space = 0  # RGB
+    for i, hex in enumerate(color_hex):
+        name = color_names[i] if color_names else f"Color{i}"
+        r, g, b = hex_to_rgb(hex)
+        color_data = struct.pack(">5H", color_space, r * 257, g * 257, b * 257, 0)
+        buffer.write(color_data)
+        if version == 2:
+            buffer.write(struct.pack(">L", len(name) + 1))
+            for c in name:
+                buffer.write(struct.pack(">H", ord(c)))
+            buffer.write(b"00")  # NULL word
 
 
 def make_csv_palette(color_hex, color_names, palette_name) -> disnake.File:

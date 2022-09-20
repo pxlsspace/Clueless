@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from utils.log import close_loggers, get_logger, setup_loggers
 from utils.pxls.template_manager import TemplateManager
 from utils.setup import (
+    AUTHORIZED_BOT_IDS,
     DEFAULT_PREFIX,
     GUILD_IDS,
     db_canvas,
@@ -323,7 +324,7 @@ async def on_message(message):
         return
 
     # check that the user isn't an other bot
-    if message.author.bot:
+    if message.author.bot and message.author.id not in AUTHORIZED_BOT_IDS:
         return
 
     # add the user to the db and check if the user is blacklisted

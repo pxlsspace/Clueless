@@ -173,7 +173,7 @@ class Palette(commands.Cog):
                     square_y = col * square_dim
                     square_shape = [
                         (square_x, square_y),
-                        (square_x + square_dim, square_y + square_dim),
+                        (square_x + square_dim - 1, square_y + square_dim - 1),
                     ]
                     row += 1
                     draw_image.rectangle(

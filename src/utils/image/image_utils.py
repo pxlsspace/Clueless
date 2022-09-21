@@ -222,17 +222,18 @@ def get_color(color: str, pxls_only=False, mode="RGBA"):
     """Get the name and RGBA value of a color
 
     Return `(color_name: str, rgba: tuple)`"""
-    try:
-        return get_pxls_color(color, mode)
-    except Exception:
-        if is_hex_color(color):
-            if not color.startswith("#"):
-                color = "#" + color
-            color_name = rgb_to_pxls(hex_to_rgb(color, "RGB"))
-            if not color_name and pxls_only:
-                return None, None
-            return color_name or color.upper(), hex_to_rgb(color, mode)
-    return None, None
+    if is_hex_color(color):
+        if not color.startswith("#"):
+            color = "#" + color
+        color_name = rgb_to_pxls(hex_to_rgb(color, "RGB"))
+        if not color_name and pxls_only:
+            return None, None
+        return color_name or color.upper(), hex_to_rgb(color, mode)
+    else:
+        try:
+            return get_pxls_color(color, mode)
+        except Exception:
+            return None, None
 
 
 def rgb_to_pxls(rgb):

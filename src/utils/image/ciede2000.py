@@ -5,6 +5,7 @@ from numba import jit
 @jit(nopython=True, cache=True)
 def rgb2xyz(rgb):
     """Converts RGB pixel array to XYZ format."""
+    rgb = rgb.astype(np.float64)
     for i in range(3):
         c = rgb[i]
         c = c / 255.0

@@ -286,7 +286,10 @@ def get_url(content, accept_emojis=True, accept_templates=True):
 
 
 def get_image_url(image) -> str:
-    return image.proxy_url or image.url
+    if hasattr(image, "proxy_url") and image.proxy_url:
+        return image.proxy_url
+    else:
+        return image.url
 
 
 @in_executor()

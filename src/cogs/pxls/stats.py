@@ -72,10 +72,16 @@ class PxlsStats(commands.Cog):
         )
         online_counts = [int(e[0]) for e in data if e[0] is not None]
         cooldowns = [stats.get_cd(count) for count in online_counts]
-        average_online = sum(online_counts) / len(online_counts)
-        min_online = min(online_counts)
-        max_online = max(online_counts)
-        average_cd = sum(cooldowns) / len(cooldowns)
+        if len(online_counts) == 0:
+            average_online = "N/A"
+            min_online = "N/A"
+            max_online = "N/A"
+            average_cd = "N/A"
+        else:
+            average_online = sum(online_counts) / len(online_counts)
+            min_online = min(online_counts)
+            max_online = max(online_counts)
+            average_cd = sum(cooldowns) / len(cooldowns)
 
         # calculate the filling speed
         canvas_time = (datetime.utcnow() - start_date) / timedelta(days=1)
@@ -149,12 +155,12 @@ class PxlsStats(commands.Cog):
         canvas_stats_text = """
         • Canvas Users: `{}`\n• Average online: `{}` users (min: `{}`, max: `{}`)\n• Average cooldown: `{}s`\n• Total Placed: `{}`\n• Average pixels per user: `{}`""".format(
             active_users,
-            round(average_online, 2),
+            format_number(average_online),
             min_online,
             max_online,
-            round(average_cd, 2),
+            format_number(average_cd),
             format_number(total_placed),
-            format_number(int(pixel_per_user)),
+            format_number(pixel_per_user),
         )
 
         completion_text = """

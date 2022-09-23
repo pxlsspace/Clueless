@@ -70,7 +70,7 @@ class Progress(commands.Cog):
 
     @commands.group(
         name="progress",
-        usage="<check|info|add|list|update|delete|speed>",
+        usage="<check|add|list|update|rename|transfer|delete|speed|timelapse>",
         description="Track a template over time.",
         aliases=["prog"],
         invoke_without_command=True,
@@ -1421,7 +1421,7 @@ class Progress(commands.Cog):
 
         Parameters
         ----------
-        template: The name of the template.
+        template: The name or URL of a template.
         last: Makes the timelapse in the last x week/day/hour/minute. (format: ?w?d?h?m)
         before: To get the timelapse before a specific date. (format: YYYY-mm-dd HH:MM)
         after: To show the timelapse after a specific date. (format: YYYY-mm-dd HH:MM)
@@ -1437,7 +1437,7 @@ class Progress(commands.Cog):
         usage="<template> [-last ?w?d?h?m] [-before YYYY-mm-dd HH:MM] [-after YYYY-mm-dd HH:MM] [-frames <frames>] [-duration <duration>]",
         aliases=["tl"],
         help="""
-        `<template>`: the name of a template you want to check
+        `<template>`: the name or URL of a template
         `[-last ?w?d?h?m]`: makes the timelapse in the last x week/day/hour/minute (format: ?w?d?h?m)
         `[-before ...]`: to get the timelapse before a specific date (format: YYYY-mm-dd HH:MM)
         `[-after ...]`: to show the timelapse after a specific date (format: YYYY-mm-dd HH:MM)
@@ -1496,9 +1496,19 @@ class Progress(commands.Cog):
             raise commands.CommandOnCooldown(bucket, retry_after, self.timelapse_cd.type)
 
         # get the template
-        template = tracked_templates.get_template(template_name)
-        if template is None:
-            return await ctx.send(f"No template named `{template_name}` found.")
+        if parse_template(template_name) is not None:
+            template = await get_template_from_url(template_name)
+            # check if we have a tracked template with the same image and coords
+            template_same_image = tracked_templates.check_duplicate_template(template)
+            is_tracked = False
+            if template_same_image:
+                template = template_same_image
+                is_tracked = True
+        else:
+            template = tracked_templates.get_template(template_name)
+            if template is None:
+                return await ctx.send(f"No template named `{template_name}` found.")
+            is_tracked = True
 
         min_frames = 2
         max_frames = 50
@@ -1522,12 +1532,18 @@ class Progress(commands.Cog):
         # check on date arguments
         if before is None and after is None and last is None:
             # default to tracking time if no input time is given
-            lower_dt, lower_progress = await template.get_progress_at(datetime.min)
-            higher_dt, higher_progress = await template.get_progress_at(datetime.utcnow())
-            if lower_dt is None or higher_dt is None:
-                return await ctx.send(
-                    ":x: Not enough data to find the start-tracking date, input dates manually with the 'before/after/last' options."
+            if is_tracked:
+                lower_dt, lower_progress = await template.get_progress_at(datetime.min)
+                higher_dt, higher_progress = await template.get_progress_at(
+                    datetime.utcnow()
                 )
+                if lower_dt is None or higher_dt is None:
+                    return await ctx.send(
+                        ":x: Not enough data to find the start-tracking date, input dates manually with the 'before/after/last' options."
+                    )
+            else:
+                lower_dt = datetime.min
+                higher_dt = datetime.max
             lower_dt = lower_dt.replace(tzinfo=timezone.utc)
             higher_dt = higher_dt.replace(tzinfo=timezone.utc)
         else:

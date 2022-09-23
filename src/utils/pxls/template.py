@@ -24,7 +24,7 @@ class InvalidStyleException(Exception):
 def parse_style_image(style_image: Image.Image):
     try:
         img_array = np.array(style_image.convert("RGBA"))
-        mask = img_array[:, :, 3] != 0
+        alpha = img_array[:, :, 3]
         symbols_per_line = 16
         style_size = int(style_image.width / symbols_per_line)
         res = np.zeros((symbols_per_line * symbols_per_line, style_size, style_size))
@@ -35,8 +35,7 @@ def parse_style_image(style_image: Image.Image):
                 y0 = j * style_size
                 x1 = x0 + style_size
                 y1 = y0 + style_size
-                symbol = mask[x0:x1, y0:y1]
-                res[color_idx] = symbol
+                res[color_idx] = alpha[x0:x1, y0:y1]
                 color_idx += 1
         return res, style_size
 
@@ -63,18 +62,18 @@ def get_style_from_name(style_name):
     return style
 
 
-none = {"name": "none", "size": 1, "array": np.array([[[1]]] * 255)}
+none = {"name": "none", "size": 1, "array": np.array([[[255]]] * 255)}
 
 dotted = {
     "name": "dotted",
     "size": 3,
-    "array": np.array([[[0, 0, 0], [0, 1, 0], [0, 0, 0]]] * 255),
+    "array": np.array([[[0, 0, 0], [0, 255, 0], [0, 0, 0]]] * 255),
 }
 
 plus = {
     "name": "plus",
     "size": 3,
-    "array": np.array([[[0, 1, 0], [1, 1, 1], [0, 1, 0]]] * 255),
+    "array": np.array([[[0, 255, 0], [255, 255, 255], [0, 255, 0]]] * 255),
 }
 
 bigdotted = {
@@ -84,9 +83,9 @@ bigdotted = {
         [
             [
                 [0, 0, 0, 0, 0],
-                [0, 1, 1, 1, 0],
-                [0, 1, 1, 1, 0],
-                [0, 1, 1, 1, 0],
+                [0, 255, 255, 255, 0],
+                [0, 255, 255, 255, 0],
+                [0, 255, 255, 255, 0],
                 [0, 0, 0, 0, 0],
             ]
         ]
@@ -131,7 +130,9 @@ def stylize(style, stylesize, palette, glow_opacity=0):
         for j in range(stylesize):
             for k in range(stylesize):
                 if style[i, j, k]:
-                    cstyle[j, k] = palette[i] * style[i, j, k]
+                    cstyle[j, k] = palette[i]
+                    # change the alpha channel to the value in the style
+                    cstyle[j, k, 3] = style[i, j, k]
         res[i] = cstyle
     return res
 

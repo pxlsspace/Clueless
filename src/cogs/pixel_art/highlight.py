@@ -88,7 +88,10 @@ class Highlight(commands.Cog):
         input_url = urls[0] if urls else None
 
         # get the input image
-        image, url = await get_image_from_message(ctx, input_url)
+        try:
+            image, url = await get_image_from_message(ctx, input_url)
+        except ValueError as e:
+            return await ctx.send(f"❌ {e}")
         image_array = np.array(image)
 
         await _highlight(ctx, image_array, colors, parsed_args.bgcolor)

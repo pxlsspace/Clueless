@@ -291,21 +291,6 @@ class Template(commands.Cog):
                 return False
             style_name = f"`{style['name']}{' (+ glow)' if glow else ''}`"
 
-        # check on the size
-        output_size = img.width * img.height * style["size"] ** 2
-        limit = int(100e6)
-        if output_size > limit:
-            msg = f"You're trying to generate a **{format_number(output_size)}** pixels image.\n"
-            msg += f"This exceeds the bot's limit of **{format_number(limit)}** pixels.\n"
-            msg += "\n*Try using a style with a smaller size or a smaller image.*"
-            await ctx.send(
-                embed=disnake.Embed(
-                    title=":x: Size limit exceeded",
-                    description=msg,
-                    color=disnake.Color.red(),
-                )
-            )
-            return False
         # check on the glow
         if glow:
             glow_opacity = 0.2
@@ -333,6 +318,22 @@ class Template(commands.Cog):
         # crop the white space around the image
         if not (nocrop):
             img = remove_white_space(img)
+
+        # check on the size
+        output_size = img.width * img.height * style["size"] ** 2
+        limit = int(100e6)
+        if output_size > limit:
+            msg = f"You're trying to generate a **{format_number(output_size)}** pixels image.\n"
+            msg += f"This exceeds the bot's limit of **{format_number(limit)}** pixels.\n"
+            msg += "\n*Try using a style with a smaller size or a smaller image.*"
+            await ctx.send(
+                embed=disnake.Embed(
+                    title=":x: Size limit exceeded",
+                    description=msg,
+                    color=disnake.Color.red(),
+                )
+            )
+            return False
 
         # reduce the image to the given palette
         img_array = np.array(img)

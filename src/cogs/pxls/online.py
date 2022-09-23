@@ -263,17 +263,21 @@ class Online(commands.Cog):
             t0 = format_datetime(t0)
             t1 = format_datetime(t1)
 
+        if len(online_counts_without_none) != 0:
+            min_online = min(online_counts_without_none)
+            max_online = max(online_counts_without_none)
+            avg_online = sum(online_counts_without_none) / len(online_counts_without_none)
+        else:
+            min_online = max_online = avg_online = "N/A"
         description = "• Between {} and {}{}\n• Current {}: `{}`\n• Average: `{}`\n• Min: `{}` • Max: `{}`".format(
             t0,
             t1,
             diff,
             title,
             format_number(stats.online_count),
-            format_number(
-                sum(online_counts_without_none) / len(online_counts_without_none)
-            ),
-            format_number(min(online_counts_without_none)),
-            format_number(max(online_counts_without_none)),
+            format_number(avg_online),
+            format_number(min_online),
+            format_number(max_online),
         )
         emb = disnake.Embed(
             title=title,

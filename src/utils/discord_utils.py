@@ -813,10 +813,10 @@ class MoreInfoView(AuthorView):
         if all([c.custom_id == self.children[1].custom_id for c in self.children[1:-1]]):
             self.stop()
             return
-        for c in self.children[1:-1]:
+        for c in self.children[1:]:
             c.disabled = True
-        if not self.add_refresh:
-            self.refresh_button.disabled = True
+        if self.add_refresh:
+            self.refresh_button.disabled = False
         await self.message.edit(view=self)
 
     def update_refresh_btn_id(self):

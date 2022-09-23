@@ -8,7 +8,12 @@ from PIL import Image
 
 from main import tracked_templates
 from utils.arguments_parser import MyParser, valid_datetime_type
-from utils.discord_utils import AuthorView, get_urls_from_list, image_to_file
+from utils.discord_utils import (
+    AuthorView,
+    autocomplete_templates,
+    get_urls_from_list,
+    image_to_file,
+)
 from utils.image.image_utils import find_upscale
 from utils.pxls.template_manager import get_template_from_url, parse_template
 from utils.setup import db_servers, db_stats, db_users, stats
@@ -233,7 +238,7 @@ class Snapshots(commands.Cog):
         inter: disnake.AppCmdInter,
         datetime: str = None,
         relative_time: str = commands.Param(default=None, name="relative-time"),
-        template=None,
+        template: str = commands.Param(default=None, autocomplete=autocomplete_templates),
         coords=None,
     ):
         """

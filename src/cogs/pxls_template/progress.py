@@ -1,4 +1,5 @@
 import asyncio
+import re
 import time
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
@@ -70,7 +71,7 @@ class Progress(commands.Cog):
 
     @commands.group(
         name="progress",
-        usage="<check|add|list|update|rename|transfer|delete|speed|timelapse>",
+        usage="<check|add|list|update|rename|transfer|delete|speed|timelapse|coords>",
         description="Track a template over time.",
         aliases=["prog"],
         invoke_without_command=True,
@@ -80,7 +81,9 @@ class Progress(commands.Cog):
             async with ctx.typing():
                 await self.p_check(ctx, template, display)
         else:
-            await ctx.send("Usage: `>progress <check|info|add|list|update|delete|speed>`")
+            await ctx.send(
+                f"Usage: `{ctx.prefix}{self.progress.name} {self.progress.usage}`\n*(Use `{ctx.prefix}help {self.progress.name}` for more information)*"
+            )
 
     display_options = {
         "Default (progress image)": "default",
@@ -588,23 +591,26 @@ class Progress(commands.Cog):
         inter: disnake.AppCmdInter,
         sort: Sort = None,
         filter: str = commands.Param(default=None, autocomplete=autocomplete_filter),
+        coords: str = None,
     ):
         """Show all the public tracked templates.
 
         Parameters
         ----------
         sort: Sort the table by the chosen column. (default: px/h (last 1h))
-        filter: Apply a filter to only display the chosen templates. (format: filter1+filter2+ ...)"""
+        filter: Apply a filter to only display the chosen templates. (format: filter1+filter2+ ...)
+        coords: To only see templates at coordinates (format: x y or pxls link)."""
         await inter.response.defer()
-        await self.list(inter, sort, filter)
+        await self.list(inter, sort, filter, coords)
 
     @progress.command(
         name="list",
         description="Show all the public tracked templates.",
         aliases=["ls"],
-        usage="[-sort <column>] [-filter <filter1+filter2+...>]",
+        usage="[-sort <column>] [-coords x y] [-filter <filter1+filter2+...>]",
         help="""
         `[-sort <column>]`: Sort the table by the chosen column.
+        `[-coords x y]`: To only see templates at coordinates (format: x y or pxls link).
         `[-filter <filter1+filter2+...>]`: Apply a filter to only display the chosen templates.
         The available filters are:
         - `notdone`: to only show the templates not done
@@ -620,19 +626,18 @@ class Progress(commands.Cog):
             "-sort", "-s", choices=list(options_dict.keys()), required=False
         )
         parser.add_argument("-filter", "-f", type=str, required=False)
+        parser.add_argument("-coords", "-c", nargs="+", required=False)
 
         try:
             parsed_args = parser.parse_args(args)
         except Exception as error:
             return await ctx.send(f"❌ {error}")
-        if parsed_args.sort:
-            sort = options_dict.get(parsed_args.sort)
-        else:
-            sort = None
+        sort = options_dict.get(parsed_args.sort) if parsed_args.sort else None
+        coords = " ".join(parsed_args.coords) if parsed_args.coords else None
         async with ctx.typing():
-            await self.list(ctx, sort, parsed_args.filter)
+            await self.list(ctx, sort, parsed_args.filter, coords)
 
-    async def list(self, ctx, sort: int = None, filters: str = None):
+    async def list(self, ctx, sort: int = None, filters: str = None, coords: str = None):
         temp_per_page = 15
         if tracked_templates.is_loading:
             return await ctx.send(":x: Templates are loading, try again later.")
@@ -654,6 +659,27 @@ class Progress(commands.Cog):
                         ", ".join([f"`{f}`" for f in self.filter_options.values()]),
                     )
                     return await ctx.send(msg)
+
+        # check on the coords
+        if coords:
+            coords = re.findall(r"-?\d+", coords)
+            if len(coords) < 2:
+                return await ctx.send(
+                    ":x: Invalid coordinates (format: x y or pxls link)."
+                )
+            coords = coords[:2]
+            try:
+                coords = [int(c) for c in coords]
+            except ValueError:
+                return await ctx.send(":x: Coordinates must be integers.")
+            x, y = coords
+            if (
+                x < 0
+                or y < 0
+                or x > stats.board_array.shape[1]
+                or y > stats.board_array.shape[0]
+            ):
+                return await ctx.send(":x: Coordinates must be inside the canvas.")
 
         # gather the templates data
         table = []
@@ -682,6 +708,19 @@ class Progress(commands.Cog):
                 if "done" in filters and togo != 0:
                     continue
                 if "mine" in filters and template.owner_id != ctx.author.id:
+                    continue
+
+            # coords filter
+            if coords:
+                # ignore template if the coords aren't in the placeable area
+                if (
+                    x < template.ox
+                    or y < template.oy
+                    or x > template.ox + template.width
+                    or y > template.oy + template.height
+                ):
+                    continue
+                if not template.placeable_mask[y - template.oy, x - template.ox]:
                     continue
 
             # timeframes speeds
@@ -728,7 +767,12 @@ class Progress(commands.Cog):
             )
 
         if len(table) == 0:
-            return await ctx.send(":x: No template matches with your filter.")
+            if filters:
+                return await ctx.send(":x: No template matches with your filter.")
+            if coords:
+                return await ctx.send(
+                    f":x: There are no tracked templates at the given coordinates ({x}, {y})."
+                )
 
         discord_user = await db_users.get_discord_user(ctx.author.id)
         current_user_theme = discord_user["color"] or "default"
@@ -823,6 +867,10 @@ class Progress(commands.Cog):
                         elif filter == "mine":
                             filter_str_list.append(f"<@{ctx.author.id}>'s templates")
                     embed.description += f"Filter: {' + '.join(filter_str_list)}\n"
+                if coords:
+                    embed.description += "Coordinates Filter: [`({0}, {1})`](https://pxls.space/#x={0}&y={1}&scale=20)\n".format(
+                        x, y
+                    )
                 embed.description += f"Total Templates: `{len(table)}`"
                 if last_updated:
                     if nb_page > 1:
@@ -1719,6 +1767,32 @@ class Progress(commands.Cog):
                 await m.edit(embed=embed)
         for frame in frames:
             frame.close()
+
+    @_progress.sub_command(name="coords")
+    async def _coords(
+        self,
+        inter: disnake.AppCmdInter,
+        coords: str,
+    ):
+        """Show all the tracked templates at the given coordinates.
+
+        Parameters
+        ----------
+        coords: Coordinates in the format: x y or pxls link."""
+        await inter.response.defer()
+        await self.list(inter, coords=coords)
+
+    @progress.command(
+        name="coords",
+        description="Show all the tracked templates at the given coordinates.",
+        usage="<x> <y>",
+        help="""`<x> <y>`: Coordinates in the format: x y or pxls link""",
+        aliases=["coord", "coordinates", "coordinate"],
+    )
+    async def p_coords(self, ctx, *, coords):
+
+        async with ctx.typing():
+            await self.list(ctx, coords=coords)
 
 
 pos_speed_palette = get_gradient_palette(["#ffffff", "#70dd13", "#31a117"], 101)

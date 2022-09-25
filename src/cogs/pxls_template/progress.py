@@ -592,6 +592,9 @@ class Progress(commands.Cog):
         sort: Sort = None,
         filter: str = commands.Param(default=None, autocomplete=autocomplete_filter),
         coords: str = None,
+        temp_per_page: int = commands.Param(
+            default=15, name="templates-per-page", gt=5, lt=40
+        ),
     ):
         """Show all the public tracked templates.
 
@@ -599,18 +602,20 @@ class Progress(commands.Cog):
         ----------
         sort: Sort the table by the chosen column. (default: px/h (last 1h))
         filter: Apply a filter to only display the chosen templates. (format: filter1+filter2+ ...)
-        coords: To only see templates at coordinates (format: x y or pxls link)."""
+        coords: To only see templates at coordinates. (format: x y or pxls link)
+        temp_per_page: The number of templates displayed in a page between 5 and 40. (default: 15)"""
         await inter.response.defer()
-        await self.list(inter, sort, filter, coords)
+        await self.list(inter, sort, filter, coords, temp_per_page)
 
     @progress.command(
         name="list",
         description="Show all the public tracked templates.",
         aliases=["ls"],
-        usage="[-sort <column>] [-coords x y] [-filter <filter1+filter2+...>]",
+        usage="[-sort <column>] [-coords x y] [-tpp <number>] [-filter <filter1+filter2+...>]",
         help="""
         `[-sort <column>]`: Sort the table by the chosen column.
         `[-coords x y]`: To only see templates at coordinates (format: x y or pxls link).
+        `[-tpp <number>]`: The number of templates to display in a page between 5 and 40. (default: 15).
         `[-filter <filter1+filter2+...>]`: Apply a filter to only display the chosen templates.
         The available filters are:
         - `notdone`: to only show the templates not done
@@ -627,6 +632,9 @@ class Progress(commands.Cog):
         )
         parser.add_argument("-filter", "-f", type=str, required=False)
         parser.add_argument("-coords", "-c", nargs="+", required=False)
+        parser.add_argument(
+            "-tpp", "-templates-per-page", type=int, required=False, default=15
+        )
 
         try:
             parsed_args = parser.parse_args(args)
@@ -634,11 +642,21 @@ class Progress(commands.Cog):
             return await ctx.send(f"❌ {error}")
         sort = options_dict.get(parsed_args.sort) if parsed_args.sort else None
         coords = " ".join(parsed_args.coords) if parsed_args.coords else None
+        if parsed_args.tpp < 5 or parsed_args.tpp > 40:
+            return await ctx.send(
+                ":x: The number of templates per page must be between 5 and 40."
+            )
         async with ctx.typing():
-            await self.list(ctx, sort, parsed_args.filter, coords)
+            await self.list(ctx, sort, parsed_args.filter, coords, parsed_args.tpp)
 
-    async def list(self, ctx, sort: int = None, filters: str = None, coords: str = None):
-        temp_per_page = 15
+    async def list(
+        self,
+        ctx,
+        sort: int = None,
+        filters: str = None,
+        coords: str = None,
+        temp_per_page=15,
+    ):
         if tracked_templates.is_loading:
             return await ctx.send(":x: Templates are loading, try again later.")
         public_tracked_templates = tracked_templates.get_all_public_templates()

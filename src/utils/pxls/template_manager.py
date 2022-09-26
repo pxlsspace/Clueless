@@ -760,7 +760,11 @@ class TemplateManager:
 
         Raises ValueError if a template is not found or cannot be parsed"""
         templates = []
+        templates_to_remove = []
         for i, template_name in enumerate(templates_uris):
+            to_remove = template_name.startswith("!")
+            if to_remove:
+                template_name = template_name[1:]
             if parse_template(template_name) is not None:
                 try:
                     template = await get_template_from_url(template_name)
@@ -772,7 +776,17 @@ class TemplateManager:
                 template = self.get_template(template_name, None, False)
                 if template is None:
                     raise ValueError(f"No template named `{template_name}` found.")
-            templates.append(template)
+            if to_remove:
+                templates_to_remove.append(template)
+            else:
+                templates.append(template)
+
+        # remove templates starting with "!"
+        if templates_to_remove:
+            if not templates:
+                templates = self.list.copy()
+            templates = [t for t in templates if t not in templates_to_remove]
+
         return templates
 
 

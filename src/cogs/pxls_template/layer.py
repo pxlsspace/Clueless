@@ -27,7 +27,7 @@ class Layer(commands.Cog):
 
         Parameters
         ----------
-        templates: List of templates (URL or name) separated by a space (last goes above).
+        templates: List of templates (URL or name) separated by a space (last goes above) (use ! to exclude one).
         """
         await inter.response.defer()
         # Remove unused entries, equal to None
@@ -39,7 +39,7 @@ class Layer(commands.Cog):
         description="Layer several templates.",
         usage="<templates>",
         help="""
-            - `<templates>`: List of templates (URL or name) separated by a space (last goes above).
+            - `<templates>`: List of templates (URL or name) separated by a space (last goes above) (use `!` in front of a template to exclude it).
             """,
     )
     async def p_layer(self, ctx, *args):

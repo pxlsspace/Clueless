@@ -241,7 +241,7 @@ class Placemap(commands.Cog):
         self,
         inter: disnake.AppCmdInter,
         canvas_code: str = commands.Param(
-            name="canvas-code", autocomplete=autocomplete_canvases
+            name="canvas-code", autocomplete=autocomplete_canvases, default=None
         ),
     ):
         """Get the final image for any canvas.
@@ -259,19 +259,23 @@ class Placemap(commands.Cog):
         description="Get the final image for any canvas.",
         aliases=["c"],
     )
-    async def p_canvas(self, ctx, *, canvas_code):
+    async def p_canvas(self, ctx, *, canvas_code=None):
         async with ctx.typing():
             await self.canvas(ctx, canvas_code)
 
     async def canvas(self, ctx, canvas_code_input):
 
-        canvas_code = check_canvas_code(canvas_code_input)
-        if canvas_code is None:
-            return await ctx.send(
-                f":x: The given canvas code `{canvas_code_input}` is invalid."
-            )
-
         current_canvas = await stats.get_canvas_code()
+
+        if canvas_code_input is None:
+            canvas_code = current_canvas
+        else:
+            canvas_code = check_canvas_code(canvas_code_input)
+            if canvas_code is None:
+                return await ctx.send(
+                    f":x: The given canvas code `{canvas_code_input}` is invalid."
+                )
+
         if canvas_code == current_canvas:
             canvas_array = stats.board_array
             canvas_array = stats.palettize_array(canvas_array)

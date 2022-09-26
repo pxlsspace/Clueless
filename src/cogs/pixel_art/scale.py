@@ -132,7 +132,9 @@ class Scale(commands.Cog):
         await ctx.send(embed=embed, file=downscaled_file)
 
     @commands.slash_command(name="upscale")
-    async def _upscale(self, inter: disnake.AppCmdInter, scale: int, image: InterImage):
+    async def _upscale(
+        self, inter: disnake.AppCmdInter, scale: int = 2, image: InterImage = None
+    ):
         """Upscale an image to the desired scale.
 
         Parameters
@@ -144,16 +146,19 @@ class Scale(commands.Cog):
 
     @commands.command(
         name="upscale",
-        usage="<scale> <image|url>",
+        usage="[scale] <image|url>",
         description="Upscale an image to the desired scale.",
         help="""- `scale`: the new scale for the image (ex: 2 means the image will be 2x bigger)
                 - `<url|image>`: an image URL or an attached image""",
     )
-    async def p_upscale(self, ctx, scale, url=None):
+    async def p_upscale(self, ctx, *args):
+        texts, urls = get_urls_from_list(args)
+        scale = texts[0] if texts else 2
+        url = urls[0] if urls else None
         async with ctx.typing():
             await self.upscale(ctx, scale, url)
 
-    async def upscale(self, ctx, scale, url=None):
+    async def upscale(self, ctx, scale=2, url=None):
         # check on the scale
         err_msg = "The scale value must be an integer."
         try:

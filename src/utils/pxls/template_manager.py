@@ -471,7 +471,9 @@ class TemplateManager:
 
         Throw an error:
         - if there is a template with the same name
-        - if there is a template with the same image"""
+        - if there is a template with the same image
+        - if the template link is a base64 URL
+        - if the template image is too big"""
 
         template.name = name
         template.owner_id = owner.id
@@ -497,6 +499,12 @@ class TemplateManager:
                 f"There is already a template with the name `{template.name}`."
             )
 
+        # check on template size
+        canvas_size = stats.board_array.shape[0] * stats.board_array.shape[1]
+        if template.width * template.height > canvas_size:
+            raise ValueError(
+                f"The template image cannot be larger than the canvas image ({canvas_size} pixels)."
+            )
         # check duplicate images/coords
         same_image_template = self.check_duplicate_template(template)
         if same_image_template:
@@ -579,6 +587,13 @@ class TemplateManager:
                 raise ValueError(
                     "The template seems to be outside the canvas, make sure it's correctly positioned."
                 )
+            # check on template size
+            canvas_size = stats.board_array.shape[0] * stats.board_array.shape[1]
+            if new_temp.width * new_temp.height > canvas_size:
+                raise ValueError(
+                    f"The template image cannot be larger than the canvas image ({canvas_size} pixels)."
+                )
+
             temp_same_image = self.check_duplicate_template(new_temp)
             if temp_same_image == old_temp:
                 if (

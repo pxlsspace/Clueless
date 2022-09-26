@@ -1481,7 +1481,9 @@ class Progress(commands.Cog):
         before=None,
         after=None,
         frames: int = commands.Param(default=40, lt=50, gt=2),
-        duration: int = commands.Param(name="frame-duration", default=100, lt=1000, gt=0),
+        duration: int = commands.Param(
+            name="frame-duration", default=100, lt=1000, gt=20
+        ),
     ):
         """Make a timelapse of the template in a given time frame.
 
@@ -1583,7 +1585,7 @@ class Progress(commands.Cog):
                 f":x: The number of frame must be between `{min_frames}` and `{max_frames}`."
             )
 
-        min_duration = 1
+        min_duration = 20
         max_duration = 1000
         if frame_duration > max_duration or frame_duration < min_duration:
             return await ctx.send(

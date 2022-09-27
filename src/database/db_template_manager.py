@@ -42,8 +42,18 @@ class DbTemplateManager:
                 FOREIGN KEY(template_id) REFERENCES template(id)
             );
         """
+
+        create_template_manager_table = """
+            CREATE TABLE IF NOT EXISTS template_manager(
+                template_id INTEGER,
+                user_id TEXT,
+                PRIMARY KEY(template_id, user_id),
+                FOREIGN KEY(template_id) REFERENCES template(id)
+            );
+        """
         await self.db.sql_update(create_template_table)
         await self.db.sql_update(create_template_stat_table)
+        await self.db.sql_update(create_template_manager_table)
 
     async def get_template_id(self, t: "Template"):
         """Return the template ID matching with the args from the database, Return None if it doesn't exist"""
@@ -186,3 +196,26 @@ class DbTemplateManager:
         sql = "SELECT * FROM template where LOWER(name) = LOWER(?) AND canvas_code = ? AND hidden = ?"
         res = await self.db.sql_select(sql, (t.name, t.canvas_code, t.hidden))
         return res
+
+    async def add_template_manager(self, t: "Template", user_id):
+        """Add a template manager to the database."""
+        sql = "INSERT OR IGNORE INTO template_manager(template_id, user_id) VALUES(?, ?)"
+        return await self.db.sql_update(sql, (t.id, user_id))
+
+    async def delete_template_manager(self, t: "Template", user_id):
+        """Delete a template manager from the database."""
+        sql = "DELETE FROM template_manager WHERE template_id = ? AND user_id = ?"
+        return await self.db.sql_update(sql, (t.id, user_id))
+
+    async def get_template_managers(self, t: "Template"):
+        """Get all the user IDs of the managers of a given template."""
+
+        sql = "SELECT * FROM template_manager WHERE template_id = ?"
+        res = await self.db.sql_select(sql, t.id)
+        return [int(m["user_id"]) for m in res] if res else []
+
+    async def get_user_managed_templates(self, user_id):
+        """Get all the template that a user manages."""
+        sql = "SELECT * FROM template_manager WHERE user_id = ?"
+        res = await self.db.sql_select(sql, str(user_id))
+        return [int(m["template_id"]) for m in res] if res else []

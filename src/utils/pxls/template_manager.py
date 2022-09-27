@@ -565,11 +565,23 @@ class TemplateManager:
         old_temp = self.get_template(current_name, command_user_id, False)
         if not old_temp:
             raise ValueError(f"No template named `{current_name}` found.")
+
+        # check if the user can update the template
         if (
             old_temp.owner_id != command_user_id
             and command_user_id not in self.progress_admins
         ):
-            raise ValueError("You cannot edit a template that you don't own.")
+            manager_ids = await db_templates.get_template_managers(old_temp)
+            if command_user_id not in manager_ids:
+                raise ValueError(
+                    "You cannot edit a template that you don't own or manage."
+                )
+            else:
+                # check that managers are not transfering ownership
+                if new_owner:
+                    raise ValueError(
+                        "Only the template owner can transfer the template's ownership."
+                    )
         if isinstance(old_temp, Combo):
             raise ValueError("You cannot edit the combo.")
 

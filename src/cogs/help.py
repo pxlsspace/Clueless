@@ -49,6 +49,9 @@ async def autocomplete_commands(inter: disnake.AppCmdInter, user_input: str):
         commands.append(cmd.name)
         for child in cmd.children.values():
             commands.append(child.qualified_name)
+            if hasattr(child, "children"):
+                for childchild in child.children.values():
+                    commands.append(childchild.qualified_name)
     categories = list(get_slash_mapping(inter.bot).keys())
     commands += categories
     return [cmd for cmd in commands if user_input.lower() in cmd.lower()][:25]
@@ -229,7 +232,7 @@ class Help(commands.Cog):
         emb.set_author(name=ctx.me, icon_url=ctx.me.display_avatar)
         emb.add_field(
             name="Usage:",
-            value=f"`{prefix}{command_name}{(' ' + command_usage) if command_usage else ''}`",
+            value=f"```{prefix}{command_name}{(' ' + command_usage) if command_usage else ''}```",
             inline=False,
         )
         emb.add_field(name="Description:", value=description or "N/A", inline=False)
@@ -258,7 +261,7 @@ class Help(commands.Cog):
         )
         emb.add_field(
             name="Usage:",
-            value=f"`{prefix}{group.name}{(' ' + group.usage) if group.usage else ''}`",
+            value=f"```{prefix}{group.name}{(' ' + group.usage) if group.usage else ''}```",
             inline=False,
         )
         emb.set_footer(

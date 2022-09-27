@@ -13,7 +13,7 @@ from PIL import Image
 from main import tracked_templates
 from utils.image import PALETTES
 from utils.pxls.template_manager import get_template_from_url, parse_template
-from utils.setup import db_canvas, db_stats, stats
+from utils.setup import db_canvas, db_stats, db_templates, stats
 from utils.utils import get_content, in_executor
 
 STATUS_EMOJIS = {
@@ -505,6 +505,25 @@ async def autocomplete_user_templates(inter: disnake.AppCmdInter, user_input: st
             for t in tracked_templates.get_all_public_templates()
             if t.owner_id == inter.author.id
         ]
+        return [
+            temp_name
+            for temp_name in template_names
+            if user_input.lower() in temp_name.lower()
+        ][:25]
+
+
+async def autocomplete_manager_templates(inter: disnake.AppCmdInter, user_input: str):
+    """Get all the user-owned and managed template names."""
+    author_id = inter.author.id
+    if author_id in tracked_templates.progress_admins:
+        return await autocomplete_templates(inter, user_input)
+    else:
+        managed_template_ids = await db_templates.get_user_managed_templates(author_id)
+        template_names = []
+        for t in tracked_templates.get_all_public_templates():
+            if t.owner_id == author_id or t.id in managed_template_ids:
+                template_names.append(t.name)
+
         return [
             temp_name
             for temp_name in template_names

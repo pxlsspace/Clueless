@@ -21,6 +21,7 @@ from utils.discord_utils import (
     DropdownView,
     MoreInfoView,
     UserConverter,
+    autocomplete_manager_templates,
     autocomplete_templates,
     autocomplete_user_templates,
     format_number,
@@ -71,7 +72,7 @@ class Progress(commands.Cog):
 
     @commands.group(
         name="progress",
-        usage="<check|add|list|update|rename|transfer|delete|speed|timelapse|coords>",
+        usage="<check|add|list|update|rename|transfer|delete|speed|timelapse|coords|managers>",
         description="Track a template over time.",
         aliases=["prog"],
         invoke_without_command=True,
@@ -82,7 +83,7 @@ class Progress(commands.Cog):
                 await self.p_check(ctx, template, display)
         else:
             await ctx.send(
-                f"Usage: `{ctx.prefix}{self.progress.name} {self.progress.usage}`\n*(Use `{ctx.prefix}help {self.progress.name}` for more information)*"
+                f"Usage: `{ctx.prefix}{self.progress.qualified_name} {self.progress.usage}`\n*(Use `{ctx.prefix}help {self.progress.qualified_name}` for more information)*"
             )
 
     display_options = {
@@ -291,8 +292,21 @@ class Progress(commands.Cog):
                 oldest_record_time_str = "`< 5 min ago`"
 
             info_text += f"• Owner: <@{template.owner_id}>\n"
+            manager_ids = await db_templates.get_template_managers(template)
+            if manager_ids:
+                info_text_expanded = (
+                    info_text
+                    + "• Manager(s): "
+                    + ", ".join([f"<@{id}>" for id in manager_ids])
+                    + "\n"
+                )
+            else:
+                info_text_expanded = info_text
             info_text += f"• Started tracking: {oldest_record_time_str}"
+            info_text_expanded += f"• Started tracking: {oldest_record_time_str}"
+
         else:
+            info_text_expanded = info_text
             if not template.stylized_url.startswith("data:image"):
                 footer_text += "\nThis template is not in the tracker.\nClick on [Add To Tracker] to add it directly."
 
@@ -386,10 +400,11 @@ class Progress(commands.Cog):
 
         embed_expanded = embed.copy()
         # this is necessary because embed.copy() keeps the same fields ..
-        embed_expanded._fields = embed._fields.copy()
+        embed_expanded._fields = deepcopy(embed._fields)
         embed_expanded.add_field(
             name="**Recent Activity**", value=activity_text, inline=False
         )
+        embed_expanded.set_field_at(0, "**Info**", info_text_expanded)
 
         if isinstance(template, Combo):
             # send the template image first and edit the embed with the URL button
@@ -569,16 +584,23 @@ class Progress(commands.Cog):
         ("ETA", "eta"),
     ]
     Sort = commands.option_enum({option[0]: i for i, option in enumerate(sort_options)})
-    filter_options = {"Not Done": "notdone", "Done": "done", "Mine": "mine"}
+    filter_options = {
+        "Not Done": "notdone",
+        "Done": "done",
+        "Mine": "mine",
+        "Managed": "managed",
+    }
 
     def autocomplete_filter(inter: disnake.AppCmdInter, user_input: str):
         user_input = user_input.split("+")
         to_search = user_input[-1]
         rest = user_input[:-1]
-        filters = ["notdone", "done", "mine"]
+        filters = ["notdone", "done", "mine", "managed"]
         for r in rest:
             if r not in filters:
                 return []
+            else:
+                filters.remove(r)
         rest = "+".join(rest)
         best_matches = [
             filter for filter in filters if to_search.lower() in filter.lower()
@@ -596,7 +618,7 @@ class Progress(commands.Cog):
             default=15, name="templates-per-page", gt=5, lt=40
         ),
     ):
-        """Show all the public tracked templates.
+        """Show all the tracked templates.
 
         Parameters
         ----------
@@ -609,7 +631,7 @@ class Progress(commands.Cog):
 
     @progress.command(
         name="list",
-        description="Show all the public tracked templates.",
+        description="Show all the tracked templates.",
         aliases=["ls"],
         usage="[-sort <column>] [-coords x y] [-tpp <number>] [-filter <filter1+filter2+...>]",
         help="""
@@ -621,6 +643,7 @@ class Progress(commands.Cog):
         - `notdone`: to only show the templates not done
         - `done`: to only show the templates done
         - `mine`: to only show templates that you own
+        - `managed`: to only show the templates you manage
         e.g. `>progress list -filter mine+notdone` will show all your templates that are not done.
         """,
     )
@@ -703,6 +726,10 @@ class Progress(commands.Cog):
         table = []
         now = round_minutes_down(datetime.utcnow(), 5)
         public_tracked_templates.append(tracked_templates.combo)
+        managed_template_ids = await db_templates.get_user_managed_templates(
+            ctx.author.id
+        )
+
         for template in public_tracked_templates:
             line_colors = [None, None, None, None]
             # template info
@@ -726,6 +753,10 @@ class Progress(commands.Cog):
                 if "done" in filters and togo != 0:
                     continue
                 if "mine" in filters and template.owner_id != ctx.author.id:
+                    continue
+                if "managed" in filters and (
+                    isinstance(template, Combo) or template.id not in managed_template_ids
+                ):
                     continue
 
             # coords filter
@@ -883,7 +914,13 @@ class Progress(commands.Cog):
                         elif filter == "done":
                             filter_str_list.append("`Done`")
                         elif filter == "mine":
-                            filter_str_list.append(f"<@{ctx.author.id}>'s templates")
+                            filter_str_list.append(
+                                f"<@{ctx.author.id}>'s owned templates"
+                            )
+                        elif filter == "managed":
+                            filter_str_list.append(
+                                f"<@{ctx.author.id}>'s managed templates"
+                            )
                     embed.description += f"Filter: {' + '.join(filter_str_list)}\n"
                 if coords:
                     embed.description += "Coordinates Filter: [`({0}, {1})`](https://pxls.space/#x={0}&y={1}&scale=20)\n".format(
@@ -940,7 +977,7 @@ class Progress(commands.Cog):
     async def _update(
         self,
         inter: disnake.AppCmdInter,
-        template: str = commands.Param(autocomplete=autocomplete_user_templates),
+        template: str = commands.Param(autocomplete=autocomplete_manager_templates),
         new_url: str = commands.Param(name="new-url", default=None),
         new_name: str = commands.Param(name="new-name", default=None),
         new_owner: disnake.User = commands.Param(name="new-owner", default=None),
@@ -967,7 +1004,7 @@ class Progress(commands.Cog):
 
     @progress.command(
         name="rename",
-        description="Update the template name.",
+        description="Update a template name.",
         usage="<current name> <new name>",
     )
     async def p_update_name(self, ctx, current_name, new_name):
@@ -976,7 +1013,7 @@ class Progress(commands.Cog):
 
     @progress.command(
         name="transfer",
-        description="Transfer the template ownernership.",
+        description="Transfer a template ownernership.",
         usage="<current name> <new owner>",
     )
     async def p_update_owner(self, ctx, current_name, new_owner):
@@ -1133,7 +1170,7 @@ class Progress(commands.Cog):
         inter: disnake.AppCmdInter,
         template: str = commands.Param(autocomplete=autocomplete_user_templates),
     ):
-        """Delete a template and all its stats from the tracker.
+        """Delete a template and its stats from the tracker.
 
         Parameters
         ----------
@@ -1143,7 +1180,7 @@ class Progress(commands.Cog):
 
     @progress.command(
         name="delete",
-        description="Delete a template and all its stats from the tracker.",
+        description="Delete a template and its stats from the tracker.",
         usage="<template>",
         aliases=["remove", "del"],
     )
@@ -1215,7 +1252,7 @@ class Progress(commands.Cog):
         last: str = None,
         groupby: str = commands.Param(default=None, choices=["5min", "hour", "day"]),
     ):
-        """Check the speed graph of a tracked template.
+        """Check the speed graph of a template.
 
         Parameters
         ----------
@@ -1227,7 +1264,7 @@ class Progress(commands.Cog):
 
     @progress.command(
         name="speed",
-        description="Check the speed graph of a tracked template.",
+        description="Check the speed graph of a template.",
         usage="<template> [-last ?w?d?h?m] [-groupby 5min]",
     )
     async def p_speed(self, ctx, *args):
@@ -1485,7 +1522,7 @@ class Progress(commands.Cog):
             name="frame-duration", default=100, lt=1000, gt=20
         ),
     ):
-        """Make a timelapse of the template in a given time frame.
+        """Make a timelapse of a template in a given time frame.
 
         Parameters
         ----------
@@ -1501,7 +1538,7 @@ class Progress(commands.Cog):
 
     @progress.command(
         name="timelapse",
-        description="Make a timelapse of the template in the given time frame.",
+        description="Make a timelapse of a template.",
         usage="<template> [-last ?w?d?h?m] [-before YYYY-mm-dd HH:MM] [-after YYYY-mm-dd HH:MM] [-frames <frames>] [-duration <duration>]",
         aliases=["tl"],
         help="""
@@ -1813,6 +1850,186 @@ class Progress(commands.Cog):
 
         async with ctx.typing():
             await self.list(ctx, coords=coords)
+
+    # # # Manager stuff # # #
+
+    @_progress.sub_command_group(
+        name="manager", description="Manage the template managers."
+    )
+    async def _manager(self, inter: disnake.AppCmdInter):
+        """Manage the template managers."""
+        pass
+
+    @progress.group(
+        name="manager",
+        usage="<add|delete>",
+        description="Manage the template managers.",
+        invoke_without_command=True,
+    )
+    async def manager(self, ctx, template=None):
+        help = """
+• A template manager can update and rename a template.
+• Managers can only be added/deleted by the template owner.
+• You can see the managers of a template if you click the down arrow on `>progress check`
+• You can see the templates you can manage with `>progress list -filter managed`"""
+        msg = f"```{ctx.prefix}{self.manager.qualified_name} {self.manager.usage}```\n"
+        msg += f"*(Use `{ctx.prefix}help {self.manager.qualified_name}` for more information)*"
+        embed = disnake.Embed(title="Progress Manager", color=0x66C5CC)
+        embed.add_field(name="Information", value=help, inline=False)
+        embed.add_field(name="Usage", value=msg, inline=False)
+
+        await ctx.send(embed=embed)
+
+    @_manager.sub_command(name="add")
+    async def _manager_add(
+        self,
+        inter: disnake.AppCmdInter,
+        template: str = commands.Param(autocomplete=autocomplete_user_templates),
+        user: disnake.User = commands.Param(),
+    ):
+        """Add a manager to a template (so they can update the template).
+
+        Parameters
+        ----------
+        template: The name of the template you want to add managers.
+        user: The user you want to add as manager (a manager can update and rename the template)."""
+        await inter.response.defer()
+        await self.manager_add(inter, template, [user])
+
+    @manager.command(
+        name="add",
+        description="Add managers to a template.",
+        usage="<template> <list of users>",
+        aliases=["managers"],
+    )
+    async def p_manager_add(self, ctx, template, *, users):
+
+        # convert to User object
+        users_list = []
+        for user in users.split(" "):
+            try:
+                user = await UserConverter().convert(ctx, user)
+            except commands.UserNotFound as e:
+                return await ctx.send(f"❌ {e}")
+            users_list.append(user)
+
+        async with ctx.typing():
+            await self.manager_add(ctx, template, users_list)
+
+    async def manager_add(self, ctx, template_name: str, users: list):
+        # get the template
+        try:
+            template = tracked_templates.get_template(template_name)
+        except Exception as e:
+            return await ctx.send(f":x: {e}")
+        if template is None:
+            return await ctx.send(f"No template named `{template_name}` found.")
+
+        # check that the user can update this template
+        if (
+            template.owner_id != ctx.author.id
+            and ctx.author.id not in tracked_templates.progress_admins
+        ):
+            return await ctx.send(":x: You cannot edit a template that you don't own.")
+        if isinstance(template, Combo):
+            return await ctx.send(":x: You cannot edit the combo.")
+
+        msg = "**Updates**\n"
+        for user in users:
+            if user.id == template.owner_id:
+                msg += f"❌ User <@{user.id}> is already the template owner\n"
+            else:
+                nb_added = await db_templates.add_template_manager(template, user.id)
+                if nb_added > 0:
+                    msg += f"✅ User <@{user.id}> added as template manager\n"
+                else:
+                    msg += f"❌ User <@{user.id}> is already template manager\n"
+
+        embed = disnake.Embed(title=f"Template {template.name} updated", color=0x66C5CC)
+        embed.description = msg
+
+        current_managers = await db_templates.get_template_managers(template)
+        embed.description += "\n**Current manager(s)**\n" + (
+            ", ".join([f"<@{id}>" for id in current_managers])
+            if current_managers
+            else "No managers :'("
+        )
+
+        await ctx.send(embed=embed)
+
+    @_manager.sub_command(name="delete")
+    async def _manager_delete(
+        self,
+        inter: disnake.AppCmdInter,
+        template: str = commands.Param(autocomplete=autocomplete_user_templates),
+        user: disnake.User = commands.Param(),
+    ):
+        """Delete a manager from a template.
+
+        Parameters
+        ----------
+        template: The name of the template you want to delete managers.
+        user: The user you want to delete from the managers."""
+        await inter.response.defer()
+        await self.manager_delete(inter, template, [user])
+
+    @manager.command(
+        name="delete",
+        description="Delete managers from a template.",
+        usage="<template> <list of users>",
+        aliases=["remove"],
+    )
+    async def p_manager_delete(self, ctx, template, *, users):
+
+        # convert to User object
+        users_list = []
+        for user in users.split(" "):
+            try:
+                user = await UserConverter().convert(ctx, user)
+            except commands.UserNotFound as e:
+                return await ctx.send(f"❌ {e}")
+            users_list.append(user)
+
+        async with ctx.typing():
+            await self.manager_delete(ctx, template, users_list)
+
+    async def manager_delete(self, ctx, template_name: str, users: list):
+        # get the template
+        try:
+            template = tracked_templates.get_template(template_name)
+        except Exception as e:
+            return await ctx.send(f":x: {e}")
+        if template is None:
+            return await ctx.send(f"No template named `{template_name}` found.")
+
+        # check that the user can update this template
+        if (
+            template.owner_id != ctx.author.id
+            and ctx.author.id not in tracked_templates.progress_admins
+        ):
+            return await ctx.send(":x: You cannot edit a template that you don't own.")
+        if isinstance(template, Combo):
+            return await ctx.send(":x: You cannot edit the combo.")
+
+        msg = "**Updates**\n"
+        for user in users:
+            nb_deleted = await db_templates.delete_template_manager(template, user.id)
+            if nb_deleted > 0:
+                msg += f"✅ User <@{user.id}> deleted from template managers\n"
+            else:
+                msg += f"❌ User <@{user.id}> is not a template manager\n"
+
+        embed = disnake.Embed(title=f"Template {template.name} updated", color=0x66C5CC)
+        embed.description = msg
+
+        current_managers = await db_templates.get_template_managers(template)
+        embed.description += "\n**Current manager(s)**\n" + (
+            ", ".join([f"<@{id}>" for id in current_managers])
+            if current_managers
+            else "no managers :'("
+        )
+
+        await ctx.send(embed=embed)
 
 
 pos_speed_palette = get_gradient_palette(["#ffffff", "#70dd13", "#31a117"], 101)

@@ -292,7 +292,10 @@ class Progress(commands.Cog):
                 oldest_record_time_str = "`< 5 min ago`"
 
             info_text += f"• Owner: <@{template.owner_id}>\n"
-            manager_ids = await db_templates.get_template_managers(template)
+            if isinstance(template, Combo):
+                manager_ids = []
+            else:
+                manager_ids = await db_templates.get_template_managers(template)
             if manager_ids:
                 info_text_expanded = (
                     info_text

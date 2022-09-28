@@ -566,6 +566,9 @@ class TemplateManager:
         if not old_temp:
             raise ValueError(f"No template named `{current_name}` found.")
 
+        if isinstance(old_temp, Combo):
+            raise ValueError("You cannot edit the combo.")
+
         # check if the user can update the template
         if (
             old_temp.owner_id != command_user_id
@@ -582,8 +585,6 @@ class TemplateManager:
                     raise ValueError(
                         "Only the template owner can transfer the template's ownership."
                     )
-        if isinstance(old_temp, Combo):
-            raise ValueError("You cannot edit the combo.")
 
         if new_url:
             new_temp = await get_template_from_url(new_url)

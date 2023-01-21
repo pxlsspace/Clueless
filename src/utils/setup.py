@@ -16,15 +16,19 @@ from utils.pxls.websocket_client import WebsocketClient
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 load_dotenv()
 
-VERSION = "2.8.0"
+VERSION = "2.8.1"
 BOT_INVITE = os.getenv("BOT_INVITE")
 SERVER_INVITE = os.getenv("SERVER_INVITE")
+
+# pxls URLs
+PXLS_URL = os.getenv("PXLS_URL")
+PXLS_URL_API = os.getenv("PXLS_URL_API")
 
 # database connection
 db_conn = DbConnection()
 
 # connection with the pxls API
-stats = PxlsStatsManager(db_conn)
+stats = PxlsStatsManager(db_conn, PXLS_URL_API)
 
 # default prefix
 DEFAULT_PREFIX = ">"
@@ -37,8 +41,8 @@ db_templates = DbTemplateManager(db_conn)
 db_canvas = DbCanvasManager(db_conn)
 
 # websocket
-uri = "wss://pxls.space/ws"
-ws_client = WebsocketClient(uri, stats)
+ws_uri = os.getenv("PXLS_WEBSOCKET")
+ws_client = WebsocketClient(ws_uri, stats)
 
 # guild IDs
 test_server_id = os.getenv("TEST_SERVER_ID")

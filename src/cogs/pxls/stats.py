@@ -17,7 +17,7 @@ from utils.discord_utils import (
 )
 from utils.plot_utils import matplotlib_to_plotly
 from utils.pxls.cooldown import get_best_possible
-from utils.setup import db_conn, db_stats, db_users, stats
+from utils.setup import PXLS_URL, db_conn, db_stats, db_users, stats
 from utils.time_converter import format_datetime, round_minutes_down, td_format
 from utils.utils import make_progress_bar
 
@@ -178,7 +178,7 @@ class PxlsStats(commands.Cog):
         )
 
         # create an embed with all the infos
-        emb = disnake.Embed(title="Pxls.space Stats", color=0x66C5CC)
+        emb = disnake.Embed(title="Pxls Stats", color=0x66C5CC)
         emb.add_field(name="**General Stats**", value=general_stats_text, inline=False)
         emb.add_field(name="**Canvas Info**", value=info_text, inline=False)
         emb.add_field(name="**Canvas Stats**", value=canvas_stats_text, inline=False)
@@ -407,7 +407,7 @@ class PxlsStats(commands.Cog):
                 embed_color = 0x747F8D
 
         # get the profile page
-        profile_url = "https://pxls.space/profile/{}".format(name)
+        profile_url = "{}/profile/{}".format(PXLS_URL, name)
 
         description = f"**Status**: {status_emoji} `{status}`\n"
         if session_start_str is not None:

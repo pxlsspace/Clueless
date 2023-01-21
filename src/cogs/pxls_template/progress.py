@@ -42,7 +42,7 @@ from utils.pxls.template_manager import (
     make_before_after_gif,
     parse_template,
 )
-from utils.setup import db_stats, db_templates, db_users, imgur_app, stats
+from utils.setup import PXLS_URL, db_stats, db_templates, db_users, imgur_app, stats
 from utils.table_to_image import table_to_image
 from utils.time_converter import (
     format_datetime,
@@ -926,8 +926,8 @@ class Progress(commands.Cog):
                             )
                     embed.description += f"Filter: {' + '.join(filter_str_list)}\n"
                 if coords:
-                    embed.description += "Coordinates Filter: [`({0}, {1})`](https://pxls.space/#x={0}&y={1}&scale=20)\n".format(
-                        x, y
+                    embed.description += "Coordinates Filter: [`({0}, {1})`]({2}/#x={0}&y={1}&scale=20)\n".format(
+                        x, y, PXLS_URL
                     )
                 embed.description += f"Total Templates: `{len(table)}`"
                 if last_updated:

@@ -22,7 +22,7 @@ from utils.pxls.archives import (
     get_canvas_image,
     get_user_placemap,
 )
-from utils.setup import db_canvas, db_users, stats
+from utils.setup import PXLS_URL, db_canvas, db_users, stats
 
 logger = get_logger(__name__)
 
@@ -162,7 +162,7 @@ class Placemap(commands.Cog):
                 log_key = check_key(log_key)
             except ValueError as e:
                 return await modal_inter.response.send_message(
-                    f":x: {e}\nYou can find your log keys here: https://pxls.space/profile?action=data"
+                    f":x: {e}\nYou can find your log keys here: {PXLS_URL}/profile?action=data"
                 )
 
             await modal_inter.response.defer()

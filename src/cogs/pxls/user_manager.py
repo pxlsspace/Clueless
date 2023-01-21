@@ -15,7 +15,7 @@ from utils.font.font_manager import DEFAULT_FONT, get_all_fonts, get_allowed_fon
 from utils.image.image_utils import hex_str_to_int
 from utils.plot_utils import get_theme, theme_list
 from utils.pxls.archives import check_canvas_code, check_key
-from utils.setup import db_canvas, db_users
+from utils.setup import PXLS_URL, db_canvas, db_users
 from utils.time_converter import format_timezone
 from utils.timezoneslib import get_timezone
 from utils.utils import chunk
@@ -303,8 +303,8 @@ class UserManager(commands.Cog):
             color=0x66C5CC,
             description="Set your log keys to access your stats on past canvases.",
         )
-        instructions = """
-        1. Go to https://pxls.space/profile?action=data
+        instructions = f"""
+        1. Go to {PXLS_URL}/profile?action=data
         2. Copy a log key (512 characters)
         3. Click the `[Add Key]` button
         4. Enter the canvas code and paste the log key
@@ -476,7 +476,11 @@ class UserManager(commands.Cog):
 
     @user.sub_command(name="unsetkey")
     async def _unsetkey(
-        self, inter, canvas_code: str = commands.Param(name="canvas-code", autocomplete=autocomplete_log_canvases)
+        self,
+        inter,
+        canvas_code: str = commands.Param(
+            name="canvas-code", autocomplete=autocomplete_log_canvases
+        ),
     ):
         """Delete your key from the bot.
 

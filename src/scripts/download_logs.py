@@ -12,14 +12,14 @@ from bs4 import BeautifulSoup
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
-from utils.setup import DbCanvasManager, DbConnection  # noqa: E402
+from utils.setup import PXLS_URL, DbCanvasManager, DbConnection  # noqa: E402
 from utils.utils import get_content  # noqa: E402
 
 basepath = os.path.dirname(__file__)
 CANVASES_FOLDER = os.path.abspath(
     os.path.join(basepath, "..", "..", "resources", "canvases")
 )
-LOGS_URL = "https://pxls.space/extra/logs/"
+LOGS_URL = f"{PXLS_URL}/extra/logs/"
 
 
 def sizeof_fmt(num, suffix="B"):

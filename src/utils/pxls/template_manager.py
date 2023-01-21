@@ -23,7 +23,7 @@ from utils.image.gif_saver import save_transparent_gif
 from utils.image.image_utils import highlight_image
 from utils.log import get_logger
 from utils.pxls.template import get_rgba_palette, reduce
-from utils.setup import db_templates, stats
+from utils.setup import PXLS_URL, db_templates, stats
 from utils.time_converter import round_minutes_down, td_format
 from utils.utils import get_content, in_executor
 
@@ -274,7 +274,8 @@ class Template:
             y = self.oy + self.height // 2
             scale = default_scale
 
-        template_url = "https://pxls.space/#x={}&y={}&scale={}&template={}&ox={}&oy={}&tw={}{}".format(
+        template_url = "{}/#x={}&y={}&scale={}&template={}&ox={}&oy={}&tw={}{}".format(
+            PXLS_URL,
             x,
             y,
             scale,

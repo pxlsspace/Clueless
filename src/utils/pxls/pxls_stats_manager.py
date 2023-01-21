@@ -15,8 +15,8 @@ logger = get_logger(__name__)
 class PxlsStatsManager:
     """A helper to get data from pxls.space/stats"""
 
-    def __init__(self, db_conn):
-        self.base_url = "https://pxls.space/"
+    def __init__(self, db_conn, pxls_url_api):
+        self.base_url = pxls_url_api + "/"
         self.stats_json = {}
         self.board_info = {}
         self.current_canvas_code = None

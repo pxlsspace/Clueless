@@ -31,7 +31,7 @@ from utils.pxls.template import (
     templatize,
 )
 from utils.pxls.template_manager import parse_template
-from utils.setup import db_stats, db_users, imgur_app, stats
+from utils.setup import PXLS_URL, db_stats, db_users, imgur_app, stats
 from utils.time_converter import td_format
 from utils.utils import get_content
 
@@ -497,7 +497,8 @@ def make_template_url(template_image_url, width, height, ox=None, oy=None, title
             x = y = 500
         t_ox = int(x - width / 2)
         t_oy = int(y - height / 2)
-    return "https://pxls.space/#x={}&y={}&scale=5&template={}&ox={}&oy={}&tw={}{}".format(
+    return "{}/#x={}&y={}&scale=5&template={}&ox={}&oy={}&tw={}{}".format(
+        PXLS_URL,
         x,
         y,
         urllib.parse.quote(template_image_url, safe=""),

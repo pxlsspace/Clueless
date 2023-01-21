@@ -146,7 +146,7 @@ class Clock(commands.Cog):
         except Exception:
             logger.exception("Couldn't send snapshots:")
 
-        logger.info("All stats updated.")
+        logger.debug("All stats updated.")
 
     @commands.command(hidden=True)
     @commands.is_owner()

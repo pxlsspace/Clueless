@@ -45,7 +45,7 @@ def get_logger(name, level="DEBUG", file="clueless.log", in_console=True):
     if in_console:
         # formatter
         console_format = "[%(asctime)s] [%(levelname)s] %(name)s: %(message)s"
-        console_formatter = logging.Formatter(console_format, "%H:%M:%S")
+        console_formatter = logging.Formatter(console_format, datetime_format)
 
         # stdout
         console_handler = logging.StreamHandler(sys.stdout)
@@ -70,7 +70,7 @@ def setup_loggers():
     os.makedirs(LOG_DIR, exist_ok=True)
 
     # Silence irrelevant loggers
-    get_logger(name="disnake", level="INFO", file=None)
+    get_logger(name="disnake", level="WARNING", file=None)
     get_logger(name="disnake.http", level="WARNING", file=None)
     get_logger(name="disnake.gateway", level="WARNING", file=None)
     get_logger(name="websockets", level="ERROR", file=None)

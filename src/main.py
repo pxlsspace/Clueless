@@ -467,9 +467,10 @@ if __name__ == "__main__":
                     logger.exception(f"Failed to load extension {extension}")
     try:
         # __start__
-        logger.debug("Starting bot ...")
+        logger.info("Starting bot ...")
         bot.run(os.environ.get("DISCORD_TOKEN"))
     finally:
         # __exit__
+        logger.info("Bot shut down.")
         logger.critical("Bot shut down.")
         close_loggers()

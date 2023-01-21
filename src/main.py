@@ -402,7 +402,7 @@ async def on_guild_join(guild: disnake.Guild):
 
     # make the embed and send it in the log channel
     embed = disnake.Embed(
-        title="**Joined a new server!**",
+        title=f"**Joined a new server!** ({len(bot.guilds)}/100)",
         color=0x66C5CC,
         timestamp=guild.created_at,
     )
@@ -430,7 +430,7 @@ async def on_guild_remove(guild):
 
     # make the embed and send it in the log channel
     embed = disnake.Embed(
-        title="**Left a server**",
+        title=f"**Left a server...** ({len(bot.guilds)}/100)",
         color=0xFF3621,
         timestamp=guild.created_at,
     )

@@ -107,6 +107,9 @@ class DbTemplateManager:
         sql = "DELETE from template_stat WHERE template_id = ?"
         await self.db.sql_update(sql, template_id)
 
+        sql = "DELETE from template_manager WHERE template_id = ?"
+        await self.db.sql_update(sql, template_id)
+
         sql = "DELETE from template WHERE id = ?"
         await self.db.sql_update(sql, template_id)
 

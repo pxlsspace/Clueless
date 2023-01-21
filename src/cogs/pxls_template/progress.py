@@ -1939,14 +1939,14 @@ class Progress(commands.Cog):
 
         msg = "**Updates**\n"
         for user in users:
-            if user.id == template.owner_id:
-                msg += f"❌ User <@{user.id}> is already the template owner\n"
+            if user.bot:
+                msg += f"❌ <@{user.id}>: cannot add a bot\n"
             else:
                 nb_added = await db_templates.add_template_manager(template, user.id)
                 if nb_added > 0:
-                    msg += f"✅ User <@{user.id}> added as template manager\n"
+                    msg += f"✅ <@{user.id}>: added as template manager\n"
                 else:
-                    msg += f"❌ User <@{user.id}> is already template manager\n"
+                    msg += f"❌ <@{user.id}>: already template manager\n"
 
         embed = disnake.Embed(title=f"Template {template.name} updated", color=0x66C5CC)
         embed.description = msg

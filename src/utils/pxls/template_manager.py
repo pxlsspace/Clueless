@@ -639,6 +639,10 @@ class TemplateManager:
                 )
             new_temp.name = new_name
         if new_owner:
+            # check that the new owner isn't a bot
+            if new_owner.bot:
+                raise ValueError("You cannot transfer the template to a bot.")
+            disnake.User.bot
             new_owner_id = new_owner.id
             new_temp.owner_id = new_owner_id
         new_temp.hidden = False

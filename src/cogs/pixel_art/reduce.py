@@ -14,7 +14,7 @@ from utils.discord_utils import (
     image_to_file,
 )
 from utils.image.image_utils import get_colors_from_input
-from utils.pxls.template import get_rgba_palette, reduce
+from utils.pxls.template import ColorDist, get_rgba_palette, reduce
 from utils.setup import stats
 
 
@@ -35,6 +35,7 @@ class Reduce(commands.Cog):
             default=None,
             choices={"Accurate (default)": "accurate", "Fast (faster)": "fast"},
         ),
+        dither: float = commands.Param(default=0, le=1, ge=0),
     ):
         """Reduce an image's colors to fit a specific palette.
 
@@ -44,22 +45,25 @@ class Reduce(commands.Cog):
         image_file: An image file you want to templatize.
         palette: A list of colors (name or hex) seprated by a comma (!<color> = remove color). (default: pxls)
         matching: The color matching algorithm to use. (default: accurate)
+        dither: The strength of the dithering, between 0-1. (default: 0)
         """
         if image_file:
             image_link = image_file.url
         await inter.response.defer()
-        await self.reduce(inter, image_link, palette, matching)
+        matching = ColorDist.EUCLIDEAN if matching == "fast" else ColorDist.CIEDE2000
+        await self.reduce(inter, image_link, palette, matching, dither)
 
     @commands.command(
         name="reduce",
         description="Reduce an image's colors to fit a specific palette.",
-        usage="<image|url> [palette] [-fast]",
+        usage="<image|url> [palette] [-fast] [-dither]",
         help="""
             - `<image|url>`: an image URL or an attached file
             - `[palette]`: a list of color (name or hex) separated by a comma. (default: pxls (current))
             There are also built-in palettes: pxls, pxls_old, c1, grayscale, browns, yellows, greens, teals, blues, pinks, reds
             Note: Use `!` in front of a color to remove it.
             - `[-fast]`: to use the fast (but less accurate) color matching algorithm
+            - `[-dither]`: strength of the dithering, between 0 and 1. 0 means no dithering.
         """,
     )
     async def p_reduce(self, ctx, *args):
@@ -67,6 +71,7 @@ class Reduce(commands.Cog):
         parser = MyParser(add_help=False)
         parser.add_argument("palette", action="store", nargs="*")
         parser.add_argument("-fast", action="store_true", required=False, default=False)
+        parser.add_argument("-dither", action="store", default=0, type=float)
 
         try:
             parsed_args, unknown = parser.parse_known_args(args)
@@ -80,16 +85,12 @@ class Reduce(commands.Cog):
             palette = " ".join(palette)
         else:
             palette = None
-        matching = "fast" if parsed_args.fast else "accurate"
+        matching = ColorDist.EUCLIDEAN if parsed_args.fast else ColorDist.CIEDE2000
+        dither = min(1, max(0, parsed_args.dither))
         async with ctx.typing():
-            await self.reduce(
-                ctx,
-                input_url,
-                palette,
-                matching,
-            )
+            await self.reduce(ctx, input_url, palette, matching, dither)
 
-    async def reduce(self, ctx, image_url, palette, matching):
+    async def reduce(self, ctx, image_url, palette, matching, dither):
         # get the image from the message
         try:
             img, url = await get_image_from_message(ctx, image_url, accept_emojis=False)
@@ -109,9 +110,6 @@ class Reduce(commands.Cog):
                     color=disnake.Color.red(),
                 )
             )
-        # check on the matching
-        if matching is None:
-            matching = "accurate"  # default = 'accurate'
 
         # get the palette
         if not palette:
@@ -128,8 +126,9 @@ class Reduce(commands.Cog):
 
         # reduce the image to the pxls palette
         img_array = np.array(img)
+        rgb_palette = rgba_palette[:, :3]
         reduced_array = await self.bot.loop.run_in_executor(
-            None, reduce, img_array, rgba_palette, matching
+            None, reduce, img_array, rgb_palette, matching, dither
         )
 
         total_amount = np.sum(reduced_array != 255)

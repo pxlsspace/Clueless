@@ -212,7 +212,7 @@ def reduce(array: np.ndarray, palette: np.ndarray, colordist: ColorDist, dither:
     Parameters
     ----------
     array: a numpy array of 0-255 RGBA colors (shape (h, w, 4))
-    palette: a numpy array (shape (h, w, 1))
+    palette: a numpy array (shape (N, 3))
     colordist: the algorithm to use to match the colors
     dither: a 0-1 float indicating dithering strength
     """

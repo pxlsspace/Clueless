@@ -24,6 +24,7 @@ from utils.discord_utils import (
 from utils.image.image_utils import get_colors_from_input, remove_white_space
 from utils.pxls.template import (
     STYLES,
+    ColorDist,
     get_rgba_palette,
     get_style,
     parse_style_image,
@@ -142,6 +143,7 @@ class Template(commands.Cog):
             default=None,
             autocomplete=autocomplete_builtin_palettes,
         ),
+        dither: float = commands.Param(default=0, le=1, ge=0),
     ):
         """Generate a template link from an image.
 
@@ -158,12 +160,25 @@ class Template(commands.Cog):
         nocrop: If you don't want the template to be automatically cropped. (default: False)
         matching: The color matching algorithm to use.
         palette: A palette name or list of colors (name or hex) seprated by a comma. (default: pxls)
+        dither: The strength of the dithering, between 0-1. (default: 0)
         """
         if image_file:
             image_link = image_file.url
         await inter.response.defer()
+        matching = ColorDist.EUCLIDEAN if matching == "fast" else ColorDist.CIEDE2000
         await self.template(
-            inter, image_link, title, style, glow, ox, oy, host, nocrop, matching, palette
+            inter,
+            image_link,
+            title,
+            style,
+            glow,
+            ox,
+            oy,
+            host,
+            nocrop,
+            matching,
+            palette,
+            dither,
         )
 
     @_template.autocomplete("style")
@@ -174,7 +189,7 @@ class Template(commands.Cog):
     @commands.command(
         name="template",
         description="Generate a template link from an image.",
-        usage="<image|url> [-style <style>] [-title <title>] [-glow] [-ox <ox>] [-oy <oy>] [-nocrop] [-matching fast|accurate] [-palette ...]",
+        usage="<image|url> [-style <style>] [-title <title>] [-glow] [-ox <ox>] [-oy <oy>] [-nocrop] [-matching fast|accurate] [-palette ...] [-dither]",
         help="""- `<image|url>`: an image URL, attached file or template link
               - `[-title <title>]`: the template title
               - `[-style <style>]`: the name or URL of a template style (use `>styles` to see the list)
@@ -184,7 +199,8 @@ class Template(commands.Cog):
               - `[-host discord|imgur]`: where to host the template image (default: discord)
               - `[-nocrop]`: if you don't want the template to be automatically cropped
               - `[-matching fast|accurate]`: the color matching algorithm to use
-              - `[-palette ...]`: the palette to use for the template (palette name or list of colors seprated by a comma.)""",
+              - `[-palette ...]`: the palette to use for the template (palette name or list of colors seprated by a comma.)
+              - `[-dither]`: strength of the dithering, between 0 and 1. 0 means no dithering.""",
         aliases=["templatize", "temp"],
     )
     async def p_template(self, ctx, *args):
@@ -200,6 +216,7 @@ class Template(commands.Cog):
         parser.add_argument("-nocrop", action="store_true", default=False)
         parser.add_argument("-matching", choices=["fast", "accurate"], required=False)
         parser.add_argument("-palette", action="store", nargs="*")
+        parser.add_argument("-dither", action="store", default=0, type=float)
 
         try:
             parsed_args = parser.parse_args(args)
@@ -207,6 +224,8 @@ class Template(commands.Cog):
             return await ctx.send(f"❌ {e}")
         url = parsed_args.url[0] if parsed_args.url else None
         palette = " ".join(parsed_args.palette) if parsed_args.palette else None
+        matching = ColorDist.EUCLIDEAN if parsed_args.matching else ColorDist.CIEDE2000
+        dither = min(1, max(0, parsed_args.dither))
         async with ctx.typing():
             await self.template(
                 ctx,
@@ -218,8 +237,9 @@ class Template(commands.Cog):
                 parsed_args.oy,
                 parsed_args.host,
                 parsed_args.nocrop,
-                parsed_args.matching,
+                matching,
                 palette,
+                dither,
             )
 
     @staticmethod
@@ -235,6 +255,7 @@ class Template(commands.Cog):
         nocrop=False,
         matching="fast",
         palette=None,
+        dither=0,
     ):
         # get the image from the message
         try:
@@ -338,8 +359,9 @@ class Template(commands.Cog):
         # reduce the image to the given palette
         img_array = np.array(img)
         loop = asyncio.get_running_loop()
+        rgb_palette = rgba_palette[:, :3]
         reduced_array = await loop.run_in_executor(
-            None, reduce, img_array, rgba_palette, matching
+            None, reduce, img_array, rgb_palette, matching, dither
         )
 
         # convert the image to a template style

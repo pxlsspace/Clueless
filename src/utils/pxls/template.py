@@ -1,6 +1,7 @@
 # code base by Nanineye#2417
 
 import os
+from enum import Enum
 
 import numpy as np
 from numba import jit
@@ -8,7 +9,7 @@ from numba.core import types
 from numba.typed import Dict
 from PIL import Image
 
-from utils.image.ciede2000 import ciede2000, rgb2lab
+from utils.image.ciede2000 import ciede2000, rgb2lab, rgb2srgb, srgb2rgb
 from utils.image.image_utils import hex_to_rgb
 from utils.log import get_logger
 from utils.setup import stats
@@ -140,60 +141,98 @@ def stylize(style, stylesize, palette, glow_opacity=0):
 @jit(
     nopython=True,
     cache=True,
-    locals={"color_bit": types.uint64, "mapped_color_idx": types.uint8},
+    fastmath=True,
+    locals={"color_key": types.uint64, "mapped_color_idx": types.uint8},
 )
-def _fast_reduce(array, palette, dist_func):
-    cache = Dict.empty(key_type=types.uint64, value_type=types.uint8)
-    res = np.empty(array.shape[:2], dtype=np.uint8)
+def _fast_reduce(array, palette_rgb, palette_dist, distance_func, dither=0.0):
+    height = array.shape[0]
     width = array.shape[1]
-    for idx in range(array.shape[0] * array.shape[1]):
+
+    # Use 0-1 color representation
+    array = array / 255
+
+    # Image to linear rgb space
+    for idx in range(width * height):
         i = idx // width
         j = idx % width
+        array[i, j, :3] = srgb2rgb(array[i, j, :3])
+
+    cache = Dict.empty(key_type=types.float64, value_type=types.uint8)
+    res = np.empty(array.shape[:2], dtype=np.uint8)
+
+    for idx in range(width * height):
+        i = idx // width
+        j = idx % width
+
         alpha = array[i, j, 3]
-        if alpha > 128:
-            color = array[i, j, :3]
-            color_bit = (color[0] << 16) + (color[1] << 8) + color[2]
-            if color_bit in cache:
-                mapped_color_idx = cache[color_bit]
+        if alpha > 0.5:
+            color_rgb = array[i, j, :3]
+            color_key = (color_rgb[0] * 100) + (color_rgb[1] * 10) + color_rgb[2]
+            if color_key in cache:
+                mapped_color_idx = cache[color_key]
             else:
-                mapped_color_idx = dist_func(color, palette)
-                cache[color_bit] = mapped_color_idx
+                mapped_color_idx = distance_func(color_rgb, palette_dist)
+
+            if dither > 0:
+                quant_error = color_rgb - palette_rgb[mapped_color_idx]
+
+                if i < height - 1:
+                    array[i + 1, j, :3] = np.clip(
+                        array[i + 1, j, :3] + dither * quant_error * 7 / 16, 0, 1
+                    )
+                if i > 0 and j < width - 1:
+                    array[i - 1, j + 1, :3] = np.clip(
+                        array[i - 1, j + 1, :3] + dither * quant_error * 3 / 16, 0, 1
+                    )
+                if j < width - 1:
+                    array[i, j + 1, :3] = np.clip(
+                        array[i, j + 1, :3] + dither * quant_error * 5 / 16, 0, 1
+                    )
+                if i < height - 1 and j < width - 1:
+                    array[i + 1, j + 1, :3] = np.clip(
+                        array[i + 1, j + 1, :3] + dither * quant_error * 1 / 16, 0, 1
+                    )
         else:
             mapped_color_idx = 255
+
         res[i, j] = mapped_color_idx
+
     return res
 
 
-def reduce(array: np.array, palette: np.array, matching="fast") -> np.array:
+class ColorDist(Enum):
+    EUCLIDEAN = 0
+    CIEDE2000 = 1
+
+
+def reduce(array: np.ndarray, palette: np.ndarray, colordist: ColorDist, dither: float):
     """Convert an image array of RGBA colors to an array of palette index
     matching the nearest color in the given palette
 
     Parameters
     ----------
-    array: a numpy array of RGBA colors (shape (h, w, 4))
+    array: a numpy array of 0-255 RGBA colors (shape (h, w, 4))
     palette: a numpy array (shape (h, w, 1))
-    matching: the algorithm to use to match the colors
-    (fast = Euclidean distance, accurate = CIEDE2000)
+    colordist: the algorithm to use to match the colors
+    dither: a 0-1 float indicating dithering strength
     """
-    matchings = ["fast", "accurate"]
-    msg = f"Unkown matching '{matching}', choose from: {', '.join(matchings)}"
-    assert matching in matchings, msg
 
-    # convert to array just in case
-    palette = np.asarray(palette, dtype=np.uint8)
-    array = np.asarray(array, dtype=np.uint8)
+    # Palette to 0-1 rgb
+    palette_srgb = np.array(palette) / 255
 
-    # Get rid of the alpha component
-    palette = palette[:, :3]
+    # Palette to linear rgb space
+    palette_rgb = np.array([srgb2rgb(c) for c in palette_srgb])
 
-    if matching == "fast":
-        dist_func = nearest_color_idx_euclidean
+    if colordist == ColorDist.EUCLIDEAN:
+        palette_dist = palette_srgb
+        distance_func = nearest_color_idx_euclidean
+    elif colordist == ColorDist.CIEDE2000:
+        palette_dist = np.array([rgb2lab(c) for c in palette_rgb])
+        distance_func = nearest_color_idx_ciede2000
     else:
-        dist_func = nearest_color_idx_ciede2000
-        palette = np.asarray([rgb2lab(color) for color in palette])
+        raise ValueError("Chose a valid color distance algorithm")
 
-    res = _fast_reduce(array, palette, dist_func)
-    return res
+    return _fast_reduce(array.copy(), palette_rgb, palette_dist, distance_func, dither)
 
 
 @jit(nopython=True, cache=True)
@@ -203,7 +242,7 @@ def nearest_color_idx_ciede2000(color, palette) -> int:
 
     Parameters
     ----------
-    color: a rgb ndarray of uint8 of shape (3,)
+    color: a linear rgb ndarray in 0-1 of shape (3,)
     palette: a lab ndarray of shape (palette_size,3)
     """
     lab = rgb2lab(color)
@@ -221,15 +260,15 @@ def nearest_color_idx_ciede2000(color, palette) -> int:
 @jit(nopython=True, cache=True)
 def nearest_color_idx_euclidean(color, palette) -> int:
     """
-    Find the nearest color to `color` in `palette` using the Euclidean distance
+    Find the nearest color to `color` in `palette` using the Euclidean distance in srgb space
 
-        Parameters
+    Parameters
     ----------
-    color: a rgb ndarray of uint8 of shape (3,)
-    palette: a rgb ndarray of uint8 of shape (palette_size,3)
+    color: a linear rgb ndarray in 0-1 of shape (3,)
+    palette: a srgb ndarray in 0-1 of shape (palette_size,3)
 
     """
-    distances = np.sum((palette - color) ** 2, axis=1)
+    distances = np.sum((palette - rgb2srgb(color)) ** 2, axis=1)
     return np.argmin(distances)
 
 

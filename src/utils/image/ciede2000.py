@@ -3,17 +3,37 @@ from numba import jit
 
 
 @jit(nopython=True, cache=True)
-def rgb2xyz(rgb):
-    """Converts RGB pixel array to XYZ format."""
-    rgb = rgb.astype(np.float64)
+def srgb2rgb(srgb):
+    """Converts sRGB pixel array to linear RGB format"""
     for i in range(3):
-        c = rgb[i]
-        c = c / 255.0
+        c = srgb[i]
         if c > 0.04045:
             c = ((c + 0.055) / 1.055) ** 2.4
         else:
             c = c / 12.92
-        rgb[i] = c * 100
+        srgb[i] = c
+    return srgb
+
+
+@jit(nopython=True, cache=True)
+def rgb2srgb(rgb):
+    """Converts linear RGB pixel array to sRGB format"""
+    srgb = rgb.astype(np.float64)
+    for i in range(3):
+        c = srgb[i]
+        if c > 0.0031308:
+            c = 1.055 * c ** (1 / 2.4) - 0.055
+        else:
+            c = c * 12.92
+        srgb[i] = c
+    return srgb
+
+
+@jit(nopython=True, cache=True)
+def rgb2xyz(rgb):
+    """Converts linear RGB pixel array to XYZ format."""
+    rgb = rgb.astype(np.float64)
+    rgb *= 100
     xyz = np.zeros((3), dtype=np.float64)
     xyz[0] = rgb[0] * 0.4124 + rgb[1] * 0.3576 + rgb[2] * 0.1805
     xyz[1] = rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722

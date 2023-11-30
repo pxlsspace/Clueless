@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.env
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+ecosystem.config.js
+*.mp4
+env/
+logs/
+*.log
+resources/

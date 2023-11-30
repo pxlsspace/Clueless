@@ -44,7 +44,9 @@ class Utility(commands.Cog):
         await ctx.send(f"pong! (bot latency: `{round(self.bot.latency*1000,2)}` ms)")
 
     @commands.command(usage="[prefix]", description="Change or display the bot prefix.")
-    @commands.has_permissions(administrator=True)
+    @commands.check_any(
+        commands.is_owner(), commands.has_permissions(administrator=True)
+    )
     async def prefix(self, ctx, prefix=None):
         if prefix is None:
             prefix = ctx.prefix

@@ -258,8 +258,7 @@ class PxlsStatsManager:
     async def query(self, endpoint, content_type):
         url = self.base_url + endpoint
 
-        pxls_validate = str(uuid.uuid4())
-        cookies = {"pxls-validate": pxls_validate}
+        cookies = {}
         return await get_content(url, content_type, cookies=cookies)
 
     def get_cd(self, online_count: int, multiplier: float = None):

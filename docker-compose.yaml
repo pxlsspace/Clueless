@@ -1,0 +1,10 @@
+services:
+  bot:
+    build:
+      context: .
+    volumes:
+      - ./database.db:/usr/app/database.db
+      - ./resources:/usr/app/resources
+    env_file:
+      - .env
+    command: poetry run python src/main.py

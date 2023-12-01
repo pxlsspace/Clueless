@@ -203,7 +203,7 @@ class DbStatsManager:
         # Find all the records between the 2 dates
         # if it's more than 1000, shorten the record list to only have 1000 values
         records = await self.db.sql_select(
-            "SELECT * FROM record WHERE datetime BETWEEN ? AND ? ORDER BY datetime",
+            "SELECT * FROM record WHERE datetime BETWEEN ? AND ? AND canvas_code IS {} ORDER BY datetime".format(f"'{canvas_to_select}'" if canvas_to_select else "NOT NULL"),
             (record1["datetime"], record2["datetime"]),
         )
         records = [r["record_id"] for r in records]
@@ -271,9 +271,9 @@ class DbStatsManager:
         records = await self.db.sql_select(
             """
             SELECT * FROM record
-            WHERE datetime BETWEEN ? AND ?
+            WHERE datetime BETWEEN ? AND ? AND canvas_code IS {}
             GROUP BY strftime(?, datetime)
-            """,
+            """.format(f"'{canvas_to_select}'" if canvas_to_select else "NOT NULL"),
             (record1["datetime"], record2["datetime"], groupby),
         )
         nb_data_max = len(records) * len(user_list)
@@ -293,9 +293,11 @@ class DbStatsManager:
             JOIN pxls_name ON pxls_name.pxls_name_id = pxls_user_stat.pxls_name_id
             WHERE name IN ({1})
                 AND pxls_user_stat.record_id BETWEEN ? AND ?
+                AND canvas_code IS {2}
             GROUP BY strftime(?,datetime), name""".format(
             "canvas_count" if canvas_opt else "alltime_count",
             ", ".join("?" for u in user_list),
+            f"'{canvas_to_select}'" if canvas_to_select else "NOT NULL",
         )
 
         rows = await self.db.sql_select(

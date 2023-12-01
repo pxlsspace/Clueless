@@ -327,10 +327,10 @@ class Progress(commands.Cog):
         if is_tracked:
             eta, eta_speed = await template.get_eta()
             if eta == "done" and nb_virgin_abuse == 0:
-                clap_emoji = "<a:HyperClapCat:976892768209219624>"
+                clap_emoji = "<a:hyperclapcat:1180111461008289832>"
                 progress_text += f"• ETA: {clap_emoji} `Done!` {clap_emoji}\n"
             elif eta == "done":
-                clap_emoji = "<a:clapcat:976892767705903155>"
+                clap_emoji = "<a:clapcat:1180111353478905906>"
                 progress_text += f"• ETA: {clap_emoji} `Done!` {clap_emoji}\n"
             else:
                 progress_text += "• ETA: `{}`{}\n".format(
@@ -1684,7 +1684,7 @@ class Progress(commands.Cog):
 
         # download the snapshots
         embed = disnake.Embed(color=0x66C5CC, title="Timelapse")
-        embed.description = "<a:typing:675416675591651329> **Downloading snapshots**...\n"
+        embed.description = "<a:typing:1180111188642766958> **Downloading snapshots**...\n"
         m = await ctx.send(embed=embed)
         if m is None:
             m = await ctx.original_message()
@@ -1722,7 +1722,7 @@ class Progress(commands.Cog):
             return
 
         # crop the template area
-        embed.description = "✅ **Downloading the snapshots**... done!\n\n<a:typing:675416675591651329> **Cropping the snapshots**..."
+        embed.description = "✅ **Downloading the snapshots**... done!\n\n<a:typing:1180111188642766958> **Cropping the snapshots**..."
         await m.edit(embed=embed)
         frames = []
         for snapshot_image in snapshot_images:
@@ -1755,7 +1755,7 @@ class Progress(commands.Cog):
 
         embed.description = "✅ **Downloading the snapshots**... done!\n\n✅ **Cropping the snapshots**... done!"
         embed.description += (
-            "\n\n<a:typing:675416675591651329> **Saving and sending the GIF**..."
+            "\n\n<a:typing:1180111188642766958> **Saving and sending the GIF**..."
         )
         await m.edit(embed=embed)
         # combine the frames to make a GIF
@@ -1797,7 +1797,7 @@ class Progress(commands.Cog):
             embed.description = "✅ **Downloading the snapshots**... done!\n\n✅ **Cropping the snapshots**... done!"
             embed.description += "\n\n:x: **Saving and sending the GIF**... error\n(most likely the GIF is too big for discord's limit of 8MB)"
             embed.description += (
-                "\n\n<a:typing:675416675591651329> **Uploading to imgur**..."
+                "\n\n<a:typing:1180111188642766958> **Uploading to imgur**..."
             )
             await m.edit(embed=embed)
             try:

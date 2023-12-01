@@ -1,5 +1,6 @@
 import platform
 import time
+from sys import exit
 from datetime import datetime, timedelta, timezone
 
 import disnake
@@ -44,7 +45,9 @@ class Utility(commands.Cog):
         await ctx.send(f"pong! (bot latency: `{round(self.bot.latency*1000,2)}` ms)")
 
     @commands.command(usage="[prefix]", description="Change or display the bot prefix.")
-    @commands.has_permissions(administrator=True)
+    @commands.check_any(
+        commands.is_owner(), commands.has_permissions(administrator=True)
+    )
     async def prefix(self, ctx, prefix=None):
         if prefix is None:
             prefix = ctx.prefix
@@ -246,6 +249,12 @@ class Utility(commands.Cog):
             except Exception as e:
                 return await ctx.send(f"❌ SQL error: ```{e}```")
         return await ctx.send(f"Done! ({nb_lines} lines affected)")
+
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def restart(self, ctx):
+        await ctx.send("Restarting now...")
+        exit()
 
     @commands.slash_command(name="botinfo")
     async def _botinfo(self, inter: disnake.AppCmdInter):

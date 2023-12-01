@@ -1,4 +1,5 @@
 FROM python:3.9-slim
+LABEL org.opencontainers.image.source="https://github.com/pxlsspace/Clueless"
 ENV PYTHONFAULTHANDLER=1 \
   PYTHONUNBUFFERED=1 \
   PYTHONHASHSEED=random \

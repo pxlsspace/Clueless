@@ -1,5 +1,6 @@
 import platform
 import time
+from sys import exit
 from datetime import datetime, timedelta, timezone
 
 import disnake
@@ -248,6 +249,12 @@ class Utility(commands.Cog):
             except Exception as e:
                 return await ctx.send(f"❌ SQL error: ```{e}```")
         return await ctx.send(f"Done! ({nb_lines} lines affected)")
+
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def restart(self, ctx):
+        await ctx.send("Restarting now...")
+        exit()
 
     @commands.slash_command(name="botinfo")
     async def _botinfo(self, inter: disnake.AppCmdInter):

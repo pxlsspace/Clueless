@@ -1,9 +1,8 @@
 services:
-  bot:
-    build:
-      context: .
+  clueless:
+    image: ghcr.io/pxlsspace/clueless:latest
     volumes:
-      - ./database.db:/usr/app/database.db
+      - ./database.db:/usr/app/src/database/database.db
       - ./resources:/usr/app/resources
     env_file:
       - .env

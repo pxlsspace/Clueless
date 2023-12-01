@@ -173,7 +173,7 @@ class Placemap(commands.Cog):
         m = await ctx.send(
             embed=disnake.Embed(
                 title=f"Canvas {canvas_code} Placemap",
-                description="<a:catload:957251966826860596> **Generating your placemap...**\n*(this can take a while)*",
+                description="<a:catload:1180111592302587904> **Generating your placemap...**\n*(this can take a while)*",
                 color=0x66C5CC,
             )
         )

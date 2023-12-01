@@ -17,12 +17,12 @@ from utils.setup import db_canvas, db_stats, db_templates, stats
 from utils.utils import get_content, in_executor
 
 STATUS_EMOJIS = {
-    "bot": "<a:status_botting:955632660653408266>",
-    "fast": "<:status_fast:955632659739078747>",
-    "online": "<:status_online:955632659810381864>",
-    "idle": "<:status_idle:955632660238204950>",
-    "offline": "<:status_offline:955632659952979998>",
-    "inactive": "<:status_inactive:955632659743248434>",
+    "bot": "<a:status_botting:1180106162402770974>",
+    "fast": "<:status_fast:1180097845680934982>",
+    "online": "<:status_online:1180106314790207528>",
+    "idle": "<:status_idle:1180097889272332298>",
+    "offline": "<:status_offline:1180097871597535294>",
+    "inactive": "<:status_inactive:1180097880493654146>",
 }
 
 

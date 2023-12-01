@@ -240,11 +240,11 @@ async def on_command_error(ctx, error):
                 embed = disnake.Embed(
                     color=0xFF4747,
                     title="Unexpected error.",
-                    description="<a:an_error_occurred:955625218968272947> An unexpected error occurred, please contact the bot developer if the problem persists.",
+                    description="<a:BadBot:1180097833144176681> An unexpected error occurred, please contact the bot developer if the problem persists.",
                 )
                 await ctx.send(embed=embed, ephemeral=True)
         else:
-            await ctx.message.add_reaction("<a:an_error_occurred:955625218968272947>")
+            await ctx.message.add_reaction("<a:BadBot:1180097833144176681>")
     except Exception:
         pass
 
@@ -356,20 +356,20 @@ async def on_message(message):
         if message.content == ">_<":
             return await message.channel.send("<_>")
         if message.content == "aa":
-            await message.channel.send("<:watermeloneat:955627387666694155>")
+            await message.channel.send("<:watermeloneat:1180097879336026112>")
         if message.content == "AA":
-            await message.channel.send("<:watermelonDEATH:949447275753648268>")
+            await message.channel.send("<:watermelonDEATH:1180112043823595600>")
     except Exception:
         pass
 
     try:
         if bot.user in message.mentions:
             if "good bot" in message.content.lower():
-                await message.add_reaction("<a:GoodBot:955658963171565658>")
+                await message.add_reaction("<a:GoodBot:1180097830539493407>")
             elif "bad bot" in message.content.lower():
-                await message.add_reaction("<a:BadBot:955659116506935336>")
+                await message.add_reaction("<a:BadBot:1180097833144176681>")
             else:
-                await message.add_reaction("<:peepoPinged:943594603632816188>")
+                await message.add_reaction("<:peepoPinged:1180111884192587786>")
     except Exception:
         pass
     await bot.process_commands(message)

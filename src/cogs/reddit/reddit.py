@@ -85,17 +85,18 @@ class Reddit(commands.Cog, name="Image"):
         :param ctx: the discord context to send the message
         :param subreddit_name: the subreddit to get the image from
         :param title: the text to show with the image"""
-
-        start = time.time()
-        image_url, submission_url = await self.get_random_submission(subreddit_name)
-        if submission_url is None:
-            return await ctx.send("❌ No image found :(")
-        ex_time = time.time() - start
-        embed = self.format_embed(
-            submission_url, image_url, title, subreddit_name, ex_time
-        )
-
-        await ctx.send(embed=embed)
+        try:
+            start = time.time()
+            image_url, submission_url = await self.get_random_submission(subreddit_name)
+            if submission_url is None:
+                return await ctx.send("❌ No image found :(")
+            ex_time = time.time() - start
+            embed = self.format_embed(
+                submission_url, image_url, title, subreddit_name, ex_time
+            )
+            await ctx.send(embed=embed)
+        except Exception: 
+            await ctx.send("❌ Failed to query reddit for an image. We're possibly being blocked :-()")
 
     @commands.cooldown(1, 2)
     @commands.command(

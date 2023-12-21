@@ -18,7 +18,7 @@ from utils.setup import DbConnection, DbStatsManager  # noqa: E402
 # palette 7: c34-42 (aqua replaced with pastel yellow) (28 total colors)
 # palette 8: c43-43a (redid all colors) (32 total colors)
 # palette 9: c44-46 (tweaked all colors) (32 total colors)
-# palette 10: c46-present (changed colors order) (32 total colors)
+# palette 10: c46-c75 (changed colors order) (32 total colors)
 
 # gimmick palette 1: c21a (50 shades of gray) (50 total colors)
 # gimmick palette 2: c30a (10 shades of blue, green, and red, + black and white) (32 total colors)
@@ -93,6 +93,21 @@ PALETTE_MAPPING = {
     "60": "p10",
     "60a": "p11",
     "61": "p12",
+    "62": "p12",
+    "63": "p12",
+    "64": "p12",
+    "65": "p12",
+    "66": "p12",
+    "67": "p12",
+    "68": "p12",
+    "69": "p12",
+    "70": "p12",
+    "71": "p12",
+    "72": "p12",
+    "73": "p12",
+    "74": "p12",
+    "75": "p12",
+    "76": "p13",
 }
 
 PALETTES = {
@@ -448,6 +463,42 @@ PALETTES = {
         "Red": "D81515",
         "Watermelon": "FF635E",
     },
+    "p13": {
+        "White": "FFFFFF",
+        "Light Grey": "B9C3CF",
+        "Medium Grey": "777F8C",
+        "Deep Grey": "424651",
+        "Dark Grey": "1F1E26",
+        "Black": "000000",
+        "Dark Chocolate": "382215",
+        "Chocolate": "7C3F20",
+        "Brown": "C06F37",
+        "Peach": "FEAD6C",
+        "Beige": "FFD2B1",
+        "Pink": "FFA4D0",
+        "Magenta": "F14FB4",
+        "Mauve": "E973FF",
+        "Purple": "A630D2",
+        "Dark Purple": "531D8C",
+        "Navy": "242367",
+        "Blue": "0334BF",
+        "Azure": "149CFF",
+        "Aqua": "8DF5FF",
+        "Light Teal": "01BFA5",
+        "Dark Teal": "16777E",
+        "Forest": "054523",
+        "Dark Green": "18862F",
+        "Green": "61E021",
+        "Lime": "B1FF37",
+        "Pastel Yellow": "FFFFA5",
+        "Yellow": "FDE111",
+        "Orange": "FF9F17",
+        "Rust": "F66E08",
+        "Maroon": "550022",
+        "Rose": "99011A",
+        "Red": "F30F0C",
+        "Watermelon": "FF7872"
+        },
     "g1": {
         "fiftyShades01": "FFFFFF",
         "fiftyShades02": "FAFAFA",

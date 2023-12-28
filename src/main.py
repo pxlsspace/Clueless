@@ -407,7 +407,7 @@ async def on_guild_join(guild: disnake.Guild):
                     break
         
         if target_channel:
-            await target_channel.send("Due to the 100 server limit, using Clueless is not supported in guilds below 10 members. Please refer to the DMs for personal use.")
+            await target_channel.send("Due to the 100 server limit, using Clueless is not supported in guilds below {0} members. Please refer to the DMs for personal use.".format(GUILD_MEMBER_MIN))
         
         await guild.leave()
         return

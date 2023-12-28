@@ -53,6 +53,12 @@ else:
     # add the commands globally
     GUILD_IDS = None
 
+guild_members_minimum = os.getenv("GUILD_MEMBER_MIN")
+if guild_members_minimum:
+    GUILD_MEMBER_MIN = int(guild_members_minimum)
+else:
+    GUILD_MEMBER_MIN = int(0)
+
 # imgur app
 IMGUR_CLIENT_ID = os.getenv("IMGUR_CLIENT_ID")
 IMGUR_CLIENT_SECRET = os.getenv("IMGUR_CLIENT_SECRET")

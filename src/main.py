@@ -11,6 +11,7 @@ from utils.pxls.template_manager import TemplateManager
 from utils.setup import (
     DEFAULT_PREFIX,
     GUILD_IDS,
+    GUILD_MEMBER_MIN,
     db_canvas,
     db_servers,
     db_stats,
@@ -391,6 +392,23 @@ async def on_guild_join(guild: disnake.Guild):
                 guild, guild.owner
             )
         )
+        await guild.leave()
+        return
+
+    if GUILD_MEMBER_MIN and guild.member_count < GUILD_MEMBER_MIN:
+        general_channel = next((channel for channel in guild.text_channels if channel.name == 'general'), None)
+        target_channel = None
+        if general_channel and general_channel.permissions_for(guild.me).send_messages:
+            target_channel = general_channel
+        else:
+            for channel in guild.text_channels:
+                if channel.permissions_for(guild.me).send_messages:
+                    target_channel = channel
+                    break
+        
+        if target_channel:
+            await target_channel.send("Due to the 100 server limit, using Clueless is not supported in guilds below 10 members. Please refer to the DMs for personal use.")
+        
         await guild.leave()
         return
 

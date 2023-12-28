@@ -214,7 +214,7 @@ class Scale(commands.Cog):
         inter: disnake.AppCmdInter,
         image: InterImage,
         width: int = 100,
-        resample=commands.Param(choices=resamples.keys(), default="Nearest"),
+        resample=commands.Param(choices=list(resamples), default="Nearest"),
     ):
         """Change an image's width.
 

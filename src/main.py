@@ -332,7 +332,7 @@ async def on_message(message):
         return
 
     # check if the bot is being called from a test guild
-    if len(GUILD_IDS) > 0:
+    if GUILD_IDS and len(GUILD_IDS) > 0:
         if not message.guild or (message.guild.id not in GUILD_IDS):
             return
 

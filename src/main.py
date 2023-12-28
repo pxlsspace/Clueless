@@ -331,6 +331,11 @@ async def on_message(message):
     if discord_user["is_blacklisted"]:
         return
 
+    # check if the bot is being called from a test guild
+    if len(GUILD_IDS) > 0:
+        if not message.guild or (message.guild.id not in GUILD_IDS):
+            return
+
     if message.guild:
         # check that server is in the db
         server = await db_servers.get_server(message.guild.id)

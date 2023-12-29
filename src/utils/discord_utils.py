@@ -1,9 +1,11 @@
 import asyncio
+import math
 import os
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from io import BytesIO
+from typing import Optional
 
 import disnake
 from disnake import ButtonStyle
@@ -294,12 +296,36 @@ def get_image_url(image) -> str:
 
 @in_executor()
 def image_to_file(
-    image: Image.Image, filename: str, embed: disnake.Embed = None
+    image: Image.Image,
+    filename: str,
+    embed: Optional[disnake.Embed] = None,
+    force_indexed_color: Optional[bool] = None,
 ) -> disnake.File:
-    """Convert a pillow Image to a discord File
-    attach the file to a discord embed if one is given"""
+    """Convert a pillow Image to a discord File, attaching the file to a discord embed if 
+    one is provided.
 
+    Parameters
+    ----------
+    image (Image): a pillow image
+    filename (str): the output's filename.
+    embed (disnake.Embed | None): a discord embed to which the file will be attached.
+    force_indexed_color (bool | None): if set to True, the generated PNG file will always 
+    use a color index. This can reduce filesizes if the number of unique colors is low.
+    Set to None by default, which uses a basic heuristic to determine whether to 
+    use a color index.
+
+    Return
+    ------
+    The image as a PNG discord file.
+    """
+    if force_indexed_color is None:
+        # Use png palette if all unique colors fit in at most 5% of the image
+        force_indexed_color = image.mode != "P" and image.getcolors(
+            maxcolors = int(math.prod(image.size) * 5 / 100) 
+        )
     with BytesIO() as image_binary:
+        if force_indexed_color:
+            image = image.convert("P")
         image.save(image_binary, "PNG")
         image_binary.seek(0)
         image = disnake.File(image_binary, filename=filename)

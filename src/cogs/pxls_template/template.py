@@ -421,7 +421,8 @@ class Template(commands.Cog):
                 template_image_url, img.width, img.height, ox, oy, title
             )
             # update the embed with the link in a new field
-            embed.set_thumbnail(url=template_image_url)
+                template_image_url = template_image_url.replace("media.discordapp.net", "cdn.discordapp.com").split('?')[0]
+                embed.set_thumbnail(url=template_image_url)
             embed.add_field(name="**Template Link**", value=template_url, inline=False)
             embed.set_footer(
                 text="⏲️ Generated in {}s | Uploaded in {}s".format(

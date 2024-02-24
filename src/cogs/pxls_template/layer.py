@@ -10,7 +10,7 @@ from main import tracked_templates
 from utils.arguments_parser import MyParser
 from utils.discord_utils import CreateTemplateView, get_image_url, image_to_file
 from utils.pxls.template_manager import Combo, layer
-from utils.setup import stats
+from utils.setup import stats, s3compat_app
 
 
 class Layer(commands.Cog):
@@ -71,16 +71,23 @@ class Layer(commands.Cog):
 
         embed = disnake.Embed(color=0x66C5CC, title="Layered")
         embed.set_footer(text=f"Layered in {round((end-start),3)}s")
-        file = await image_to_file(img, "layered.png", embed)
+        # file = await image_to_file(img, "layered.png", embed)
+
+        metadata = {
+            "discord_id": f"{ctx.author.id}",
+        }
+        template_image_url = await s3compat_app.upload_image(img, metadata)
+        embed.set_image(url=template_image_url)
+
         # Use the combo object here because it doesn't generate a placeable mask
         template = Combo(None, palettized_array, ox, oy, None, None, None)
         view = CreateTemplateView(ctx, template)
-        m = await ctx.send(file=file, embed=embed, view=view)
+        m = await ctx.send(embed=embed, view=view)
 
         # save the URL of the image sent to use it to generate templates later
         if isinstance(ctx, disnake.AppCmdInter):
             m = await ctx.original_message()
-        view.template_image_url = get_image_url(m.embeds[0].image)
+        view.template_image_url = template_image_url
         view.message = m
 
 

@@ -143,6 +143,41 @@ python-versions = "*"
 numpy = "*"
 
 [[package]]
+name = "boto3"
+version = "1.34.49"
+description = "The AWS SDK for Python"
+category = "main"
+optional = false
+python-versions = ">= 3.8"
+
+[package.dependencies]
+botocore = ">=1.34.49,<1.35.0"
+jmespath = ">=0.7.1,<2.0.0"
+s3transfer = ">=0.10.0,<0.11.0"
+
+[package.extras]
+crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
+
+[[package]]
+name = "botocore"
+version = "1.34.49"
+description = "Low-level, data-driven core of boto 3."
+category = "main"
+optional = false
+python-versions = ">= 3.8"
+
+[package.dependencies]
+jmespath = ">=0.7.1,<2.0.0"
+python-dateutil = ">=2.1,<3.0.0"
+urllib3 = [
+    {version = ">=1.25.4,<1.27", markers = "python_version < \"3.10\""},
+    {version = ">=1.25.4,<2.1", markers = "python_version >= \"3.10\""},
+]
+
+[package.extras]
+crt = ["awscrt (==0.19.19)"]
+
+[[package]]
 name = "certifi"
 version = "2023.11.17"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -398,6 +433,14 @@ python-versions = ">=3.8.0"
 colors = ["colorama (>=0.4.6)"]
 
 [[package]]
+name = "jmespath"
+version = "1.0.1"
+description = "JSON Matching Expressions"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[[package]]
 name = "kaleido"
 version = "0.2.1"
 description = "Static image export for web-based visualization libraries with zero dependencies"
@@ -633,6 +676,20 @@ python-versions = "*"
 idna2008 = ["idna"]
 
 [[package]]
+name = "s3transfer"
+version = "0.10.0"
+description = "An Amazon S3 Transfer Manager"
+category = "main"
+optional = false
+python-versions = ">= 3.8"
+
+[package.dependencies]
+botocore = ">=1.33.2,<2.0a.0"
+
+[package.extras]
+crt = ["botocore[crt] (>=1.33.2,<2.0a.0)"]
+
+[[package]]
 name = "six"
 version = "1.16.0"
 description = "Python 2 and 3 compatibility utilities"
@@ -684,6 +741,33 @@ optional = false
 python-versions = ">=3.8"
 
 [[package]]
+name = "urllib3"
+version = "1.26.18"
+description = "HTTP library with thread-safe connection pooling, file post, and more."
+category = "main"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*"
+
+[package.extras]
+brotli = ["brotlicffi (>=0.8.0)", "brotli (==1.0.9)", "brotlipy (>=0.6.0)", "brotli (>=1.0.9)"]
+secure = ["pyOpenSSL (>=0.14)", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "certifi", "urllib3-secure-extra", "ipaddress"]
+socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
+
+[[package]]
+name = "urllib3"
+version = "2.0.7"
+description = "HTTP library with thread-safe connection pooling, file post, and more."
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.extras]
+brotli = ["brotli (>=1.0.9)", "brotlicffi (>=0.8.0)"]
+secure = ["certifi", "cryptography (>=1.9)", "idna (>=2.0.0)", "pyopenssl (>=17.1.0)", "urllib3-secure-extra"]
+socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
+zstd = ["zstandard (>=0.18.0)"]
+
+[[package]]
 name = "websockets"
 version = "10.4"
 description = "An implementation of the WebSocket Protocol (RFC 6455 & 7692)"
@@ -718,7 +802,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-ena
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.8,<3.11"
-content-hash = "35798b9da5dc5f13f9c47d29c83f651938d2cb93c8d667c77c2255d2d545545d"
+content-hash = "5a6d7301d3aa733d6a97a61b7ad45707406b51d57def20f9cff2b65112e3d919"
 
 [metadata.files]
 about-time = []
@@ -732,6 +816,8 @@ bar-chart-race = []
 beautifulsoup4 = []
 black = []
 blend-modes = []
+boto3 = []
+botocore = []
 certifi = []
 chardet = []
 click = []
@@ -754,6 +840,7 @@ hyperframe = []
 idna = []
 importlib-resources = []
 isort = []
+jmespath = []
 kaleido = []
 kiwisolver = []
 llvmlite = []
@@ -777,12 +864,14 @@ python-dotenv = []
 pytz = []
 rapptz-asqlite = []
 rfc3986 = []
+s3transfer = []
 six = []
 sniffio = []
 soupsieve = []
 tenacity = []
 tomli = []
 typing-extensions = []
+urllib3 = []
 websockets = []
 yarl = []
 zipp = []

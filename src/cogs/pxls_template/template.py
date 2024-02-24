@@ -31,7 +31,7 @@ from utils.pxls.template import (
     templatize,
 )
 from utils.pxls.template_manager import parse_template
-from utils.setup import PXLS_URL, db_stats, db_users, imgur_app, stats
+from utils.setup import PXLS_URL, db_stats, db_users, imgur_app, s3compat_app, stats
 from utils.time_converter import td_format
 from utils.utils import get_content
 
@@ -130,8 +130,8 @@ class Template(commands.Cog):
         ox: int = None,
         oy: int = None,
         host: str = commands.Param(
-            default="discord",
-            choices={"Discord": "discord", "Imgur": "imgur"},
+            default="s3compat",
+            choices={"S3Compat": "s3compat", "Discord": "discord", "Imgur": "imgur"},
         ),
         nocrop: bool = False,
         matching: str = commands.Param(
@@ -154,7 +154,7 @@ class Template(commands.Cog):
         title: The template title.
         ox: The template x-position.
         oy: The template y-position.
-        host: Where to host the template image. (default: discord)
+        host: Where to host the template image. (default: s3compat)
         nocrop: If you don't want the template to be automatically cropped. (default: False)
         matching: The color matching algorithm to use.
         palette: A palette name or list of colors (name or hex) seprated by a comma. (default: pxls)
@@ -181,7 +181,7 @@ class Template(commands.Cog):
               - `[-glow]`: add glow to the template
               - `[-ox <ox>]`: template x-position
               - `[-oy <oy>]`: template y-position
-              - `[-host discord|imgur]`: where to host the template image (default: discord)
+              - `[-host s3compat|discord|imgur]`: where to host the template image (default: s3compat)
               - `[-nocrop]`: if you don't want the template to be automatically cropped
               - `[-matching fast|accurate]`: the color matching algorithm to use
               - `[-palette ...]`: the palette to use for the template (palette name or list of colors seprated by a comma.)""",
@@ -196,7 +196,7 @@ class Template(commands.Cog):
         parser.add_argument("-glow", action="store_true", default=False)
         parser.add_argument("-ox", action="store", required=False)
         parser.add_argument("-oy", action="store", required=False)
-        parser.add_argument("-host", choices=["discord", "imgur"], default="discord")
+        parser.add_argument("-host", choices=["s3compat", "discord", "imgur"], default="s3compat")
         parser.add_argument("-nocrop", action="store_true", default=False)
         parser.add_argument("-matching", choices=["fast", "accurate"], required=False)
         parser.add_argument("-palette", action="store", nargs="*")
@@ -231,7 +231,7 @@ class Template(commands.Cog):
         glow=False,
         ox=None,
         oy=None,
-        host="discord",
+        host="s3compat",
         nocrop=False,
         matching="fast",
         palette=None,
@@ -411,6 +411,18 @@ class Template(commands.Cog):
                         ":x: An error occurred while uploading the image to imgur, please try again with an other host."
                     )
                     return False
+            elif host == 's3compat':
+                try:
+                    template_image_url = await s3compat_app.upload_image(template_image, ctx.author.id)
+                except ValueError as e:
+                    await ctx.send(f":x: {e}")
+                    return False
+                except Exception as e:
+                    print(e)
+                    await ctx.send(
+                        ":x: An error occurred while uploading the image to s3compat, please try again with an other host."
+                    )
+                    return False
             else:
                 await ctx.send(f":x: Unkown host `{host}`.")
                 return False
@@ -423,6 +435,7 @@ class Template(commands.Cog):
             # update the embed with the link in a new field
             embed.set_thumbnail(url=template_image_url)
             embed.add_field(name="**Template Link**", value=template_url, inline=False)
+            embed.add_field(name="**Upload URL**", value=template_image_url, inline=False)
             embed.set_footer(
                 text="⏲️ Generated in {}s | Uploaded in {}s".format(
                     processing_time, upload_time

@@ -10,6 +10,7 @@ from database.db_stats_manager import DbStatsManager
 from database.db_template_manager import DbTemplateManager
 from database.db_user_manager import DbUserManager
 from utils.image.imgur import Imgur
+from utils.image.s3compat import S3Compat
 from utils.pxls.pxls_stats_manager import PxlsStatsManager
 from utils.pxls.websocket_client import WebsocketClient
 
@@ -67,4 +68,19 @@ IMGUR_REFRESH_TOKEN = os.getenv("IMGUR_REFRESH_TOKEN")
 
 imgur_app = Imgur(
     IMGUR_CLIENT_ID, IMGUR_CLIENT_SECRET, IMGUR_REFRESH_TOKEN, IMGUR_ACCESS_TOKEN
+)
+
+# S3 Compatible Storage
+S3_COMPAT_ENDPOINT = os.getenv("S3_COMPAT_ENDPOINT")
+S3_COMPAT_ACCESS_KEY = os.getenv("S3_COMPAT_ACCESS_KEY")
+S3_COMPAT_SECRET_KEY = os.getenv("S3_COMPAT_SECRET_KEY")
+S3_COMPAT_BUCKET_NAME = os.getenv("S3_COMPAT_BUCKET_NAME")
+S3_COMPAT_ACCESS_URL = os.getenv("S3_COMPAT_ACCESS_URL")
+
+s3compat_app = S3Compat(
+    S3_COMPAT_ACCESS_KEY,
+    S3_COMPAT_SECRET_KEY,
+    S3_COMPAT_ENDPOINT,
+    S3_COMPAT_BUCKET_NAME,
+    S3_COMPAT_ACCESS_URL
 )

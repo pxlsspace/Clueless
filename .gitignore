@@ -10,3 +10,4 @@ ecosystem.config.js
 env/
 logs/
 *.log
+resources/canvases

@@ -23,7 +23,7 @@ class S3Compat:
         self.bucket_name = bucket_name
         self.access_url = access_url
 
-    async def upload_image(self, image, discord_id = None):
+    async def upload_image(self, image, custom_metadata=None):
         """Upload the input image to S3-compatible storage, return the image URL."""
         if isinstance(image, Image.Image):
             payload_image = await self.image_to_bytes(image)
@@ -33,7 +33,7 @@ class S3Compat:
             payload_image = image
 
         # Generate hash from image content
-        image_hash = hashlib.sha256(payload_image).hexdigest()[:10]  # Adjust the length as needed
+        image_hash = hashlib.sha256(payload_image).hexdigest()[:16]  # Adjust the length as needed
 
         # Create S3 client
         s3_client = boto3.client(
@@ -44,13 +44,15 @@ class S3Compat:
         )
 
         # Upload image
-        filename = f'{discord_id if discord_id else "u"}_{image_hash}.png'
+        filename = f'{image_hash}.png'
         try:
+            metadata = custom_metadata if custom_metadata else {}
             response = s3_client.put_object(
                 Bucket=self.bucket_name,
                 Key=filename,
                 Body=payload_image,
-                ContentType='image/png'
+                ContentType='image/png',
+                Metadata=metadata
             )
         except ClientError as e:
             print(f"Error uploading image: {e}")

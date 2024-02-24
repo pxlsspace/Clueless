@@ -412,8 +412,19 @@ class Template(commands.Cog):
                     )
                     return False
             elif host == 's3compat':
+                if not pxls_user_id:
+                    await ctx.send(
+                        ":x: Sorry, file uploads to S3compat is only available to users with a linked account."
+                    )
+                    return False
+
                 try:
-                    template_image_url = await s3compat_app.upload_image(template_image, ctx.author.id)
+                    metadata = {
+                        "discord_id": f"{ctx.author.id}",
+                        "pxls_user_id": f"{pxls_user_id}",
+                        "canvas_code": f"{canvas_code}",
+                    }
+                    template_image_url = await s3compat_app.upload_image(template_image, metadata)
                 except ValueError as e:
                     await ctx.send(f":x: {e}")
                     return False

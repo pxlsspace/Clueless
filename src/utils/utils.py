@@ -12,6 +12,8 @@ import numpy as np
 from aiohttp.client_exceptions import ClientConnectionError, InvalidURL
 from typing_extensions import ParamSpec
 
+from dotenv import load_dotenv # this might be me being lazy but if it works, it works
+
 T = TypeVar("T")
 P = ParamSpec("P")
 _MaybeEventLoop = Optional[asyncio.AbstractEventLoop]
@@ -25,6 +27,7 @@ async def get_content(url: str, content_type, **kwargs):
     """Send a GET request to the url and return the response as json or bytes.
     Raise BadResponseError or ValueError."""
     # check if the URL is a data URL
+    pxls_cfauth = os.getenv("PXLS_CFAUTH")
     data = check_data_url(url)
     pxls_validate = str(uuid.uuid4())
     headers = {

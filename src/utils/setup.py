@@ -24,6 +24,7 @@ SERVER_INVITE = os.getenv("SERVER_INVITE")
 # pxls URLs
 PXLS_URL = os.getenv("PXLS_URL")
 PXLS_URL_API = os.getenv("PXLS_URL_API")
+PXLS_CFAUTH = os.getenv("PXLS_CFAUTH")
 
 # database connection
 db_conn = DbConnection()
@@ -43,7 +44,7 @@ db_canvas = DbCanvasManager(db_conn)
 
 # websocket
 ws_uri = os.getenv("PXLS_WEBSOCKET")
-ws_client = WebsocketClient(ws_uri, stats)
+ws_client = WebsocketClient(ws_uri, stats, PXLS_CFAUTH)
 
 # guild IDs
 test_server_id = os.getenv("TEST_SERVER_ID")

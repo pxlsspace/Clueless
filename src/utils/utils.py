@@ -6,11 +6,13 @@ import functools
 import re
 import timeit
 from typing import Awaitable, Callable, Optional, TypeVar
-
+import uuid
 import aiohttp
 import numpy as np
 from aiohttp.client_exceptions import ClientConnectionError, InvalidURL
 from typing_extensions import ParamSpec
+
+from dotenv import load_dotenv # this might be me being lazy but if it works, it works
 
 T = TypeVar("T")
 P = ParamSpec("P")
@@ -26,6 +28,16 @@ async def get_content(url: str, content_type, **kwargs):
     Raise BadResponseError or ValueError."""
     # check if the URL is a data URL
     data = check_data_url(url)
+
+    # check if cfauth is filled
+    pxls_cfauth = os.getenv("PXLS_CFAUTH")
+    headers = {}
+    if pxls_cfauth:
+        pxls_validate = str(uuid.uuid4())
+        headers = {
+            "Cookie": f"pxls-validate={pxls_validate}",
+            "x-pxls-cfauth": f"{pxls_cfauth}"
+        }
     if data:
         return data
     timeout = aiohttp.ClientTimeout(
@@ -33,7 +45,7 @@ async def get_content(url: str, content_type, **kwargs):
     )  # set a timeout of 10 seconds
     async with aiohttp.ClientSession(timeout=timeout, **kwargs) as session:
         try:
-            async with session.get(url) as r:
+            async with session.get(url, headers=headers if pxls_cfauth else None) as r:
                 if r.status == 200:
                     if content_type == "json":
                         return await r.json()

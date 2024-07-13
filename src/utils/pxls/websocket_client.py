@@ -14,9 +14,10 @@ class WebsocketClient:
     """A threaded websocket client to update the canvas board and online count
     in real-time."""
 
-    def __init__(self, uri: str, stats_manager):
+    def __init__(self, uri: str, stats_manager, cfauth):
         self.uri = uri
         self.stats = stats_manager
+        self.pxls_cfauth = cfauth
         self.loop = asyncio.new_event_loop()
         self.thread = threading.Thread(target=self._start, daemon=True)
         self._paused = False
@@ -41,7 +42,15 @@ class WebsocketClient:
 
         while True:
             pxls_validate = str(uuid.uuid4())
-            headers = {"Cookie": f"pxls-validate={pxls_validate}"}
+            if self.pxls_cfauth:
+                headers = {
+                    "Cookie": f"pxls-validate={pxls_validate}",
+                    "x-pxls-cfauth": f"{self.pxls_cfauth}"
+                }
+            else:
+                headers = {
+                    "Cookie": f"pxls-validate={pxls_validate}"
+                }
             try:
                 async with websockets.connect(
                     self.uri, extra_headers=headers

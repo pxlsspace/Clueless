@@ -24,6 +24,7 @@ SERVER_INVITE = os.getenv("SERVER_INVITE")
 # pxls URLs
 PXLS_URL = os.getenv("PXLS_URL")
 PXLS_URL_API = os.getenv("PXLS_URL_API")
+PXLS_CFAUTH = os.getenv("PXLS_CFAUTH")
 
 # database connection
 db_conn = DbConnection()

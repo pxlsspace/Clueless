@@ -6,7 +6,7 @@ import functools
 import re
 import timeit
 from typing import Awaitable, Callable, Optional, TypeVar
-
+import uuid
 import aiohttp
 import numpy as np
 from aiohttp.client_exceptions import ClientConnectionError, InvalidURL
@@ -26,6 +26,11 @@ async def get_content(url: str, content_type, **kwargs):
     Raise BadResponseError or ValueError."""
     # check if the URL is a data URL
     data = check_data_url(url)
+    pxls_validate = str(uuid.uuid4())
+    headers = {
+        "Cookie": f"pxls-validate={pxls_validate}",
+        "x-pxls-cfauth": f"{pxls_cfauth}" # this auth can be found when you are approved for api access in pxls.space
+    }
     if data:
         return data
     timeout = aiohttp.ClientTimeout(
@@ -33,7 +38,7 @@ async def get_content(url: str, content_type, **kwargs):
     )  # set a timeout of 10 seconds
     async with aiohttp.ClientSession(timeout=timeout, **kwargs) as session:
         try:
-            async with session.get(url) as r:
+            async with session.get(url, headers=headers) as r:
                 if r.status == 200:
                     if content_type == "json":
                         return await r.json()

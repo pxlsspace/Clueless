@@ -30,7 +30,7 @@ PXLS_CFAUTH = os.getenv("PXLS_CFAUTH")
 db_conn = DbConnection()
 
 # connection with the pxls API
-stats = PxlsStatsManager(db_conn, PXLS_URL_API)
+stats = PxlsStatsManager(db_conn, PXLS_URL_API, PXLS_CFAUTH)
 
 # default prefix
 DEFAULT_PREFIX = ">"
@@ -44,7 +44,7 @@ db_canvas = DbCanvasManager(db_conn)
 
 # websocket
 ws_uri = os.getenv("PXLS_WEBSOCKET")
-ws_client = WebsocketClient(ws_uri, stats)
+ws_client = WebsocketClient(ws_uri, stats, PXLS_CFAUTH)
 
 # guild IDs
 test_server_id = os.getenv("TEST_SERVER_ID")

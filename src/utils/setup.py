@@ -30,7 +30,7 @@ PXLS_CFAUTH = os.getenv("PXLS_CFAUTH")
 db_conn = DbConnection()
 
 # connection with the pxls API
-stats = PxlsStatsManager(db_conn, PXLS_URL_API, PXLS_CFAUTH)
+stats = PxlsStatsManager(db_conn, PXLS_URL_API)
 
 # default prefix
 DEFAULT_PREFIX = ">"

@@ -42,14 +42,14 @@ class WebsocketClient:
 
         while True:
             pxls_validate = str(uuid.uuid4())
-            if self.pxls_cfauth == "":
-                headers = {
-                    "Cookie": f"pxls-validate={pxls_validate}"
-                }
-            else:
+            if self.pxls_cfauth:
                 headers = {
                     "Cookie": f"pxls-validate={pxls_validate}",
                     "x-pxls-cfauth": f"{self.pxls_cfauth}"
+                }
+            else:
+                headers = {
+                    "Cookie": f"pxls-validate={pxls_validate}"
                 }
             try:
                 async with websockets.connect(

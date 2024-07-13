@@ -20,7 +20,8 @@ from utils.setup import (
 )
 
 load_dotenv()
-intents = disnake.Intents.all()
+intents = disnake.Intents(messages=True)
+intents.message_content = True
 activity = disnake.Activity(
     type=disnake.ActivityType.watching, name="you placing those pixels 👀"
 )

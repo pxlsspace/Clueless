@@ -27,13 +27,17 @@ async def get_content(url: str, content_type, **kwargs):
     """Send a GET request to the url and return the response as json or bytes.
     Raise BadResponseError or ValueError."""
     # check if the URL is a data URL
-    pxls_cfauth = os.getenv("PXLS_CFAUTH")
     data = check_data_url(url)
-    pxls_validate = str(uuid.uuid4())
-    headers = {
-        "Cookie": f"pxls-validate={pxls_validate}",
-        "x-pxls-cfauth": f"{pxls_cfauth}" # this auth can be found when you are approved for api access in pxls.space
-    }
+
+    # check if cfauth is filled
+    pxls_cfauth = os.getenv("PXLS_CFAUTH")
+    headers = {}
+    if pxls_cfauth:
+        pxls_validate = str(uuid.uuid4())
+        headers = {
+            "Cookie": f"pxls-validate={pxls_validate}",
+            "x-pxls-cfauth": f"{pxls_cfauth}"
+        }
     if data:
         return data
     timeout = aiohttp.ClientTimeout(
@@ -41,7 +45,7 @@ async def get_content(url: str, content_type, **kwargs):
     )  # set a timeout of 10 seconds
     async with aiohttp.ClientSession(timeout=timeout, **kwargs) as session:
         try:
-            async with session.get(url, headers=headers) as r:
+            async with session.get(url, headers=headers if pxls_cfauth else None) as r:
                 if r.status == 200:
                     if content_type == "json":
                         return await r.json()

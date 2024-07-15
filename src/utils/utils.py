@@ -26,6 +26,15 @@ async def get_content(url: str, content_type, **kwargs):
     Raise BadResponseError or ValueError."""
     # check if the URL is a data URL
     data = check_data_url(url)
+    # set headers for user-agent
+    headers = {
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+        }
+    if content_type == "image":
+        if url.startswith('https://imgur.com/'):
+            reurl = re.search(r'https://imgur\.com/([^?#]*)', url)
+            image_hash = reurl.group(1)
+            url = f"https://i.imgur.com/{image_hash}.png"
     if data:
         return data
     timeout = aiohttp.ClientTimeout(
@@ -33,7 +42,7 @@ async def get_content(url: str, content_type, **kwargs):
     )  # set a timeout of 10 seconds
     async with aiohttp.ClientSession(timeout=timeout, **kwargs) as session:
         try:
-            async with session.get(url) as r:
+            async with session.get(url, headers=headers) as r:
                 if r.status == 200:
                     if content_type == "json":
                         return await r.json()

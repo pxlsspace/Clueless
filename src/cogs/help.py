@@ -122,7 +122,7 @@ class Help(commands.Cog):
             f"Use `{prefix}help [command]` to see more information about a command.\n"
             + f"Use `{prefix}help [category]` to see more information about a category.\n"
         )
-        emb.set_author(name=ctx.me, icon_url=ctx.me.display_avatar)
+        emb.set_author(name=ctx.me)
         emb.set_footer(text=f"Requested by {author}")
 
         # add a field and button per category
@@ -198,7 +198,7 @@ class Help(commands.Cog):
         if category_description:
             emb.description += f"\n**Description**\n{category_description}\n"
         emb.description += f"\n**Commands**\n{commands_text}"
-        emb.set_author(name=ctx.me, icon_url=ctx.me.display_avatar)
+        emb.set_author(name=ctx.me)
         emb.set_footer(text=f"Requested by {author}")
 
         if send_buttons:
@@ -229,7 +229,7 @@ class Help(commands.Cog):
             description = command.description
         prefix = "/" if is_slash else ctx.prefix
         emb = disnake.Embed(title=f"**Command {command_name}**", color=EMBED_COLOR)
-        emb.set_author(name=ctx.me, icon_url=ctx.me.display_avatar)
+        emb.set_author(name=ctx.me)
         emb.add_field(
             name="Usage:",
             value=f"```{prefix}{command_name}{(' ' + command_usage) if command_usage else ''}```",
@@ -255,7 +255,7 @@ class Help(commands.Cog):
         """Called when ">help <group command> is used."""
         prefix = ctx.prefix
         emb = disnake.Embed(title=f"**Command {group.name}**", color=EMBED_COLOR)
-        emb.set_author(name=ctx.me, icon_url=ctx.me.display_avatar)
+        emb.set_author(name=ctx.me)
         emb.add_field(
             name="Description: ", value=group.description or "N/A", inline=False
         )

@@ -366,8 +366,7 @@ class Utility(commands.Cog):
         )
         embed.add_field(name=f"**Your stats** ({ctx.author})", value=user_info)
 
-        embed.set_thumbnail(url=ctx.me.display_avatar)
-        embed.set_author(name=me, icon_url=me.display_avatar)
+        embed.set_author(name=me)
         versions = "This bot runs on Python {} using disnake {} 🐍".format(
             platform.python_version(), disnake.__version__
         )

@@ -379,7 +379,7 @@ class Template(commands.Cog):
 
         # create the embed
         embed = disnake.Embed(title="**Template**", color=0x66C5CC)
-        embed.set_author(name=ctx.author, icon_url=ctx.author.display_avatar)
+        embed.set_author(name=ctx.author)
 
         template_info = f"Title: `{title if title else 'N/A'}`\n"
         template_info += f"Style: {style_name}\n"

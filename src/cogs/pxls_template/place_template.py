@@ -205,7 +205,7 @@ class PlaceTemplate(commands.Cog):
         embed.set_footer(
             text="⚠️ Warning: if you delete this message the template WILL break."
         )
-        embed.set_author(name=ctx.author, icon_url=ctx.author.display_avatar)
+        embed.set_author(name=ctx.author)
         reduced_image = Image.fromarray(
             stats.palettize_array(
                 reduced_array,

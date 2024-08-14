@@ -205,7 +205,6 @@ class UserManager(commands.Cog):
         if current_time:
             text += f"• **Current time:** {current_time}"
         embed = disnake.Embed(title=title, description=text, color=color)
-        embed.set_thumbnail(url=user.display_avatar)
         await ctx.send(embed=embed)
 
     @user.sub_command(name="settimezone")
@@ -430,7 +429,7 @@ class UserManager(commands.Cog):
                 description=f"✅ Log key for canvas `{canvas_code}` successfully {'updated' if is_update else 'added'}.",
             )
             embed.set_author(
-                name=modal_inter.author, icon_url=modal_inter.author.display_avatar
+                name=modal_inter.author
             )
             await modal_inter.response.send_message(embed=embed, ephemeral=True)
 
@@ -455,7 +454,7 @@ class UserManager(commands.Cog):
             res.append(f"{STATUS_EMOJIS.get(status)} `c{canvas_code}`")
 
         embed = disnake.Embed(color=0x66C5CC)
-        embed.set_author(name=ctx.author, icon_url=ctx.author.display_avatar)
+        embed.set_author(name=ctx.author)
         res = chunk(res, 3)
 
         for i, group in enumerate(res):

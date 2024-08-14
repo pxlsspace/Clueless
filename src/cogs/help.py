@@ -123,7 +123,7 @@ class Help(commands.Cog):
             + f"Use `{prefix}help [category]` to see more information about a category.\n"
         )
         emb.set_author(name=ctx.me, icon_url=ctx.me.display_avatar)
-        emb.set_footer(text=f"Requested by {author}", icon_url=author.display_avatar)
+        emb.set_footer(text=f"Requested by {author}")
 
         # add a field and button per category
         for category, category_commands in categories.items():
@@ -199,7 +199,7 @@ class Help(commands.Cog):
             emb.description += f"\n**Description**\n{category_description}\n"
         emb.description += f"\n**Commands**\n{commands_text}"
         emb.set_author(name=ctx.me, icon_url=ctx.me.display_avatar)
-        emb.set_footer(text=f"Requested by {author}", icon_url=author.display_avatar)
+        emb.set_footer(text=f"Requested by {author}")
 
         if send_buttons:
             view = HelpView(categories, category_name, is_slash)

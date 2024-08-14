@@ -143,7 +143,6 @@ async def on_command(ctx):
     emb = disnake.Embed(color=0x00BB00, title="Command '{}' used.".format(command_name))
     emb.add_field(name="Context:", value=context, inline=False)
     emb.add_field(name="Message:", value=message, inline=False)
-    emb.set_thumbnail(url=ctx.author.display_avatar)
     await log_channel.send(embed=emb)
 
 

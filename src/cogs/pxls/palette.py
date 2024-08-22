@@ -266,7 +266,10 @@ def make_json_palette(color_hex, color_names, palette_name) -> disnake.File:
     for i in range(len(color_hex)):
         hex = color_hex[i]
         name = color_names[i] if color_names else hex
-        content += f'\t"{name}": "{hex}",\n'
+        content += f'\t"{name}": "{hex}"'
+        if i < len(color_hex) - 1:
+            content += ","
+        content += "\n"
     content += "}"
 
     buffer = BytesIO(content.encode("utf-8"))

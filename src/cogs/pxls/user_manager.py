@@ -451,27 +451,68 @@ class UserManager(commands.Cog):
                 status = "online"
             else:
                 status = "offline"
-            res.append(f"{STATUS_EMOJIS.get(status)} `c{canvas_code}`")
+            res.append(f"{STATUS_EMOJIS.get(status)} `c{canvas_code: <2}`")
 
+        # Group the log keys, 5 per line (adjust as needed)
+        grouped_res = [res[i:i + 5] for i in range(0, len(res), 5)]  # 4 items per line
+
+        # Convert each group into a single string, joined with spaces
+        grouped_lines = [" ".join(group) for group in grouped_res]
+
+        # Safely split text to avoid cut-offs in the middle of an emoji or word
+        def safe_split(text, max_length=1024):
+            chunks = []
+            while len(text) > max_length:
+                split_index = text.rfind("\n", 0, max_length)
+                if split_index == -1:
+                    split_index = text.rfind(" ", 0, max_length)
+                if split_index == -1:
+                    split_index = max_length
+                chunks.append(text[:split_index])
+                text = text[split_index:].lstrip()
+            chunks.append(text)
+            return chunks
+
+        embeds = []
         embed = disnake.Embed(color=0x66C5CC)
-        embed.set_author(name=ctx.author)
-        res = chunk(res, 3)
 
-        for i, group in enumerate(res):
-            if i == 0:
-                title = "**Log Keys**"
-            else:
-                title = "\u200b"
-            embed.add_field(name=title, value="\n".join(group))
+        footer_text = f"Requested by {ctx.author.name}"
+        footer_icon = ctx.author.display_avatar.url
+
+        value = "\n".join(grouped_lines)
+        if len(value) > 1024:
+            chunks = safe_split(value, 1024)
+            for i, chunk in enumerate(chunks):
+                if i == 0:
+                    embed.add_field(name="**Log Keys**", value=chunk, inline=False)
+                else:
+                    embed.add_field(name="", value=chunk, inline=False)
+
+                # Check for total embed size limits (6000 characters)
+                if len(embed) + len(chunk) > 6000:
+                    embeds.append(embed)
+                    embed = disnake.Embed(color=0x66C5CC)
+        else:
+            # If it's small enough, add the grouped lines as a single field
+            embed.add_field(name="**Log Keys**", value=value, inline=False)
+
         embed.add_field(
             name="Key Status",
             value=f"{STATUS_EMOJIS['online']} = `key added` {STATUS_EMOJIS['offline']} = `key not added`",
             inline=False,
         )
+
+        embed.set_footer(text=footer_text, icon_url=footer_icon)
+        embeds.append(embed)
+
         if isinstance(ctx, commands.Context):
-            return await ctx.send(embed=embed)
+            for embed in embeds:
+                await ctx.send(embed=embed)
+        elif isinstance(ctx, disnake.ApplicationCommandInteraction):
+            for embed in embeds:
+                await ctx.send(embed=embed, ephemeral=True)
         else:
-            return await ctx.send(embed=embed, ephemeral=True)
+            raise ValueError("Unknown context type")
 
     @user.sub_command(name="unsetkey")
     async def _unsetkey(

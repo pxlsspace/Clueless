@@ -454,9 +454,7 @@ class UserManager(commands.Cog):
             res.append(f"{STATUS_EMOJIS.get(status)} `c{canvas_code: <2}`")
 
         # Group the log keys, 5 per line (adjust as needed)
-        grouped_res = [res[i:i + 5] for i in range(0, len(res), 5)]  # 4 items per line
-
-        # Convert each group into a single string, joined with spaces
+        grouped_res = [res[i:i + 5] for i in range(0, len(res), 5)]
         grouped_lines = [" ".join(group) for group in grouped_res]
 
         # Safely split text to avoid cut-offs in the middle of an emoji or word

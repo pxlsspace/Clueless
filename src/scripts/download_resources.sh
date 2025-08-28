@@ -1,5 +1,5 @@
 #!/bin/bash
-TARGET_PATH="/home/doxy/git/pxls.space/Clueless/resources/canvases"
+TARGET_PATH="/var/clueless/canvases"
 
 INFO_DATA=$(curl  -s https://pxls.space/info)
 if [ $? -ne 0 ]; then
@@ -37,7 +37,7 @@ download_logs() {
 
                 echo "[$canvas_id$suffix] Downloading final image for Canvas ${canvas_id} from archive"
                 # Download the final image
-                curl  -s -o "$TARGET_PATH/${canvas_id}/final c${canvas_id}${suffix}.png" "https://archives.pxls.space/data/images/canvas-${canvas_id}-final.png"
+                curl  -s -o "$TARGET_PATH/${canvas_id}${suffix}/final c${canvas_id}${suffix}.png" "https://archives.pxls.space/data/images/canvas-${canvas_id}${suffix}-final.png"
 
                 # Clean up the downloaded tar.xz file
                 rm /tmp/pixels_c${canvas_id}${suffix}.sanit.log.tar.xz

@@ -6,6 +6,7 @@ from disnake.ext import commands
 
 from utils.arguments_parser import MyParser
 from utils.discord_utils import format_number, image_to_file
+from utils.pxls.archives import check_canvas_code
 from utils.image.image_utils import (
     get_builtin_palette,
     get_color,
@@ -33,6 +34,7 @@ class ColorsGraph(commands.Cog):
         inter: disnake.AppCmdInter,
         colors: str = None,
         placed: bool = False,
+        canvas_code: str = commands.param(default=None, name="canvas-code"),
         last: str = None,
     ):
         """Show a graph of the canvas colors.
@@ -41,6 +43,7 @@ class ColorsGraph(commands.Cog):
         ----------
         colors: List of pxls colors separated by a comma.
         placed: To show the graph for the non-virgin pixels only.
+        canvas_code: To show the color graph of a selected canvas. (default: current)
         last: Show the progress in the last x year/month/week/day/hour/minute/second. (format: ?y?mo?w?d?h?m?s)
         """
         await inter.response.defer()
@@ -60,7 +63,8 @@ class ColorsGraph(commands.Cog):
         usage="[colors] [-placed|-p] [-last ?y?mo?w?d?h?m?s]",
         help="""\t- `<colors>`: list of pxls colors separated by a comma
         \t- `[-placed|-p]`: only show the virgin pixels
-        \t- `[-last ?y?mo?w?d?h?m?s]` Show the progress in the last x years/months/weeks/days/hours/minutes/seconds""",
+        \t- `[-last ?y?mo?w?d?h?m?s]` Show the progress in the last x years/months/weeks/days/hours/minutes/seconds,
+        \t- `[-canvas|-c <canvas code>]`: show the color graph of a selected canvas (default: current)""",
     )
     async def p_colorsgraph(self, ctx, *args):
         async with ctx.typing():
@@ -76,6 +80,7 @@ class ColorsGraph(commands.Cog):
         parser.add_argument("colors", type=str, nargs="*")
         parser.add_argument("-placed", action="store_true", default=False, required=False)
         parser.add_argument("-last", "-l", nargs="+", default=None)
+        parser.add_argument("-canvas", "-c", action="store", nargs="*", default=None)
         try:
             parsed_args = parser.parse_args(args)
         except ValueError as e:
@@ -115,10 +120,25 @@ class ColorsGraph(commands.Cog):
         placed_opt = False
         if parsed_args.placed:
             placed_opt = True
-
+        # 0.1% chance of this working functionally, check on canvas code input
         canvas_code = await stats.get_canvas_code()
+        if canvas_input is None:
+            if not any([last, before, after]) and groupby not in ["month", "canvas"]:
+                canvas = current_canvas
+            else:
+                canvas = None
+        else:
+            canvas = check_canvas_code(canvas_input)
+            if canvas is None:
+                return await ctx.send(
+                    f":x: The given canvas code `{canvas_input}` is invalid."
+                )
+            if canvas != current_canvas:
+                last_bar_darker = False
         data = await db_stats.get_canvas_color_stats(canvas_code, dt1, dt2)
-
+        )
+        if not data:
+            return await ctx.send(":x: No data found for this canvas.")
         palette = await db_stats.get_palette(canvas_code)
 
         # initialise a data dictionary for each color

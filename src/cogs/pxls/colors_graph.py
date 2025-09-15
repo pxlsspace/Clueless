@@ -52,6 +52,8 @@ class ColorsGraph(commands.Cog):
             args += (colors,)
         if placed:
             args += ("-placed",)
+        if canvas_code
+            args += ("-canvas_code",)
         if last:
             args += ("-last", last)
         await self.colorsgraph(inter, *args)

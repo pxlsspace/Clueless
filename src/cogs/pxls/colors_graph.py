@@ -52,7 +52,7 @@ class ColorsGraph(commands.Cog):
             args += (colors,)
         if placed:
             args += ("-placed",)
-        if canvas_code
+        if canvas_code:
             args += ("-canvas_code",)
         if last:
             args += ("-last", last)
@@ -72,7 +72,12 @@ class ColorsGraph(commands.Cog):
         async with ctx.typing():
             await self.colorsgraph(ctx, *args)
 
-    async def colorsgraph(self, ctx, *args):
+    async def colorsgraph(
+        self, 
+        ctx,
+        last=None,
+        canvas_input=None,
+        *args):
         "Show a graph of the canvas colors."
 
         discord_user = await db_users.get_discord_user(ctx.author.id)
@@ -122,10 +127,12 @@ class ColorsGraph(commands.Cog):
         placed_opt = False
         if parsed_args.placed:
             placed_opt = True
-        # 0.1% chance of this working functionally, check on canvas code input
+
+        # 0.01% chance of this working functionally, check on canvas code input
+        current_canvas = await stats.get_canvas_code()
         canvas_code = await stats.get_canvas_code()
         if canvas_input is None:
-            if not any([last, before, after]) and groupby not in ["month", "canvas"]:
+            if not ([last]):
                 canvas = current_canvas
             else:
                 canvas = None
@@ -138,7 +145,6 @@ class ColorsGraph(commands.Cog):
             if canvas != current_canvas:
                 last_bar_darker = False
         data = await db_stats.get_canvas_color_stats(canvas_code, dt1, dt2)
-        )
         if not data:
             return await ctx.send(":x: No data found for this canvas.")
         palette = await db_stats.get_palette(canvas_code)

@@ -35,7 +35,7 @@ class PxlsStats(commands.Cog):
     @commands.command(
         name="generalstats",
         description="Show some general stats about the canvas.",
-        aliases=["gstats", "gs", "canvasinfo"],
+        aliases=["gstats", "gs", "canvasinfo", "cinfo"],
     )
     async def p_generalstats(self, ctx):
         async with ctx.typing():

@@ -221,6 +221,7 @@ class PxlsStats(commands.Cog):
         -`<username>`: a pxls username (will use your set username if set)\n
         **Status explanation:**
         {STATUS_EMOJIS["bot"]} `online (botting)`: the user is placing more than the best possible
+        {STATUS_EMOJIS["perfect"]} `online (perfect)`: the user is placing the best possible amount of pixels
         {STATUS_EMOJIS["fast"]}`online (fast)`: the user is close to the best possible in the last 15 minutes
         {STATUS_EMOJIS["online"]}`online`: the user placed in the last 15 minutes
         {STATUS_EMOJIS["idle"]}`idle`: the user stopped placing 15/30 minutes ago
@@ -363,6 +364,10 @@ class PxlsStats(commands.Cog):
                 status = "online (botting)"
                 status_emoji = STATUS_EMOJIS["bot"]
                 embed_color = 0x7CE1EC
+             elif last_15m = best_possible:
+                status = "online (perfect)"
+                status_emoji = STATUS_EMOJIS["perfect"]
+                embed_color = 0xFFA4D0
             elif last_15m >= fast_amount:
                 status = "online (fast)"
                 status_emoji = STATUS_EMOJIS["fast"]

@@ -365,7 +365,7 @@ class PxlsStats(commands.Cog):
                 status = "online (botting)"
                 status_emoji = STATUS_EMOJIS["bot"]
                 embed_color = 0x7CE1EC
-             elif last_15m >= perfect_amount:
+            elif last_15m >= perfect_amount:
                 status = "online (perfect)"
                 status_emoji = STATUS_EMOJIS["perfect"]
                 embed_color = 0xFFA4D0

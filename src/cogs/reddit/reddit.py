@@ -100,7 +100,7 @@ class Reddit(commands.Cog, name="Image"):
 
     @commands.cooldown(1, 2)
     @commands.command(
-        aliases=["kitty", "cat"], description="Send a random kitten image.", ratelimit=1
+        aliases=["kitty", "neko", "cat"], description="Send a random kitten image.", ratelimit=1
     )
     async def kitten(self, ctx):
         subreddit = random.choice(["tuckedinkitties", "kitten"])

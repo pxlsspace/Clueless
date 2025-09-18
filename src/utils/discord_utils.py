@@ -18,6 +18,7 @@ from utils.utils import get_content, in_executor
 
 STATUS_EMOJIS = {
     "bot": "<a:status_botting:955632660653408266>",
+    "perfect": "<:status_perfect:1418306481488527503>",
     "fast": "<:status_fast:955632659739078747>",
     "online": "<:status_online:955632659810381864>",
     "idle": "<:status_idle:955632660238204950>",

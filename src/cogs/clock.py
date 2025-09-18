@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 import disnake
+from disnake import Team, User
 from disnake.ext import commands, tasks
 from PIL import Image
 
@@ -60,8 +61,17 @@ class Clock(commands.Cog):
             logger.info("Loading templates...")
             canvas_code = await stats.get_canvas_code()
             app_info = await self.bot.application_info()
-            bot_owner_id = app_info.owner.id
-            tracked_templates.load_progress_admins(bot_owner_id)
+            # checks if owner_ids is set
+            if getattr(self.bot, "owner_ids", None):
+                for owner_id in self.bot.owner_ids: 
+                    tracked_templates.load_progress_admins(owner_id)
+            else:
+                owner = app_info.owner
+                if isinstance(owner, Team):
+                    for member in owner.members:
+                        tracked_templates.load_progress_admins(member.id)
+                else:
+                    tracked_templates.load_progress_admins(owner.id)
             await tracked_templates.load_all_templates(canvas_code)
 
         except Exception:
@@ -240,11 +250,15 @@ class Clock(commands.Cog):
         for channel_id in channels:
             try:
                 channel = self.bot.get_channel(int(channel_id))
+                if channel is None:
+                    logger.warning(f"Channel {channel_id} not found!")
+                    continue
                 embed = disnake.Embed(title="Canvas Snapshot", color=0x66C5CC)
                 embed.timestamp = snapshot_time
                 file = await image_to_file(board_img, filename, embed)
                 m = await channel.send(file=file, embed=embed)
-            except Exception:
+            except Exception as e:
+                logger.exception(f"Failed to send snapshot to channel {channel_id}: {e}")
                 continue
             else:
                 if not snapshot_saved:

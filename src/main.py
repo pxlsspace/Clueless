@@ -5,6 +5,7 @@ from datetime import timezone
 import disnake
 from disnake.ext import commands
 from dotenv import load_dotenv
+load_dotenv()
 
 from utils.log import close_loggers, get_logger, setup_loggers
 from utils.pxls.template_manager import TemplateManager
@@ -12,6 +13,7 @@ from utils.setup import (
     DEFAULT_PREFIX,
     GUILD_IDS,
     GUILD_MEMBER_MIN,
+    db_conn,
     db_canvas,
     db_servers,
     db_stats,
@@ -19,7 +21,6 @@ from utils.setup import (
     db_users,
 )
 
-load_dotenv()
 intents = disnake.Intents(messages=True)
 intents.message_content = True
 activity = disnake.Activity(
@@ -31,16 +32,31 @@ allowed_mentions = disnake.AllowedMentions(
     roles=False,
     replied_user=False,
 )
-bot = commands.Bot(
-    command_prefix=db_servers.get_prefix,
-    help_command=None,
-    intents=intents,
-    case_insensitive=True,
-    activity=activity,
-    test_guilds=GUILD_IDS,
-    reload=bool(GUILD_IDS),
-    allowed_mentions=allowed_mentions,
-)
+fetch_owner_ids = os.getenv("OWNER_IDS", "").strip()
+if fetch_owner_ids:
+    owner_ids = {int(x) for x in fetch_owner_ids.split(",") if x}
+    bot = commands.Bot(
+        command_prefix=db_servers.get_prefix,
+        help_command=None,
+        intents=intents,
+        case_insensitive=True,
+        activity=activity,
+        test_guilds=GUILD_IDS,
+        reload=bool(GUILD_IDS),
+        allowed_mentions=allowed_mentions,
+        owner_ids=owner_ids
+    )
+else:
+    bot = commands.Bot(
+        command_prefix=db_servers.get_prefix,
+        help_command=None,
+        intents=intents,
+        case_insensitive=True,
+        activity=activity,
+        test_guilds=GUILD_IDS,
+        reload=bool(GUILD_IDS),
+        allowed_mentions=allowed_mentions,
+    )
 
 tracked_templates = TemplateManager()
 

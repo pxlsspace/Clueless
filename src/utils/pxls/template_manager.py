@@ -417,13 +417,16 @@ class TemplateManager:
     def load_progress_admins(self, bot_owner_id: int):
         """Update the current `progress_admins` list with the PROGRESS_ADMINS env variable
         and add the bot owner to it."""
-        self.progress_admins = [bot_owner_id]
+        if not hasattr(self, "progress_admins"):
+            self.progress_admins = []
+        if bot_owner_id not in self.progress_admins:
+            self.progress_admins.append(bot_owner_id)
         load_dotenv(override=True)
         progress_admins = os.environ.get("PROGRESS_ADMINS")
         if progress_admins:
-            progress_admins = progress_admins.split(",")
-            for admin_id in progress_admins:
-                if admin_id.isdigit():
+            for admin_id in progress_admins.split(","):
+                admin_id = admin_id.strip()
+                if admin_id.isdigit() and int(admin_id) not in self.progress_admins:
                     self.progress_admins.append(int(admin_id))
         return self.progress_admins
 

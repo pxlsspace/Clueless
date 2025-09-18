@@ -214,7 +214,7 @@ class Snapshots(commands.Cog):
             channel_id = ctx.message.channel_mentions[0].id
 
         # checks if the bot has write perms in the snapshots channel
-        channel = self.bot.get_channel(channel_id)
+        channel = await self.bot.fetch_channel(channel_id)
         if not channel.permissions_for(ctx.guild.me).send_messages:
             await ctx.send(
                 f"❌ I don't have permissions to send messages in <#{channel_id}>"

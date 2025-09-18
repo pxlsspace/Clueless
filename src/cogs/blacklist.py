@@ -1,4 +1,5 @@
 import disnake
+from disnake import Team, User
 from disnake.ext import commands
 from disnake.ext.commands.converter import RoleConverter
 from disnake.ext.commands.errors import RoleNotFound
@@ -28,8 +29,15 @@ class Blacklist(commands.Cog):
 
         # check that the user isn't the bot owner
         app_info = await self.bot.application_info()
-        owner = app_info.owner
-        if user == owner:
+        if getattr(self.bot, "owner_ids", None):
+            owners = list(self.bot.owner_ids)
+        else:
+            owner = app_info.owner
+            if isinstance(owner, Team):
+                owners = [member.id for member in owner.members]
+            else:
+                owners = [owner.id]
+        if user.id in owners:
             return await ctx.send("❌ You can't blacklist the bot owner.")
 
         # check that the user isn't already blacklisted

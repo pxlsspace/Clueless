@@ -10,6 +10,7 @@ import disnake
 import numpy as np
 import pandas as pd
 from disnake.ext import commands
+from disnake import Team, User
 from PIL import Image
 
 from cogs.pxls.speed import get_grouped_graph, get_stats_graph
@@ -1504,8 +1505,18 @@ class Progress(commands.Cog):
     @commands.is_owner()
     async def reload_admins(self, ctx: commands.Context):
         app_info = await self.bot.application_info()
-        bot_owner_id = app_info.owner.id
-        admins = tracked_templates.load_progress_admins(bot_owner_id)
+        # checks if owner_ids is set
+        if getattr(self.bot, "owner_ids", None):
+            owners = list(self.bot.owner_ids)
+        else:
+            owner = app_info.owner
+            if isinstance(owner, Team):
+                owners = [member.id for member in owner.members]
+            else:
+                owners = [owner.id]
+        for owner_id in owners:
+            tracked_templates.load_progress_admins(owner_id)
+        admins = tracked_templates.progress_admins
         msg = "✅ **Progress admin list updated**\nCurrent progress admins:\n"
         for admin_id in admins:
             msg += f"- <@{admin_id}>\n"

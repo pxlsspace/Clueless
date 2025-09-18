@@ -264,7 +264,7 @@ class Utility(commands.Cog):
     @commands.command(
         name="botinfo",
         aliases=["binfo"],
-        description="Show some stats and information about the bot.",)
+        description="Show some stats and information about the bot.")
     async def botinfo(self, ctx):
         app_info = await self.bot.application_info()
         owner = app_info.owner

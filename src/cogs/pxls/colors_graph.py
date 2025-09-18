@@ -60,7 +60,7 @@ class ColorsGraph(commands.Cog):
         usage="[colors] [-placed|-p] [-last ?y?mo?w?d?h?m?s]",
         help="""\t- `<colors>`: list of pxls colors separated by a comma
         \t- `[-placed|-p]`: only show the virgin pixels
-        \t- `[-last ?y?mo?w?d?h?m?s]` Show the progress in the last x years/months/weeks/days/hours/minutes/seconds""",
+        \t- `[-last ?y?mo?w?d?h?m?s]`: Show the progress in the last x years/months/weeks/days/hours/minutes/seconds""",
     )
     async def p_colorsgraph(self, ctx, *args):
         async with ctx.typing():

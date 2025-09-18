@@ -35,7 +35,7 @@ class PxlsStats(commands.Cog):
     @commands.command(
         name="generalstats",
         description="Show some general stats about the canvas.",
-        aliases=["gstats", "gs", "canvasinfo"],
+        aliases=["gstats", "gs", "canvasinfo", "cinfo"],
     )
     async def p_generalstats(self, ctx):
         async with ctx.typing():
@@ -221,6 +221,7 @@ class PxlsStats(commands.Cog):
         -`<username>`: a pxls username (will use your set username if set)\n
         **Status explanation:**
         {STATUS_EMOJIS["bot"]} `online (botting)`: the user is placing more than the best possible
+        {STATUS_EMOJIS["perfect"]} `online (perfect)`: the user is placing the best possible amount of pixels
         {STATUS_EMOJIS["fast"]}`online (fast)`: the user is close to the best possible in the last 15 minutes
         {STATUS_EMOJIS["online"]}`online`: the user placed in the last 15 minutes
         {STATUS_EMOJIS["idle"]}`idle`: the user stopped placing 15/30 minutes ago
@@ -357,12 +358,17 @@ class PxlsStats(commands.Cog):
             dt2 = user_row["datetime"]
             dt1 = record_list[0]["datetime"]
             best_possible, average_cooldown = await get_best_possible(dt1, dt2)
+            perfect_amount = int(best_possible * 0.995)
             fast_amount = int(best_possible * 0.95)
 
             if last_15m > best_possible:
                 status = "online (botting)"
                 status_emoji = STATUS_EMOJIS["bot"]
                 embed_color = 0x7CE1EC
+             elif last_15m >= perfect_amount:
+                status = "online (perfect)"
+                status_emoji = STATUS_EMOJIS["perfect"]
+                embed_color = 0xFFA4D0
             elif last_15m >= fast_amount:
                 status = "online (fast)"
                 status_emoji = STATUS_EMOJIS["fast"]

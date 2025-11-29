@@ -447,7 +447,7 @@ async def on_guild_join(guild: disnake.Guild):
         timestamp=guild.created_at,
     )
     embed.add_field(name="**Server Name**", value=guild.name)
-    embed.add_field(name="**Owner**", value=guild.owner)
+    embed.add_field(name="**Owner**", value=f"<@{guild.owner_id}> ({guild.owner if guild.owner else 'Unknown'})")
     embed.add_field(name="**Members**", value=guild.member_count)
     if guild.icon:
         embed.set_thumbnail(url=guild.icon.url)

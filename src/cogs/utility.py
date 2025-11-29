@@ -667,7 +667,7 @@ class Utility(commands.Cog):
                 nb_usage = last_usage = None
 
             res = f"**{guild.name}** *(id: {guild.id})*\n"
-            res += f"• Owner: <@{guild.owner.id}> ({guild.owner})\n"
+            res += f"• Owner: <@{guild.owner_id}> ({guild.owner if guild.owner else 'Unknown'})\n"
             res += f"• Members: `{guild.member_count}`\n"
             res += f"• Joined: {format_datetime(join_time)} ({format_datetime(join_time,'R')})\n"
             res += f"• Total Usage: `{format_number(nb_usage)}`\n"

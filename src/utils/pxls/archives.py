@@ -4,14 +4,17 @@ from hashlib import sha256
 
 import numpy as np
 from PIL import Image
+from dotenv import load_dotenv
 
 from utils.setup import db_stats, stats
 from utils.utils import in_executor
 
 basepath = os.path.dirname(__file__)
-CANVASES_FOLDER = os.path.abspath(
-    os.path.join(basepath, "..", "..", "..", "resources", "canvases")
-)
+# CANVASES_FOLDER = os.path.abspath(
+#     os.path.join(basepath, "..", "..", "..", "resources", "canvases")
+# )
+CANVASES_FOLDER = os.getenv("CANVASES_ENV")
+
 
 
 def get_log_file(input_canvas_code):

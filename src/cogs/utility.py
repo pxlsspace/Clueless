@@ -592,10 +592,12 @@ class Utility(commands.Cog):
     )
     @commands.is_owner()
     async def leave(self, ctx, guild_id):
-        try:
-            guild = await self.bot.fetch_guild(guild_id)
-        except Exception as e:
-            return await ctx.send(f":x: {e}")
+        guild = self.bot.get_guild(guild_id)
+        if guild is None:
+            try:
+                guild = await self.bot.fetch_guild(guild_id)
+            except Exception as e:
+                return await ctx.send(f":x: {e}")
         guild_name = guild.name
         guild_id = guild.id
         try:
@@ -604,6 +606,26 @@ class Utility(commands.Cog):
             return await ctx.send(f":x: {e}")
         return await ctx.send(
             f"✅ Successfully left guild **{guild_name}** (id: {guild_id})"
+        )
+
+    @commands.command(
+        name="verify",
+        description="Verify a server ID and get its name. (owner only)",
+        hidden=True,
+        usage="<server ID>",
+    )
+    @commands.is_owner()
+    async def verify(self, ctx, guild_id):
+        guild = self.bot.get_guild(guild_id)
+        if guild is None:
+            try:
+                guild = await self.bot.fetch_guild(guild_id)
+            except Exception as e:
+                return await ctx.send(f":x: {e}")
+        guild_name = guild.name
+        guild_id = guild.id
+        return await ctx.send(
+            f"ID `{guild_id}` returns **{guild_name}**"
         )
 
     @commands.command(

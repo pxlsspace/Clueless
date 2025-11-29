@@ -249,7 +249,7 @@ class Clock(commands.Cog):
 
         for channel_id in channels:
             try:
-                channel = self.bot.get_channel(int(channel_id))
+                channel = await self.bot.fetch_channel(int(channel_id))
                 if channel is None:
                     logger.warning(f"Channel {channel_id} not found!")
                     continue

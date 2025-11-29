@@ -24,7 +24,7 @@ class Detemplatize(commands.Cog):
         name="detemplatize",
         description="Get the image from a template URL.",
         usage="<url>",
-        aliases=["detemp"],
+        aliases=["detemp","detemplatise"],
     )
     async def p_detemplatize(self, ctx, url: str):
 

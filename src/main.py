@@ -13,7 +13,6 @@ from utils.setup import (
     DEFAULT_PREFIX,
     GUILD_IDS,
     GUILD_MEMBER_MIN,
-    db_conn,
     db_canvas,
     db_servers,
     db_stats,
@@ -21,10 +20,12 @@ from utils.setup import (
     db_users,
 )
 
-intents = disnake.Intents(messages=True)
+intents = disnake.Intents.default()
+intents.members = False 
+intents.presences = False
 intents.message_content = True
 activity = disnake.Activity(
-    type=disnake.ActivityType.watching, name="you placing those pixels 👀"
+    type=disnake.ActivityType.watching, name="Watching you place those pixels 👀"
 )
 allowed_mentions = disnake.AllowedMentions(
     everyone=False,

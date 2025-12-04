@@ -79,14 +79,14 @@ class ColorsGraph(commands.Cog):
         try:
             parsed_args = parser.parse_args(args)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         # check on 'last' param
         if parsed_args.last:
             input_time = str_to_td(parsed_args.last)
             if not input_time:
                 return await ctx.send(
-                    "❌ Invalid `last` parameter, format must be `?y?mo?w?d?h?m?s`."
+                    ":x: Invalid `last` parameter, format must be `?y?mo?w?d?h?m?s`."
                 )
             dt2 = datetime.now(timezone.utc)
             dt1 = round_minutes_down(datetime.now(timezone.utc) - input_time)
@@ -110,7 +110,7 @@ class ColorsGraph(commands.Cog):
                     colors[i] = get_color(c, pxls_only=True)[0].lower()
                 except Exception as e:
                     print(e)
-                    return await ctx.send(f"❌ The color `{c}` is invalid.")
+                    return await ctx.send(f":x: The color `{c}` is invalid.")
         # init the 'placed' option
         placed_opt = False
         if parsed_args.placed:
@@ -154,7 +154,7 @@ class ColorsGraph(commands.Cog):
         # create the graph and style
         fig = await make_color_graph(data_list, colors, discord_user["timezone"])
         if fig is None:
-            return await ctx.send("❌ Invalid color name.")
+            return await ctx.send(":x: Invalid color name.")
         fig.update_layout(title="Colors Graph" + (" (non-virgin)" if placed_opt else ""))
 
         # format the table data

@@ -65,14 +65,14 @@ class Colorify(commands.Cog):
 
         color_name, rgb = get_color(color, mode="RGB")
         if rgb is None:
-            return await ctx.send(f"❌ The color `{color}` is invalid.")
+            return await ctx.send(f":x: The color `{color}` is invalid.")
         color = color_name
 
         # get the image from the message
         try:
             img, url = await get_image_from_message(ctx, url, return_type="image")
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         try:
             is_animated = img.is_animated
@@ -171,29 +171,29 @@ class Colorify(commands.Cog):
         try:
             parsed_args = parser.parse_args(args)
         except Exception as error:
-            return await ctx.send(f"❌ {error}")
+            return await ctx.send(f":x: {error}")
 
         # check on arguments
         url = parsed_args.url[0] if parsed_args.url else None
         try:
             saturation = int(parsed_args.saturation)
         except ValueError:
-            return await ctx.send(f"❌ Invalid number '{parsed_args.saturation}'")
+            return await ctx.send(f":x: Invalid number '{parsed_args.saturation}'")
         try:
             lightness = int(parsed_args.lightness)
         except ValueError:
-            return await ctx.send(f"❌ Invalid number '{parsed_args.lightness}'")
+            return await ctx.send(f":x: Invalid number '{parsed_args.lightness}'")
 
         if saturation > 100 or saturation < 0:
-            return await ctx.send("❌ The saturation value must be between 0 and 100.")
+            return await ctx.send(":x: The saturation value must be between 0 and 100.")
         if lightness > 100 or lightness < 0:
-            return await ctx.send("❌ The lightness value must be between 0 and 100.")
+            return await ctx.send(":x: The lightness value must be between 0 and 100.")
 
         # get the image from the message
         try:
             img, url = await get_image_from_message(ctx, url, return_type="image")
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
         rainbow_img = await rainbowfy(img, saturation, lightness)
         file = disnake.File(fp=rainbow_img, filename="rainbowfy.gif")
         await ctx.send(file=file)

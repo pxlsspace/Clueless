@@ -88,7 +88,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         try:
             param = parse_leaderboard_args(args)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         async with ctx.typing():
             await self.leaderboard(
@@ -140,7 +140,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                 prefix = "/" if is_slash else ctx.prefix
                 usage_text = f"(You can set your default username with `{prefix}{cmd_name} <username>`)"
                 return await ctx.send(
-                    "❌ You need to have a set username to use `!`.\n" + usage_text
+                    ":x: You need to have a set username to use `!`.\n" + usage_text
                 )
             name = await db_users.get_pxls_user_name(pxls_user_id)
             username = [name if u == "!" else u for u in username]
@@ -180,7 +180,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
 
         # check that we can actually calculate the speed
         if speed_opt and datetime1 == datetime2:
-            return await ctx.send("❌ The time frame given is too short.")
+            return await ctx.send(":x: The time frame given is too short.")
 
         # trim the leaderboard to only get the lines asked
         if ranks:
@@ -190,7 +190,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                 ldb = ldb[rank_low - 1 : rank_high]
             except IndexError:
                 return await ctx.send(
-                    "❌ Can't find values between these ranks in the leaderboard."
+                    ":x: Can't find values between these ranks in the leaderboard."
                 )
 
         elif username:
@@ -207,7 +207,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
                     user_pixels = pixels
                     break
             if name_index is None:
-                return await ctx.send("❌ User not found")
+                return await ctx.send(":x: User not found")
 
             if len(username) == 1:
                 # calucluate the indexes around the user

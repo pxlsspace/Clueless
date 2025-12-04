@@ -89,14 +89,14 @@ class Reddit(commands.Cog, name="Image"):
             start = time.time()
             image_url, submission_url = await self.get_random_submission(subreddit_name)
             if submission_url is None:
-                return await ctx.send("❌ No image found :(")
+                return await ctx.send(":x: No image found :(")
             ex_time = time.time() - start
             embed = self.format_embed(
                 submission_url, image_url, title, subreddit_name, ex_time
             )
             await ctx.send(embed=embed)
         except Exception: 
-            await ctx.send("❌ Failed to query reddit for an image. We're possibly being blocked :-()")
+            await ctx.send(":x: Failed to query reddit for an image. We're possibly being blocked :-()")
 
     @commands.cooldown(1, 2)
     @commands.command(

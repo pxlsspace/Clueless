@@ -65,7 +65,7 @@ class Replace(commands.Cog):
         try:
             input_image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         rgbas = []
         color_names = []
@@ -78,7 +78,7 @@ class Replace(commands.Cog):
                 color_name, rgba = get_color(color)
                 if rgba is None:
                     return await ctx.send(
-                        f"❌ The color `{color}` is invalid.\n(use quotes if the color has 2 words)"
+                        f":x: The color `{color}` is invalid.\n(use quotes if the color has 2 words)"
                     )
             rgbas.append(rgba)
             color_names.append(color_name)

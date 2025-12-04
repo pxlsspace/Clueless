@@ -71,7 +71,7 @@ class Reduce(commands.Cog):
         try:
             parsed_args, unknown = parser.parse_known_args(args)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         palette, urls = get_urls_from_list(parsed_args.palette)
         input_url = urls[0] if urls else None
@@ -94,7 +94,7 @@ class Reduce(commands.Cog):
         try:
             img, url = await get_image_from_message(ctx, image_url, accept_emojis=False)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         start = time.time()
 

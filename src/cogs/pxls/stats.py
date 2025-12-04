@@ -244,7 +244,7 @@ class PxlsStats(commands.Cog):
                 cmd_name = "user setname" if is_slash else "setname"
                 prefix = "/" if is_slash else ctx.prefix
                 return await ctx.send(
-                    f"❌ You need to specify a pxls username.\n(You can set your default username with `{prefix}{cmd_name} <username>`)"
+                    f":x: You need to specify a pxls username.\n(You can set your default username with `{prefix}{cmd_name} <username>`)"
                 )
             else:
                 name = await db_users.get_pxls_user_name(pxls_user_id)
@@ -252,7 +252,7 @@ class PxlsStats(commands.Cog):
         else:
             user_id = await db_users.get_pxls_user_id(name)
             if user_id is None:
-                return await ctx.send("❌ User not found.")
+                return await ctx.send(":x: User not found.")
 
         # get current pixels and leaderboard place
         last_leaderboard = await db_stats.get_last_leaderboard()
@@ -495,7 +495,7 @@ class PxlsStats(commands.Cog):
         try:
             parsed_args = parser.parse_args(args)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         heatmap_opacity = None
         if parsed_args.heatmap is not None:
@@ -507,10 +507,10 @@ class PxlsStats(commands.Cog):
                 try:
                     heatmap_opacity = int(heatmap_opacity)
                 except ValueError:
-                    return await ctx.send("❌ The opacity value must be an integer.")
+                    return await ctx.send(":x: The opacity value must be an integer.")
                 if heatmap_opacity < 0 or heatmap_opacity > 100:
                     return await ctx.send(
-                        "❌ The opacity value must be between 0 and 100."
+                        ":x: The opacity value must be between 0 and 100."
                     )
 
         # virginmap
@@ -661,7 +661,7 @@ class PxlsStats(commands.Cog):
         try:
             parsed_args = parser.parse_args(args)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         # get the board with the placeable pixels only
         canvas_array_idx = await stats.get_placable_board()

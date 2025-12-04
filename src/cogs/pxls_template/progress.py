@@ -559,7 +559,7 @@ class Progress(commands.Cog):
         total_pixels = format_number(int(template.total_size))
 
         embed = disnake.Embed(
-            title=f"✅ Template `{name}` added to the tracker.", color=0x66C5CC
+            title=f":white_check_mark: Template `{name}` added to the tracker.", color=0x66C5CC
         )
         embed.description = f"**Title**: {template.title or '`N/A`'}\n"
         embed.description += f"[Template link]({template.url})\n"
@@ -666,7 +666,7 @@ class Progress(commands.Cog):
         try:
             parsed_args = parser.parse_args(args)
         except Exception as error:
-            return await ctx.send(f"❌ {error}")
+            return await ctx.send(f":x: {error}")
         sort = options_dict.get(parsed_args.sort) if parsed_args.sort else None
         coords = " ".join(parsed_args.coords) if parsed_args.coords else None
         if parsed_args.tpp < 5 or parsed_args.tpp > 40:
@@ -1024,7 +1024,7 @@ class Progress(commands.Cog):
         try:
             new_user = await UserConverter().convert(ctx, new_owner)
         except commands.UserNotFound as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         async with ctx.typing():
             await self.update(ctx, current_name, new_owner=new_user)
@@ -1043,7 +1043,7 @@ class Progress(commands.Cog):
         except ValueError as e:
             return await ctx.send(f":x: {e}")
         embed = disnake.Embed(
-            title=f"**✅ Template {old_temp.name} Updated**", color=0x66C5CC
+            title=f"**:white_check_mark: Template {old_temp.name} Updated**", color=0x66C5CC
         )
 
         # Show name update
@@ -1208,7 +1208,7 @@ class Progress(commands.Cog):
             return await ctx.send(f":x: {e}")
 
         confirm_title = (
-            f"⚠️ Are you sure you want to DELETE `{temp.name}` from the tracker?"
+            f":warning: Are you sure you want to DELETE `{temp.name}` from the tracker?"
         )
         confirm_text = "This is **IRREVERSIBLE**!\nThis template and all its stats will be **FOREVER LOST** if you proceed."
         confirm_embed = disnake.Embed(
@@ -1241,7 +1241,7 @@ class Progress(commands.Cog):
             except Exception as e:
                 return await ctx.send(f":x: {e}")
             embed = disnake.Embed(
-                title="✅ Template Deleted",
+                title=":white_check_mark: Template Deleted",
                 description=f"The template `{deleted_temp.name}` and all its stats were successfully deleted.",
                 color=0x3BA55D,
             )
@@ -1283,7 +1283,7 @@ class Progress(commands.Cog):
         try:
             parsed_args = parser.parse_args(args)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         async with ctx.typing():
             await self.speed(
@@ -1308,7 +1308,7 @@ class Progress(commands.Cog):
             input_time = str_to_td(last)
             if not input_time:
                 return await ctx.send(
-                    "❌ Invalid `last` parameter, format must be `?y?mo?w?d?h?m?s`."
+                    ":x: Invalid `last` parameter, format must be `?y?mo?w?d?h?m?s`."
                 )
             dt2 = datetime.now(timezone.utc)
             dt1 = round_minutes_down(dt2 - input_time, step=5) - timedelta(minutes=1)
@@ -1517,7 +1517,7 @@ class Progress(commands.Cog):
         for owner_id in owners:
             tracked_templates.load_progress_admins(owner_id)
         admins = tracked_templates.progress_admins
-        msg = "✅ **Progress admin list updated**\nCurrent progress admins:\n"
+        msg = ":white_check_mark: **Progress admin list updated**\nCurrent progress admins:\n"
         for admin_id in admins:
             msg += f"- <@{admin_id}>\n"
         await ctx.send(embed=disnake.Embed(description=msg, color=0x66C5CC))
@@ -1583,7 +1583,7 @@ class Progress(commands.Cog):
         try:
             parsed_args = parser.parse_args(args)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         async with ctx.typing():
             await self.timelapse(
@@ -1733,7 +1733,7 @@ class Progress(commands.Cog):
             return
 
         # crop the template area
-        embed.description = "✅ **Downloading the snapshots**... done!\n\n<a:typing:675416675591651329> **Cropping the snapshots**..."
+        embed.description = ":white_check_mark: **Downloading the snapshots**... done!\n\n<a:typing:675416675591651329> **Cropping the snapshots**..."
         await m.edit(embed=embed)
         frames = []
         for snapshot_image in snapshot_images:
@@ -1764,7 +1764,7 @@ class Progress(commands.Cog):
                 ss_frame_resized = ss_frame
             frames.append(ss_frame_resized)
 
-        embed.description = "✅ **Downloading the snapshots**... done!\n\n✅ **Cropping the snapshots**... done!"
+        embed.description = ":white_check_mark: **Downloading the snapshots**... done!\n\n:white_check_mark: **Cropping the snapshots**... done!"
         embed.description += (
             "\n\n<a:typing:675416675591651329> **Saving and sending the GIF**..."
         )
@@ -1805,7 +1805,7 @@ class Progress(commands.Cog):
             await m.edit(embed=embed, file=file)
         except Exception:
             embed.set_footer(text="")
-            embed.description = "✅ **Downloading the snapshots**... done!\n\n✅ **Cropping the snapshots**... done!"
+            embed.description = ":white_check_mark: **Downloading the snapshots**... done!\n\n:white_check_mark: **Cropping the snapshots**... done!"
             embed.description += "\n\n:x: **Saving and sending the GIF**... error\n(most likely the GIF is too big for discord's limit of 8MB)"
             embed.description += (
                 "\n\n<a:typing:675416675591651329> **Uploading to imgur**..."
@@ -1826,7 +1826,7 @@ class Progress(commands.Cog):
                     msg += f"(add `{cmd}` to the command)."
                 else:
                     msg = "unexpected error"
-                embed.description = "✅ **Downloading the snapshots**... done!\n\n✅ **Cropping the snapshots**... done!"
+                embed.description = ":white_check_mark: **Downloading the snapshots**... done!\n\n:white_check_mark: **Cropping the snapshots**... done!"
                 embed.description += "\n\n:x: **Saving and sending the GIF**... error\n(most likely the GIF is too big for discord's limit of 8MB)"
                 embed.description += f"\n\n:x: **Uploading to imgur**... {msg}"
                 embed.color = disnake.Color.red()
@@ -1924,7 +1924,7 @@ class Progress(commands.Cog):
             try:
                 user = await UserConverter().convert(ctx, user)
             except commands.UserNotFound as e:
-                return await ctx.send(f"❌ {e}")
+                return await ctx.send(f":x: {e}")
             users_list.append(user)
 
         async with ctx.typing():
@@ -1951,13 +1951,13 @@ class Progress(commands.Cog):
         msg = "**Updates**\n"
         for user in users:
             if user.bot:
-                msg += f"❌ <@{user.id}>: cannot add a bot\n"
+                msg += f":x: <@{user.id}>: cannot add a bot\n"
             else:
                 nb_added = await db_templates.add_template_manager(template, user.id)
                 if nb_added > 0:
-                    msg += f"✅ <@{user.id}>: added as template manager\n"
+                    msg += f":white_check_mark: <@{user.id}>: added as template manager\n"
                 else:
-                    msg += f"❌ <@{user.id}>: already template manager\n"
+                    msg += f":x: <@{user.id}>: already template manager\n"
 
         embed = disnake.Embed(title=f"Template {template.name} updated", color=0x66C5CC)
         embed.description = msg
@@ -2001,7 +2001,7 @@ class Progress(commands.Cog):
             try:
                 user = await UserConverter().convert(ctx, user)
             except commands.UserNotFound as e:
-                return await ctx.send(f"❌ {e}")
+                return await ctx.send(f":x: {e}")
             users_list.append(user)
 
         async with ctx.typing():
@@ -2029,9 +2029,9 @@ class Progress(commands.Cog):
         for user in users:
             nb_deleted = await db_templates.delete_template_manager(template, user.id)
             if nb_deleted > 0:
-                msg += f"✅ User <@{user.id}> deleted from template managers\n"
+                msg += f":white_check_mark: User <@{user.id}> deleted from template managers\n"
             else:
-                msg += f"❌ User <@{user.id}> is not a template manager\n"
+                msg += f":x: User <@{user.id}> is not a template manager\n"
 
         embed = disnake.Embed(title=f"Template {template.name} updated", color=0x66C5CC)
         embed.description = msg

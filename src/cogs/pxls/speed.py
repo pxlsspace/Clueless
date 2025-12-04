@@ -78,7 +78,7 @@ class PxlsSpeed(commands.Cog):
         try:
             params = parse_speed_args(args)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         async with ctx.typing():
             await self.speed(
@@ -130,7 +130,7 @@ class PxlsSpeed(commands.Cog):
         if len(usernames) == 0:
             if pxls_user_id is None:
                 return await ctx.send(
-                    "❌ You need to specify at least one username.\n" + usage_text
+                    ":x: You need to specify at least one username.\n" + usage_text
                 )
             else:
                 name = await db_users.get_pxls_user_name(pxls_user_id)
@@ -139,7 +139,7 @@ class PxlsSpeed(commands.Cog):
         if "!" in usernames:
             if pxls_user_id is None:
                 return await ctx.send(
-                    "❌ You need to have a set username to use `!`.\n" + usage_text
+                    ":x: You need to have a set username to use `!`.\n" + usage_text
                 )
             else:
                 name = await db_users.get_pxls_user_name(pxls_user_id)
@@ -174,7 +174,7 @@ class PxlsSpeed(commands.Cog):
 
         # check that we found data
         err_embed = disnake.Embed(
-            title=f"❌ User{'s' if len(usernames) > 1 else ''} Not Found",
+            title=f":x: User{'s' if len(usernames) > 1 else ''} Not Found",
             color=disnake.Color.red(),
         )
         err_embed.description = f"The users need to be in the **top 1000 of {'the canvas' if canvas else 'all-time'}** for this command to work.\n"
@@ -186,7 +186,7 @@ class PxlsSpeed(commands.Cog):
 
         # check that we can calculate the speed
         if past_time == now_time:
-            return await ctx.send("❌ The time frame given is too short.")
+            return await ctx.send(":x: The time frame given is too short.")
         diff_time = now_time - past_time
         nb_hour = diff_time / timedelta(hours=1)
 
@@ -425,7 +425,7 @@ class PxlsSpeed(commands.Cog):
                 and old_time < canvas_start.replace(tzinfo=timezone.utc)
             ):
                 emb.set_footer(
-                    text="⚠️ Warning: The time given is earlier than the canvas start, use {} to use the all-time data.".format(
+                    text=":warning: Warning: The time given is earlier than the canvas start, use {} to use the all-time data.".format(
                         "/speed alltime:True" if is_slash else f"{prefix}speed -alltime"
                     )
                 )

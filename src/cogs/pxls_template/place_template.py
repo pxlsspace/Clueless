@@ -84,7 +84,7 @@ class PlaceTemplate(commands.Cog):
         try:
             parsed_args = parser.parse_args(args)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
         url = parsed_args.url[0] if parsed_args.url else None
         async with ctx.typing():
             await self.template(
@@ -103,7 +103,7 @@ class PlaceTemplate(commands.Cog):
         try:
             img, url = await get_image_from_message(ctx, image_url)
         except ValueError as e:
-            await ctx.send(f"❌ {e}")
+            await ctx.send(f":x: {e}")
             return False
 
         start = time.time()
@@ -114,7 +114,7 @@ class PlaceTemplate(commands.Cog):
             try:
                 style_image_bytes = await get_content(style_url, "image")
             except Exception as e:
-                await ctx.send(f"❌ {e}")
+                await ctx.send(f":x: {e}")
                 return False
             style_image = Image.open(BytesIO(style_image_bytes))
             style_image = style_image.convert("RGBA")
@@ -140,7 +140,7 @@ class PlaceTemplate(commands.Cog):
                     styles_available += ("\t• {0} ({1}x{1})\n").format(
                         s["name"], s["size"]
                     )
-                await ctx.send(f"❌ Unknown style '{style_name}'.\n{styles_available}")
+                await ctx.send(f":x: Unknown style '{style_name}'.\n{styles_available}")
                 return False
 
         # check on the size
@@ -203,7 +203,7 @@ class PlaceTemplate(commands.Cog):
         embed = disnake.Embed(title="**Template Image**", color=0x66C5CC)
         embed.description = f"**Style**: {style['name']}\n**Glow**: {'yes' if glow else 'no'}\n**Size**: {total_amount} pixels ({img.width}x{img.height})"
         embed.set_footer(
-            text="⚠️ Warning: if you delete this message the template WILL break."
+            text=":warning: Warning: if you delete this message the template WILL break."
         )
         embed.set_author(name=ctx.author)
         reduced_image = Image.fromarray(

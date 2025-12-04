@@ -65,15 +65,15 @@ class Scale(commands.Cog):
             try:
                 pixel_size = int(pixel_size)
             except ValueError:
-                return await ctx.send(f"❌ {err_msg}")
+                return await ctx.send(f":x: {err_msg}")
             if pixel_size < 2:
-                return await ctx.send(f"❌ {err_msg}")
+                return await ctx.send(f":x: {err_msg}")
 
         # get the input image
         try:
             input_image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         input_image = remove_white_space(input_image)  # Remove extra space
         input_image_array = np.array(input_image)
@@ -164,15 +164,15 @@ class Scale(commands.Cog):
         try:
             scale = int(scale)
         except ValueError:
-            return await ctx.send(f"❌ {err_msg}")
+            return await ctx.send(f":x: {err_msg}")
         if scale < 1:
-            return await ctx.send(f"❌ {err_msg}")
+            return await ctx.send(f":x: {err_msg}")
 
         # get the input image
         try:
             input_image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         # check that the image won't be too big
         final_width = scale * input_image.width
@@ -184,7 +184,7 @@ class Scale(commands.Cog):
                     final_width, final_height
                 )
             )
-            return await ctx.send(f"❌ {err_msg}")
+            return await ctx.send(f":x: {err_msg}")
 
         res_image = input_image.resize((final_width, final_height), Image.NEAREST)
 
@@ -248,7 +248,7 @@ class Scale(commands.Cog):
         try:
             parsed_args = parser.parse_args(args)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         texts, urls = get_urls_from_list(parsed_args.args)
         url = urls[0] if urls else None
@@ -276,13 +276,13 @@ class Scale(commands.Cog):
         try:
             width = _check_width(width)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         # get the input image
         try:
             input_image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         async def _resize(width):
             # checks on the width
@@ -316,7 +316,7 @@ class Scale(commands.Cog):
         try:
             embed, res_file = await _resize(width)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         view = ResizeView(ctx.author, width, _resize)
         view.message = await ctx.send(embed=embed, file=res_file, view=view)
@@ -345,7 +345,7 @@ class Scale(commands.Cog):
         try:
             image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         width = image.width
         height = image.height

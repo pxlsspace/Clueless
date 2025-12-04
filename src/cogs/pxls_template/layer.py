@@ -51,7 +51,7 @@ class Layer(commands.Cog):
             parsed_args, _ = parser.parse_known_args(args)
             template_uris = parsed_args.templates
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
         async with ctx.typing():
             await self.layer(ctx, template_uris)
 
@@ -60,12 +60,12 @@ class Layer(commands.Cog):
         try:
             templates = await tracked_templates.get_templates(template_uris)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         start = time.time()
         ox, oy, palettized_array = layer(templates)
         if palettized_array.size == 0:
-            return await ctx.send("❌ No placeable pixels in the layered template.")
+            return await ctx.send(":x: No placeable pixels in the layered template.")
         img = Image.fromarray(stats.palettize_array(palettized_array))
         end = time.time()
 

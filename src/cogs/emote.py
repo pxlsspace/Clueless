@@ -21,7 +21,7 @@ class Emote(commands.Cog):
     )
     async def emote(self, ctx, subcommand):
         return await ctx.send(
-            f"❌ Sub-command {subcommand} is not found\nUsage: `{ctx.prefix}{ctx.command.name} {ctx.command.usage}`"
+            f":x: Sub-command {subcommand} is not found\nUsage: `{ctx.prefix}{ctx.command.name} {ctx.command.usage}`"
         )
 
     @emote.command(
@@ -37,12 +37,12 @@ class Emote(commands.Cog):
         try:
             img_bytes, url = await get_image_from_message(ctx, url, return_type="bytes")
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         # check if there is enough emote space
         nb_emoji, nb_animated = await number_emoji(ctx)
         if nb_emoji + nb_animated >= 2 * ctx.guild.emoji_limit:
-            return await ctx.send("❌ The server is full")
+            return await ctx.send(":x: The server is full")
 
         # convert the emoji to gif if the server is full
         if nb_emoji >= ctx.guild.emoji_limit:
@@ -58,21 +58,21 @@ class Emote(commands.Cog):
             )
         except disnake.InvalidArgument:
             return await ctx.send(
-                "❌ Invalid image type. Only PNG, JPEG and GIF are supported."
+                ":x: Invalid image type. Only PNG, JPEG and GIF are supported."
             )
         except disnake.HTTPException as e:
             if e.code == 30008:
                 return await ctx.send(
-                    f"❌ Maximum number of emojis reached ({ctx.guild.emoji_limit})"
+                    f":x: Maximum number of emojis reached ({ctx.guild.emoji_limit})"
                 )
             else:
-                return await ctx.send(f"❌ {e.text}")
+                return await ctx.send(f":x: {e.text}")
         except asyncio.TimeoutError:
             return await ctx.send(
-                "❌ You're getting ratelimited by discord, retry again in 20/30 min"
+                ":x: You're getting ratelimited by discord, retry again in 20/30 min"
             )
 
-        await ctx.send("✅ Successfully added the emoji {}".format(format_emoji(emoji)))
+        await ctx.send(":white_check_mark: Successfully added the emoji {}".format(format_emoji(emoji)))
 
     @emote.command(
         usage="<name>",
@@ -83,14 +83,14 @@ class Emote(commands.Cog):
     async def remove(self, ctx, name):
         emotes = [x for x in ctx.guild.emojis if x.name == name]
         if len(emotes) == 0:
-            return await ctx.send("❌ There is no emote with that name on this server.")
+            return await ctx.send(":x: There is no emote with that name on this server.")
         nb_emote = len(emotes)
         deleted_emojis = ""
         for emote in emotes:
             deleted_emojis += f" {format_emoji(emote)}"
 
         await ctx.send(
-            f"✅ {nb_emote} emote(s) with the name `:{name}:` have been deleted:"
+            f":white_check_mark: {nb_emote} emote(s) with the name `:{name}:` have been deleted:"
             + deleted_emojis
         )
         for emote in emotes:
@@ -103,7 +103,7 @@ class Emote(commands.Cog):
     async def list(self, ctx):
         emotes = ctx.guild.emojis
         if len(emotes) == 0:
-            return await ctx.send("❌ There are no emotes in this server")
+            return await ctx.send(":x: There are no emotes in this server")
         res = [""]
         i = 0
         for emote in emotes:

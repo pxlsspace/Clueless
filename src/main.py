@@ -211,20 +211,20 @@ async def on_command_error(ctx, error):
 
     # handled errors
     if not slash_command and isinstance(error, commands.MissingRequiredArgument):
-        text = "❌ " + str(error) + "\n"
+        text = ":x: " + str(error) + "\n"
         text += f"Usage: `{ctx.prefix}{command_name} {ctx.command.usage}`"
         return await ctx.send(text)
 
     if isinstance(error, (commands.MissingPermissions, commands.NotOwner)):
         return await ctx.send(
-            f"❌ You don't have permissions to use the `{command_name}` command."
+            f":x: You don't have permissions to use the `{command_name}` command."
         )
 
     if isinstance(error, commands.CommandOnCooldown):
-        return await ctx.send(f"❌ {error}")
+        return await ctx.send(f":x: {error}")
 
     if isinstance(error, OverflowError):
-        return await ctx.send("❌ Overflow error. <:bruhkitty:943594789532737586>")
+        return await ctx.send(":x: Overflow error. <:bruhkitty:943594789532737586>")
 
     if isinstance(error, (disnake.errors.Forbidden, disnake.Forbidden)):
         # Try to send error message

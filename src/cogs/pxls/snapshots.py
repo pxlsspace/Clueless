@@ -195,7 +195,7 @@ class Snapshots(commands.Cog):
             channel_id = await db_servers.get_snapshots_channel(ctx.guild.id)
             if channel_id is None:
                 return await ctx.send(
-                    f"❌ No snapshots channel set\n (use `{ctx.prefix}setsnapshot channel <#channel|here|none>`)"
+                    f":x: No snapshots channel set\n (use `{ctx.prefix}setsnapshot channel <#channel|here|none>`)"
                 )
             else:
                 return await ctx.send("Snapshots are set to <#" + str(channel_id) + ">")
@@ -206,10 +206,10 @@ class Snapshots(commands.Cog):
                 channel_id = ctx.message.channel.id
             elif channel == "none":
                 await db_servers.update_snapshots_channel(ctx.guild.id, None)
-                await ctx.send("✅ Snapshots won't be sent anymore.")
+                await ctx.send(":white_check_mark: Snapshots won't be sent anymore.")
                 return
             else:
-                return await ctx.send("❌ You need to give a valid channel.")
+                return await ctx.send(":x: You need to give a valid channel.")
         else:
             channel_id = ctx.message.channel_mentions[0].id
 
@@ -217,12 +217,12 @@ class Snapshots(commands.Cog):
         channel = await self.bot.fetch_channel(channel_id)
         if not channel.permissions_for(ctx.guild.me).send_messages:
             await ctx.send(
-                f"❌ I don't have permissions to send messages in <#{channel_id}>"
+                f":x: I don't have permissions to send messages in <#{channel_id}>"
             )
         else:
             # saves the new channel id in the db
             await db_servers.update_snapshots_channel(ctx.guild.id, channel_id)
-            await ctx.send("✅ Snapshots successfully set to <#" + str(channel_id) + ">")
+            await ctx.send(":white_check_mark: Snapshots successfully set to <#" + str(channel_id) + ">")
 
     @setsnapshots.command(description="Disable snapshots.", aliases=["unset"])
     @commands.check_any(
@@ -230,7 +230,7 @@ class Snapshots(commands.Cog):
     )
     async def disable(self, ctx):
         await db_servers.update_snapshots_channel(ctx.guild.id, None)
-        await ctx.send("✅ Snapshots won't be sent anymore.")
+        await ctx.send(":white_check_mark: Snapshots won't be sent anymore.")
 
     @commands.slash_command(name="snapshot")
     async def _snapshot(
@@ -288,7 +288,7 @@ class Snapshots(commands.Cog):
         try:
             parsed_args, unknown = parser.parse_known_args(args)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
         dts, urls = get_urls_from_list(parsed_args.args)
         dt = " ".join(dts) if dts else None
         template = urls[0] if urls else None

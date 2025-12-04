@@ -81,7 +81,7 @@ class Highlight(commands.Cog):
         try:
             parsed_args = parser.parse_args(args)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         # check if there is an image URL in the arguments
         colors, urls = get_urls_from_list(parsed_args.colors)
@@ -91,7 +91,7 @@ class Highlight(commands.Cog):
         try:
             image, url = await get_image_from_message(ctx, input_url)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
         image_array = np.array(image)
 
         await _highlight(ctx, image_array, colors, parsed_args.bgcolor)
@@ -117,7 +117,7 @@ async def _highlight(ctx, image_array: np.ndarray, colors, bg_color):
     for i, color in enumerate(colors):
         color_name, rgba = get_color(color)
         if rgba is None:
-            return await ctx.send(f"❌ The color `{color}` is invalid.")
+            return await ctx.send(f":x: The color `{color}` is invalid.")
         colors[i] = color_name
 
         rgba_list.append(rgba)
@@ -136,7 +136,7 @@ async def _highlight(ctx, image_array: np.ndarray, colors, bg_color):
         else:
             bg_color_name, bg_rgba = get_color(bg_color)
             if bg_rgba is None:
-                return await ctx.send(f"❌ The background color `{bg_color}` is invalid.")
+                return await ctx.send(f":x: The background color `{bg_color}` is invalid.")
 
     # find the number of pixels non-transparent
     alpha_values = image_array[:, :, 3]

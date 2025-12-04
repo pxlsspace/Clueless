@@ -38,9 +38,9 @@ class PxlsCooldown(commands.Cog):
             try:
                 online = int(number)
             except ValueError:
-                return await ctx.send("❌ The number of users must be an integer.")
+                return await ctx.send(":x: The number of users must be an integer.")
             if online < 0:
-                return await ctx.send("❌ The number of users must be positive.")
+                return await ctx.send(":x: The number of users must be positive.")
         else:
             online = stats.online_count
             if online is None:

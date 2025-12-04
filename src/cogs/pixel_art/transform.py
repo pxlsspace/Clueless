@@ -41,7 +41,7 @@ class Transform(commands.Cog):
         try:
             image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         flipped = ImageOps.mirror(image)
 
@@ -70,7 +70,7 @@ class Transform(commands.Cog):
         try:
             image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         flipped = ImageOps.flip(image)
 

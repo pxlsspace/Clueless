@@ -108,7 +108,7 @@ class TemplateView(AuthorView):
         # confirmation message (because we HAVE to respond something to the modal inter)
         await modal_inter.response.send_message(
             embed=disnake.Embed(
-                color=0x66C5CC, title="✅ Template title successfully added."
+                color=0x66C5CC, title=":white_check_mark: Template title successfully added."
             ),
             ephemeral=True,
         )
@@ -204,7 +204,7 @@ class Template(commands.Cog):
         try:
             parsed_args = parser.parse_args(args)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
         url = parsed_args.url[0] if parsed_args.url else None
         palette = " ".join(parsed_args.palette) if parsed_args.palette else None
         async with ctx.typing():
@@ -240,7 +240,7 @@ class Template(commands.Cog):
         try:
             img, url = await get_image_from_message(ctx, image_url)
         except ValueError as e:
-            await ctx.send(f"❌ {e}")
+            await ctx.send(f":x: {e}")
             return False
 
         # check if the input is a template and use its parameters
@@ -260,7 +260,7 @@ class Template(commands.Cog):
             try:
                 style_image_bytes = await get_content(style_url, "image")
             except Exception as e:
-                await ctx.send(f"❌ {e}")
+                await ctx.send(f":x: {e}")
                 return False
             style_image = Image.open(BytesIO(style_image_bytes))
             style_image = style_image.convert("RGBA")
@@ -287,7 +287,7 @@ class Template(commands.Cog):
                     styles_available += ("\t• {0} ({1}x{1})\n").format(
                         s["name"], s["size"]
                     )
-                await ctx.send(f"❌ Unknown style `{style_name}`.\n{styles_available}")
+                await ctx.send(f":x: Unknown style `{style_name}`.\n{styles_available}")
                 return False
             style_name = f"`{style['name']}{' (+ glow)' if glow else ''}`"
 
@@ -479,7 +479,7 @@ class Template(commands.Cog):
 
             # update the embed with the link in a new field
             embed.add_field(name="**Template Link**", value=template_url, inline=False)
-            warning = "⚠️ Warning: if you delete this message the template WILL break."
+            warning = ":warning: Warning: if you delete this message the template WILL break."
             embed.set_footer(
                 text="⏲️ Generated in {}s | Uploaded in {}s\n{}".format(
                     processing_time, upload_time, warning

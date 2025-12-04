@@ -46,7 +46,7 @@ class ColorBreakdown(commands.Cog):
         try:
             input_image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         await _colors(self.bot, ctx, input_image)
 
@@ -60,7 +60,7 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
     # get the colors table
     image_colors = await bot.loop.run_in_executor(None, input_image.getcolors, nb_pixels)
     if image_colors is None:
-        return await ctx.send("❌ Unsupported format or image mode.")
+        return await ctx.send(":x: Unsupported format or image mode.")
 
     # remove transparent pixels (alpha < 128)
     image_colors = [c for c in image_colors if (len(c[1]) != 4 or c[1][3] > 128)]
@@ -70,7 +70,7 @@ async def _colors(bot: commands.Bot, ctx, input_image, title="Color Breakdown"):
     if nb_colors > 1e6:
         return await ctx.send(
             embed=disnake.Embed(
-                title="❌ Too many colors.",
+                title=":x: Too many colors.",
                 description=f"This image has way too many colors! (**{format_number(nb_colors)}**)",
                 color=disnake.Color.red(),
             )

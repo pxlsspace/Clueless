@@ -24,16 +24,16 @@ class PxlsMilestones(commands.Cog):
     async def add(self, ctx, name=None):
         # checking valid paramter
         if name is None:
-            return await ctx.send("❌ You need to specify a username.")
+            return await ctx.send(":x: You need to specify a username.")
 
         try:
             await db_users.create_server_pxls_user(ctx.guild.id, name)
         except IntegrityError:
-            return await ctx.send("❌ This user is already being tracked.")
+            return await ctx.send(":x: This user is already being tracked.")
         except ValueError:
-            return await ctx.send("❌ User not found.")
+            return await ctx.send(":x: User not found.")
 
-        msg = "✅ Tracking " + name + "'s all-time counter."
+        msg = ":white_check_mark: Tracking " + name + "'s all-time counter."
 
         if await db_servers.get_alert_channel(ctx.guild.id) is None:
             msg += "\nYou haven't set any alert channel, use `>milestones channel [#channel|here]`"
@@ -46,12 +46,12 @@ class PxlsMilestones(commands.Cog):
     )
     async def remove(self, ctx, name=None):
         if name is None:
-            return await ctx.send("❌ You need to specify a username.")
+            return await ctx.send(":x: You need to specify a username.")
         try:
             await db_users.delete_server_pxls_user(ctx.guild.id, name) != -1
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
-        return await ctx.send("✅ " + name + " isn't being tracked anymore.")
+            return await ctx.send(f":x: {e}")
+        return await ctx.send(":white_check_mark: " + name + " isn't being tracked anymore.")
 
     @milestones.command(
         description="Shows the list of users being tracked.", aliases=["ls"]
@@ -60,7 +60,7 @@ class PxlsMilestones(commands.Cog):
         users = await db_users.get_all_server_tracked_users(ctx.guild.id)
         if len(users) == 0:
             await ctx.send(
-                "❌ No user added yet.\n*(use `"
+                ":x: No user added yet.\n*(use `"
                 + ctx.prefix
                 + "milestones add <username>` to add a new user.*)"
             )
@@ -86,7 +86,7 @@ class PxlsMilestones(commands.Cog):
             channel_id = await db_servers.get_alert_channel(ctx.guild.id)
             if channel_id is None:
                 return await ctx.send(
-                    f"❌ No alert channel set\n (use `{ctx.prefix}milestones setchannel <#channel|here|none>`)"
+                    f":x: No alert channel set\n (use `{ctx.prefix}milestones setchannel <#channel|here|none>`)"
                 )
             else:
                 return await ctx.send(
@@ -99,10 +99,10 @@ class PxlsMilestones(commands.Cog):
                 channel_id = ctx.message.channel.id
             elif channel == "none":
                 await db_servers.update_alert_channel(ctx.guild.id, None)
-                await ctx.send("✅ Milestone alerts won't be sent anymore.")
+                await ctx.send(":white_check_mark: Milestone alerts won't be sent anymore.")
                 return
             else:
-                return await ctx.send("❌ You need to give a valid channel.")
+                return await ctx.send(":x: You need to give a valid channel.")
         else:
             channel_id = ctx.message.channel_mentions[0].id
 
@@ -110,13 +110,13 @@ class PxlsMilestones(commands.Cog):
         channel = self.bot.get_channel(channel_id)
         if not ctx.message.guild.me.permissions_in(channel).send_messages:
             await ctx.send(
-                f"❌ I do not have permissions to send mesages in <#{channel_id}>"
+                f":x: I do not have permissions to send mesages in <#{channel_id}>"
             )
         else:
             # saves the new channel id in the db
             await db_servers.update_alert_channel(ctx.guild.id, channel_id)
             await ctx.send(
-                "✅ Milestones alerts successfully set to <#" + str(channel_id) + ">"
+                ":white_check_mark: Milestones alerts successfully set to <#" + str(channel_id) + ">"
             )
 
 

@@ -206,7 +206,7 @@ class TemplateCrop(commands.Cog):
             res_array[wrong_pixels_mask == 1] = cropped_board[wrong_pixels_mask == 1]
 
         if np.all(res_array == 255):
-            return await ctx.send("❌ No placeable pixels in the cropped template.")
+            return await ctx.send(":x: No placeable pixels in the cropped template.")
         img = Image.fromarray(stats.palettize_array(res_array))
 
         embed = disnake.Embed(color=0x66C5CC, title="Cropped")

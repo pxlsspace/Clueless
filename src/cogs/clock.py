@@ -165,9 +165,9 @@ class Clock(commands.Cog):
             await self._update_stats_data()
         except Exception as e:
             return await ctx.send(
-                f"❌ **An error occurred during the update:**\n ```{type(e).__name__}: {e}```"
+                f":x: **An error occurred during the update:**\n ```{type(e).__name__}: {e}```"
             )
-        await ctx.send("✅ Successfully updated stats")
+        await ctx.send(":white_check_mark: Successfully updated stats")
 
     @tasks.loop(minutes=5)
     async def update_online_count(self):

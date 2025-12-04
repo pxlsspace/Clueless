@@ -68,15 +68,15 @@ class Font(commands.Cog):
         try:
             arguments = parse_pixelfont_args(args)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         fonts = get_all_fonts()
         if len(fonts) == 0:
-            return await ctx.send("❌ I can't find any fonts :(")
+            return await ctx.send(":x: I can't find any fonts :(")
 
         font = arguments.font
         if not (font in fonts) and font != "*":
-            msg = "❌ Can't find this font.\n"
+            msg = ":x: Can't find this font.\n"
             msg += "**Available fonts:**\n"
             for font in fonts:
                 msg += "\t• `" + font + "`\n"
@@ -91,7 +91,7 @@ class Font(commands.Cog):
             else:
                 font_color_name, font_rgba = get_color(font_color)
                 if font_rgba is None:
-                    return await ctx.send(f"❌ The font color `{font_color}` is invalid.")
+                    return await ctx.send(f":x: The font color `{font_color}` is invalid.")
         else:
             font_rgba = None
 
@@ -105,7 +105,7 @@ class Font(commands.Cog):
                 background_color_name, bg_rgba = get_color(background_color)
                 if bg_rgba is None:
                     return await ctx.send(
-                        f"❌ The background color `{background_color}` is invalid."
+                        f":x: The background color `{background_color}` is invalid."
                     )
         else:
             bg_rgba = None
@@ -122,15 +122,15 @@ class Font(commands.Cog):
                         ]
                     )
                 except ValueError as e:
-                    return await ctx.send(f"❌ {e}")
+                    return await ctx.send(f":x: {e}")
             # check that we have at least one image in the image list
             if all([im[1] is None for im in images]):
-                return await ctx.send("❌ These characters weren't found in any font.")
+                return await ctx.send(":x: These characters weren't found in any font.")
         else:
             images.append([font, PixelText(text, font, font_rgba, bg_rgba).get_image()])
             # check that we have at least one image in the image list
             if all([im[1] is None for im in images]):
-                return await ctx.send("❌ These characters weren't found in the font.")
+                return await ctx.send(":x: These characters weren't found in the font.")
 
         # create a list of discord File to send
         files = []
@@ -149,7 +149,7 @@ class Font(commands.Cog):
         fonts = get_all_fonts()
         allowed_fonts = get_allowed_fonts()
         if len(fonts) == 0:
-            return await ctx.send("❌ I can't find any font :(")
+            return await ctx.send(":x: I can't find any font :(")
         msg = ""
         for font in fonts:
             if font in allowed_fonts:

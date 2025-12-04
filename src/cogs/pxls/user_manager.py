@@ -50,9 +50,9 @@ class UserManager(commands.Cog):
     async def setname(self, ctx, username):
         pxls_user_id = await db_users.get_pxls_user_id(username)
         if pxls_user_id is None:
-            return await ctx.send("❌ Can't find this pxls username.")
+            return await ctx.send(":x: Can't find this pxls username.")
         await db_users.set_pxls_user(ctx.author.id, pxls_user_id)
-        await ctx.send(f"✅ Pxls username successfully set to **{username}**.")
+        await ctx.send(f":white_check_mark: Pxls username successfully set to **{username}**.")
 
     @user.sub_command(name="unsetname")
     async def _unsetname(self, inter: disnake.AppCmdInter):
@@ -63,9 +63,9 @@ class UserManager(commands.Cog):
     async def unsetname(self, ctx):
         discord_user = await db_users.get_discord_user(ctx.author.id)
         if discord_user["pxls_user_id"] is None:
-            return await ctx.send("❌ You haven't set any pxls username.")
+            return await ctx.send(":x: You haven't set any pxls username.")
         await db_users.set_pxls_user(ctx.author.id, None)
-        await ctx.send("✅ Pxls username successfully unset.")
+        await ctx.send(":white_check_mark: Pxls username successfully unset.")
 
     @user.sub_command(name="settheme")
     async def _theme(
@@ -118,11 +118,11 @@ class UserManager(commands.Cog):
             return await ctx.send(embed=embed)
 
         if theme not in [t.name for t in theme_list]:
-            error_msg = "❌ Can't find this theme.\n"
+            error_msg = ":x: Can't find this theme.\n"
             return await ctx.send(error_msg + available_themes_text)
 
         await db_users.set_user_theme(ctx.author.id, theme)
-        await ctx.send(f"✅ Theme successfully set to **{theme}**.")
+        await ctx.send(f":white_check_mark: Theme successfully set to **{theme}**.")
 
     @commands.slash_command(name="whoami")
     async def _whoami(self, inter: disnake.AppCmdInter):
@@ -154,7 +154,7 @@ class UserManager(commands.Cog):
             try:
                 user = await UserConverter().convert(ctx, user)
             except commands.UserNotFound as e:
-                return await ctx.send(f"❌ {e}")
+                return await ctx.send(f":x: {e}")
         await self.whoami(ctx, user)
 
     async def whoami(self, ctx, user=None):
@@ -226,10 +226,10 @@ class UserManager(commands.Cog):
     async def settimezone(self, ctx, timezone: str):
         tz = get_timezone(timezone)
         if tz is None:
-            return await ctx.send("❌ Timezone not found.")
+            return await ctx.send(":x: Timezone not found.")
         await db_users.set_user_timezone(ctx.author.id, timezone)
         await ctx.send(
-            "✅ Timezone successfully set to `{}`.\nCurrent time: {}".format(
+            ":white_check_mark: Timezone successfully set to `{}`.\nCurrent time: {}".format(
                 timezone,
                 datetime.astimezone(datetime.now(), tz).strftime(
                     "**%H:%M** %Z (%Y-%m-%d)"
@@ -246,9 +246,9 @@ class UserManager(commands.Cog):
     async def unsettimezone(self, ctx):
         discord_user = await db_users.get_discord_user(ctx.author.id)
         if discord_user["timezone"] is None:
-            return await ctx.send("❌ You haven't set any timezone.")
+            return await ctx.send(":x: You haven't set any timezone.")
         await db_users.set_user_timezone(ctx.author.id, None)
-        await ctx.send("✅ Timezone successfully unset.")
+        await ctx.send(":white_check_mark: Timezone successfully unset.")
 
     allowed_fonts = get_allowed_fonts()
 
@@ -283,7 +283,7 @@ class UserManager(commands.Cog):
                 return await ctx.send(f":x: Font not found.\n{allowed_fonts}")
 
         await db_users.set_user_font(ctx.author.id, font.lower())
-        await ctx.send(f"✅ Font successfully set to `{font.lower()}`.")
+        await ctx.send(f":white_check_mark: Font successfully set to `{font.lower()}`.")
 
     @user.sub_command(name="setkey")
     async def _set_key(self, inter: disnake.AppCmdInter):
@@ -426,7 +426,7 @@ class UserManager(commands.Cog):
 
             embed = disnake.Embed(
                 color=disnake.Color.green(),
-                description=f"✅ Log key for canvas `{canvas_code}` successfully {'updated' if is_update else 'added'}.",
+                description=f":white_check_mark: Log key for canvas `{canvas_code}` successfully {'updated' if is_update else 'added'}.",
             )
             embed.set_author(
                 name=modal_inter.author
@@ -543,7 +543,7 @@ class UserManager(commands.Cog):
             for canvas_code in canvases:
                 await db_users.delete_key(ctx.author.id, canvas_code)
 
-            return await ctx.send("✅ All your log keys were successfully deleted.")
+            return await ctx.send(":white_check_mark: All your log keys were successfully deleted.")
         else:
             canvas_code = check_canvas_code(canvas_code_input)
             if canvas_code is None:
@@ -557,7 +557,7 @@ class UserManager(commands.Cog):
             else:
                 await db_users.delete_key(ctx.author.id, canvas_code)
             return await ctx.send(
-                f"✅ Log key for canvas `{canvas_code}` successfully deleted."
+                f":white_check_mark: Log key for canvas `{canvas_code}` successfully deleted."
             )
 
 

@@ -53,7 +53,7 @@ class Outline(commands.Cog):
         try:
             param = parse_outline_args(args)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         colors, urls = get_urls_from_list(param["pos_args"])
         if colors:
@@ -73,20 +73,20 @@ class Outline(commands.Cog):
         """command to add an to an image"""
 
         if width > 32:
-            return await ctx.send("❌ This outline width is too big (max: 32).")
+            return await ctx.send(":x: This outline width is too big (max: 32).")
         elif width < 1:
-            return await ctx.send("❌ This outline width is too small (min: 1).")
+            return await ctx.send(":x: This outline width is too small (min: 1).")
 
         # get the rgba from the color input
         color_name, rgba = get_color(color)
         if rgba is None:
-            return await ctx.send(f"❌ The color `{color}` is invalid.")
+            return await ctx.send(f":x: The color `{color}` is invalid.")
 
         # get the input image
         try:
             input_image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         func = functools.partial(add_outline, input_image, rgba, not (sparse), width)
         image_with_outline = await self.bot.loop.run_in_executor(None, func)
@@ -119,7 +119,7 @@ class Outline(commands.Cog):
         try:
             input_image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         image_cropped = await self.bot.loop.run_in_executor(
             None, remove_white_space, input_image

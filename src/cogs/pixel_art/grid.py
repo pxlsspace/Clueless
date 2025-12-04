@@ -81,7 +81,7 @@ class Grid(commands.Cog):
         if color:
             color_name, rgba = get_color(color)
             if rgba is None:
-                return await ctx.send(f"❌ The color `{color}` is invalid.")
+                return await ctx.send(f":x: The color `{color}` is invalid.")
         else:
             rgba = [0, 0, 0, 255]
 
@@ -89,7 +89,7 @@ class Grid(commands.Cog):
         try:
             input_image, url = await get_image_from_message(ctx, url)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         image_scale = 7
         grid_width = 1

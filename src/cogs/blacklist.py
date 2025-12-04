@@ -25,7 +25,7 @@ class Blacklist(commands.Cog):
         try:
             user = await UserConverter().convert(ctx, user)
         except commands.UserNotFound as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         # check that the user isn't the bot owner
         app_info = await self.bot.application_info()
@@ -38,21 +38,21 @@ class Blacklist(commands.Cog):
             else:
                 owners = [owner.id]
         if user.id in owners:
-            return await ctx.send("❌ You can't blacklist the bot owner.")
+            return await ctx.send(":x: You can't blacklist the bot owner.")
 
         # check that the user isn't already blacklisted
         no_user_mention = disnake.AllowedMentions(users=False)  # to avoid pinging user
         discord_db_user = await db_users.get_discord_user(user.id)
         if discord_db_user["is_blacklisted"]:
             return await ctx.send(
-                "❌ <@{}> is already blacklisted.".format(user.id),
+                ":x: <@{}> is already blacklisted.".format(user.id),
                 allowed_mentions=no_user_mention,
             )
 
         # add to the blacklist
         await db_users.set_user_blacklist(user.id, True)
         return await ctx.send(
-            "✅ <@{}> has been blacklisted.".format(user.id),
+            ":white_check_mark: <@{}> has been blacklisted.".format(user.id),
             allowed_mentions=no_user_mention,
         )
 
@@ -67,21 +67,21 @@ class Blacklist(commands.Cog):
         try:
             user = await UserConverter().convert(ctx, user)
         except commands.UserNotFound as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         # check that the user is actually blacklisted
         no_user_mention = disnake.AllowedMentions(users=False)  # to avoid pinging user
         discord_db_user = await db_users.get_discord_user(user.id)
         if not discord_db_user["is_blacklisted"]:
             return await ctx.send(
-                "❌ <@{}> is not blacklisted.".format(user.id),
+                ":x: <@{}> is not blacklisted.".format(user.id),
                 allowed_mentions=no_user_mention,
             )
 
         # remove from the blacklist
         await db_users.set_user_blacklist(user.id, False)
         return await ctx.send(
-            "✅ <@{}> has been removed from the blacklist.".format(user.id),
+            ":white_check_mark: <@{}> has been removed from the blacklist.".format(user.id),
             allowed_mentions=no_user_mention,
         )
 
@@ -126,14 +126,14 @@ class Blacklist(commands.Cog):
         try:
             role = await RoleConverter().convert(ctx, role)
         except RoleNotFound as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
         await db_servers.update_blacklist_role(ctx.guild.id, role.id)
-        await ctx.send(f"✅ Blacklist role set to <@&{role.id}>.")
+        await ctx.send(f":white_check_mark: Blacklist role set to <@&{role.id}>.")
 
     @roleblacklist.command(description="Remove the current blacklist role.")
     async def remove(self, ctx):
         await db_servers.update_blacklist_role(ctx.guild.id, None)
-        await ctx.send("✅ Blacklist role removed.")
+        await ctx.send(":white_check_mark: Blacklist role removed.")
 
 
 def setup(bot: commands.Bot):

@@ -54,7 +54,7 @@ class Utility(commands.Cog):
             await ctx.send("Current prefix: `" + prefix + "`")
         else:
             await db_servers.update_prefix(prefix, ctx.guild.id)
-            await ctx.send("✅ Prefix set to `" + prefix + "`")
+            await ctx.send(":white_check_mark: Prefix set to `" + prefix + "`")
 
     choices = ["years", "months", "weeks", "days", "hours", "minutes", "seconds"]
 
@@ -85,10 +85,10 @@ class Utility(commands.Cog):
         try:
             time = str_to_td(input)
         except OverflowError:
-            return await ctx.send("❌ The time given is too big.")
+            return await ctx.send(":x: The time given is too big.")
         if not time:
             return await ctx.send(
-                "❌ Invalid `time` parameter, format must be `?y?mo?w?d?h?m?s`."
+                ":x: Invalid `time` parameter, format must be `?y?mo?w?d?h?m?s`."
             )
 
         if len(options) > 0:
@@ -115,7 +115,7 @@ class Utility(commands.Cog):
                 res_nb = time / timedelta(seconds=1)
                 res_unit = "second"
             else:
-                return await ctx.send(f"❌ unrecognized arguments: {' '.join(options)}")
+                return await ctx.send(f":x: unrecognized arguments: {' '.join(options)}")
             res = f"{format_number(res_nb)} {res_unit}{'s' if res_nb >= 2 else ''}"
         else:
             res = td_format(time)
@@ -128,9 +128,9 @@ class Utility(commands.Cog):
         try:
             self.bot.reload_extension("cogs." + extension)
         except Exception as e:
-            return await ctx.send("```❌ {}: {} ```".format(type(e).__name__, e))
+            return await ctx.send("```:x: {}: {} ```".format(type(e).__name__, e))
 
-        await ctx.send(f"✅ Extension `{extension}` has been reloaded")
+        await ctx.send(f":white_check_mark: Extension `{extension}` has been reloaded")
 
     @commands.slash_command(name="time")
     async def _time(self, inter: disnake.AppCmdInter, timezone: str = None):
@@ -176,7 +176,7 @@ class Utility(commands.Cog):
                 return await ctx.send(err_msg)
         tz = get_timezone(timezone)
         if tz is None:
-            return await ctx.send("❌ Timezone not found.")
+            return await ctx.send(":x: Timezone not found.")
 
         if user:
             msg = "**Current time for <@{}>**:\n```json\n{}```".format(
@@ -206,7 +206,7 @@ class Utility(commands.Cog):
             try:
                 rows = await db_servers.db.sql_select(sql_expression)
             except Exception as e:
-                return await ctx.send(f"❌ SQL error: ```{e}```")
+                return await ctx.send(f":x: SQL error: ```{e}```")
         query_time = round(time.time() - start, 3)
 
         embed = disnake.Embed(
@@ -216,9 +216,9 @@ class Utility(commands.Cog):
         )
 
         if len(rows) == 0:
-            return await ctx.send("❌ No match found.")
+            return await ctx.send(":x: No match found.")
         elif len(rows) > 100 and not as_text:
-            embed.description = f"❌ Too many lines to show ({len(rows)})"
+            embed.description = f":x: Too many lines to show ({len(rows)})"
             return await ctx.send(embed=embed)
 
         discord_user = await db_users.get_discord_user(ctx.author.id)
@@ -247,7 +247,7 @@ class Utility(commands.Cog):
             try:
                 nb_lines = await db_servers.db.sql_update(sql_expression)
             except Exception as e:
-                return await ctx.send(f"❌ SQL error: ```{e}```")
+                return await ctx.send(f":x: SQL error: ```{e}```")
         return await ctx.send(f"Done! ({nb_lines} lines affected)")
 
     @commands.command(hidden=True)
@@ -529,7 +529,7 @@ class Utility(commands.Cog):
 
         tz = get_timezone(tz_str)
         if tz is None:
-            return await ctx.send(f"❌ Invalid timezone `{tz_str}`.")
+            return await ctx.send(f":x: Invalid timezone `{tz_str}`.")
         if dt_str and "now" in dt_str:
             dt = datetime.now(tz)
         else:
@@ -605,7 +605,7 @@ class Utility(commands.Cog):
         except Exception as e:
             return await ctx.send(f":x: {e}")
         return await ctx.send(
-            f"✅ Successfully left guild **{guild_name}** (id: {guild_id})"
+            f":white_check_mark: Successfully left guild **{guild_name}** (id: {guild_id})"
         )
 
     @commands.command(

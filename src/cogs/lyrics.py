@@ -48,14 +48,14 @@ class Lyrics(commands.Cog):
                     activities = user.mutual_guilds[0].get_member(user.id).activities
                 else:
                     return await ctx.send(
-                        "❌ You must share at least one server with me for this to work in DM."
+                        ":x: You must share at least one server with me for this to work in DM."
                     )
             for activity in activities:
                 if isinstance(activity, Spotify):
                     spotify_title = activity.title
                     spotify_artists = activity.artists
             if spotify_title is None and spotify_artists is None:
-                return await ctx.send("❌ You are not playing any song on Spotify.")
+                return await ctx.send(":x: You are not playing any song on Spotify.")
             else:
                 title_to_search = spotify_title
                 artists_to_search = spotify_artists
@@ -98,7 +98,7 @@ class Lyrics(commands.Cog):
         # check that we found a song and that it's the correct song
         if song is None or (spotify_title and not is_similar(spotify_title, song.title)):
             return await ctx.send(
-                f"❌ Can't find any lyrics for **{title_to_search}**"
+                f":x: Can't find any lyrics for **{title_to_search}**"
                 + ((f" by **{artists_to_search}**") if artists_to_search else "")
             )
 

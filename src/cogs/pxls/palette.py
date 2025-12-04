@@ -111,7 +111,7 @@ class Palette(commands.Cog):
         try:
             parsed_args = parser.parse_args(args)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
         colors = " ".join(parsed_args.colors) if parsed_args.colors else None
         async with ctx.typing():
             await self.palette(ctx, parsed_args.canvas_code, colors)

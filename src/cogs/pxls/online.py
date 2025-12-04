@@ -82,7 +82,7 @@ class Online(commands.Cog):
         try:
             parsed_args = parser.parse_args(args)
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
 
         async with ctx.typing():
             await self.online(
@@ -188,7 +188,7 @@ class Online(commands.Cog):
                 dates.append(key)
                 online_counts.append(average)
             if len(dates) <= 1:
-                return await ctx.send("❌ The time frame given is too short.")
+                return await ctx.send(":x: The time frame given is too short.")
             dates = dates[1:]
             t0 = dates[0]
             if groupby == "canvas":

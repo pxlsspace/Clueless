@@ -50,7 +50,7 @@ class Pet(commands.Cog):
             try:
                 user = await UserConverter().convert(ctx, target)
             except commands.UserNotFound as e:
-                return await ctx.send(f"❌ {e}")
+                return await ctx.send(f":x: {e}")
             target = user.display_avatar.url
         async with ctx.typing():
             await self.pet(ctx, target)
@@ -59,7 +59,7 @@ class Pet(commands.Cog):
         try:
             img, url = await get_image_from_message(ctx, target, return_type="image")
         except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+            return await ctx.send(f":x: {e}")
         pet_img = await pet(img)
         file = disnake.File(fp=pet_img, filename="pet.gif")
         await ctx.send(file=file)

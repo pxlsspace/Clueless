@@ -16,14 +16,14 @@
     <a href="https://discord.gg/5MVDCq53vC">
         <img src="https://img.shields.io/discord/936560830462451762?style=flat-square&color=5865F2&label=discord&logo=discord&logoColor=FFFFFF" alt="Discord">
     </a>
-    <a href="https://github.com/GrayTurtles/Clueless">
+    <a href="https://github.com/pxlsspace/Clueless">
         <img src="https://img.shields.io/badge/version-2.0+-blue?style=flat-square" alt="Discord">
     </a>
     <a href="https://github.com/DisnakeDev/disnake">
         <img src="https://img.shields.io/badge/lib-disnake%202.4-blue?style=flat-square" alt="Disnake">
     </a>
     <br/>
-    <a href="https://github.com/GrayTurtles/Clueless">
+    <a href="https://github.com/pxlsspace/Clueless">
         <img src="https://img.shields.io/github/commit-activity/m/GrayTurtles/Clueless?style=flat-square&color=green" alt="Activity">
     </a>
 </p>

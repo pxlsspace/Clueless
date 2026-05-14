@@ -691,7 +691,8 @@ class DbStatsManager:
                 max(datetime) as canvas_end,
                 canvas_code
             FROM record
-            GROUP BY canvas_code """
+            GROUP BY canvas_code 
+            ORDER BY canvas_end """
         last_canvas_records = await self.db.sql_select(sql_last_canvas_records)
 
         res = []

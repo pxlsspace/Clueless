@@ -74,16 +74,13 @@ async def on_message_command(inter):
 async def on_command(ctx):
     """Save the command usage in the database and in a discord channel if set"""
     slash_command = isinstance(ctx, disnake.ApplicationCommandInteraction)
-    if slash_command:
-        command_name = ctx.data.name
-        for option in ctx.data.options:
-            if option.type in (
-                disnake.OptionType.sub_command,
-                disnake.OptionType.sub_command_group,
-            ):
-                command_name += f" {option.name}"
-    else:
-        command_name = ctx.command.qualified_name
+    command_name = ctx.data.name
+    for option in ctx.data.options:
+        if option.type in (
+            disnake.OptionType.sub_command,
+            disnake.OptionType.sub_command_group,
+        ):
+            command_name += f" {option.name}"
 
     is_dm = ctx.guild is None
 
@@ -97,29 +94,19 @@ async def on_command(ctx):
         context = f"• **Server**: {server_name} "
         context += f"• **Channel**: <#{channel_id}>\n"
 
-    message_time = ctx.message.created_at if not slash_command else ctx.created_at
+    message_time = ctx.created_at
     message_time = message_time.replace(tzinfo=timezone.utc)
     author_id = ctx.author.id
     message = f"By <@{author_id}> "
     message += f"on <t:{int(message_time.timestamp())}>\n"
-    if not slash_command:
-        args_clean = ctx.message.content
-        args = f"```{args_clean}```"
-        args += f"[link to the message]({ctx.message.jump_url})\n"
-        if len(message + args) > 1024:
-            args = "```[Message too long to show]```"
-            args += f"[link to the message]({ctx.message.jump_url})\n"
-
-        message += args
-    else:
-        options = ""
-        for key, value in ctx.filled_options.items():
-            options += f" {key}:{value}"
-        args_clean = f"/{command_name}{options}"
-        args = f"```{args_clean}```"
-        if len(message + args) > 1024:
-            args = "```[Command too long to show]```"
-        message += args
+    options = ""
+    for key, value in ctx.filled_options.items():
+        options += f" {key}:{value}"
+    args_clean = f"/{command_name}{options}"
+    args = f"```{args_clean}```"
+    if len(message + args) > 1024:
+        args = "```[Command too long to show]```"
+    message += args
 
     # save commands used in the database
     await db_servers.create_command_usage(
@@ -180,23 +167,15 @@ async def on_command_error(ctx, error):
         return
 
     slash_command = isinstance(ctx, disnake.ApplicationCommandInteraction)
-    if slash_command:
-        command_name = ctx.data.name
-        for option in ctx.data.options:
-            if option.type in (
-                disnake.OptionType.sub_command,
-                disnake.OptionType.sub_command_group,
-            ):
-                command_name += f" {option.name}"
-    else:
-        command_name = ctx.command.qualified_name
+    command_name = ctx.data.name
+    for option in ctx.data.options:
+        if option.type in (
+            disnake.OptionType.sub_command,
+            disnake.OptionType.sub_command_group,
+        ):
+            command_name += f" {option.name}"
 
     # handled errors
-    if not slash_command and isinstance(error, commands.MissingRequiredArgument):
-        text = "❌ " + str(error) + "\n"
-        text += f"Usage: `{ctx.prefix}{command_name} {ctx.command.usage}`"
-        return await ctx.send(text)
-
     if isinstance(
         error, (commands.MissingPermissions, commands.NotOwner, commands.CheckFailure)
     ):
@@ -221,12 +200,8 @@ async def on_command_error(ctx, error):
             )
             return await ctx.send(embed=embed)
         except Exception:
-            # Try to add reaction
-            try:
-                return await ctx.message.add_reaction(missing_perms_emoji)
-            except Exception:
-                # Give up
-                return
+            # Give up
+            return
     if isinstance(error, UserBlacklisted):
         embed = disnake.Embed(
             title="Blacklisted",
@@ -237,16 +212,13 @@ async def on_command_error(ctx, error):
 
     # unhandled errors
     try:
-        if slash_command:
-            if not isinstance(error, disnake.errors.NotFound):
-                embed = disnake.Embed(
-                    color=0xFF4747,
-                    title="Unexpected error.",
-                    description="<a:an_error_occurred:955625218968272947> An unexpected error occurred, please contact the bot developer if the problem persists.",
-                )
-                await ctx.send(embed=embed, ephemeral=True)
-        else:
-            await ctx.message.add_reaction("<a:an_error_occurred:955625218968272947>")
+        if not isinstance(error, disnake.errors.NotFound):
+            embed = disnake.Embed(
+                color=0xFF4747,
+                title="Unexpected error.",
+                description="<a:an_error_occurred:955625218968272947> An unexpected error occurred, please contact the bot developer if the problem persists.",
+            )
+            await ctx.send(embed=embed, ephemeral=True)
     except Exception:
         pass
 
@@ -272,27 +244,18 @@ async def on_command_error(ctx, error):
             context = f"• **Server**: {ctx.guild.name} ({ctx.guild.id})\n"
             context += f"• **Channel**: <#{ctx.channel.id}>\n"
 
-        message_time = ctx.message.created_at if not slash_command else ctx.created_at
+        message_time = ctx.created_at
         message_time = message_time.replace(tzinfo=timezone.utc)
         message = f"By <@{ctx.author.id}> "
         message += f"on <t:{int(message_time.timestamp())}>\n"
 
-        if not slash_command:
-            args = f"```{ctx.message.content}```"
-            args += f"[link to the message]({ctx.message.jump_url})\n"
-            if len(message + args) > 1024:
-                args = "```[Message too long to show]```"
-                args += f"[link to the message]({ctx.message.jump_url})\n"
-
-            message += args
-        else:
-            options = ""
-            for key, value in ctx.filled_options.items():
-                options += f" {key}:{value}"
-            args = f"```/{command_name}{options}```"
-            if len(message + args) > 1024:
-                args = "```[Command too long to show]```"
-            message += args
+        options = ""
+        for key, value in ctx.filled_options.items():
+            options += f" {key}:{value}"
+        args = f"```/{command_name}{options}```"
+        if len(message + args) > 1024:
+            args = "```[Command too long to show]```"
+        message += args
         emb = disnake.Embed(
             color=0xFF0000,
             title="Unexpected exception in command '{}'".format(command_name),

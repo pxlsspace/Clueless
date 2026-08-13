@@ -98,15 +98,6 @@ class Placemap(commands.Cog):
         """
         await self.placemap(inter, canvas_code)
 
-    @commands.command(
-        name="placemap",
-        usage="<canvas code>",
-        description="Get your placemap and personal stats for a given canvas.",
-    )
-    async def p_placemap(self, ctx, *, canvas_code):
-        async with ctx.typing():
-            await self.placemap(ctx, canvas_code)
-
     async def placemap(self, ctx, canvas_code_input):
         # check cooldown
         bucket = self.cd.get_bucket(ctx)
@@ -252,16 +243,6 @@ class Placemap(commands.Cog):
         """
         await inter.response.defer()
         await self.canvas(inter, canvas_code)
-
-    @commands.command(
-        name="canvas",
-        usage="<canvas code>",
-        description="Get the final image for any canvas.",
-        aliases=["c"],
-    )
-    async def p_canvas(self, ctx, *, canvas_code=None):
-        async with ctx.typing():
-            await self.canvas(ctx, canvas_code)
 
     async def canvas(self, ctx, canvas_code_input):
 

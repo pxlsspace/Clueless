@@ -4,7 +4,6 @@ import disnake
 import plotly.graph_objects as go
 from disnake.ext import commands
 
-from utils.arguments_parser import MyParser
 from utils.discord_utils import format_number, image_to_file
 from utils.image.image_utils import hex_str_to_int
 from utils.plot_utils import add_glow, fig2img, get_theme, hex_to_rgba_string
@@ -51,49 +50,6 @@ class Online(commands.Cog):
         """
         await inter.response.defer()
         await self.online(inter, last, cooldown, canvas_code, groupby, before, after)
-
-    @commands.command(
-        name="online",
-        description="Show the online count history.",
-        usage="[-last ?y?mo?w?d?h?m?s] [-cooldown] [-canvas <canvas code>] [-groupby hour|day|month|canvas] [-before <date time>] [-after <date time>]",
-        help="""- `[-last|-l ?y?mo?w?d?h?m?s]` Show the count in the last x years/months/weeks/days/hours/minutes/seconds
-                - `[-cooldown|-cd]`: show the cooldown instead of online count
-                - `[-canvas|-c <canvas code>]`: show the count during a selected canvas (default: current)
-                - `[-groupby|-g]`: show a bar graph with the average of each `hour`, `day`, `month` or `canvas`
-                - `[-before <date time>]`: show the online count after a specific date (format YYYY-mm-dd HH:MM)
-                - `[-after <date time>]`: show the online count after a specific date (format YYYY-mm-dd HH:MM)
-            """,
-    )
-    async def p_online(self, ctx, *args):
-        # parse the arguemnts
-        parser = MyParser(add_help=False)
-        parser.add_argument("-last", "-l", nargs="+", default=None)
-        parser.add_argument("-cooldown", "-cd", action="store_true", default=False)
-        parser.add_argument("-canvas", "-c", action="store", nargs="*", default=None)
-        parser.add_argument(
-            "-groupby",
-            "-g",
-            type=str.lower,
-            choices=["hour", "day", "month", "canvas"],
-            required=False,
-        )
-        parser.add_argument("-after", dest="after", nargs="+", default=None)
-        parser.add_argument("-before", dest="before", nargs="+", default=None)
-        try:
-            parsed_args = parser.parse_args(args)
-        except ValueError as e:
-            return await ctx.send(f"❌ {e}")
-
-        async with ctx.typing():
-            await self.online(
-                ctx,
-                parsed_args.last,
-                parsed_args.cooldown,
-                parsed_args.canvas[0] if parsed_args.canvas else None,
-                parsed_args.groupby,
-                parsed_args.before,
-                parsed_args.after,
-            )
 
     async def online(
         self,

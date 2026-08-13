@@ -28,11 +28,6 @@ class PxlsCooldown(commands.Cog):
         """
         await self.cooldown(inter, users, cd_mult)
 
-    @commands.command(
-        usage="[nb user] [cooldown multiplier]",
-        description="Show the current pxls cooldown.",
-        aliases=["cd", "timer"],
-    )
     async def cooldown(self, ctx, number=None, cd_mult=None):
         if number is not None:
             try:

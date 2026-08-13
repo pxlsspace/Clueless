@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from disnake.ext import commands
 
 from cogs.pxls.speed import get_stats_graph
-from utils.arguments_parser import check_ranks, parse_leaderboard_args
+from utils.arguments_parser import check_ranks
 from utils.discord_utils import format_number, image_to_file
 from utils.image.image_utils import hex_str_to_int
 from utils.plot_utils import fig2img, get_theme, hex_to_rgba_string
@@ -66,44 +66,6 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
         await self.leaderboard(
             inter, username, canvas, last, lines, graph, bars, ranks, eta, before, after
         )
-
-    @commands.command(
-        name="leaderboard",
-        usage="[username] [-canvas] [-last ?y?m?w?d?h?m?s] [-lines <number>] [-graph] [-bars] [-ranks ?-?] [-before <date time>] [-after <date time>]",
-        description="Show the all-time or canvas leaderboard.",
-        aliases=["ldb"],
-        help="""- `[username]`: center the leaderboard on this user (`!` = your set username)
-                  - `[-canvas|-c]`: to get the canvas leaderboard
-                  - `[-last ?y?mo?w?d?h?m?s]` Show the leaderboard in the last x years/months/weeks/days/hour/min/s
-                  - `[-lines <number>]`: number of lines to show, must be less than 40 (default 15)
-                  - `[-graph|-g]`: show a progress graph for each user in the leaderboard
-                  - `[-bars|-b]`: show a bar graph of the leaderboard
-                  - `[-ranks ?-?]`: show the leaderboard between 2 ranks
-                  - `[-eta]`: add an ETA column showing the estimated time to pass the user above
-                  - `[-before <date time>]`: show the leaderboard before a date and time (format YYYY-mm-dd HH:MM)
-                  - `[-after <date time>]`: show the leaderboard after a date and time (format YYYY-mm-dd HH:MM)
-                  """,
-    )
-    async def p_leaderboard(self, ctx, *args):
-        try:
-            param = parse_leaderboard_args(args)
-        except ValueError as e:
-            return await ctx.send(f"❌ {e}")
-
-        async with ctx.typing():
-            await self.leaderboard(
-                ctx,
-                param["names"],
-                param["canvas"],
-                param["last"],
-                param["lines"],
-                param["graph"],
-                param["bars"],
-                param["ranks"],
-                param["eta"],
-                param["before"],
-                param["after"],
-            )
 
     async def leaderboard(
         self,

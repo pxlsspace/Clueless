@@ -4,7 +4,6 @@ import disnake
 import plotly.graph_objects as go
 from disnake.ext import commands
 
-from utils.arguments_parser import parse_speed_args
 from utils.discord_utils import format_number, image_to_file
 from utils.image.image_utils import hex_str_to_int, v_concatenate
 from utils.plot_utils import add_glow, fig2img, get_theme, hex_to_rgba_string
@@ -61,36 +60,6 @@ class PxlsSpeed(commands.Cog):
         await self.speed(
             inter, usernames, last, not (alltime), groupby, progress, before, after
         )
-
-    @commands.command(
-        name="speed",
-        usage="<username> [-alltime] [-groupby [hour|day|week|month]] [-progress] [-last <?d?h?m?s>] [-before <date time>] [-after <date time>]",
-        description="Show the speed of a pxls user with a graph.",
-        help="""- `<usernames>`: list of pxls usernames separated by a space (`!` = your set username)
-              - `[-alltime|-at]`: show the all-time stats
-              - `[-groupby|-g]`: show a bar chart for each `hour`, `day`, `week`, `month` or `canvas`
-              - `[-progress|-p]`: compare the progress between users
-              - `[-last ?y?mo?w?d?h?m?s]` Show the progress in the last x years/months/weeks/days/hours/minutes/seconds (default: 1d)
-              - `[-before <date time>]`: show the speed before a date and time (format YYYY-mm-dd HH:MM)
-              - `[-after <date time>]`: show the speed after a date and time (format YYYY-mm-dd HH:MM)""",
-    )
-    async def p_speed(self, ctx, *args):
-        try:
-            params = parse_speed_args(args)
-        except ValueError as e:
-            return await ctx.send(f"❌ {e}")
-
-        async with ctx.typing():
-            await self.speed(
-                ctx,
-                " ".join(params["usernames"]) if params["usernames"] else None,
-                params["last"],
-                not (params["alltime"]),
-                params["groupby"],
-                params["progress"],
-                params["before"],
-                params["after"],
-            )
 
     async def speed(
         self,

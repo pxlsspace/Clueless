@@ -5,7 +5,6 @@ import disnake
 from disnake.ext import commands
 from PIL import Image, ImageDraw
 
-from utils.arguments_parser import MyParser
 from utils.discord_utils import (
     autocomplete_builtin_palettes,
     autocomplete_canvases,
@@ -96,25 +95,6 @@ class Palette(commands.Cog):
         colors: List of colors (seprated by a comma) to generate a palette from.
         """
         await self.palette(inter, canvas_code, colors)
-
-    @commands.command(
-        name="palette",
-        usage="[canvas code] [-colors <list, of, colors>]",
-        description="Generate palette files and image.",
-    )
-    async def p_palette(self, ctx, *args):
-
-        parser = MyParser(add_help=False)
-        parser.add_argument("canvas_code", type=str, nargs="?", default=None)
-        parser.add_argument("-colors", action="store", nargs="*")
-
-        try:
-            parsed_args = parser.parse_args(args)
-        except ValueError as e:
-            return await ctx.send(f"❌ {e}")
-        colors = " ".join(parsed_args.colors) if parsed_args.colors else None
-        async with ctx.typing():
-            await self.palette(ctx, parsed_args.canvas_code, colors)
 
     async def palette(self, ctx, canvas_code_input, colors):
 

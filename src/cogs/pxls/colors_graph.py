@@ -53,19 +53,6 @@ class ColorsGraph(commands.Cog):
             args += ("-last", last)
         await self.colorsgraph(inter, *args)
 
-    @commands.command(
-        name="colorsgraph",
-        aliases=["colorgraph", "coloursgraph", "colourgraph", "cg"],
-        description="Show a graph of the canvas colors.",
-        usage="[colors] [-placed|-p] [-last ?y?mo?w?d?h?m?s]",
-        help="""\t- `<colors>`: list of pxls colors separated by a comma
-        \t- `[-placed|-p]`: only show the virgin pixels
-        \t- `[-last ?y?mo?w?d?h?m?s]`: Show the progress in the last x years/months/weeks/days/hours/minutes/seconds""",
-    )
-    async def p_colorsgraph(self, ctx, *args):
-        async with ctx.typing():
-            await self.colorsgraph(ctx, *args)
-
     async def colorsgraph(self, ctx, *args):
         "Show a graph of the canvas colors."
 

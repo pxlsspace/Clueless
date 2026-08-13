@@ -32,15 +32,6 @@ class PxlsStats(commands.Cog):
         await inter.response.defer()
         await self.generalstats(inter)
 
-    @commands.command(
-        name="generalstats",
-        description="Show some general stats about the canvas.",
-        aliases=["gstats", "gs", "canvasinfo", "cinfo"],
-    )
-    async def p_generalstats(self, ctx):
-        async with ctx.typing():
-            await self.generalstats(ctx)
-
     async def generalstats(self, ctx):
         # getting the general stats from pxls.space/stats
         gen_stats = stats.get_general_stats()
@@ -211,27 +202,6 @@ class PxlsStats(commands.Cog):
         username: A pxls username."""
         await inter.response.defer()
         await self.userinfo(inter, username)
-
-    @commands.command(
-        name="userinfo",
-        aliases=["uinfo", "status"],
-        usage="<username>",
-        description="Show some information about a pxls user.",
-        help=f"""
-        -`<username>`: a pxls username (will use your set username if set)\n
-        **Status explanation:**
-        {STATUS_EMOJIS["bot"]} `online (botting)`: the user is placing more than the best possible
-        {STATUS_EMOJIS["perfect"]} `online (perfect)`: the user is placing the best possible amount of pixels
-        {STATUS_EMOJIS["fast"]}`online (fast)`: the user is close to the best possible in the last 15 minutes
-        {STATUS_EMOJIS["online"]}`online`: the user placed in the last 15 minutes
-        {STATUS_EMOJIS["idle"]}`idle`: the user stopped placing 15/30 minutes ago
-        {STATUS_EMOJIS["offline"]}`offline`: The user hasn't placed in the last 30 minutes
-        {STATUS_EMOJIS["inactive"]}`inactive`: The user hasn't placed on the current canvas
-        """,
-    )
-    async def p_userinfo(self, ctx, username=None):
-        async with ctx.typing():
-            await self.userinfo(ctx, username)
 
     async def userinfo(self, ctx, name=None):
         "Show some information about a pxls user."
@@ -461,21 +431,6 @@ class PxlsStats(commands.Cog):
             args += ("-" + display,)
         await self.board(inter, *args)
 
-    @commands.command(
-        name="board",
-        description="Get the current pxls board.",
-        usage="[-virginmap] [-nonvirgin] [-heatmap [opacity]]",
-        help="""
-        - `[-virginmap]`: show a map of the virgin pixels (white = virgin)
-        - `[-nonvirgin]`: show the board without the virgin pixels
-        - `[-heatmap [opacity]]`: show the heatmap on top of the canvas\
-            (the opacity value should be between 0 and 100, the default value is 20)
-        - `[-initial]`: show the initial state of the canvas""",
-    )
-    async def p_board(self, ctx, *options):
-        async with ctx.typing():
-            await self.board(ctx, *options)
-
     async def board(self, ctx, *args):
         # parse the args
         parser = MyParser(add_help=False)
@@ -576,16 +531,6 @@ class PxlsStats(commands.Cog):
         await inter.response.defer()
         await self.canvascolors(inter, "-placed" if nonvirgin else None)
 
-    @commands.command(
-        name="canvascolors",
-        description="Show the amount for each color on the canvas.",
-        aliases=["canvascolours", "cc"],
-        usage="[-placed|-p]",
-    )
-    async def p_canvascolors(self, ctx, *options):
-        async with ctx.typing():
-            await self.canvascolors(ctx, *options)
-
     async def canvascolors(self, ctx, *options):
         """Show the canvas colors."""
         # get the board with the placeable pixels only
@@ -627,27 +572,6 @@ class PxlsStats(commands.Cog):
         if placed:
             args += ("-placed",)
         await self.canvashighlight(inter, *args)
-
-    @commands.command(
-        name="canvashighlight",
-        description="Highlight the selected colors on the canvas.",
-        aliases=["chl", "canvashl"],
-        usage="<colors> [-bgcolor|-bg <color>] [-placed]",
-        help="""
-            - `<colors>`: list of pxls colors separated by a comma
-            - `[-bgcolor|bg <color>]`: the color to display behind the higlighted colors, it can be:
-                • a pxls name color (ex: "red")
-                • a hex color (ex: "#ff000")
-                • "none": to have a transparent background
-                • "dark": to have the background darkened
-                • "light": to have the background lightened
-            - `[-placed|-p]`: highlight the colors only on the non-virgin pixels.
-        """,
-    )
-    async def p_canvashighlight(self, ctx, *, args):
-        args = args.split(" ")
-        async with ctx.typing():
-            await self.canvashighlight(ctx, *args)
 
     async def canvashighlight(self, ctx, *args):
         "Highlight the selected colors on the canvas"

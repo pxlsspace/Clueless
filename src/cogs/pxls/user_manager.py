@@ -7,7 +7,6 @@ from disnake.ext import commands
 
 from utils.discord_utils import (
     STATUS_EMOJIS,
-    UserConverter,
     autocomplete_log_canvases,
     autocomplete_pxls_name,
 )
@@ -43,10 +42,6 @@ class UserManager(commands.Cog):
         username: A pxls username."""
         await self.setname(inter, username)
 
-    @commands.command(
-        description="Link your discord account to a pxls username.",
-        usage="<pxls username>",
-    )
     async def setname(self, ctx, username):
         pxls_user_id = await db_users.get_pxls_user_id(username)
         if pxls_user_id is None:
@@ -59,7 +54,6 @@ class UserManager(commands.Cog):
         """Unlink your discord account from a pxls username."""
         await self.unsetname(inter)
 
-    @commands.command(description="Unlink your discord account from a pxls username.")
     async def unsetname(self, ctx):
         discord_user = await db_users.get_discord_user(ctx.author.id)
         if discord_user["pxls_user_id"] is None:
@@ -85,11 +79,6 @@ class UserManager(commands.Cog):
         """Show the list of themes."""
         await self.theme(inter)
 
-    @commands.command(
-        description="Set your theme for the graphs",
-        usage="[theme name]",
-        aliases=["themes"],
-    )
     async def theme(self, ctx, theme=None):
         discord_user = await db_users.get_discord_user(ctx.author.id)
         current_user_theme = discord_user["color"] or "default"
@@ -141,21 +130,6 @@ class UserManager(commands.Cog):
             # so we fetch the user object from the ID "manually"
             user = await self.bot.fetch_user(user)
         await self.whoami(inter, user)
-
-    @commands.command(
-        name="whoami",
-        usage="[discord name]",
-        aliases=["whois"],
-        description="Show your or anyone's linked pxls username, theme and timezone.",
-    )
-    async def p_whoami(self, ctx, user=None):
-        if user:
-            # check that the user exists
-            try:
-                user = await UserConverter().convert(ctx, user)
-            except commands.UserNotFound as e:
-                return await ctx.send(f"❌ {e}")
-        await self.whoami(ctx, user)
 
     async def whoami(self, ctx, user=None):
         if user:
@@ -216,13 +190,6 @@ class UserManager(commands.Cog):
         timezone: Your timezone name (ex: 'UTC+8', US/Pacific, PST)."""
         await self.settimezone(inter, timezone)
 
-    @commands.command(
-        name="settimezone",
-        description="Set your timezone for the graphs and time inputs.",
-        aliases=["settz", "timezone"],
-        usage="<timezone>",
-        help="- `<timezone>`: your timezone name (ex: 'UTC+8', US/Pacific, PST)",
-    )
     async def settimezone(self, ctx, timezone: str):
         tz = get_timezone(timezone)
         if tz is None:
@@ -242,7 +209,6 @@ class UserManager(commands.Cog):
         """Unset your timezone."""
         await self.unsettimezone(inter)
 
-    @commands.command(description="Unset your timezone.", aliases=["unsettz"])
     async def unsettimezone(self, ctx):
         discord_user = await db_users.get_discord_user(ctx.author.id)
         if discord_user["timezone"] is None:
@@ -265,13 +231,6 @@ class UserManager(commands.Cog):
         font: The font name."""
         await self.setfont(inter, font)
 
-    @commands.command(
-        name="setfont",
-        description="Set your font for the image tables.",
-        aliases=["font"],
-        usage="<font name>",
-        help="- `<font name>`: The name of the font",
-    )
     async def setfont(self, ctx, font: str):
         # check on the font
         if font.lower() not in self.allowed_fonts:
@@ -289,12 +248,6 @@ class UserManager(commands.Cog):
     async def _set_key(self, inter: disnake.AppCmdInter):
         """Set your log keys to get past canvases stats."""
         await self.set_key(inter)
-
-    @commands.command(
-        name="setkey", description="Set your log keys to get past canvases stats."
-    )
-    async def p_set_key(self, ctx):
-        await self.set_key(ctx)
 
     async def set_key(self, inter: disnake.AppCmdInter):
         info_embed = disnake.Embed(
@@ -438,10 +391,6 @@ class UserManager(commands.Cog):
         """Check the status of your log keys."""
         await self.keys(inter)
 
-    @commands.command(name="keys", description="Check the status of your log keys.")
-    async def p_keys(self, ctx):
-        await self.keys(ctx)
-
     async def keys(self, ctx):
         canvases_with_logs = await db_canvas.get_logs_canvases()
         res = []
@@ -487,14 +436,6 @@ class UserManager(commands.Cog):
         ----------
         canvas_code: The canvas code of the key you wish to delete (or "all" to delete all)."""
         await self.unsetkey(inter, canvas_code)
-
-    @commands.command(
-        name="unsetkey",
-        description="Delete your key from the bot.",
-        usage="<canvas code|all>",
-    )
-    async def p_unsetkey(self, ctx, *, canvas_code):
-        await self.unsetkey(ctx, canvas_code)
 
     async def unsetkey(self, ctx, canvas_code_input):
         if canvas_code_input.lower() == "all":

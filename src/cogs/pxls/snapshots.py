@@ -260,6 +260,7 @@ class Snapshots(commands.Cog):
     )
     async def _setsnapshots_disable(self, inter: disnake.AppCmdInter):
         """Disable snapshots."""
+        await inter.response.defer()
         await self.disable(inter)
 
     @commands.slash_command(name="snapshot")

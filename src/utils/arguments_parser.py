@@ -53,17 +53,6 @@ def valid_datetime_type(arg_datetime_str, user_timezone: timezone = None):
         raise ValueError(error_msg)
 
 
-def check_lines(value):
-    try:
-        ivalue = int(value)
-    except Exception:
-        raise argparse.ArgumentTypeError("Must be an integer between 1 and 40.")
-
-    if ivalue <= 0 or ivalue > 40:
-        raise argparse.ArgumentTypeError("Must be an integer between 1 and 40.")
-    return ivalue
-
-
 def check_ranks(value):
     ranks = value.split("-")
     if len(ranks) != 2:

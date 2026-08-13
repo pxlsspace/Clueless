@@ -1,3 +1,4 @@
+import contextlib
 import platform
 import time
 from sys import exit
@@ -20,11 +21,29 @@ from utils.discord_utils import (
     image_to_file,
 )
 from utils.plot_utils import get_theme
-from utils.setup import BOT_INVITE, SERVER_INVITE, VERSION, db_servers, db_users, stats
+from utils.setup import (
+    BOT_INVITE,
+    SERVER_INVITE,
+    VERSION,
+    db_servers,
+    db_users,
+    owner_only,
+    stats,
+)
 from utils.table_to_image import table_to_image
 from utils.time_converter import format_datetime, format_timezone, str_to_td, td_format
 from utils.timezoneslib import get_timezone
 from utils.utils import get_lang_emoji, ordinal
+
+
+@contextlib.asynccontextmanager
+async def _null_acm():
+    yield
+
+
+def _safe_typing(ctx):
+    """ctx.typing() for a prefix Context; a no-op for an AppCmdInter (slash defers instead)."""
+    return ctx.typing() if isinstance(ctx, commands.Context) else _null_acm()
 
 
 class Utility(commands.Cog):
@@ -122,6 +141,13 @@ class Utility(commands.Cog):
 
         await ctx.send(f"{str_to_td(input,raw=True)} = {res}.")
 
+    @commands.slash_command(name="rl")
+    @owner_only()
+    async def _rl(self, inter: disnake.AppCmdInter, extension: str):
+        """Reload a bot extension. (owner only)"""
+        await inter.response.defer()
+        await self.rl(inter, extension)
+
     @commands.command(hidden=True)
     @commands.is_owner()
     async def rl(self, ctx, extension):
@@ -190,6 +216,20 @@ class Utility(commands.Cog):
             )
         await ctx.send(embed=disnake.Embed(description=msg, color=0x66C5CC))
 
+    @commands.slash_command(name="sql")
+    @owner_only()
+    async def _sql(self, inter: disnake.AppCmdInter, query: str):
+        """Run a SQL SELECT query and show the result as an image. (owner only)"""
+        await inter.response.defer()
+        await self.sql(inter, sql_expression=query, as_text=False)
+
+    @commands.slash_command(name="sqltext")
+    @owner_only()
+    async def _sqltext(self, inter: disnake.AppCmdInter, query: str):
+        """Run a SQL SELECT query and show the result as text. (owner only)"""
+        await inter.response.defer()
+        await self.sql(inter, sql_expression=query, as_text=True)
+
     @commands.command(name="sql", hidden=True, usage="<sql expression>")
     @commands.is_owner()
     async def sqlimage(self, ctx, *, sql_expression, as_text=True):
@@ -201,7 +241,7 @@ class Utility(commands.Cog):
         await self.sql(ctx, sql_expression=sql_expression, as_text=True)
 
     async def sql(self, ctx, *, sql_expression, as_text=True):
-        async with ctx.typing():
+        async with _safe_typing(ctx):
             start = time.time()
             try:
                 rows = await db_servers.db.sql_select(sql_expression)
@@ -240,15 +280,28 @@ class Utility(commands.Cog):
             file = await image_to_file(img, "table.png", embed)
             return await ctx.send(file=file, embed=embed)
 
+    @commands.slash_command(name="sqlcommit")
+    @owner_only()
+    async def _sqlcommit(self, inter: disnake.AppCmdInter, query: str):
+        """Run a SQL UPDATE/INSERT/DELETE query. (owner only)"""
+        await inter.response.defer()
+        await self.sqlcommit(inter, sql_expression=query)
+
     @commands.command(hidden=True, usage="<sql expression>")
     @commands.is_owner()
     async def sqlcommit(self, ctx, *, sql_expression):
-        async with ctx.typing():
+        async with _safe_typing(ctx):
             try:
                 nb_lines = await db_servers.db.sql_update(sql_expression)
             except Exception as e:
                 return await ctx.send(f"❌ SQL error: ```{e}```")
         return await ctx.send(f"Done! ({nb_lines} lines affected)")
+
+    @commands.slash_command(name="restart")
+    @owner_only()
+    async def _restart(self, inter: disnake.AppCmdInter):
+        """Restart the bot. (owner only)"""
+        await self.restart(inter)
 
     @commands.command(hidden=True)
     @commands.is_owner()
@@ -584,6 +637,13 @@ class Utility(commands.Cog):
         embed.timestamp = dt
         await ctx.send(embed=embed)
 
+    @commands.slash_command(name="leave")
+    @owner_only()
+    async def _leave(self, inter: disnake.AppCmdInter, guild_id: str):
+        """Make the bot leave a server. (owner only)"""
+        await inter.response.defer()
+        await self.leave(inter, guild_id)
+
     @commands.command(
         name="leave",
         description="Make the bot leave a server. (owner only)",
@@ -605,6 +665,13 @@ class Utility(commands.Cog):
         return await ctx.send(
             f"✅ Successfully left guild **{guild_name}** (id: {guild_id})"
         )
+
+    @commands.slash_command(name="serverlist")
+    @owner_only()
+    async def _serverlist(self, inter: disnake.AppCmdInter):
+        """Show the list of servers the bot is in. (owner only)"""
+        await inter.response.defer()
+        await self.serverlist(inter)
 
     @commands.command(
         name="serverlist",
@@ -682,6 +749,23 @@ class Utility(commands.Cog):
 
     # Populate the snapshot database with snapshot URLs sent in the snapshots channel
     # (This is meant to be used only once)
+    @commands.slash_command(name="snapshots2db")
+    @owner_only()
+    async def _snapshots2db(
+        self,
+        inter: disnake.AppCmdInter,
+        channel: disnake.TextChannel,
+        datetime: str,
+    ):
+        """Populate the snapshot database with snapshot URLs sent in a channel. (owner only)
+
+        Parameters
+        ----------
+        channel: The channel containing the snapshot messages.
+        datetime: Only parse messages sent after this datetime."""
+        await inter.response.defer()
+        await self.snapshots2db(inter, str(channel.id), dt=datetime)
+
     @commands.command(hidden=True, enabled=True, usage="<channel_id> <datetime>")
     @commands.is_owner()
     async def snapshots2db(self, ctx, snapshot_channel_id, *, dt):
@@ -698,7 +782,7 @@ class Utility(commands.Cog):
 
         canvas_code = await stats.get_canvas_code()
         await ctx.send("parsing snapshot messages ...")
-        async with ctx.typing():
+        async with _safe_typing(ctx):
             count = 0
             values = []
             async for msg in snapshot_channel.history(

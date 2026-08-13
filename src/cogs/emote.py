@@ -13,7 +13,10 @@ class Emote(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot: commands.Bot = bot
 
-    @commands.slash_command(name="emote")
+    @commands.slash_command(
+        name="emote",
+        default_member_permissions=disnake.Permissions(manage_emojis=True),
+    )
     async def _emote(self, inter: disnake.AppCmdInter):
         """Manage the server custom emotes."""
         pass  # group root is a no-op
@@ -56,6 +59,7 @@ class Emote(commands.Cog):
     @_emote.sub_command(name="number")
     async def _emote_number(self, inter: disnake.AppCmdInter):
         """Give the number of emojis and animated emojis on the server."""
+        await inter.response.defer()
         await self.number(inter)
 
     @commands.group(

@@ -13,6 +13,51 @@ class Emote(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot: commands.Bot = bot
 
+    @commands.slash_command(name="emote")
+    async def _emote(self, inter: disnake.AppCmdInter):
+        """Manage the server custom emotes."""
+        pass  # group root is a no-op
+
+    @_emote.sub_command(name="add")
+    @commands.has_permissions(manage_emojis=True)
+    async def _emote_add(
+        self,
+        inter: disnake.AppCmdInter,
+        name: str,
+        image: disnake.Attachment = None,
+        url: str = None,
+    ):
+        """Add an image as a custom emoji.
+
+        Parameters
+        ----------
+        name: Name of the emoji to add.
+        image: An attached image to use.
+        url: An image URL to use (if no attachment)."""
+        await inter.response.defer()
+        await self.add(inter, name, url=url, image=image)
+
+    @_emote.sub_command(name="remove")
+    @commands.has_permissions(manage_emojis=True)
+    async def _emote_remove(self, inter: disnake.AppCmdInter, name: str):
+        """Remove a custom emoji from the server.
+
+        Parameters
+        ----------
+        name: Name of the emoji to remove."""
+        await self.remove(inter, name)
+
+    @_emote.sub_command(name="list")
+    async def _emote_list(self, inter: disnake.AppCmdInter):
+        """Show all of the server custom emojis and their names."""
+        await inter.response.defer()
+        await self.list(inter)
+
+    @_emote.sub_command(name="number")
+    async def _emote_number(self, inter: disnake.AppCmdInter):
+        """Give the number of emojis and animated emojis on the server."""
+        await self.number(inter)
+
     @commands.group(
         usage="[add|remove|list|number]",
         description="Manage the server custom emotes.",
@@ -31,13 +76,20 @@ class Emote(commands.Cog):
                   \t- `<url|image>`: an image URL or an attached image""",
     )
     @commands.has_permissions(manage_emojis=True)
-    async def add(self, ctx, name, url=None):
+    async def add(self, ctx, name, url=None, image=None):
 
         # get the input image
-        try:
-            img_bytes, url = await get_image_from_message(ctx, url, return_type="bytes")
-        except ValueError as e:
-            return await ctx.send(f"❌ {e}")
+        if image is not None:
+            # slash attachment path
+            img_bytes = await image.read()
+        else:
+            # prefix / URL path (unchanged)
+            try:
+                img_bytes, url = await get_image_from_message(
+                    ctx, url, return_type="bytes"
+                )
+            except ValueError as e:
+                return await ctx.send(f"❌ {e}")
 
         # check if there is enough emote space
         nb_emoji, nb_animated = await number_emoji(ctx)

@@ -13,7 +13,7 @@
 - **disnake decorators:** slash = `@commands.slash_command` / `@x.sub_command` / `@x.sub_command_group`; prefix = `@commands.command` / `@commands.group`. Never introduce new `@commands.command`s.
 - **Established hybrid pattern is mandatory:** slash entry `_name(self, inter, ...)` calls the existing shared handler; do **not** duplicate business logic. Shared handlers already call `await ctx.send(...)`, which works for `AppCmdInter` too (see `src/cogs/utility.py:37-42` `_ping`→`ping`).
 - **Slash registration scope:** when `TEST_SERVER_ID` is set in `.env`, slash commands register instantly to `GUILD_IDS` (test guild); otherwise they register globally with up to ~1h propagation (`src/utils/setup.py`, `src/main.py:40`). **Set `TEST_SERVER_ID` while developing** so commands appear immediately.
-- **Owner/permission gating carries over:** `@commands.is_owner()` and `@commands.has_permissions(...)` both work on `@commands.slash_command`. Add `default_member_permissions=...` on slash commands so Discord hides them from unentitled users. The global `blacklist_check` app-command check (`src/main.py:154`) already covers slash/user/message commands — do not re-add per-command.
+- **Owner/permission gating:** bot-global owner-only commands are gated by the `owner_only()` check (backed by the `OWNER_IDS` env var — see Pattern D), NOT `@commands.is_owner()` and NOT guild scoping. Per-guild admin commands use `@commands.has_permissions(...)` plus `default_member_permissions=...` so Discord hides them from unentitled users. The global `blacklist_check` app-command check (`src/main.py:154`) already covers slash/user/message commands — do not re-add per-command.
 - **Commit message hygiene:** commit messages contain the subject line only (as shown in each task). Do **NOT** append `Co-Authored-By` trailers, "Generated with" lines, or any tool/attribution remarks.
 - **No unit-test harness exists** (no `tests/`, no pytest config). The real test cycle is: `poetry run flake8 src && poetry run black --check src`, boot the bot (`poetry run python src/main.py`) against a test guild, confirm the command registers and behaves identically to its prefix version. Each task's "verify" steps use this cycle.
 - **Do not remove the `message_content` intent or `on_message` prefix dispatch until Task 11** — every slash equivalent must exist and be verified first.
@@ -25,7 +25,7 @@
 
 These are baked into the tasks below with the recommended choice; flip a task's approach if you decide otherwise.
 
-1. **Owner-only debug commands** (`rl`, `sql`, `sqltext`, `sqlcommit`, `restart`, `leave`, `serverlist`, `snapshots2db`, `clock forceupdate`, `reload_admins`). Dropping the intent kills their prefix trigger, so they must move. **Recommended:** port them to slash commands scoped to a single owner/control guild via `guild_ids=[OWNER_GUILD_ID]` + `@commands.is_owner()`, so they never register publicly. (Alternative: move them out of Discord entirely — larger change, not covered here.) Task 7 & 8 assume the slash-port approach.
+1. **Owner-only debug commands** (`rl`, `sql`, `sqltext`, `sqlcommit`, `restart`, `leave`, `serverlist`, `snapshots2db`, `clock forceupdate`, `reload_admins`) and the bot-global **`/blacklist`** group. These act on bot-global state and must be restricted to bot owners. **DECIDED:** gate them by a new **`OWNER_IDS`** env var (comma-separated user IDs) via a reusable `owner_only()` check — NOT by guild scoping. They register globally (their names are visible in the slash picker) but only execute for users whose ID is in `OWNER_IDS`. Tasks 3, 7 & 8 use `owner_only()`.
 2. **The `prefix` command + per-server prefix storage** (`utility.py:47`, `db_servers.get_prefix`). Under slash-only there is no message prefix to configure. **Recommended:** retire the command and stop passing a dynamic prefix. Task 9 does this.
 3. **Stripping now-dead prefix `@commands.command` defs.** Once the intent is gone, all prefix entries are inert but harmless. **Recommended:** remove the `message_content` intent + dispatch (compliance-critical, Task 11) first; strip dead prefix defs as a low-risk follow-up sweep (Task 12, optional). This avoids a risky big-bang deletion.
 
@@ -104,17 +104,27 @@ async def add(self, ctx, name, url=None, image=None):
     ...
 ```
 
-**D. Owner command scoped to a control guild** (keeps debug tools off public registration):
+**D. Owner-only command gated by `OWNER_IDS`** (restricts execution to bot owners; registers globally):
 
 ```python
-@commands.slash_command(name="restart", guild_ids=OWNER_GUILD_IDS)
-@commands.is_owner()
+@commands.slash_command(name="restart")
+@owner_only()
 async def _restart(self, inter: disnake.AppCmdInter):
     """Restart the bot (owner only)."""
     await self.restart(inter)
 ```
 
-`OWNER_GUILD_IDS` = a module constant read from env (define once, e.g. in `src/utils/setup.py`, reuse the existing `GUILD_IDS`/`TEST_SERVER_ID` if that is your control guild).
+Define once in `src/utils/setup.py` (Task 3 is the first consumer):
+```python
+OWNER_IDS = [int(x) for x in os.getenv("OWNER_IDS", "").split(",") if x.strip()]
+
+def owner_only():
+    """Command check restricting usage to OWNER_IDS. Works on prefix Context and slash AppCmdInter (both expose `.author`)."""
+    async def predicate(ctx):
+        return ctx.author is not None and ctx.author.id in OWNER_IDS
+    return commands.check(predicate)
+```
+`owner_only()` replaces `@commands.is_owner()` on the new slash entries. `setup.py` must import `commands` (`from disnake.ext import commands`) and already imports `os`.
 
 ---
 
@@ -179,16 +189,39 @@ git commit -m "feat(emote): add slash group add/remove/list/number with attachme
 ### Task 3: `blacklist` + `roleblacklist` groups → slash (owner/admin)
 
 **Files:**
-- Modify: `src/cogs/blacklist.py` (`blacklist add:19 remove:51 list:80`; `roleblacklist add:112 remove:125`)
+- Modify: `src/cogs/blacklist.py` (`blacklist add:22 remove:57 list:80`; `roleblacklist add:116 remove:126`), `src/utils/setup.py` (define `OWNER_IDS` + `owner_only()`)
 
 **Interfaces:**
-- Produces: `/blacklist add|remove|list`, `/roleblacklist add|remove`.
-- Consumes: existing shared logic in each prefix method (reuse via shared handler or call directly).
+- Produces: `/blacklist add|remove|list` (bot-global, `owner_only()`), `/roleblacklist add|remove` (per-guild, `manage_roles`).
+- Consumes: `owner_only()` (Pattern D). The two groups have OPPOSITE scope — `/blacklist` mutates bot-global user state (`db_users.set_user_blacklist`); `/roleblacklist` mutates per-guild state (`db_servers.update_blacklist_role(ctx.guild.id, ...)`).
 
-- [ ] **Step 1: Add two slash groups** per **Pattern B**. Because these are owner/hidden, scope with `guild_ids=OWNER_GUILD_IDS` and `@commands.is_owner()` on each sub-command (**Pattern D** semantics on a group). Signatures:
-  - `_blacklist_add(inter, user: disnake.User)`, `_blacklist_remove(inter, user: disnake.User)`, `_blacklist_list(inter)`
-  - `_roleblacklist_add(inter, role: disnake.Role)`, `_roleblacklist_remove(inter)`
-  Each defers if it hits the DB/formatting, then calls the matching existing handler.
+**Converter caveat (drives a small refactor):** the existing `blacklist_add`/`blacklist_remove` (`blacklist.py:22/57`) and `roleblacklist add` (`:116`) take a **string** and run `UserConverter()/RoleConverter().convert(ctx, arg)`, which expect a `Context`, not an `AppCmdInter`. Do NOT pass a `disnake.User`/`Role` object into those methods, and do NOT run the converters against an interaction. Instead extract the post-resolution logic into shared helpers that take an already-resolved object:
+
+```python
+# prefix entry keeps resolving the string, then calls the shared helper:
+async def blacklist_add(self, ctx, user):
+    try:
+        user = await UserConverter().convert(ctx, user)
+    except commands.UserNotFound as e:
+        return await ctx.send(f"❌ {e}")
+    await self._do_blacklist_add(ctx, user)
+
+async def _do_blacklist_add(self, ctx, user):   # user is a resolved User; body = existing add logic
+    ...
+
+# slash entry already has a resolved disnake.User:
+@_blacklist.sub_command(name="add")
+@owner_only()
+async def _blacklist_add(self, inter: disnake.AppCmdInter, user: disnake.User):
+    """Ban a user from using the bot."""
+    await self._do_blacklist_add(inter, user)
+```
+
+- [ ] **Step 0: Define `OWNER_IDS` + `owner_only()`** in `src/utils/setup.py` per Pattern D (add `from disnake.ext import commands` if absent). This is the first consumer; Tasks 7 & 8 reuse it.
+
+- [ ] **Step 1a: `/blacklist` group (bot-global, owner-gated).** Add a `_blacklist` slash group (Pattern B) with `@owner_only()` on each sub-command. Extract shared helpers `_do_blacklist_add(ctx, user)` and `_do_blacklist_remove(ctx, user)` from the existing string-taking methods (per the caveat above); `list` reads no arg so `_blacklist_list(inter)` may call the existing `self.list(inter)` directly. Signatures: `_blacklist_add(inter, user: disnake.User)`, `_blacklist_remove(inter, user: disnake.User)`, `_blacklist_list(inter)`. Defer where a DB read/format precedes the reply.
+
+- [ ] **Step 1b: `/roleblacklist` group (per-guild, admin-gated).** Add a `_roleblacklist` slash group registered globally with `default_member_permissions=disnake.Permissions(manage_roles=True)` and a `@commands.has_permissions(manage_roles=True)` check on the mutating sub-commands. Extract `_do_roleblacklist_add(ctx, role)` from the existing string-taking `add` (`:116`). Signatures: `_roleblacklist_add(inter, role: disnake.Role)`, `_roleblacklist_remove(inter)` (remove takes no arg → may call existing `self.remove(inter)` directly). These use `ctx.guild.id`, so they are correctly per-guild — do NOT gate with `owner_only()`.
 
 - [ ] **Step 2: Lint** the file.
 
@@ -256,27 +289,27 @@ git commit -m "feat: add /fonts and /styles slash commands (#24)"
 **Files:**
 - Modify: `src/cogs/clock.py:151` (`forceupdate`), `src/cogs/pxls_template/progress.py:1499` (`reload_admins`/`rladmins`)
 
-**Interfaces:** Produces `/forceupdate`, `/progress reload_admins` (attach under the existing `_progress` group as a `sub_command`).
+**Interfaces:** Produces `/forceupdate`, `/progress reload_admins` (attach under the existing `_progress` group as a `sub_command`). Both gated by `owner_only()` (import from `utils.setup`; defined in Task 3).
 
-- [ ] **Step 1: `forceupdate`** — add `_forceupdate(inter)` per **Pattern D** (`guild_ids=OWNER_GUILD_IDS`, `@commands.is_owner()`), calling the existing handler; defer (it triggers a stats update).
-- [ ] **Step 2: `reload_admins`** — add `@_progress.sub_command(name="reload_admins")` `_progress_reload_admins(inter)` with `@commands.is_owner()`, calling the existing `reload_admins` handler.
+- [ ] **Step 1: `forceupdate`** — add `_forceupdate(inter)` per **Pattern D** (`@owner_only()`), calling the existing handler; defer (it triggers a stats update).
+- [ ] **Step 2: `reload_admins`** — add `@_progress.sub_command(name="reload_admins")` `_progress_reload_admins(inter)` with `@owner_only()`, calling the existing `reload_admins` handler.
 - [ ] **Step 3: Lint** both files.
-- [ ] **Step 4: Boot & verify** both run for the owner and are hidden/scoped otherwise.
+- [ ] **Step 4: Boot & verify** both run for an `OWNER_IDS` user and are rejected for others.
 - [ ] **Step 5: Commit.**
 ```bash
 git add src/cogs/clock.py src/cogs/pxls_template/progress.py
 git commit -m "feat: add owner slash /forceupdate and /progress reload_admins (#24)"
 ```
 
-### Task 8: Owner utility commands → slash (control-guild scoped)
+### Task 8: Owner utility commands → slash (`OWNER_IDS`-gated)
 
 **Files:**
 - Modify: `src/cogs/utility.py` — `rl:125`, `sql/sqlimage:193`, `sqltext:198`, `sqlcommit:243`, `restart:253`, `leave:587`, `serverlist:609`, `snapshots2db:685`
 
-**Interfaces:** Produces `/rl`, `/sql`, `/sqltext`, `/sqlcommit`, `/restart`, `/leave`, `/serverlist`, `/snapshots2db`, all `guild_ids=OWNER_GUILD_IDS` + `@commands.is_owner()`.
+**Interfaces:** Produces `/rl`, `/sql`, `/sqltext`, `/sqlcommit`, `/restart`, `/leave`, `/serverlist`, `/snapshots2db`, all gated by `@owner_only()`.
 
-- [ ] **Step 1: Define `OWNER_GUILD_IDS`** once (reuse `GUILD_IDS` from `src/utils/setup.py` if that is the control guild; otherwise add an env-backed constant). Import it in `utility.py`.
-- [ ] **Step 2: Add slash twins** (**Pattern D**) mapping the greedy prefix args to single string options:
+- [ ] **Step 1: Import `owner_only`** from `utils.setup` in `utility.py` (`OWNER_IDS`/`owner_only()` are defined in Task 3 Step 0 — do not redefine).
+- [ ] **Step 2: Add slash twins** (**Pattern D**, `@owner_only()`) mapping the greedy prefix args to single string options:
   - `_rl(inter, extension: str)` → `self.rl(inter, extension)`
   - `_sql(inter, query: str)` → `self.sql(inter, query)` (image output; `defer()`)
   - `_sqltext(inter, query: str)` → `self.sqltext(inter, query)`
@@ -287,7 +320,7 @@ git commit -m "feat: add owner slash /forceupdate and /progress reload_admins (#
   - `_snapshots2db(inter, channel: disnake.TextChannel)` → `self.snapshots2db(inter, channel)` (`defer()`; long-running)
   Where a shared handler currently reads `ctx.guild`/`ctx.author`, confirm the equivalent `inter.guild`/`inter.author` is used (disnake aliases these, but verify per handler).
 - [ ] **Step 3: Lint** `utility.py`.
-- [ ] **Step 4: Boot & verify** each in the control guild as owner: `/sql`, `/sqltext`, `/rl <cog>`, `/serverlist`, `/leave`, `/snapshots2db`. Verify `/restart` last. Confirm none register publicly.
+- [ ] **Step 4: Boot & verify** each as an `OWNER_IDS` user: `/sql`, `/sqltext`, `/rl <cog>`, `/serverlist`, `/leave`, `/snapshots2db`. Verify `/restart` last. Confirm a non-owner is rejected by `owner_only()`.
 - [ ] **Step 5: Commit.**
 ```bash
 git add src/cogs/utility.py src/utils/setup.py
@@ -476,4 +509,4 @@ git commit -m "feat(snapshots): add one-time backfill of salvageable snapshot im
 
 **Placeholder scan:** Each task names exact files/lines, exact slash signatures with typed options, exact handler calls, and real verify/commit commands. Patterns A–D carry the literal code; per-command specs give concrete option names/types rather than "implement similarly." No TBD/TODO. ✅
 
-**Type/name consistency:** slash entries use the `_name` prefix convention throughout; group roots use `pass`; sub-commands use `@_group.sub_command`; owner commands use `guild_ids=OWNER_GUILD_IDS` + `@commands.is_owner()` consistently; attachment path uses `disnake.Attachment` + `.read()` consistently. `send_random_image`, `add`, `list`, `number`, `reload_admins` handler names match their cogs. ✅
+**Type/name consistency:** slash entries use the `_name` prefix convention throughout; group roots use `pass`; sub-commands use `@_group.sub_command`; bot-global owner commands use `@owner_only()` (backed by `OWNER_IDS`) consistently, while per-guild admin commands use `manage_roles`/`default_member_permissions`; attachment path uses `disnake.Attachment` + `.read()` consistently. `send_random_image`, `add`, `list`, `number`, `reload_admins` handler names match their cogs. ✅

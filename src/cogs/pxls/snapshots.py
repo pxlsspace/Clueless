@@ -16,7 +16,7 @@ from utils.discord_utils import (
 )
 from utils.image.image_utils import find_upscale
 from utils.pxls.template_manager import get_template_from_url, parse_template
-from utils.setup import db_servers, db_stats, db_users, stats
+from utils.setup import db_servers, db_stats, db_users, owner_only, stats
 from utils.time_converter import format_datetime, str_to_td, td_format
 from utils.timezoneslib import get_timezone
 from utils.utils import get_content
@@ -213,16 +213,17 @@ class Snapshots(commands.Cog):
         else:
             channel_id = ctx.message.channel_mentions[0].id
 
+        return await self._do_set_snapshots_channel(ctx, self.bot.get_channel(channel_id))
+
+    async def _do_set_snapshots_channel(self, ctx, channel):
         # checks if the bot has write perms in the snapshots channel
-        channel = self.bot.get_channel(channel_id)
         if not channel.permissions_for(ctx.guild.me).send_messages:
-            await ctx.send(
-                f"❌ I don't have permissions to send messages in <#{channel_id}>"
+            return await ctx.send(
+                f"❌ I don't have permissions to send messages in <#{channel.id}>"
             )
-        else:
-            # saves the new channel id in the db
-            await db_servers.update_snapshots_channel(ctx.guild.id, channel_id)
-            await ctx.send("✅ Snapshots successfully set to <#" + str(channel_id) + ">")
+        # saves the new channel id in the db
+        await db_servers.update_snapshots_channel(ctx.guild.id, channel.id)
+        await ctx.send("✅ Snapshots successfully set to <#" + str(channel.id) + ">")
 
     @setsnapshots.command(description="Disable snapshots.", aliases=["unset"])
     @commands.check_any(
@@ -231,6 +232,35 @@ class Snapshots(commands.Cog):
     async def disable(self, ctx):
         await db_servers.update_snapshots_channel(ctx.guild.id, None)
         await ctx.send("✅ Snapshots won't be sent anymore.")
+
+    @commands.slash_command(
+        name="setsnapshots",
+        default_member_permissions=disnake.Permissions(manage_channels=True),
+    )
+    async def _setsnapshots(self, inter: disnake.AppCmdInter):
+        """Send canvas snapshots in a channel every 15min."""
+        pass  # group root is a no-op
+
+    @_setsnapshots.sub_command(name="channel")
+    @owner_only()
+    async def _setsnapshots_channel(
+        self, inter: disnake.AppCmdInter, channel: disnake.TextChannel
+    ):
+        """Set the channel for the snapshots.
+
+        Parameters
+        ----------
+        channel: The channel to send the snapshots in."""
+        await inter.response.defer()
+        await self._do_set_snapshots_channel(inter, channel)
+
+    @_setsnapshots.sub_command(name="disable")
+    @commands.check_any(
+        owner_only(), commands.has_permissions(manage_channels=True)
+    )
+    async def _setsnapshots_disable(self, inter: disnake.AppCmdInter):
+        """Disable snapshots."""
+        await self.disable(inter)
 
     @commands.slash_command(name="snapshot")
     async def _snapshot(

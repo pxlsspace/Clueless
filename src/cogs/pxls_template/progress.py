@@ -42,7 +42,15 @@ from utils.pxls.template_manager import (
     make_before_after_gif,
     parse_template,
 )
-from utils.setup import PXLS_URL, db_stats, db_templates, db_users, imgur_app, stats
+from utils.setup import (
+    PXLS_URL,
+    db_stats,
+    db_templates,
+    db_users,
+    imgur_app,
+    owner_only,
+    stats,
+)
 from utils.table_to_image import table_to_image
 from utils.time_converter import (
     format_datetime,
@@ -1495,6 +1503,13 @@ class Progress(commands.Cog):
         res_file = await image_to_file(res_image, "template_speed.png", embed)
 
         await ctx.send(embed=embed, file=res_file)
+
+    @_progress.sub_command(name="reload_admins")
+    @owner_only()
+    async def _progress_reload_admins(self, inter: disnake.AppCmdInter):
+        """Update the list of progress admins (owner only)."""
+        await inter.response.defer()
+        await self.reload_admins(inter)
 
     @progress.command(
         hidden=True,

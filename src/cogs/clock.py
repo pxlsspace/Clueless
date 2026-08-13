@@ -7,7 +7,15 @@ from PIL import Image
 from main import tracked_templates
 from utils.discord_utils import get_image_url, image_to_file
 from utils.log import get_logger
-from utils.setup import db_servers, db_stats, db_templates, db_users, stats, ws_client
+from utils.setup import (
+    db_servers,
+    db_stats,
+    db_templates,
+    db_users,
+    owner_only,
+    stats,
+    ws_client,
+)
 from utils.time_converter import local_to_utc
 
 logger = get_logger("clock")
@@ -147,6 +155,13 @@ class Clock(commands.Cog):
             logger.exception("Couldn't send snapshots:")
 
         logger.debug("All stats updated.")
+
+    @commands.slash_command(name="forceupdate")
+    @owner_only()
+    async def _forceupdate(self, inter: disnake.AppCmdInter):
+        """Force an immediate stats update (owner only)."""
+        await inter.response.defer()
+        await self.forceupdate(inter)
 
     @commands.command(hidden=True)
     @commands.is_owner()

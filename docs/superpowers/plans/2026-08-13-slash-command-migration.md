@@ -381,15 +381,20 @@ git commit -m "feat(speed): expose canvas option on slash for 1:1 parity (#24)"
 ### Task 11: Remove `message_content` intent and prefix dispatch (compliance-critical)
 
 **Files:**
-- Modify: `src/main.py` — intent (`23-24`), `command_prefix` (`35`), `on_message` `process_commands` (`381`), prefix command error/`on_command` handlers, `on_message` prefix easter-eggs (`>_>` etc. at `356-370`).
+- Modify: `src/main.py` — intent (`24`), `on_message` easter-eggs + `process_commands` (`357-381`).
 
-**Do this only after Tasks 1–10 are verified in a real guild.**
+**DECISIONS (from user):**
+- **Easter eggs: DELETE** the two `try` blocks in `on_message` — the text triggers (`>_>`/`>.>`/`>_<`/`aa`/`AA`, `main.py:357-370`) and the mention reactions (good bot/bad bot/peepoPinged, `:372-380`). They depend on `message.content` and cannot survive dropping the intent.
+- **Keep the non-privileged `messages` intent** and the rest of `on_message` (first-message server-creation + blacklist-role check, `:319-356`) — these don't use `message.content`. Only `message_content` (privileged) is dropped.
+- **Keep `command_prefix=DEFAULT_PREFIX`** (from Task 9) — removing it risks `commands.Bot` construction; it is inert once `process_commands` is gone. (A future switch to `commands.InteractionBot` could drop it entirely — out of scope.)
+- Prefix-only branches in `on_command`/`on_command_error` become dead but are guarded (they never fire without prefix dispatch) — leave them to the Task 12 cleanup, don't touch them here to keep this critical change minimal.
 
-- [ ] **Step 1: Drop the intent.** Change `src/main.py:23-24` to construct intents **without** `message_content` (keep only what non-message features need; if nothing else needs the `messages` intent, use `disnake.Intents.default()` minus privileged ones). Verify no remaining code reads `message.content` for command routing.
-- [ ] **Step 2: Remove prefix routing.** Delete the `await bot.process_commands(message)` call (`src/main.py:381`) and the `command_prefix=` argument (`35`). Decide the fate of the `on_message` easter-eggs (`>_>`, `aa`, mention reactions) — they rely on `message.content` and will silently stop working without the intent; either delete them or gate them behind a non-privileged path, and note the removal.
-- [ ] **Step 3: Remove/adjust prefix-only error handlers.** `on_command`/`on_command_error` branches that only serve prefix commands (`src/main.py` around the message-command handlers) should be removed; keep `on_slash_command_error` / `on_message_command_error`.
-- [ ] **Step 4: Lint** `src/main.py`.
-- [ ] **Step 5: Boot & full smoke test.** Start the bot; confirm it connects **without** requesting `message_content`, all slash commands still register, and a prefix invocation (`>ping`) now does nothing. Confirm the bot no longer errors on messages.
+**Do this only after Tasks 1–10 are verified.** (In STATIC mode: py_compile + review; live boot DEFERRED to user.)
+
+- [ ] **Step 1: Drop the privileged intent.** In `src/main.py`, remove line `intents.message_content = True` (`:24`). Leave `intents = disnake.Intents(messages=True)` (`:23`) — the `messages` intent is non-privileged and still needed for `on_message`.
+- [ ] **Step 2: Delete the easter eggs + prefix routing in `on_message`.** Remove the two `try:` blocks (`:357-370` text triggers, `:372-380` mention reactions) AND the final `await bot.process_commands(message)` (`:381`). Keep everything from `:319` through the blacklist-role check (`:356`). After the edit, `on_message` ends after the blacklist-role check with no trailing easter-egg/dispatch code.
+- [ ] **Step 3: (skipped)** Error-handler prefix-branch cleanup is deferred to Task 12 (dead + guarded). Do not modify `on_command`/`on_command_error` here.
+- [ ] **Step 4: Verify (STATIC).** `python3 -m py_compile src/main.py` clean. Grep to confirm: no `intents.message_content` remains; no `process_commands` remains; the easter-egg emoji strings (`watermeloneat`, `GoodBot`, `BadBot`) are gone. (Live boot — connects without `message_content`, slash commands register, `>ping` does nothing — DEFERRED to user.)
 - [ ] **Step 6: Commit.**
 ```bash
 git add src/main.py

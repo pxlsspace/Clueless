@@ -260,11 +260,15 @@ git commit -m "feat(milestones): add slash group add/remove/list/channel (cog st
 **Files:**
 - Modify: `src/cogs/pxls/snapshots.py` (`setsnapshots channel:182`, `disable:227`). Note `snapshot` itself is already hybrid (`235/263`) — do not touch it.
 
-**Interfaces:** Produces `/setsnapshots channel|disable`.
+**Interfaces:** Produces `/setsnapshots channel|disable`. Cog is LIVE (`setup()` adds it, `snapshots.py:432`).
 
-- [ ] **Step 1: Add the slash group** (**Pattern B**), admin-gated. Signatures: `_setsnapshots_channel(inter, channel: disnake.TextChannel)`, `_setsnapshots_disable(inter)`. Call existing handlers.
+**Gating (preserve existing intent):** the prefix `channel` is `@commands.is_owner()` (`:191`) and `disable` is `@commands.check_any(is_owner, has_permissions(manage_channels=True))` (`:228`). Preserve: slash `_setsnapshots_channel` → `@owner_only()`; slash `_setsnapshots_disable` → `@commands.check_any(owner_only(), commands.has_permissions(manage_channels=True))`. Set `default_member_permissions=disnake.Permissions(manage_channels=True)` on the group root for UI hygiene. Import `owner_only` from `utils.setup`.
+
+**Caveat:** prefix `channel` (`:192`) reads `ctx.message.channel_mentions`/`ctx.message.channel` (no `.message` on `AppCmdInter`) to RESOLVE the channel, and uses `ctx.prefix` in its show branch (`:198`). Since slash already has a resolved channel, extract only the SET portion into a helper `async def _do_set_snapshots_channel(self, ctx, channel):` (the perm-check via `channel.permissions_for(ctx.guild.me)` + `db_servers.update_snapshots_channel(ctx.guild.id, channel.id)` + confirm, `:216-227` — this already uses `ctx.guild.me`, no `.message`). Prefix `channel` keeps its here/none/show/mention parsing then calls `self._do_set_snapshots_channel(ctx, self.bot.get_channel(channel_id))`. Do NOT touch the prefix group root's `ctx.prefix` (`:173`) — the slash root is a no-op `pass` and never runs it.
+
+- [ ] **Step 1: Add the slash group** (**Pattern B**). Signatures: `_setsnapshots_channel(inter, channel: disnake.TextChannel)` (required → set-only, calls the helper; `defer()` before the perm-check/DB write), `_setsnapshots_disable(inter)` → `await self.disable(inter)` (existing `disable` has no `.message` dep, direct delegation is safe). Slash "show current" is intentionally dropped (a dedicated `disable` sub-command already exists; setting is the primary action) — note this as a minor parity delta.
 - [ ] **Step 2: Lint** the file.
-- [ ] **Step 3: Boot & verify** set + disable in a test guild.
+- [ ] **Step 3: Boot & verify** set + disable in a test guild (owner for channel; owner or manage_channels for disable).
 - [ ] **Step 4: Commit.**
 ```bash
 git add src/cogs/pxls/snapshots.py

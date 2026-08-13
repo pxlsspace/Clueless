@@ -12,7 +12,7 @@ from utils.log import get_logger
 from utils.utils import BadResponseError, in_executor
 
 logger = get_logger(__name__)
-SIZE_LIMIT = 5 * 2**20  # 5 MB
+SIZE_LIMIT = 25 * 2**20  # 25 MB
 
 
 class S3Compat:
@@ -63,7 +63,7 @@ class S3Compat:
         if self.access_url:
             image_url = f"{self.access_url}/{filename}"
         else:
-            image_url = f"{self.access_url}/{self.bucket_name}/{filename}"
+            image_url = f"{self.endpoint_url}/{self.bucket_name}/{filename}"
 
         return image_url
     

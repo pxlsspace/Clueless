@@ -316,22 +316,34 @@ git commit -m "feat: add owner slash /forceupdate and /progress reload_admins (#
 **Interfaces:** Produces `/rl`, `/sql`, `/sqltext`, `/sqlcommit`, `/restart`, `/leave`, `/serverlist`, `/snapshots2db`, all gated by `@owner_only()`.
 
 - [ ] **Step 1: Import `owner_only`** from `utils.setup` in `utility.py` (`OWNER_IDS`/`owner_only()` are defined in Task 3 Step 0 — do not redefine).
-- [ ] **Step 2: Add slash twins** (**Pattern D**, `@owner_only()`) mapping the greedy prefix args to single string options:
+
+- [ ] **Step 2: Fix the `ctx.typing()` incompatibility (blocks slash delegation).** The shared `sql` (`:204`), `sqlcommit` (`:246`), and `snapshots2db` (`:701`) do `async with ctx.typing():`. `AppCmdInter` has no `.typing()`, so naive delegation crashes on the slash path. Add a helper near the top of the cog and replace all three `async with ctx.typing():` with `async with _safe_typing(ctx):` (do NOT use `contextlib.nullcontext()` for the `async with` — it lacks async support on Python 3.9, the deploy runtime):
+```python
+import contextlib
+@contextlib.asynccontextmanager
+async def _null_acm():
+    yield
+def _safe_typing(ctx):
+    """ctx.typing() for a prefix Context; a no-op for an AppCmdInter (slash defers instead)."""
+    return ctx.typing() if isinstance(ctx, commands.Context) else _null_acm()
+```
+
+- [ ] **Step 3: Add slash twins** (**Pattern D**, `@owner_only()`). All `defer()` first EXCEPT `_restart` (it sends then `exit()`s immediately):
   - `_rl(inter, extension: str)` → `self.rl(inter, extension)`
-  - `_sql(inter, query: str)` → `self.sql(inter, query)` (image output; `defer()`)
-  - `_sqltext(inter, query: str)` → `self.sqltext(inter, query)`
-  - `_sqlcommit(inter, query: str)` → `self.sqlcommit(inter, query)`
-  - `_restart(inter)` → `self.restart(inter)`
+  - `_sql(inter, query: str)` → `self.sql(inter, sql_expression=query, as_text=False)` (image output)
+  - `_sqltext(inter, query: str)` → `self.sql(inter, sql_expression=query, as_text=True)`
+  - `_sqlcommit(inter, query: str)` → `self.sqlcommit(inter, sql_expression=query)`
+  - `_restart(inter)` → `self.restart(inter)` (NO defer — immediate send + `exit()`)
   - `_leave(inter, guild_id: str)` → `self.leave(inter, guild_id)`
-  - `_serverlist(inter)` → `self.serverlist(inter)` (`defer()` if paginated)
-  - `_snapshots2db(inter, channel: disnake.TextChannel)` → `self.snapshots2db(inter, channel)` (`defer()`; long-running)
-  Where a shared handler currently reads `ctx.guild`/`ctx.author`, confirm the equivalent `inter.guild`/`inter.author` is used (disnake aliases these, but verify per handler).
-- [ ] **Step 3: Lint** `utility.py`.
-- [ ] **Step 4: Boot & verify** each as an `OWNER_IDS` user: `/sql`, `/sqltext`, `/rl <cog>`, `/serverlist`, `/leave`, `/snapshots2db`. Verify `/restart` last. Confirm a non-owner is rejected by `owner_only()`.
-- [ ] **Step 5: Commit.**
+  - `_serverlist(inter)` → `self.serverlist(inter)`
+  - `_snapshots2db(inter, channel: disnake.TextChannel, datetime: str)` → `self.snapshots2db(inter, str(channel.id), dt=datetime)`. NOTE: the handler signature is `snapshots2db(self, ctx, snapshot_channel_id, *, dt)` — it needs BOTH a channel-id string (pass `str(channel.id)`, since it calls `fetch_channel(id)`) AND the `dt` datetime string. The earlier single-`channel`-arg sketch was wrong.
+  `ctx.author` is used by `sql`/`snapshots2db` and is a valid alias on `AppCmdInter` — OK. Call the shared `sql` method directly (it's a plain method, not the decorated `sqlimage`/`sqltext` prefix commands).
+- [ ] **Step 4: Lint** `utility.py`.
+- [ ] **Step 5: Boot & verify** each as an `OWNER_IDS` user: `/sql`, `/sqltext`, `/rl <cog>`, `/serverlist`, `/leave`, `/snapshots2db`. Verify `/restart` last. Confirm a non-owner is rejected by `owner_only()`.
+- [ ] **Step 6: Commit.**
 ```bash
-git add src/cogs/utility.py src/utils/setup.py
-git commit -m "feat(utility): port owner debug commands to control-guild slash commands (#24)"
+git add src/cogs/utility.py
+git commit -m "feat(utility): port owner debug commands to OWNER_IDS-gated slash commands (#24)"
 ```
 
 ### Task 9: Retire the `prefix` command and dynamic prefix

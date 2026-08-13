@@ -5,7 +5,7 @@ from disnake.ext import commands, tasks
 from PIL import Image
 
 from main import tracked_templates
-from utils.discord_utils import get_image_url, image_to_file
+from utils.discord_utils import image_to_file
 from utils.log import get_logger
 from utils.setup import (
     db_servers,
@@ -13,6 +13,7 @@ from utils.setup import (
     db_templates,
     db_users,
     owner_only,
+    s3compat_app,
     stats,
     ws_client,
 )
@@ -242,33 +243,40 @@ class Clock(commands.Cog):
                         pass
 
     async def send_snapshots(self):
-        """Send snapshots for the servers where a channel is set"""
-        channels = await db_servers.get_all_snapshots_channels()
-        if not channels:
-            return
-        snapshot_saved = False
+        """Persist a canvas snapshot to S3 (source of truth) and post it to any configured channels."""
         array = stats.palettize_array(stats.board_array)
         board_img = Image.fromarray(array)
         snapshot_time = datetime.now(timezone.utc)
         filename = f"snapshot_{snapshot_time.strftime('%FT%H%M')}.png"
+        canvas_code = await stats.get_canvas_code()
 
+        # 1) Persist to S3 and record — source of truth, independent of any channel
+        try:
+            s3_url = await s3compat_app.upload_image(
+                board_img,
+                custom_metadata={
+                    "canvas_code": str(canvas_code),
+                    "datetime": snapshot_time.isoformat(),
+                },
+            )
+            await db_stats.save_snapshot(
+                snapshot_time.replace(tzinfo=None), canvas_code, s3_url
+            )
+        except Exception:
+            logger.exception("Failed to upload/record snapshot to S3")
+            # do NOT fall back to the expiring Discord URL; skip recording this cycle
+
+        # 2) Optional: post to any configured channels (independent of the DB record)
+        channels = await db_servers.get_all_snapshots_channels()
         for channel_id in channels:
             try:
                 channel = self.bot.get_channel(int(channel_id))
                 embed = disnake.Embed(title="Canvas Snapshot", color=0x66C5CC)
                 embed.timestamp = snapshot_time
                 file = await image_to_file(board_img, filename, embed)
-                m = await channel.send(file=file, embed=embed)
+                await channel.send(file=file, embed=embed)
             except Exception:
                 continue
-            else:
-                if not snapshot_saved:
-                    await db_stats.save_snapshot(
-                        snapshot_time.replace(tzinfo=None),
-                        await stats.get_canvas_code(),
-                        get_image_url(m.embeds[0].image),
-                    )
-                    snapshot_saved = True
 
     async def create_record(self):
         # get the 'last updated' datetime and its timezone

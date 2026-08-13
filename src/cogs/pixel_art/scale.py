@@ -5,13 +5,11 @@ import numpy as np
 from disnake.ext import commands
 from PIL import Image
 
-from utils.arguments_parser import MyParser
 from utils.discord_utils import (
     InterImage,
     ResizeView,
     format_number,
     get_image_from_message,
-    get_urls_from_list,
     image_to_file,
 )
 from utils.image.image_utils import (
@@ -41,22 +39,6 @@ class Scale(commands.Cog):
         """
         await inter.response.defer()
         await self.downscale(inter, image.url, pixel_size)
-
-    @commands.command(
-        name="downscale",
-        usage="<image|url> [pixel size]",
-        description="Downscale an upscaled pixel art.",
-        help="""
-        - `<url|image>`: an image URL or an attached image
-        - `[pixel size]`: The current size of the pixels (e.g. "2" means  the pixels are 2x2).
-        """,
-    )
-    async def p_downscale(self, ctx, *args):
-        args, urls = get_urls_from_list(args)
-        pixel_size = args[0] if args else None
-        url = urls[0] if urls else None
-        async with ctx.typing():
-            await self.downscale(ctx, url, pixel_size)
 
     async def downscale(self, ctx, url=None, pixel_size=None):
         # check on the pixel_size
@@ -144,20 +126,6 @@ class Scale(commands.Cog):
         await inter.response.defer()
         await self.upscale(inter, scale, image.url)
 
-    @commands.command(
-        name="upscale",
-        usage="[scale] <image|url>",
-        description="Upscale an image to the desired scale.",
-        help="""- `scale`: the new scale for the image (ex: 2 means the image will be 2x bigger)
-                - `<url|image>`: an image URL or an attached image""",
-    )
-    async def p_upscale(self, ctx, *args):
-        texts, urls = get_urls_from_list(args)
-        scale = texts[0] if texts else 2
-        url = urls[0] if urls else None
-        async with ctx.typing():
-            await self.upscale(ctx, scale, url)
-
     async def upscale(self, ctx, scale=2, url=None):
         # check on the scale
         err_msg = "The scale value must be an integer."
@@ -226,35 +194,6 @@ class Scale(commands.Cog):
         """
         await inter.response.defer()
         await self.resize(inter, width, image.url, resample)
-
-    @commands.command(
-        name="resize",
-        usage="<image|url> [width] [-resample ...]",
-        description="Change an image's width.",
-        help="""
-            - `<url|image>`: an image URL or an attached image
-            - `[width]`: the new width for the image (default: 100)
-            - `[-resample nearest|lanczos|bilinear|bicubic|box|hamming]`: a resampling filter (default: nearest)""",
-    )
-    async def p_resize(self, ctx, *args):
-        parser = MyParser(add_help=False)
-        parser.add_argument("args", type=str, nargs="*")
-        parser.add_argument(
-            "-resample",
-            choices=[r.lower() for r in self.resamples.keys()],
-            default="Nearest",
-            type=lambda s: s.lower(),
-        )
-        try:
-            parsed_args = parser.parse_args(args)
-        except ValueError as e:
-            return await ctx.send(f"❌ {e}")
-
-        texts, urls = get_urls_from_list(parsed_args.args)
-        url = urls[0] if urls else None
-        width = texts[0] if texts else 100
-        async with ctx.typing():
-            await self.resize(ctx, width, url, parsed_args.resample)
 
     async def resize(self, ctx, width, url=None, resample="Nearest"):
         # check on the resample
@@ -328,16 +267,6 @@ class Scale(commands.Cog):
         """To quickly get the size of an image."""
         await inter.response.defer()
         await self.size(inter, image.url)
-
-    @commands.command(
-        name="size",
-        usage="<image|url>",
-        description="To quickly get the size of an image.",
-        help="""`<url|image>`: an image URL or an attached image""",
-    )
-    async def p_size(self, ctx, url=None):
-        async with ctx.typing():
-            await self.size(ctx, url)
 
     async def size(self, ctx, url=None):
         # get the input image

@@ -8,7 +8,6 @@ from utils.discord_utils import (
     autocomplete_palette,
     format_number,
     get_image_from_message,
-    get_urls_from_list,
     image_to_file,
 )
 from utils.font.font_manager import PixelText
@@ -39,40 +38,6 @@ class Grid(commands.Cog):
         """
         await inter.response.defer()
         await self.grid(inter, image.url, x, y, color)
-
-    @commands.command(
-        name="grid",
-        description="Add a grid between pixels and upscale a pixel art.",
-        usage="<url|image> <x> <y> [color]",
-        help="""- `<url|image>`: an image URL or an attached image
-                - `<x>`: the x coordinate of the top left pixel
-                - `<y>`: the y coordinate of the top left pixel
-                - `[color]`: color of the grid (default: black)""",
-    )
-    async def p_grid(self, ctx, *args):
-
-        color = None
-        coords, urls = get_urls_from_list(args)
-        if len(coords) >= 3:
-            x, y, color = coords[:3]
-        elif len(coords) >= 2:
-            x, y = coords[:2]
-        elif len(coords) <= 0:
-            raise commands.MissingRequiredArgument(commands.Param(name="x"))
-        elif len(coords) <= 1:
-            raise commands.MissingRequiredArgument(commands.Param(name="y"))
-
-        try:
-            x = int(x)
-            y = int(y)
-        except Exception:
-            return await ctx.send(":x: Invalid integer in the coordinates.")
-        url = None
-        if urls:
-            url = urls[0]
-
-        async with ctx.typing():
-            await self.grid(ctx, url, x, y, color)
 
     async def grid(self, ctx, url=None, x=0, y=0, color=None):
         """command to add an to an image"""

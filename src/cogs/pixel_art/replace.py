@@ -7,7 +7,6 @@ from utils.discord_utils import (
     InterImage,
     autocomplete_palette_with_none,
     get_image_from_message,
-    get_urls_from_list,
     image_to_file,
 )
 from utils.image.image_utils import get_color
@@ -33,32 +32,6 @@ class Replace(commands.Cog):
         """
         await inter.response.defer()
         await self.replace(inter, color1, color2, image.url)
-
-    @commands.command(
-        name="replace",
-        usage="<color1> <color2> <image|url>",
-        description="Replace a color by an other in an image.",
-        help="""- `<color1>`: the name/hex/index of the color to replace (none = transparent)
-        - `<color2>`: the name/hex/index of the new color (none = transparent)
-        - `<url|image>`: an image URL or attached image""",
-    )
-    async def p_replace(self, ctx, *args):
-        colors, urls = get_urls_from_list(list(args))
-        # colors = " ".join(colors)
-        # colors = colors.split(",")
-        if len(colors) >= 2:
-            color1 = colors[0]
-            color2 = colors[1]
-        elif len(colors) == 1:
-            raise commands.MissingRequiredArgument(commands.Param(name="color2"))
-        else:
-            raise commands.MissingRequiredArgument(commands.Param(name="color1"))
-        url = None
-        if urls:
-            url = urls[0]
-
-        async with ctx.typing():
-            await self.replace(ctx, color1, color2, url)
 
     async def replace(self, ctx, color1, color2, url=None):
         # get the input image

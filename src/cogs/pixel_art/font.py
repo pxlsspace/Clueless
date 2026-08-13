@@ -48,22 +48,6 @@ class Font(commands.Cog):
             args += ("-bgcolor", bgcolor)
         await self.pixelfont(inter, *args)
 
-    @commands.command(
-        name="pixelfont",
-        description="Convert a text to pixel art.",
-        aliases=["pf", "pixeltext"],
-        usage="<text> [-font <name|*>] [-color <color|none>] [-bgcolor <color|none>]",
-        help="""- `<text>` a text to convert to pixel art
-                  - `[-font name|*]`: the name of the font (`*` will use all the fonts available)
-                  - `[-color]`: the color you want the text to be
-                  - `[-bgcolor]`: the color for the background around the text
-                  (the colors can be a pxls color name, a hex color, or `none` if you want transparent)""",
-    )
-    async def p_pixelfont(self, ctx, *, args):
-        args = args.split(" ")
-        async with ctx.typing():
-            await self.pixelfont(ctx, *args)
-
     async def pixelfont(self, ctx, *args):
         try:
             arguments = parse_pixelfont_args(args)
@@ -149,7 +133,6 @@ class Font(commands.Cog):
         """Show the list of the fonts available."""
         await self.fonts(inter)
 
-    @commands.command(description="Show the list of the fonts available.")
     async def fonts(self, ctx):
         fonts = get_all_fonts()
         allowed_fonts = get_allowed_fonts()

@@ -25,17 +25,6 @@ class Transform(commands.Cog):
         await inter.response.defer()
         await self.flip(inter, image.url)
 
-    @commands.command(
-        name="flip",
-        usage="<image|url>",
-        description="Flip an image vertically.",
-        help="""`<url|image>`: an image URL or an attached image""",
-        aliases=["mirror", "vflip"],
-    )
-    async def p_flip(self, ctx, url=None):
-        async with ctx.typing():
-            await self.flip(ctx, url)
-
     async def flip(self, ctx, url=None):
         # get the input image
         try:
@@ -54,16 +43,6 @@ class Transform(commands.Cog):
         """Flip an image horizontally."""
         await inter.response.defer()
         await self.hflip(inter, image.url)
-
-    @commands.command(
-        name="hflip",
-        usage="<image|url>",
-        description="Flip an image horizontally.",
-        help="""`<url|image>`: an image URL or an attached image""",
-    )
-    async def p_hflip(self, ctx, url=None):
-        async with ctx.typing():
-            await self.hflip(ctx, url)
 
     async def hflip(self, ctx, url=None):
         # get the input image

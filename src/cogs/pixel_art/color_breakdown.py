@@ -31,16 +31,6 @@ class ColorBreakdown(commands.Cog):
         await inter.response.defer()
         await self.colors(inter, image.url)
 
-    @commands.command(
-        name="colors",
-        description="Amount of pixels for each color in an image.",
-        usage="<image|url>",
-        aliases=["color", "colours", "colour"],
-    )
-    async def p_colors(self, ctx, url=None):
-        async with ctx.typing():
-            await self.colors(ctx, url)
-
     async def colors(self, ctx, url=None):
         # get the input image
         try:

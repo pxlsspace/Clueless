@@ -3,13 +3,11 @@ import functools
 import disnake
 from disnake.ext import commands
 
-from utils.arguments_parser import parse_outline_args
 from utils.discord_utils import (
     InterImage,
     autocomplete_palette,
     format_number,
     get_image_from_message,
-    get_urls_from_list,
     image_to_file,
 )
 from utils.image.image_utils import add_outline, get_color, remove_white_space
@@ -38,36 +36,6 @@ class Outline(commands.Cog):
         """
         await inter.response.defer()
         await self.outline(inter, color, image.url, sparse, width)
-
-    @commands.command(
-        name="outline",
-        description="Add an outline to an image.",
-        usage="<color> <url|image> [-sparse] [-width <number>]",
-        aliases=["border"],
-        help="""- `<color>`: color of the outline, can be the name of a pxlsColor or a hexcolor
-                  - `<url|image>`: an image URL or an attached image
-                  - `[-sparse]`: to have a sparse outline (outline without the corners)
-                  - `[-width <number>]`: the width of the outline in pixels""",
-    )
-    async def p_outline(self, ctx, *args):
-        try:
-            param = parse_outline_args(args)
-        except ValueError as e:
-            return await ctx.send(f"❌ {e}")
-
-        colors, urls = get_urls_from_list(param["pos_args"])
-        if colors:
-            color = " ".join(colors)
-        else:
-            raise commands.MissingRequiredArgument(commands.Param(name="color"))
-        url = None
-        if urls:
-            url = urls[0]
-
-        sparse = param["sparse"]
-        width = param["width"]
-        async with ctx.typing():
-            await self.outline(ctx, color, url, sparse, width)
 
     async def outline(self, ctx, color, url=None, sparse=False, width=1):
         """command to add an to an image"""
@@ -103,16 +71,6 @@ class Outline(commands.Cog):
         """Remove the 'white space' from a PNG image."""
         await inter.response.defer()
         await self.crop(inter, image.url)
-
-    @commands.command(
-        name="crop",
-        usage="<image|url>",
-        description="Remove the empty space from a PNG image.",
-        help="""- `<url|image>`: an image URL or an attached image""",
-    )
-    async def p_crop(self, ctx, url=None):
-        async with ctx.typing():
-            await self.crop(ctx, url)
 
     async def crop(self, ctx, url=None):
         # get the input image

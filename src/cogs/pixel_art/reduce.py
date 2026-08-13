@@ -5,12 +5,10 @@ import numpy as np
 from disnake.ext import commands
 from PIL import Image
 
-from utils.arguments_parser import MyParser
 from utils.discord_utils import (
     autocomplete_builtin_palettes,
     format_number,
     get_image_from_message,
-    get_urls_from_list,
     image_to_file,
 )
 from utils.image.image_utils import get_colors_from_input
@@ -49,45 +47,6 @@ class Reduce(commands.Cog):
             image_link = image_file.url
         await inter.response.defer()
         await self.reduce(inter, image_link, palette, matching)
-
-    @commands.command(
-        name="reduce",
-        description="Reduce an image's colors to fit a specific palette.",
-        usage="<image|url> [palette] [-fast]",
-        help="""
-            - `<image|url>`: an image URL or an attached file
-            - `[palette]`: a list of color (name or hex) separated by a comma. (default: pxls (current))
-            There are also built-in palettes: pxls, pxls_old, c1, grayscale, browns, yellows, greens, teals, blues, pinks, reds
-            Note: Use `!` in front of a color to remove it.
-            - `[-fast]`: to use the fast (but less accurate) color matching algorithm
-        """,
-    )
-    async def p_reduce(self, ctx, *args):
-
-        parser = MyParser(add_help=False)
-        parser.add_argument("palette", action="store", nargs="*")
-        parser.add_argument("-fast", action="store_true", required=False, default=False)
-
-        try:
-            parsed_args, unknown = parser.parse_known_args(args)
-        except ValueError as e:
-            return await ctx.send(f"❌ {e}")
-
-        palette, urls = get_urls_from_list(parsed_args.palette)
-        input_url = urls[0] if urls else None
-
-        if palette:
-            palette = " ".join(palette)
-        else:
-            palette = None
-        matching = "fast" if parsed_args.fast else "accurate"
-        async with ctx.typing():
-            await self.reduce(
-                ctx,
-                input_url,
-                palette,
-                matching,
-            )
 
     async def reduce(self, ctx, image_url, palette, matching):
         # get the image from the message

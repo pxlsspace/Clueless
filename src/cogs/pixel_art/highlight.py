@@ -52,25 +52,6 @@ class Highlight(commands.Cog):
         await inter.response.defer()
         await self.highlight(inter, *args)
 
-    @commands.command(
-        name="highlight",
-        description="Highlight the selected colors in an image.",
-        aliases=["hl"],
-        usage="<colors> <image|url> [-bgcolor|-bg <color>]",
-        help="""
-            - `<colors>`: list of pxls or hex colors or palettes separated by a comma
-            - `<image|url>`: an image URL or an attached file
-            - `[-bgcolor|bg <color>]`: the color to display behind the higlighted colors, it can be:
-                • a pxls name color (ex: "red")
-                • a hex color (ex: "#ff000")
-                • "none": to have a transparent background
-                • "dark": to have the background darkened
-                • "light": to have the background lightened""",
-    )
-    async def p_highlight(self, ctx, *args):
-        async with ctx.typing():
-            await self.highlight(ctx, *args)
-
     async def highlight(self, ctx, *args):
         # parse the arguemnts
         parser = MyParser(add_help=False)

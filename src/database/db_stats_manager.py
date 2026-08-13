@@ -759,6 +759,14 @@ class DbStatsManager:
         sql = "INSERT INTO snapshot (datetime, canvas_code, url) VALUES (?, ?, ?)"
         return await self.db.sql_insert(sql, (datetime, canvas_code, url))
 
+    async def get_all_snapshots(self):
+        sql = "SELECT datetime, canvas_code, url FROM snapshot ORDER BY datetime"
+        return await self.db.sql_select(sql)
+
+    async def update_snapshot_url(self, datetime, url):
+        sql = "UPDATE snapshot SET url = ? WHERE datetime = ?"
+        return await self.db.sql_update(sql, (url, datetime))
+
     async def get_snapshots_between(self, dt1, dt2, canvas_code):
         """Get all the snapshots between 2 datetimes"""
 

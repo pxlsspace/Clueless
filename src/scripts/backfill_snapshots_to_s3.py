@@ -29,6 +29,7 @@ async def main(dry_run):
     already_s3 = 0
     migrated = 0
     unrecoverable = 0
+    failed = 0
 
     for row in rows:
         total += 1
@@ -40,7 +41,16 @@ async def main(dry_run):
 
         try:
             img_bytes = await get_content(url, "bytes")
-            if not dry_run:
+        except Exception as e:
+            unrecoverable += 1
+            print(
+                f"[unrecoverable] {row['datetime']} (canvas {row['canvas_code']}): "
+                f"{url} -> {e}"
+            )
+            continue
+
+        if not dry_run:
+            try:
                 new_url = await s3compat_app.upload_image(
                     img_bytes,
                     custom_metadata={
@@ -49,13 +59,14 @@ async def main(dry_run):
                     },
                 )
                 await db_stats.update_snapshot_url(row["datetime"], new_url)
-            migrated += 1
-        except Exception as e:
-            unrecoverable += 1
-            print(
-                f"[unrecoverable] {row['datetime']} (canvas {row['canvas_code']}): "
-                f"{url} -> {e}"
-            )
+            except Exception as e:
+                failed += 1
+                print(
+                    f"[failed] {row['datetime']} (canvas {row['canvas_code']}): {e}"
+                )
+                continue
+
+        migrated += 1
 
     print("-" * 50)
     print("Backfill summary" + (" (dry run)" if dry_run else ""))
@@ -65,6 +76,7 @@ async def main(dry_run):
         f"  {'would migrate' if dry_run else 'migrated':<36}{migrated}"
     )
     print(f"  unrecoverable (expired/404):        {unrecoverable}")
+    print(f"  failed (upload/db error):           {failed}")
 
 
 if __name__ == "__main__":

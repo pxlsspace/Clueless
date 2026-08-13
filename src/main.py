@@ -197,7 +197,9 @@ async def on_command_error(ctx, error):
         text += f"Usage: `{ctx.prefix}{command_name} {ctx.command.usage}`"
         return await ctx.send(text)
 
-    if isinstance(error, (commands.MissingPermissions, commands.NotOwner)):
+    if isinstance(
+        error, (commands.MissingPermissions, commands.NotOwner, commands.CheckFailure)
+    ):
         return await ctx.send(
             f"❌ You don't have permissions to use the `{command_name}` command."
         )

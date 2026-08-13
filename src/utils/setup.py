@@ -1,6 +1,7 @@
 import os
 import sys
 
+from disnake.ext import commands
 from dotenv import load_dotenv
 
 from database.db_canvas_manager import DbCanvasManager
@@ -59,6 +60,18 @@ if guild_members_minimum:
     GUILD_MEMBER_MIN = int(guild_members_minimum)
 else:
     GUILD_MEMBER_MIN = int(0)
+
+# bot owner IDs
+OWNER_IDS = [int(x) for x in os.getenv("OWNER_IDS", "").split(",") if x.strip()]
+
+
+def owner_only():
+    """Command check restricting usage to OWNER_IDS. Works on prefix Context and slash AppCmdInter (both expose `.author`)."""
+
+    async def predicate(ctx):
+        return ctx.author is not None and ctx.author.id in OWNER_IDS
+
+    return commands.check(predicate)
 
 # imgur app
 IMGUR_CLIENT_ID = os.getenv("IMGUR_CLIENT_ID")

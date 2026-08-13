@@ -4,7 +4,7 @@ from disnake.ext.commands.converter import RoleConverter
 from disnake.ext.commands.errors import RoleNotFound
 
 from utils.discord_utils import UserConverter
-from utils.setup import db_servers, db_users
+from utils.setup import db_servers, db_users, owner_only
 
 
 class Blacklist(commands.Cog):
@@ -25,7 +25,9 @@ class Blacklist(commands.Cog):
             user = await UserConverter().convert(ctx, user)
         except commands.UserNotFound as e:
             return await ctx.send(f"❌ {e}")
+        await self._do_blacklist_add(ctx, user)
 
+    async def _do_blacklist_add(self, ctx, user):
         # check that the user isn't the bot owner
         app_info = await self.bot.application_info()
         owner = app_info.owner
@@ -60,7 +62,9 @@ class Blacklist(commands.Cog):
             user = await UserConverter().convert(ctx, user)
         except commands.UserNotFound as e:
             return await ctx.send(f"❌ {e}")
+        await self._do_blacklist_remove(ctx, user)
 
+    async def _do_blacklist_remove(self, ctx, user):
         # check that the user is actually blacklisted
         no_user_mention = disnake.AllowedMentions(users=False)  # to avoid pinging user
         discord_db_user = await db_users.get_discord_user(user.id)
@@ -87,6 +91,40 @@ class Blacklist(commands.Cog):
             for user_id in blacklisted_users:
                 text += "\t• <@{}>\n".format(user_id)
             await ctx.send(text)
+
+    @commands.slash_command(name="blacklist")
+    async def _blacklist(self, inter: disnake.AppCmdInter):
+        """Ban a user from using the bot."""
+        pass  # group root is a no-op
+
+    @_blacklist.sub_command(name="add")
+    @owner_only()
+    async def _blacklist_add(self, inter: disnake.AppCmdInter, user: disnake.User):
+        """Add a user to the blacklist.
+
+        Parameters
+        ----------
+        user: The user to blacklist."""
+        await inter.response.defer()
+        await self._do_blacklist_add(inter, user)
+
+    @_blacklist.sub_command(name="remove")
+    @owner_only()
+    async def _blacklist_remove(self, inter: disnake.AppCmdInter, user: disnake.User):
+        """Remove a user from the blacklist.
+
+        Parameters
+        ----------
+        user: The user to remove from the blacklist."""
+        await inter.response.defer()
+        await self._do_blacklist_remove(inter, user)
+
+    @_blacklist.sub_command(name="list")
+    @owner_only()
+    async def _blacklist_list(self, inter: disnake.AppCmdInter):
+        """Show all the blacklisted users."""
+        await inter.response.defer()
+        await self.list(inter)
 
     @commands.group(
         hidden=True,
@@ -119,6 +157,9 @@ class Blacklist(commands.Cog):
             role = await RoleConverter().convert(ctx, role)
         except RoleNotFound as e:
             return await ctx.send(f"❌ {e}")
+        await self._do_roleblacklist_add(ctx, role)
+
+    async def _do_roleblacklist_add(self, ctx, role):
         await db_servers.update_blacklist_role(ctx.guild.id, role.id)
         await ctx.send(f"✅ Blacklist role set to <@&{role.id}>.")
 
@@ -126,6 +167,32 @@ class Blacklist(commands.Cog):
     async def remove(self, ctx):
         await db_servers.update_blacklist_role(ctx.guild.id, None)
         await ctx.send("✅ Blacklist role removed.")
+
+    @commands.slash_command(
+        name="roleblacklist",
+        default_member_permissions=disnake.Permissions(manage_roles=True),
+    )
+    async def _roleblacklist(self, inter: disnake.AppCmdInter):
+        """Manage the role used to blacklist users from using the bot."""
+        pass  # group root is a no-op
+
+    @_roleblacklist.sub_command(name="add")
+    @commands.has_permissions(manage_roles=True)
+    async def _roleblacklist_add(self, inter: disnake.AppCmdInter, role: disnake.Role):
+        """Add a blacklist role, any user with this role won't be able to use the bot.
+
+        Parameters
+        ----------
+        role: The role to use as the blacklist role."""
+        await inter.response.defer()
+        await self._do_roleblacklist_add(inter, role)
+
+    @_roleblacklist.sub_command(name="remove")
+    @commands.has_permissions(manage_roles=True)
+    async def _roleblacklist_remove(self, inter: disnake.AppCmdInter):
+        """Remove the current blacklist role."""
+        await inter.response.defer()
+        await self.remove(inter)
 
 
 def setup(bot: commands.Bot):

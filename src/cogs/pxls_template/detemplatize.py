@@ -20,17 +20,6 @@ class Detemplatize(commands.Cog):
         await inter.response.defer()
         await self.detemplatize(inter, url)
 
-    @commands.command(
-        name="detemplatize",
-        description="Get the image from a template URL.",
-        usage="<url>",
-        aliases=["detemp"],
-    )
-    async def p_detemplatize(self, ctx, url: str):
-
-        async with ctx.typing():
-            await self.detemplatize(ctx, url)
-
     async def detemplatize(self, ctx, template_url):
         try:
             template = await get_template_from_url(template_url)

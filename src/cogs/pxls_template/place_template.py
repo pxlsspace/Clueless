@@ -8,7 +8,6 @@ import numpy as np
 from disnake.ext import commands
 from PIL import Image
 
-from utils.arguments_parser import MyParser
 from utils.discord_utils import (
     IMAGE_URL_REGEX,
     format_number,
@@ -58,44 +57,6 @@ class PlaceTemplate(commands.Cog):
     async def autocomplete_style(self, inter: disnake.AppCmdInter, user_input: str):
         styles = [s["name"] for s in STYLES]
         return [s for s in styles if user_input.lower() in s.lower()][:25]
-
-    @commands.command(
-        name="placetemplate",
-        description="Generate a template image for r/place overlays.",
-        usage="<image|url> [-style <style>] [-glow] [-ox <ox>] [-oy <oy>] [-nocrop] [-matching fast|accurate]",
-        help="""- `<image|url>`: an image URL or an attached file
-              - `[-style <style>]`: the name or URL of a template style (use `>styles` to see the list)
-              - `[-glow]`: add glow to the template
-              - `[-ox <ox>]`: template x-position
-              - `[-oy <oy>]`: template y-position
-              - `[-matching fast|accurate]`: the color matching algorithm to use""",
-        aliases=["placetemp"],
-    )
-    async def p_template(self, ctx, *args):
-
-        parser = MyParser(add_help=False)
-        parser.add_argument("url", action="store", nargs="*")
-        parser.add_argument("-style", action="store", required=False)
-        parser.add_argument("-glow", action="store_true", default=False)
-        parser.add_argument("-ox", action="store", required=False)
-        parser.add_argument("-oy", action="store", required=False)
-        parser.add_argument("-matching", choices=["fast", "accurate"], required=False)
-
-        try:
-            parsed_args = parser.parse_args(args)
-        except ValueError as e:
-            return await ctx.send(f"❌ {e}")
-        url = parsed_args.url[0] if parsed_args.url else None
-        async with ctx.typing():
-            await self.template(
-                ctx,
-                url,
-                parsed_args.style,
-                parsed_args.glow,
-                parsed_args.ox,
-                parsed_args.oy,
-                parsed_args.matching,
-            )
 
     @staticmethod
     async def template(ctx, image_url, style_name, glow, ox, oy, matching):

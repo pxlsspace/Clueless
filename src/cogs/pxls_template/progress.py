@@ -14,13 +14,11 @@ from PIL import Image
 
 from cogs.pxls.speed import get_grouped_graph, get_stats_graph
 from main import tracked_templates
-from utils.arguments_parser import MyParser
 from utils.discord_utils import (
     AddTemplateView,
     Confirm,
     DropdownView,
     MoreInfoView,
-    UserConverter,
     autocomplete_manager_templates,
     autocomplete_templates,
     autocomplete_user_templates,
@@ -78,22 +76,6 @@ class Progress(commands.Cog):
         """Track a template over time."""
         pass
 
-    @commands.group(
-        name="progress",
-        usage="<check|add|list|update|rename|transfer|delete|speed|timelapse|coords|managers>",
-        description="Track a template over time.",
-        aliases=["prog"],
-        invoke_without_command=True,
-    )
-    async def progress(self, ctx, template=None, display=None):
-        if template:
-            async with ctx.typing():
-                await self.p_check(ctx, template, display)
-        else:
-            await ctx.send(
-                f"Usage: `{ctx.prefix}{self.progress.qualified_name} {self.progress.usage}`\n*(Use `{ctx.prefix}help {self.progress.qualified_name}` for more information)*"
-            )
-
     display_options = {
         "Default (progress image)": "default",
         "Template": "template",
@@ -124,34 +106,6 @@ class Progress(commands.Cog):
         display: How to display the template."""
         await inter.response.defer()
         await self.check(inter, template, display)
-
-    @progress.command(
-        name="check",
-        description="Check the progress of a template.",
-        usage="<name|URL> [display option]",
-        help="""
-        - `<name|URL>`: The name or URL of the template you want to check
-        - `[display option]`: How to display the template.
-
-        **Display Options**:
-        • `default`: The progress image.
-        • `template`: The template image.
-        • `hltemplate`: The template image over the canvas.
-        • `wrong`: Only the wrong pixels.
-        • `hlwrong`: Wrong pixels highlighted over the template.
-        • `canvas`: The canvas in the template area.
-        • `heatmap`: The heatmap in the template area.
-        • `virginmap`: The virginmap in the template area.
-        • `virginabuse`: The pixels that are both correct and virgin.
-        • `none`: No image.""",
-    )
-    async def p_check(self, ctx, template, display=None):
-        if display and display.lower() not in self.display_options.values():
-            options = " ".join([f"`{o}`" for o in self.display_options.values()])
-            err_msg = f":x: Invalid display option '{display}' (choose from {options})"
-            return await ctx.send(err_msg)
-        async with ctx.typing():
-            await self.check(ctx, template, display.lower() if display else None)
 
     async def check(self, ctx, template_input, display):
         # check if the input is an URL or template name
@@ -529,13 +483,6 @@ class Progress(commands.Cog):
         await inter.response.defer()
         await self.add(inter, name, url)
 
-    @progress.command(
-        name="add", description="Add a template to the tracker.", usage="<name> <URL>"
-    )
-    async def p_add(self, ctx, name: str, url: str, args=None):
-        async with ctx.typing():
-            await self.add(ctx, name, url)
-
     @staticmethod
     async def add(ctx, name, url):
         try:
@@ -639,49 +586,6 @@ class Progress(commands.Cog):
         temp_per_page: The number of templates displayed in a page between 5 and 40. (default: 15)"""
         await inter.response.defer()
         await self.list(inter, sort, filter, coords, temp_per_page)
-
-    @progress.command(
-        name="list",
-        description="Show all the tracked templates.",
-        aliases=["ls"],
-        usage="[-sort <column>] [-coords x y] [-tpp <number>] [-filter <filter1+filter2+...>]",
-        help="""
-        `[-sort <column>]`: Sort the table by the chosen column.
-        `[-coords x y]`: To only see templates at coordinates (format: x y or pxls link).
-        `[-tpp <number>]`: The number of templates to display in a page between 5 and 40. (default: 15).
-        `[-filter <filter1+filter2+...>]`: Apply a filter to only display the chosen templates.
-        The available filters are:
-        - `notdone`: to only show the templates not done
-        - `done`: to only show the templates done
-        - `mine`: to only show templates that you own
-        - `managed`: to only show the templates you manage
-        e.g. `>progress list -filter mine+notdone` will show all your templates that are not done.
-        """,
-    )
-    async def p_list(self, ctx, *args):
-        parser = MyParser(add_help=False)
-        options_dict = {option[1]: i for i, option in enumerate(self.sort_options)}
-        parser.add_argument(
-            "-sort", "-s", choices=list(options_dict.keys()), required=False
-        )
-        parser.add_argument("-filter", "-f", type=str, required=False)
-        parser.add_argument("-coords", "-c", nargs="+", required=False)
-        parser.add_argument(
-            "-tpp", "-templates-per-page", type=int, required=False, default=15
-        )
-
-        try:
-            parsed_args = parser.parse_args(args)
-        except Exception as error:
-            return await ctx.send(f"❌ {error}")
-        sort = options_dict.get(parsed_args.sort) if parsed_args.sort else None
-        coords = " ".join(parsed_args.coords) if parsed_args.coords else None
-        if parsed_args.tpp < 5 or parsed_args.tpp > 40:
-            return await ctx.send(
-                ":x: The number of templates per page must be between 5 and 40."
-            )
-        async with ctx.typing():
-            await self.list(ctx, sort, parsed_args.filter, coords, parsed_args.tpp)
 
     async def list(
         self,
@@ -1004,38 +908,6 @@ class Progress(commands.Cog):
         await inter.response.defer()
         await self.update(inter, template, new_url, new_name, new_owner)
 
-    @progress.command(
-        name="update",
-        description="Update the template URL.",
-        usage="<current name> <new url>",
-    )
-    async def p_update_url(self, ctx, current_name, new_url):
-        async with ctx.typing():
-            await self.update(ctx, current_name, new_url=new_url)
-
-    @progress.command(
-        name="rename",
-        description="Update a template name.",
-        usage="<current name> <new name>",
-    )
-    async def p_update_name(self, ctx, current_name, new_name):
-        async with ctx.typing():
-            await self.update(ctx, current_name, new_name=new_name)
-
-    @progress.command(
-        name="transfer",
-        description="Transfer a template ownernership.",
-        usage="<current name> <new owner>",
-    )
-    async def p_update_owner(self, ctx, current_name, new_owner):
-        try:
-            new_user = await UserConverter().convert(ctx, new_owner)
-        except commands.UserNotFound as e:
-            return await ctx.send(f"❌ {e}")
-
-        async with ctx.typing():
-            await self.update(ctx, current_name, new_owner=new_user)
-
     async def update(
         self, ctx, current_name, new_url=None, new_name=None, new_owner=None
     ):
@@ -1189,16 +1061,6 @@ class Progress(commands.Cog):
         await inter.response.defer()
         await self.delete(inter, template)
 
-    @progress.command(
-        name="delete",
-        description="Delete a template and its stats from the tracker.",
-        usage="<template>",
-        aliases=["remove", "del"],
-    )
-    async def p_delete(self, ctx, template: str):
-        async with ctx.typing():
-            await self.delete(ctx, template)
-
     async def delete(self, ctx, template_name):
         try:
             temp = tracked_templates.get_template(template_name, ctx.author.id, False)
@@ -1272,30 +1134,6 @@ class Progress(commands.Cog):
         groupby: Show a bar chart for each 5 min interval, hour or day."""
         await inter.response.defer()
         await self.speed(inter, template, last, groupby)
-
-    @progress.command(
-        name="speed",
-        description="Check the speed graph of a template.",
-        usage="<template> [-last ?w?d?h?m] [-groupby 5min]",
-    )
-    async def p_speed(self, ctx, *args):
-        # parse the arguemnts
-        parser = MyParser(add_help=False)
-        parser.add_argument("template", action="store")
-        parser.add_argument("-last", "-l", nargs="+", default=None)
-        parser.add_argument(
-            "-groupby", "-g", choices=["5min", "hour", "day"], required=False
-        )
-
-        try:
-            parsed_args = parser.parse_args(args)
-        except ValueError as e:
-            return await ctx.send(f"❌ {e}")
-
-        async with ctx.typing():
-            await self.speed(
-                ctx, parsed_args.template, parsed_args.last, parsed_args.groupby
-            )
 
     @staticmethod
     async def speed(ctx, template_name, last: str = None, groupby: str = None):
@@ -1511,12 +1349,6 @@ class Progress(commands.Cog):
         await inter.response.defer()
         await self.reload_admins(inter)
 
-    @progress.command(
-        hidden=True,
-        description="Update the list of progress admins (owner only)",
-        aliases=["rladmins", "updateadmins"],
-    )
-    @commands.is_owner()
     async def reload_admins(self, ctx: commands.Context):
         app_info = await self.bot.application_info()
         bot_owner_id = app_info.owner.id
@@ -1553,52 +1385,6 @@ class Progress(commands.Cog):
         """
         await inter.response.defer()
         await self.timelapse(inter, template, last, before, after, frames, duration)
-
-    @progress.command(
-        name="timelapse",
-        description="Make a timelapse of a template.",
-        usage="<template> [-last ?w?d?h?m] [-before YYYY-mm-dd HH:MM] [-after YYYY-mm-dd HH:MM] [-frames <frames>] [-duration <duration>]",
-        aliases=["tl"],
-        help="""
-        `<template>`: the name or URL of a template
-        `[-last ?w?d?h?m]`: makes the timelapse in the last x week/day/hour/minute (format: ?w?d?h?m)
-        `[-before ...]`: to get the timelapse before a specific date (format: YYYY-mm-dd HH:MM)
-        `[-after ...]`: to show the timelapse after a specific date (format: YYYY-mm-dd HH:MM)
-        `[-frames <frames>]`: the number of frames in the timelapse (default: 40)
-        `[-duration <duration>]`: The duration of each frame in milliseconds. (default: 100)
-        """,
-    )
-    async def p_timelapse(self, ctx, *args):
-        # parse the arguemnts
-        parser = MyParser(add_help=False)
-        parser.add_argument("template", action="store")
-        # parser.add_argument(
-        #     "-display",
-        #     action="store",
-        #     default="canvas",
-        #     choices=["canvas", "progress"],
-        # )
-        parser.add_argument("-last", "-l", nargs="+", default=None)
-        parser.add_argument("-after", nargs="+", default=None)
-        parser.add_argument("-before", nargs="+", default=None)
-        parser.add_argument("-frames", "-nbframes", type=int, default=40)
-        parser.add_argument("-duration", type=int, default=100)
-
-        try:
-            parsed_args = parser.parse_args(args)
-        except ValueError as e:
-            return await ctx.send(f"❌ {e}")
-
-        async with ctx.typing():
-            await self.timelapse(
-                ctx,
-                parsed_args.template,
-                parsed_args.last,
-                parsed_args.before,
-                parsed_args.after,
-                parsed_args.frames,
-                parsed_args.duration,
-            )
 
     async def timelapse(
         self,
@@ -1857,18 +1643,6 @@ class Progress(commands.Cog):
         await inter.response.defer()
         await self.list(inter, coords=coords)
 
-    @progress.command(
-        name="coords",
-        description="Show all the tracked templates at the given coordinates.",
-        usage="<x> <y>",
-        help="""`<x> <y>`: Coordinates in the format: x y or pxls link""",
-        aliases=["coord", "coordinates", "coordinate"],
-    )
-    async def p_coords(self, ctx, *, coords):
-
-        async with ctx.typing():
-            await self.list(ctx, coords=coords)
-
     # # # Manager stuff # # #
 
     @_progress.sub_command_group(
@@ -1877,26 +1651,6 @@ class Progress(commands.Cog):
     async def _manager(self, inter: disnake.AppCmdInter):
         """Manage the template managers."""
         pass
-
-    @progress.group(
-        name="manager",
-        usage="<add|delete>",
-        description="Manage the template managers.",
-        invoke_without_command=True,
-    )
-    async def manager(self, ctx, template=None):
-        help = """
-• A template manager can update and rename a template.
-• Managers can only be added/deleted by the template owner.
-• You can see the managers of a template if you click the down arrow on `>progress check`
-• You can see the templates you can manage with `>progress list -filter managed`"""
-        msg = f"```{ctx.prefix}{self.manager.qualified_name} {self.manager.usage}```\n"
-        msg += f"*(Use `{ctx.prefix}help {self.manager.qualified_name}` for more information)*"
-        embed = disnake.Embed(title="Progress Manager", color=0x66C5CC)
-        embed.add_field(name="Information", value=help, inline=False)
-        embed.add_field(name="Usage", value=msg, inline=False)
-
-        await ctx.send(embed=embed)
 
     @_manager.sub_command(name="add")
     async def _manager_add(
@@ -1913,26 +1667,6 @@ class Progress(commands.Cog):
         user: The user you want to add as manager (a manager can update and rename the template)."""
         await inter.response.defer()
         await self.manager_add(inter, template, [user])
-
-    @manager.command(
-        name="add",
-        description="Add managers to a template.",
-        usage="<template> <list of users>",
-        aliases=["managers"],
-    )
-    async def p_manager_add(self, ctx, template, *, users):
-
-        # convert to User object
-        users_list = []
-        for user in users.split(" "):
-            try:
-                user = await UserConverter().convert(ctx, user)
-            except commands.UserNotFound as e:
-                return await ctx.send(f"❌ {e}")
-            users_list.append(user)
-
-        async with ctx.typing():
-            await self.manager_add(ctx, template, users_list)
 
     async def manager_add(self, ctx, template_name: str, users: list):
         # get the template
@@ -1990,26 +1724,6 @@ class Progress(commands.Cog):
         user: The user you want to delete from the managers."""
         await inter.response.defer()
         await self.manager_delete(inter, template, [user])
-
-    @manager.command(
-        name="delete",
-        description="Delete managers from a template.",
-        usage="<template> <list of users>",
-        aliases=["remove"],
-    )
-    async def p_manager_delete(self, ctx, template, *, users):
-
-        # convert to User object
-        users_list = []
-        for user in users.split(" "):
-            try:
-                user = await UserConverter().convert(ctx, user)
-            except commands.UserNotFound as e:
-                return await ctx.send(f"❌ {e}")
-            users_list.append(user)
-
-        async with ctx.typing():
-            await self.manager_delete(ctx, template, users_list)
 
     async def manager_delete(self, ctx, template_name: str, users: list):
         # get the template

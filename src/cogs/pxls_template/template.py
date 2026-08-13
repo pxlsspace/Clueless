@@ -11,7 +11,6 @@ import numpy as np
 from disnake.ext import commands
 from PIL import Image
 
-from utils.arguments_parser import MyParser
 from utils.discord_utils import (
     IMAGE_URL_REGEX,
     AuthorView,
@@ -170,57 +169,6 @@ class Template(commands.Cog):
     async def autocomplete_style(self, inter: disnake.AppCmdInter, user_input: str):
         styles = [s["name"] for s in STYLES]
         return [s for s in styles if user_input.lower() in s.lower()][:25]
-
-    @commands.command(
-        name="template",
-        description="Generate a template link from an image.",
-        usage="<image|url> [-style <style>] [-title <title>] [-glow] [-ox <ox>] [-oy <oy>] [-nocrop] [-matching fast|accurate] [-palette ...]",
-        help="""- `<image|url>`: an image URL, attached file or template link
-              - `[-title <title>]`: the template title
-              - `[-style <style>]`: the name or URL of a template style (use `>styles` to see the list)
-              - `[-glow]`: add glow to the template
-              - `[-ox <ox>]`: template x-position
-              - `[-oy <oy>]`: template y-position
-              - `[-host s3compat|discord|imgur]`: where to host the template image (default: s3compat)
-              - `[-nocrop]`: if you don't want the template to be automatically cropped
-              - `[-matching fast|accurate]`: the color matching algorithm to use
-              - `[-palette ...]`: the palette to use for the template (palette name or list of colors seprated by a comma.)""",
-        aliases=["templatize", "temp"],
-    )
-    async def p_template(self, ctx, *args):
-
-        parser = MyParser(add_help=False)
-        parser.add_argument("url", action="store", nargs="*")
-        parser.add_argument("-title", action="store", required=False)
-        parser.add_argument("-style", action="store", required=False)
-        parser.add_argument("-glow", action="store_true", default=False)
-        parser.add_argument("-ox", action="store", required=False)
-        parser.add_argument("-oy", action="store", required=False)
-        parser.add_argument("-host", choices=["s3compat", "discord", "imgur"], default="s3compat")
-        parser.add_argument("-nocrop", action="store_true", default=False)
-        parser.add_argument("-matching", choices=["fast", "accurate"], required=False)
-        parser.add_argument("-palette", action="store", nargs="*")
-
-        try:
-            parsed_args = parser.parse_args(args)
-        except ValueError as e:
-            return await ctx.send(f"❌ {e}")
-        url = parsed_args.url[0] if parsed_args.url else None
-        palette = " ".join(parsed_args.palette) if parsed_args.palette else None
-        async with ctx.typing():
-            await self.template(
-                ctx,
-                url,
-                parsed_args.title,
-                parsed_args.style,
-                parsed_args.glow,
-                parsed_args.ox,
-                parsed_args.oy,
-                parsed_args.host,
-                parsed_args.nocrop,
-                parsed_args.matching,
-                palette,
-            )
 
     @staticmethod
     async def template(
@@ -496,11 +444,6 @@ class Template(commands.Cog):
         """List the template styles available."""
         await self.styles(inter)
 
-    @commands.command(
-        name="styles",
-        description="List the template styles available.",
-        aliases=["style"],
-    )
     async def styles(self, ctx):
         styles_available = "**Available Styles:**\n"
         for s in STYLES:

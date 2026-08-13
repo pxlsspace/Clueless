@@ -7,7 +7,6 @@ from disnake.ext import commands
 from PIL import Image
 
 from main import tracked_templates
-from utils.arguments_parser import MyParser
 from utils.discord_utils import CreateTemplateView, get_image_url, image_to_file
 from utils.pxls.template_manager import Combo, layer
 from utils.setup import stats, s3compat_app
@@ -33,27 +32,6 @@ class Layer(commands.Cog):
         # Remove unused entries, equal to None
         template_uris = templates.split(" ")
         await self.layer(inter, template_uris)
-
-    @commands.command(
-        name="layer",
-        description="Layer several templates.",
-        usage="<templates>",
-        help="""
-            - `<templates>`: List of templates (URL or name) separated by a space (last goes above) (use `!` in front of a template to exclude it).
-            """,
-    )
-    async def p_layer(self, ctx, *args):
-
-        parser = MyParser(add_help=False)
-        parser.add_argument("templates", nargs="+")
-
-        try:
-            parsed_args, _ = parser.parse_known_args(args)
-            template_uris = parsed_args.templates
-        except ValueError as e:
-            return await ctx.send(f"❌ {e}")
-        async with ctx.typing():
-            await self.layer(ctx, template_uris)
 
     @staticmethod
     async def layer(ctx, template_uris):

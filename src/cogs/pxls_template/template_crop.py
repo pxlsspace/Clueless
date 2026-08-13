@@ -6,7 +6,6 @@ from disnake.ext import commands
 from PIL import Image
 
 from main import tracked_templates
-from utils.arguments_parser import MyParser
 from utils.discord_utils import (
     CreateTemplateView,
     autocomplete_templates,
@@ -36,20 +35,6 @@ class TemplateCrop(commands.Cog):
         await inter.response.defer()
         await self.crop(inter, template, type="tocanvas")
 
-    @commands.command(
-        name="croptocanvas",
-        aliases=["canvascrop", "ctc"],
-        description="Crop a template to the canvas boundaries.",
-        usage="<template>",
-        help="""
-            - `<template>`: A template name or URL.
-            """,
-    )
-    async def p_croptocanvas(self, ctx, template):
-
-        async with ctx.typing():
-            await self.crop(ctx, template, type="tocanvas")
-
     @commands.slash_command(name="crop-to-templates")
     async def _croptotemplates(
         self,
@@ -73,36 +58,6 @@ class TemplateCrop(commands.Cog):
                 return await inter.send(f":x: {e}")
         await self.crop(inter, template, type="totemplates", templates=templates)
 
-    @commands.command(
-        name="croptotemplates",
-        aliases=["croptocombo", "ctt", "cropoverlaps"],
-        description="Crop out all overlaps with other templates.",
-        usage="<template> [templates]",
-        help="""
-            - `<template>`: A template name or URL.
-            - `[templates]`: A list of overlapping templates (name or URL) to crop out (default: everything in the tracker).
-            """,
-    )
-    async def p_croptotemplates(self, ctx, *args):
-
-        parser = MyParser(add_help=False)
-        parser.add_argument("template", action="store")
-        parser.add_argument("templates", nargs="*")
-
-        try:
-            parsed_args, _ = parser.parse_known_args(args)
-            template = parsed_args.template
-            templates_str = parsed_args.templates
-            if templates_str:
-                templates = await tracked_templates.get_templates(templates_str)
-            else:
-                templates = None
-        except ValueError as e:
-            return await ctx.send(f":x: {e}")
-
-        async with ctx.typing():
-            await self.crop(ctx, template, type="totemplates", templates=templates)
-
     @commands.slash_command(name="crop-wrong-pixels")
     async def _cropwrongpixels(
         self,
@@ -118,20 +73,6 @@ class TemplateCrop(commands.Cog):
         await inter.response.defer()
         await self.crop(inter, template, type="cropwrongpixels")
 
-    @commands.command(
-        name="cropwrongpixels",
-        aliases=["cwp"],
-        description="Crop out all the current incorrect pixels.",
-        usage="<template>",
-        help="""
-            - `<template>`: A template name or URL.
-            """,
-    )
-    async def p_cropwrongpixels(self, ctx, template):
-
-        async with ctx.typing():
-            await self.crop(ctx, template, type="cropwrongpixels")
-
     @commands.slash_command(name="replace-wrong-pixels")
     async def _replacewrongpixels(
         self,
@@ -146,20 +87,6 @@ class TemplateCrop(commands.Cog):
         """
         await inter.response.defer()
         await self.crop(inter, template, type="replacewrongpixels")
-
-    @commands.command(
-        name="replacewrongpixels",
-        aliases=["rwp"],
-        description="Replace all the incorrect pixels with what is currently on the canvas.",
-        usage="<template>",
-        help="""
-            - `<template>`: A template name or URL.
-            """,
-    )
-    async def p_replacewrongpixels(self, ctx, template):
-
-        async with ctx.typing():
-            await self.crop(ctx, template, type="replacewrongpixels")
 
     @staticmethod
     async def crop(ctx, template_input, type="tocanvas", templates=None):

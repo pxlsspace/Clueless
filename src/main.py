@@ -21,7 +21,6 @@ from utils.setup import (
 
 load_dotenv()
 intents = disnake.Intents(messages=True)
-intents.message_content = True
 activity = disnake.Activity(
     type=disnake.ActivityType.watching, name="you placing those pixels 👀"
 )
@@ -353,32 +352,6 @@ async def on_message(message):
             if blacklist_role is not None:
                 if blacklist_role in message.author.roles:
                     return
-
-    try:
-        if message.content == ">_>":
-            return await message.channel.send("<_<")
-        if message.content == ">.>":
-            return await message.channel.send("<.<")
-        if message.content == ">_<":
-            return await message.channel.send("<_>")
-        if message.content == "aa":
-            await message.channel.send("<:watermeloneat:955627387666694155>")
-        if message.content == "AA":
-            await message.channel.send("<:watermelonDEATH:949447275753648268>")
-    except Exception:
-        pass
-
-    try:
-        if bot.user in message.mentions:
-            if "good bot" in message.content.lower():
-                await message.add_reaction("<a:GoodBot:955658963171565658>")
-            elif "bad bot" in message.content.lower():
-                await message.add_reaction("<a:BadBot:955659116506935336>")
-            else:
-                await message.add_reaction("<:peepoPinged:943594603632816188>")
-    except Exception:
-        pass
-    await bot.process_commands(message)
 
 
 @bot.event

@@ -233,23 +233,26 @@ git add src/cogs/blacklist.py
 git commit -m "feat(blacklist): add owner-scoped slash groups for blacklist/roleblacklist (#24)"
 ```
 
-### Task 4: `milestones` group → slash (admin)
+### Task 4: `milestones` group → slash (admin) — cog is DISABLED, keep it disabled
 
 **Files:**
-- Modify: `src/cogs/pxls/milestones.py` (`add:23 remove:42 list:56 channel:73`)
+- Modify: `src/cogs/pxls/milestones.py` (`add:24 remove:47 list:59 channel:83`)
 
-**Interfaces:** Produces `/milestones add|remove|list|channel`.
+**DECISION:** This cog is disabled (`setup()` does `return` before `bot.add_cog`, `milestones.py:131-133`). Per user: **migrate to slash but LEAVE `setup()` disabled** — do NOT re-enable, do NOT touch `setup()`. Existing gating is `manage_channels` (not `administrator`; the earlier "admin" wording is superseded — match existing behavior).
 
-- [ ] **Step 1: Add the slash group** (**Pattern B**), `default_member_permissions=disnake.Permissions(administrator=True)`. Signatures:
-  - `_milestones_add(inter, username: str)`, `_milestones_remove(inter, username: str)`, `_milestones_list(inter)`, `_milestones_channel(inter, channel: disnake.TextChannel)`.
-  Each calls the existing handler; defer where DB/image work happens.
+**Caveats (slash entries must be internally correct even though disabled):**
+- `add`/`remove` take a plain `name` string → direct delegation is safe: `self.add(inter, name=username)`, `self.remove(inter, name=username)`.
+- `list` (`:59`) uses `ctx.prefix` in its empty-list branch (`:64`) — no `.prefix` on `AppCmdInter`. Replace that hint with a prefix-agnostic literal (e.g. ``/milestones add <username>``) so the slash path can't `AttributeError`.
+- `channel` (`:83`) uses `ctx.message.channel_mentions`/`ctx.message.channel`/`ctx.message.guild` — no `.message` on `AppCmdInter`. Do NOT delegate to it. Extract a shared helper `_do_set_milestones_channel(self, ctx, channel, disable, show)` that operates on a resolved `disnake.TextChannel`/flags and uses `ctx.guild` (not `ctx.message.guild`); the prefix `channel` keeps its message-based parsing then calls the helper. Leave the pre-existing `permissions_in(...)` call as-is (pre-existing stale API, out of scope) but note it as a concern.
 
-- [ ] **Step 2: Lint** the file.
-- [ ] **Step 3: Boot & verify** each sub-command matches the `>milestones ...` behavior in a test guild.
-- [ ] **Step 4: Commit.**
+- [ ] **Step 1: Add the slash group** (**Pattern B**), `default_member_permissions=disnake.Permissions(manage_channels=True)` on the group root, `@commands.has_permissions(manage_channels=True)` on all four sub-commands (the prefix group check gates all four). Signatures:
+  - `_milestones_add(inter, username: str)`, `_milestones_remove(inter, username: str)`, `_milestones_list(inter)`, `_milestones_channel(inter, channel: disnake.TextChannel = None, disable: bool = False)` (channel set → set it; `disable=True` → clear it; both omitted → show current). Defer where a DB read/format precedes the reply.
+
+- [ ] **Step 2: Lint** the file. (Do NOT modify `setup()` — the cog stays disabled.)
+- [ ] **Step 3: Commit.**
 ```bash
 git add src/cogs/pxls/milestones.py
-git commit -m "feat(milestones): add admin slash group add/remove/list/channel (#24)"
+git commit -m "feat(milestones): add slash group add/remove/list/channel (cog stays disabled) (#24)"
 ```
 
 ### Task 5: `setsnapshots` group → slash (admin)

@@ -491,6 +491,11 @@ class Template(commands.Cog):
             await m.edit(embed=embed, view=view)
             return True
 
+    @commands.slash_command(name="styles")
+    async def _styles(self, inter: disnake.AppCmdInter):
+        """List the template styles available."""
+        await self.styles(inter)
+
     @commands.command(
         name="styles",
         description="List the template styles available.",

@@ -144,6 +144,11 @@ class Font(commands.Cog):
         # send the image(s)
         await ctx.send(files=files)
 
+    @commands.slash_command(name="fonts")
+    async def _fonts(self, inter: disnake.AppCmdInter):
+        """Show the list of the fonts available."""
+        await self.fonts(inter)
+
     @commands.command(description="Show the list of the fonts available.")
     async def fonts(self, ctx):
         fonts = get_all_fonts()
@@ -158,7 +163,7 @@ class Font(commands.Cog):
             else:
                 msg += f"\t• `{font}`\n"
         embed = disnake.Embed(title="Available Fonts", color=0x66C5CC, description=msg)
-        embed.set_footer(text=f"* = available for {ctx.prefix}setfont\n")
+        embed.set_footer(text="* = available for /setfont\n")
         return await ctx.send(embed=embed)
 
 

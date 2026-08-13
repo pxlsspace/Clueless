@@ -59,7 +59,6 @@ class Utility(commands.Cog):
         """pong! (show the bot latency)."""
         await self.ping(inter)
 
-    @commands.command(description="pong! (show the bot latency)")
     async def ping(self, ctx):
         await ctx.send(f"pong! (bot latency: `{round(self.bot.latency*1000,2)}` ms)")
 
@@ -83,11 +82,6 @@ class Utility(commands.Cog):
         else:
             await self.timeconvert(inter, time)
 
-    @commands.command(
-        usage="<?y?mo?w?d?h?m?s> {-year|month|week|day|hour|minute|second}",
-        description="Convert time formats.",
-        aliases=["converttime", "tconvert", "tc"],
-    )
     async def timeconvert(self, ctx, input, *options):
         try:
             time = str_to_td(input)
@@ -136,8 +130,6 @@ class Utility(commands.Cog):
         await inter.response.defer()
         await self.rl(inter, extension)
 
-    @commands.command(hidden=True)
-    @commands.is_owner()
     async def rl(self, ctx, extension):
         try:
             self.bot.reload_extension("cogs." + extension)
@@ -155,11 +147,6 @@ class Utility(commands.Cog):
         timezone: A discord user or a timezone name (ex: 'UTC+8', US/Pacific, PST)."""
         await self.time(inter, timezone)
 
-    @commands.command(
-        name="time",
-        description="Show the current time in a timezone or for a user.",
-        usage="<timezone>",
-    )
     async def time(self, ctx, timezone: str = None):
 
         # check if the input timezone is a user
@@ -218,16 +205,6 @@ class Utility(commands.Cog):
         await inter.response.defer()
         await self.sql(inter, sql_expression=query, as_text=True)
 
-    @commands.command(name="sql", hidden=True, usage="<sql expression>")
-    @commands.is_owner()
-    async def sqlimage(self, ctx, *, sql_expression, as_text=True):
-        await self.sql(ctx, sql_expression=sql_expression, as_text=False)
-
-    @commands.command(name="sqltext", hidden=True, usage="<sql expression>")
-    @commands.is_owner()
-    async def sqltext(self, ctx, *, sql_expression):
-        await self.sql(ctx, sql_expression=sql_expression, as_text=True)
-
     async def sql(self, ctx, *, sql_expression, as_text=True):
         async with _safe_typing(ctx):
             start = time.time()
@@ -275,8 +252,6 @@ class Utility(commands.Cog):
         await inter.response.defer()
         await self.sqlcommit(inter, sql_expression=query)
 
-    @commands.command(hidden=True, usage="<sql expression>")
-    @commands.is_owner()
     async def sqlcommit(self, ctx, *, sql_expression):
         async with _safe_typing(ctx):
             try:
@@ -291,8 +266,6 @@ class Utility(commands.Cog):
         """Restart the bot. (owner only)"""
         await self.restart(inter)
 
-    @commands.command(hidden=True)
-    @commands.is_owner()
     async def restart(self, ctx):
         await ctx.send("Restarting now...")
         exit()
@@ -302,10 +275,6 @@ class Utility(commands.Cog):
         """Show some stats and information about the bot."""
         await self.botinfo(inter)
 
-    @commands.command(
-        name="botinfo",
-        aliases=["binfo"],
-        description="Show some stats and information about the bot.")
     async def botinfo(self, ctx):
         app_info = await self.bot.application_info()
         owner = app_info.owner
@@ -532,36 +501,6 @@ class Utility(commands.Cog):
         dt_str = " ".join(dt_list)
         await self.timestamp(inter, dt_str, timezone)
 
-    @commands.command(
-        name="timestamp",
-        aliases=["ts"],
-        description="Generate discord timestamps from a date, time and timezone.",
-        usage="[date (YYYY-mm-dd)] [time (HH:MM)] [timezone] | [+|-] [?y?m?w?d?h?m?s]",
-        help="""
-            - `[date]`: a date in the format `YYYY-mm-dd`
-            - `[time]`: a time in the format `HH:MM`
-            - `[timezone]`: a timezone (ex: 'UTC+8', US/Pacific, PST)\n(default: your set timezone or UTC)
-            - `[+|-] [?y?m?w?d?h?m?s]`: a relative time (example: -3d = 3 days ago)
-        """,
-    )
-    async def p_timestamp(self, ctx, *, args: str = None):
-
-        args = args.split(" ") if args else []
-        tz_str = None
-        if len(args) == 0:
-            dt_str = None
-        elif len(args) == 1:
-            dt_str = args[0]
-        else:
-            # check if the last arg is a timezone
-            if get_timezone(args[-1]):
-                dt_str = " ".join(args[:-1])
-                tz_str = args[-1]
-            else:
-                dt_str = " ".join(args)
-
-        await self.timestamp(ctx, dt_str, tz_str)
-
     async def timestamp(self, ctx, dt_str: str, tz_str: str = None):
 
         if tz_str is None:
@@ -632,13 +571,6 @@ class Utility(commands.Cog):
         await inter.response.defer()
         await self.leave(inter, guild_id)
 
-    @commands.command(
-        name="leave",
-        description="Make the bot leave a server. (owner only)",
-        hidden=True,
-        usage="<server ID>",
-    )
-    @commands.is_owner()
     async def leave(self, ctx, guild_id):
         try:
             guild = await self.bot.fetch_guild(guild_id)
@@ -661,12 +593,6 @@ class Utility(commands.Cog):
         await inter.response.defer()
         await self.serverlist(inter)
 
-    @commands.command(
-        name="serverlist",
-        description="Show the list of servers the bot is in. (owner only)",
-        hidden=True,
-    )
-    @commands.is_owner()
     async def serverlist(self, ctx):
         sql = """
             SELECT
@@ -754,8 +680,6 @@ class Utility(commands.Cog):
         await inter.response.defer()
         await self.snapshots2db(inter, str(channel.id), dt=datetime)
 
-    @commands.command(hidden=True, enabled=True, usage="<channel_id> <datetime>")
-    @commands.is_owner()
     async def snapshots2db(self, ctx, snapshot_channel_id, *, dt):
         try:
             snapshot_channel = await self.bot.fetch_channel(snapshot_channel_id)

@@ -62,24 +62,6 @@ class Emote(commands.Cog):
         await inter.response.defer()
         await self.number(inter)
 
-    @commands.group(
-        usage="[add|remove|list|number]",
-        description="Manage the server custom emotes.",
-        aliases=["emoji"],
-        invoke_without_command=True,
-    )
-    async def emote(self, ctx, subcommand):
-        return await ctx.send(
-            f"❌ Sub-command {subcommand} is not found\nUsage: `{ctx.prefix}{ctx.command.name} {ctx.command.usage}`"
-        )
-
-    @emote.command(
-        usage="<name> <url|image>",
-        description="""Add the image as a custom emoji.""",
-        help="""\t- `<name>`: name of the emoji to add\n
-                  \t- `<url|image>`: an image URL or an attached image""",
-    )
-    @commands.has_permissions(manage_emojis=True)
     async def add(self, ctx, name, url=None, image=None):
 
         # get the input image
@@ -130,12 +112,6 @@ class Emote(commands.Cog):
 
         await ctx.send("✅ Successfully added the emoji {}".format(format_emoji(emoji)))
 
-    @emote.command(
-        usage="<name>",
-        description="""Remove a custom emoji from the server.""",
-        aliases=["delete", "rm"],
-    )
-    @commands.has_permissions(manage_emojis=True)
     async def remove(self, ctx, name):
         emotes = [x for x in ctx.guild.emojis if x.name == name]
         if len(emotes) == 0:
@@ -152,10 +128,6 @@ class Emote(commands.Cog):
         for emote in emotes:
             await emote.delete()
 
-    @emote.command(
-        description="Show all of the server custom emojis and their names.",
-        aliases=["show"],
-    )
     async def list(self, ctx):
         emotes = ctx.guild.emojis
         if len(emotes) == 0:
@@ -173,10 +145,6 @@ class Emote(commands.Cog):
         for msg in res:
             await ctx.send(msg)
 
-    @emote.command(
-        description="Give the number of emojis and animated emojis on the server",
-        aliases=["nb"],
-    )
     async def number(self, ctx):
         nb_static, nb_anim = await number_emoji(ctx)
         await ctx.send(

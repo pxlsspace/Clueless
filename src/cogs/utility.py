@@ -63,18 +63,6 @@ class Utility(commands.Cog):
     async def ping(self, ctx):
         await ctx.send(f"pong! (bot latency: `{round(self.bot.latency*1000,2)}` ms)")
 
-    @commands.command(usage="[prefix]", description="Change or display the bot prefix.")
-    @commands.check_any(
-        commands.is_owner(), commands.has_permissions(administrator=True)
-    )
-    async def prefix(self, ctx, prefix=None):
-        if prefix is None:
-            prefix = ctx.prefix
-            await ctx.send("Current prefix: `" + prefix + "`")
-        else:
-            await db_servers.update_prefix(prefix, ctx.guild.id)
-            await ctx.send("✅ Prefix set to `" + prefix + "`")
-
     choices = ["years", "months", "weeks", "days", "hours", "minutes", "seconds"]
 
     @commands.slash_command(name="timeconvert")

@@ -32,7 +32,7 @@ allowed_mentions = disnake.AllowedMentions(
     replied_user=False,
 )
 bot = commands.Bot(
-    command_prefix=db_servers.get_prefix,
+    command_prefix=DEFAULT_PREFIX,
     help_command=None,
     intents=intents,
     case_insensitive=True,

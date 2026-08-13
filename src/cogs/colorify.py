@@ -12,7 +12,6 @@ from utils.discord_utils import (
     InterImage,
     autocomplete_palette,
     get_image_from_message,
-    get_urls_from_list,
     image_to_file,
 )
 from utils.image.gif_saver import save_transparent_gif
@@ -40,25 +39,6 @@ class Colorify(commands.Cog):
         """
         await inter.response.defer()
         await self.colorify(inter, color, image.url)
-
-    @commands.command(
-        name="colorify",
-        description="Turn an image to a different color.",
-        usage="<color> <image|url|emoji>",
-        aliases=["colorize", "colourify"],
-    )
-    async def p_colorify(self, ctx, *args):
-        colors, urls = get_urls_from_list(list(args))
-        if colors:
-            color = " ".join(colors)
-        else:
-            raise commands.MissingRequiredArgument(commands.Param(name="color"))
-        url = None
-        if urls:
-            url = urls[0]
-
-        async with ctx.typing():
-            await self.colorify(ctx, color, url)
 
     async def colorify(self, ctx, color, url=None):
         # get the rgba from the color input
@@ -117,11 +97,6 @@ class Colorify(commands.Cog):
         await inter.response.defer()
         await self.colorify(inter, "pink", image.url)
 
-    @commands.command(description="Turn an image pink.", usage="<image|url|emoji>")
-    async def pinkify(self, ctx, url=None):
-        async with ctx.typing():
-            await self.colorify(ctx, "#FFA9D9", url)
-
     @commands.slash_command(name="rainbowfy")
     async def _rainbowfy(
         self,
@@ -148,19 +123,6 @@ class Colorify(commands.Cog):
 
         await inter.response.defer()
         await self.rainbowfy(inter, *args)
-
-    @commands.command(
-        name="rainbowfy",
-        usage="<image|url|emoji> [-saturation value] [-lightness value]",
-        description="Turn an image to a rainbow GIF.",
-        help="""
-            - `<url|image|emoji>`: the image you want to rainbowfy
-            - `[-saturation|-s value]`: the rainbow saturation value between 0 and 100 (default: 50)
-            - `[-lightness|-l value]`: the rainbow lightness value between 0 and 100 (default: 60)""",
-    )
-    async def p_rainbowfy(self, ctx, *args):
-        async with ctx.typing():
-            await self.rainbowfy(ctx, *args)
 
     async def rainbowfy(self, ctx, *args):
 

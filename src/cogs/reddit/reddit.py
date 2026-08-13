@@ -105,26 +105,12 @@ class Reddit(commands.Cog, name="Image"):
         subreddit = random.choice(["tuckedinkitties", "kitten"])
         await self.send_random_image(inter, subreddit, "Here, have a kitten!")
 
-    @commands.cooldown(1, 2)
-    @commands.command(
-        aliases=["kitty", "neko", "cat"], description="Send a random kitten image.", ratelimit=1
-    )
-    async def kitten(self, ctx):
-        subreddit = random.choice(["tuckedinkitties", "kitten"])
-        await self.send_random_image(ctx, subreddit, "Here, have a kitten!")
-
     @commands.slash_command(name="duck")
     async def _duck(self, inter: disnake.AppCmdInter):
         """Send a random duck image."""
         await inter.response.defer()
         subreddit = "duck"
         await self.send_random_image(inter, subreddit, "quack quack")
-
-    @commands.cooldown(1, 2)
-    @commands.command(description="Send a random duck image.")
-    async def duck(self, ctx):
-        subreddit = "duck"
-        await self.send_random_image(ctx, subreddit, "quack quack")
 
     @commands.slash_command(name="bird")
     async def _bird(self, inter: disnake.AppCmdInter):
@@ -133,12 +119,6 @@ class Reddit(commands.Cog, name="Image"):
         subreddit = random.choice(["birding", "birdpics"])
         await self.send_random_image(inter, subreddit, "Here, have a bird!")
 
-    @commands.cooldown(1, 2)
-    @commands.command(description="Send a random bird image.")
-    async def bird(self, ctx):
-        subreddit = random.choice(["birding", "birdpics"])
-        await self.send_random_image(ctx, subreddit, "Here, have a bird!")
-
     @commands.slash_command(name="snek")
     async def _snek(self, inter: disnake.AppCmdInter):
         """Send a random snek image."""
@@ -146,24 +126,12 @@ class Reddit(commands.Cog, name="Image"):
         subreddit = "Sneks"
         await self.send_random_image(inter, subreddit, "s  n  e  k")
 
-    @commands.cooldown(1, 2)
-    @commands.command(description="Send a random snek image.")
-    async def snek(self, ctx):
-        subreddit = "Sneks"
-        await self.send_random_image(ctx, subreddit, "s  n  e  k")
-
     @commands.slash_command(name="doggo")
     async def _doggo(self, inter: disnake.AppCmdInter):
         """Send a random doggo image."""
         await inter.response.defer()
         subreddit = random.choice(["dog", "dogpictures", "puppies", "PuppySmiles"])
         await self.send_random_image(inter, subreddit, "Here, have a doggo!")
-
-    @commands.cooldown(1, 2)
-    @commands.command(description="Send a random doggo image.")
-    async def doggo(self, ctx):
-        subreddit = random.choice(["dog", "dogpictures", "puppies", "PuppySmiles"])
-        await self.send_random_image(ctx, subreddit, "Here, have a doggo!")
 
 
 def setup(bot: commands.Bot):

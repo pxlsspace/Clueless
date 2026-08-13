@@ -6,7 +6,7 @@ import numpy as np
 from disnake.ext import commands
 from PIL import Image
 
-from utils.discord_utils import InterImage, UserConverter, get_image_from_message, get_url
+from utils.discord_utils import InterImage, get_image_from_message
 from utils.image.gif_saver import save_transparent_gif
 from utils.utils import in_executor
 
@@ -36,24 +36,6 @@ class Pet(commands.Cog):
             url = target.display_avatar.url
         await inter.response.defer()
         await self.pet(inter, url)
-
-    @commands.command(
-        name="pet",
-        aliases=["pat"],
-        usage="<user|emoji|image|url|>",
-        description="Pet someone or something.",
-        help="""
-            - `<user|emoji|image|url>`: the user/emoji/image to pet""",
-    )
-    async def p_pet(self, ctx, target=None):
-        if target and get_url(target) is None:
-            try:
-                user = await UserConverter().convert(ctx, target)
-            except commands.UserNotFound as e:
-                return await ctx.send(f"❌ {e}")
-            target = user.display_avatar.url
-        async with ctx.typing():
-            await self.pet(ctx, target)
 
     async def pet(self, ctx, target=None):
         try:

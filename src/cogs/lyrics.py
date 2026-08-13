@@ -24,16 +24,6 @@ class Lyrics(commands.Cog):
         await inter.response.defer()
         await self.lyrics(inter, query=song)
 
-    # prefix command
-    @commands.command(
-        name="lyrics",
-        description="Get the lyrics of the song you're listening on Spotify.",
-        usage="[song]",
-    )
-    async def p_lyrics(self, ctx, *, song=None):
-        async with ctx.typing():
-            await self.lyrics(ctx, query=song)
-
     async def lyrics(self, ctx, *, query=None):
         spotify_title = None
         spotify_artists = None

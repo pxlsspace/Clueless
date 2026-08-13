@@ -164,8 +164,6 @@ class Clock(commands.Cog):
         await inter.response.defer()
         await self.forceupdate(inter)
 
-    @commands.command(hidden=True)
-    @commands.is_owner()
     async def forceupdate(self, ctx):
         try:
             await self._update_stats_data()

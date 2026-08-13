@@ -290,10 +290,6 @@ class Help(commands.Cog):
 
         await ctx.send(embed=emb)
 
-    @commands.command(name="help", description="Show all the commands.")
-    async def help(self, ctx, *, command_name=None):
-        return await self.handle_help(ctx, command_name, is_slash=False)
-
     @commands.slash_command(name="help")
     async def _help(
         self,

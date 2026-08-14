@@ -278,8 +278,11 @@ class Utility(commands.Cog):
     async def botinfo(self, ctx):
         app_info = await self.bot.application_info()
         owner = app_info.owner
-        me = ctx.me
-        bot_age = td_format(disnake.utils.utcnow() - me.created_at, hide_seconds=True)
+        # use the bot's ClientUser (always present) rather than ctx.me, which is
+        # None on a slash interaction when the bot member isn't cached.
+        bot_age = td_format(
+            disnake.utils.utcnow() - self.bot.user.created_at, hide_seconds=True
+        )
         server_prefix = await db_servers.get_prefix(self.bot, ctx)
         # get some bot stats
         guild_count = len(self.bot.guilds)

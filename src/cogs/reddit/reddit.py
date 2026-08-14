@@ -95,8 +95,10 @@ class Reddit(commands.Cog, name="Image"):
                 submission_url, image_url, title, subreddit_name, ex_time
             )
             await ctx.send(embed=embed)
-        except Exception: 
-            await ctx.send("❌ Failed to query reddit for an image. We're possibly being blocked :-()")
+        except Exception:
+            await ctx.send(
+                "❌ Failed to query reddit for an image. We're possibly being blocked :-()"
+            )
 
     @commands.slash_command(name="kitten")
     async def _kitten(self, inter: disnake.AppCmdInter):

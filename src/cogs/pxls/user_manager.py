@@ -381,9 +381,7 @@ class UserManager(commands.Cog):
                 color=disnake.Color.green(),
                 description=f"✅ Log key for canvas `{canvas_code}` successfully {'updated' if is_update else 'added'}.",
             )
-            embed.set_author(
-                name=modal_inter.author
-            )
+            embed.set_author(name=modal_inter.author)
             await modal_inter.response.send_message(embed=embed, ephemeral=True)
 
     @user.sub_command(name="keys")

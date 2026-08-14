@@ -7,7 +7,7 @@ from disnake.ext import commands
 from PIL import Image
 
 from main import tracked_templates
-from utils.discord_utils import CreateTemplateView, get_image_url, image_to_file
+from utils.discord_utils import CreateTemplateView
 from utils.pxls.template_manager import Combo, layer
 from utils.setup import stats, s3compat_app
 

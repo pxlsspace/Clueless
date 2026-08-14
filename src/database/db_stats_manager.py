@@ -203,7 +203,9 @@ class DbStatsManager:
         # Find all the records between the 2 dates
         # if it's more than 1000, shorten the record list to only have 1000 values
         records = await self.db.sql_select(
-            "SELECT * FROM record WHERE datetime BETWEEN ? AND ? AND canvas_code IS {} ORDER BY datetime".format(f"'{canvas_to_select}'" if canvas_to_select else "NOT NULL"),
+            "SELECT * FROM record WHERE datetime BETWEEN ? AND ? AND canvas_code IS {} ORDER BY datetime".format(
+                f"'{canvas_to_select}'" if canvas_to_select else "NOT NULL"
+            ),
             (record1["datetime"], record2["datetime"]),
         )
         records = [r["record_id"] for r in records]
@@ -273,7 +275,9 @@ class DbStatsManager:
             SELECT * FROM record
             WHERE datetime BETWEEN ? AND ? AND canvas_code IS {}
             GROUP BY strftime(?, datetime)
-            """.format(f"'{canvas_to_select}'" if canvas_to_select else "NOT NULL"),
+            """.format(
+                f"'{canvas_to_select}'" if canvas_to_select else "NOT NULL"
+            ),
             (record1["datetime"], record2["datetime"], groupby),
         )
         nb_data_max = len(records) * len(user_list)

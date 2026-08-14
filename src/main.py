@@ -166,7 +166,6 @@ async def on_command_error(ctx, error):
     if isinstance(error, ignored):
         return
 
-    slash_command = isinstance(ctx, disnake.ApplicationCommandInteraction)
     command_name = ctx.data.name
     for option in ctx.data.options:
         if option.type in (
@@ -334,7 +333,10 @@ async def on_guild_join(guild: disnake.Guild):
         return
 
     if GUILD_MEMBER_MIN and guild.member_count < GUILD_MEMBER_MIN:
-        general_channel = next((channel for channel in guild.text_channels if channel.name == 'general'), None)
+        general_channel = next(
+            (channel for channel in guild.text_channels if channel.name == "general"),
+            None,
+        )
         target_channel = None
         if general_channel and general_channel.permissions_for(guild.me).send_messages:
             target_channel = general_channel
@@ -343,10 +345,14 @@ async def on_guild_join(guild: disnake.Guild):
                 if channel.permissions_for(guild.me).send_messages:
                     target_channel = channel
                     break
-        
+
         if target_channel:
-            await target_channel.send("Due to the 100 server limit, using Clueless is not supported in guilds below {0} members. Please refer to the DMs for personal use.".format(GUILD_MEMBER_MIN))
-        
+            await target_channel.send(
+                "Due to the 100 server limit, using Clueless is not supported in guilds below {0} members. Please refer to the DMs for personal use.".format(
+                    GUILD_MEMBER_MIN
+                )
+            )
+
         await guild.leave()
         return
 

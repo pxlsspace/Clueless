@@ -73,6 +73,7 @@ def owner_only():
 
     return commands.check(predicate)
 
+
 # imgur app
 IMGUR_CLIENT_ID = os.getenv("IMGUR_CLIENT_ID")
 IMGUR_CLIENT_SECRET = os.getenv("IMGUR_CLIENT_SECRET")
@@ -95,5 +96,5 @@ s3compat_app = S3Compat(
     S3_COMPAT_SECRET_KEY,
     S3_COMPAT_ENDPOINT,
     S3_COMPAT_BUCKET_NAME,
-    S3_COMPAT_ACCESS_URL
+    S3_COMPAT_ACCESS_URL,
 )

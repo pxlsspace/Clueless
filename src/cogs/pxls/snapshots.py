@@ -193,9 +193,7 @@ class Snapshots(commands.Cog):
         await self._do_set_snapshots_channel(inter, channel)
 
     @_setsnapshots.sub_command(name="disable")
-    @commands.check_any(
-        owner_only(), commands.has_permissions(manage_channels=True)
-    )
+    @commands.check_any(owner_only(), commands.has_permissions(manage_channels=True))
     async def _setsnapshots_disable(self, inter: disnake.AppCmdInter):
         """Disable snapshots."""
         await inter.response.defer()

@@ -359,7 +359,7 @@ class Template(commands.Cog):
                         ":x: An error occurred while uploading the image to imgur, please try again with an other host."
                     )
                     return False
-            elif host == 's3compat':
+            elif host == "s3compat":
                 if not pxls_user_id:
                     await ctx.send(
                         ":x: Sorry, file uploads to S3compat is only available to users who have linked their pxls account with >setname."
@@ -372,7 +372,9 @@ class Template(commands.Cog):
                         "pxls_user_id": f"{pxls_user_id}",
                         "canvas_code": f"{canvas_code}",
                     }
-                    template_image_url = await s3compat_app.upload_image(template_image, metadata)
+                    template_image_url = await s3compat_app.upload_image(
+                        template_image, metadata
+                    )
                 except ValueError as e:
                     await ctx.send(f":x: {e}")
                     return False

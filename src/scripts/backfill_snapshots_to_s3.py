@@ -61,9 +61,7 @@ async def main(dry_run):
                 await db_stats.update_snapshot_url(row["datetime"], new_url)
             except Exception as e:
                 failed += 1
-                print(
-                    f"[failed] {row['datetime']} (canvas {row['canvas_code']}): {e}"
-                )
+                print(f"[failed] {row['datetime']} (canvas {row['canvas_code']}): {e}")
                 continue
 
         migrated += 1
@@ -72,9 +70,7 @@ async def main(dry_run):
     print("Backfill summary" + (" (dry run)" if dry_run else ""))
     print(f"  total:                              {total}")
     print(f"  already on S3:                      {already_s3}")
-    print(
-        f"  {'would migrate' if dry_run else 'migrated':<36}{migrated}"
-    )
+    print(f"  {'would migrate' if dry_run else 'migrated':<36}{migrated}")
     print(f"  unrecoverable (expired/404):        {unrecoverable}")
     print(f"  failed (upload/db error):           {failed}")
 

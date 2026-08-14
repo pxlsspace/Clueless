@@ -159,14 +159,9 @@ class Snapshots(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot: commands.Bot = bot
 
-    @commands.group(
-        hidden=True,
-        usage="[setchannel|disable]",
-        description="Send canvas snapshots in a channel every 15min.",
-        aliases=["setsnapshot"],
-        invoke_without_command=True,
-    )
-    async def setsnapshots(self, ctx, args=None):
+    # --- shared helpers ---
+
+    async def _do_setsnapshots_show(self, ctx):
         # display the current channel
         channel_id = await db_servers.get_snapshots_channel(ctx.guild.id)
         if channel_id is None:
@@ -180,17 +175,12 @@ class Snapshots(commands.Cog):
                 + ">.\nUse `>setsnapshot disable` to disable them."
             )
 
-    @setsnapshots.command(
-        usage="[#channel|here|none]",
-        description="Set the channel for the snapshots.",
-        aliases=["setchannel"],
-        help="""- `[#<channel>]`: set the snapshots in the given channel
-                  - `[here]`: send the snapshots in the current channel
-                  - `[none]`: disable the snapshots
-                If no parameter is given, will show the current snapshots channel""",
-    )
-    @commands.is_owner()
-    async def channel(self, ctx, channel=None):
+    async def _do_setsnapshots_channel(self, ctx, channel, disable):
+        if disable:
+            await db_servers.update_snapshots_channel(ctx.guild.id, None)
+            await ctx.send(":white_check_mark: Snapshots won't be sent anymore.")
+            return
+
         if channel is None:
             # displays the current channel if no argument specified
             channel_id = await db_servers.get_snapshots_channel(ctx.guild.id)
@@ -200,23 +190,11 @@ class Snapshots(commands.Cog):
                 )
             else:
                 return await ctx.send("Snapshots are set to <#" + str(channel_id) + ">")
-            # return await ctx.send("you need to give a valid channel")
-        channel_id = 0
-        if len(ctx.message.channel_mentions) == 0:
-            if channel == "here":
-                channel_id = ctx.message.channel.id
-            elif channel == "none":
-                await db_servers.update_snapshots_channel(ctx.guild.id, None)
-                await ctx.send(":white_check_mark: Snapshots won't be sent anymore.")
-                return
-            else:
-                return await ctx.send(":x: You need to give a valid channel.")
-        else:
-            channel_id = ctx.message.channel_mentions[0].id
 
+        channel_id = channel.id
         # checks if the bot has write perms in the snapshots channel
-        channel = await self.bot.fetch_channel(channel_id)
-        if not channel.permissions_for(ctx.guild.me).send_messages:
+        fetched_channel = await self.bot.fetch_channel(channel_id)
+        if not fetched_channel.permissions_for(ctx.guild.me).send_messages:
             await ctx.send(
                 f":x: I don't have permissions to send messages in <#{channel_id}>"
             )
@@ -229,13 +207,93 @@ class Snapshots(commands.Cog):
                 + ">"
             )
 
+    async def _do_setsnapshots_disable(self, ctx):
+        await db_servers.update_snapshots_channel(ctx.guild.id, None)
+        await ctx.send(":white_check_mark: Snapshots won't be sent anymore.")
+
+    # --- prefix commands ---
+
+    @commands.group(
+        hidden=True,
+        usage="[setchannel|disable]",
+        description="Send canvas snapshots in a channel every 15min.",
+        aliases=["setsnapshot"],
+        invoke_without_command=True,
+    )
+    async def setsnapshots(self, ctx, args=None):
+        await self._do_setsnapshots_show(ctx)
+
+    @setsnapshots.command(
+        usage="[#channel|here|none]",
+        description="Set the channel for the snapshots.",
+        aliases=["setchannel"],
+        help="""- `[#<channel>]`: set the snapshots in the given channel
+                  - `[here]`: send the snapshots in the current channel
+                  - `[none]`: disable the snapshots
+                If no parameter is given, will show the current snapshots channel""",
+    )
+    @commands.is_owner()
+    async def channel(self, ctx, channel=None):
+        # parse the here/none/#channel string sub-language into a
+        # resolved channel + disable flag for the shared helper
+        parsed_channel = None
+        disable = False
+        if channel is not None:
+            if len(ctx.message.channel_mentions) == 0:
+                if channel == "here":
+                    parsed_channel = ctx.message.channel
+                elif channel == "none":
+                    disable = True
+                else:
+                    return await ctx.send(":x: You need to give a valid channel.")
+            else:
+                parsed_channel = ctx.message.channel_mentions[0]
+
+        await self._do_setsnapshots_channel(ctx, parsed_channel, disable)
+
     @setsnapshots.command(description="Disable snapshots.", aliases=["unset"])
     @commands.check_any(
         commands.is_owner(), commands.has_permissions(manage_channels=True)
     )
     async def disable(self, ctx):
-        await db_servers.update_snapshots_channel(ctx.guild.id, None)
-        await ctx.send(":white_check_mark: Snapshots won't be sent anymore.")
+        await self._do_setsnapshots_disable(ctx)
+
+    # --- slash commands ---
+
+    @commands.slash_command(
+        name="setsnapshots",
+        default_member_permissions=disnake.Permissions(administrator=True),
+    )
+    async def _setsnapshots(self, inter):
+        pass
+
+    @_setsnapshots.sub_command(
+        name="channel", description="Set the channel for the snapshots."
+    )
+    @commands.is_owner()
+    async def _setsnapshots_channel(
+        self,
+        inter,
+        channel: disnake.TextChannel = None,
+        disable: bool = False,
+    ):
+        """
+        Set the channel for the snapshots.
+
+        Parameters
+        ----------
+        channel: The channel to send the snapshots in. If not given, shows the current channel.
+        disable: Disable the automatic snapshots.
+        """
+        await inter.response.defer()
+        await self._do_setsnapshots_channel(inter, channel, disable)
+
+    @_setsnapshots.sub_command(name="disable", description="Disable snapshots.")
+    @commands.check_any(
+        commands.is_owner(), commands.has_permissions(manage_channels=True)
+    )
+    async def _setsnapshots_disable(self, inter):
+        await self._do_setsnapshots_disable(inter)
 
     @commands.slash_command(name="snapshot")
     async def _snapshot(

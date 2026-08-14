@@ -1,7 +1,7 @@
 import platform
 import time
-from sys import exit
 from datetime import datetime, timedelta, timezone
+from sys import exit
 
 import disnake
 from disnake.ext import commands
@@ -43,18 +43,6 @@ class Utility(commands.Cog):
     @commands.command(description="pong! (show the bot latency)")
     async def ping(self, ctx):
         await ctx.send(f"pong! (bot latency: `{round(self.bot.latency*1000,2)}` ms)")
-
-    @commands.command(usage="[prefix]", description="Change or display the bot prefix.")
-    @commands.check_any(
-        commands.is_owner(), commands.has_permissions(administrator=True)
-    )
-    async def prefix(self, ctx, prefix=None):
-        if prefix is None:
-            prefix = ctx.prefix
-            await ctx.send("Current prefix: `" + prefix + "`")
-        else:
-            await db_servers.update_prefix(prefix, ctx.guild.id)
-            await ctx.send(":white_check_mark: Prefix set to `" + prefix + "`")
 
     choices = ["years", "months", "weeks", "days", "hours", "minutes", "seconds"]
 
@@ -264,7 +252,8 @@ class Utility(commands.Cog):
     @commands.command(
         name="botinfo",
         aliases=["binfo"],
-        description="Show some stats and information about the bot.")
+        description="Show some stats and information about the bot.",
+    )
     async def botinfo(self, ctx):
         app_info = await self.bot.application_info()
         owner = app_info.owner
@@ -624,9 +613,7 @@ class Utility(commands.Cog):
                 return await ctx.send(f":x: {e}")
         guild_name = guild.name
         guild_id = guild.id
-        return await ctx.send(
-            f"ID `{guild_id}` returns **{guild_name}**"
-        )
+        return await ctx.send(f"ID `{guild_id}` returns **{guild_name}**")
 
     @commands.command(
         name="serverlist",

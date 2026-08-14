@@ -612,7 +612,8 @@ class Utility(commands.Cog):
         guild_infos = []
         for guild in guilds:
             usage = stats_dict.get(guild.name)
-            join_time = guild.me.joined_at
+            # guild.me can be None if the bot member isn't cached
+            join_time = guild.me.joined_at if guild.me else None
             if usage:
                 nb_usage = usage["nb_usage"]
                 last_usage = usage["last_usage"]
@@ -628,10 +629,15 @@ class Utility(commands.Cog):
             else:
                 nb_usage = last_usage = None
 
+            joined = (
+                f"{format_datetime(join_time)} ({format_datetime(join_time,'R')})"
+                if join_time
+                else "unknown"
+            )
             res = f"**{guild.name}** *(id: {guild.id})*\n"
-            res += f"• Owner: <@{guild.owner.id}> ({guild.owner})\n"
+            res += f"• Owner: <@{guild.owner_id}> ({guild.owner})\n"
             res += f"• Members: `{guild.member_count}`\n"
-            res += f"• Joined: {format_datetime(join_time)} ({format_datetime(join_time,'R')})\n"
+            res += f"• Joined: {joined}\n"
             res += f"• Total Usage: `{format_number(nb_usage)}`\n"
             if last_usage:
                 res += f"• Last Usage: {format_datetime(last_usage)} ({format_datetime(last_usage,'R')})\n"

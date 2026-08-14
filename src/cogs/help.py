@@ -365,9 +365,10 @@ class Help(commands.Cog):
         is_slash = parsed_id[-1] == "slash"
         category_name = parsed_id[1]
 
-        # check on the author
-        command_author = await get_embed_author(inter)
-        if command_author != inter.author or command_author is None:
+        # check on the author: compare the clicker's username to the footer name
+        # (no user-cache lookup — bot.users is sparse without the members intent)
+        command_author_name = await get_embed_author(inter)
+        if command_author_name is None or str(inter.author) != command_author_name:
             emb = disnake.Embed(title="This isn't your command!", color=0xFF3621)
             emb.description = (
                 "Use the help command yourself to interact with the buttons."
@@ -375,11 +376,12 @@ class Help(commands.Cog):
             return await inter.send(embed=emb, ephemeral=True)
 
         # handle the button
+        author = inter.author
         await inter.response.defer(with_message=False)  # maybe to delete?
         if category_name == "Home":
-            await self.send_home_help(inter, command_author, is_slash)
+            await self.send_home_help(inter, author, is_slash)
         else:
-            await self.send_category_help(inter, category_name, command_author, is_slash)
+            await self.send_category_help(inter, category_name, author, is_slash)
 
 
 def setup(bot: commands.Bot):

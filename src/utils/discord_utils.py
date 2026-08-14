@@ -410,20 +410,17 @@ class UserConverter(commands.Converter):
             raise commands.UserNotFound(argument)
 
 
-async def get_embed_author(inter: disnake.MessageInteraction) -> disnake.User:
-    """Get the author User from an embed with "Requested by <username>" in the footer,
-    return ``None`` if not found. Discord usernames are unique now (no #discriminator)."""
+async def get_embed_author(inter: disnake.MessageInteraction) -> str:
+    """Return the "Requested by <username>" name from the embed footer, or ``None``.
+    We return the username string (not a User) and let the caller compare it to
+    str(inter.author) — the bot.users cache is sparse without the members intent,
+    so a cache lookup would wrongly fail. Usernames are unique now (no #discriminator)."""
     embeds = inter.message.embeds
-    if not embeds:
+    if not embeds or not embeds[0].footer or not embeds[0].footer.text:
         return None
     try:
         found = re.search(r"Requested by (\S+)", embeds[0].footer.text)
-        if not found:
-            return None
-        name = found.group(1)
-        # match on the unique username (str(user) == name for the new username system)
-        result = disnake.utils.find(lambda u: str(u) == name, inter.bot.users)
-        return result
+        return found.group(1) if found else None
     except Exception:
         return None
 

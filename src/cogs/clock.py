@@ -6,9 +6,17 @@ from disnake.ext import commands, tasks
 from PIL import Image
 
 from main import tracked_templates
-from utils.discord_utils import get_image_url, image_to_file
+from utils.discord_utils import image_to_file
 from utils.log import get_logger
-from utils.setup import db_servers, db_stats, db_templates, db_users, stats, ws_client
+from utils.setup import (
+    db_servers,
+    db_stats,
+    db_templates,
+    db_users,
+    s3compat_app,
+    stats,
+    ws_client,
+)
 from utils.time_converter import local_to_utc
 
 logger = get_logger("clock")
@@ -63,7 +71,7 @@ class Clock(commands.Cog):
             app_info = await self.bot.application_info()
             # checks if owner_ids is set
             if getattr(self.bot, "owner_ids", None):
-                for owner_id in self.bot.owner_ids: 
+                for owner_id in self.bot.owner_ids:
                     tracked_templates.load_progress_admins(owner_id)
             else:
                 owner = app_info.owner
@@ -256,16 +264,28 @@ class Clock(commands.Cog):
                 embed = disnake.Embed(title="Canvas Snapshot", color=0x66C5CC)
                 embed.timestamp = snapshot_time
                 file = await image_to_file(board_img, filename, embed)
-                m = await channel.send(file=file, embed=embed)
+                await channel.send(file=file, embed=embed)
             except Exception as e:
                 logger.exception(f"Failed to send snapshot to channel {channel_id}: {e}")
                 continue
             else:
                 if not snapshot_saved:
+                    canvas_code = await stats.get_canvas_code()
+                    try:
+                        snapshot_url = await s3compat_app.upload_image(
+                            board_img,
+                            {
+                                "canvas_code": f"{canvas_code}",
+                                "snapshot_time": snapshot_time.strftime("%FT%H%M"),
+                            },
+                        )
+                    except Exception as e:
+                        logger.exception(f"Failed to upload snapshot to S3: {e}")
+                        continue
                     await db_stats.save_snapshot(
                         snapshot_time.replace(tzinfo=None),
-                        await stats.get_canvas_code(),
-                        get_image_url(m.embeds[0].image),
+                        canvas_code,
+                        snapshot_url,
                     )
                     snapshot_saved = True
 

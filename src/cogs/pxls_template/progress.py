@@ -1906,21 +1906,50 @@ class Progress(commands.Cog):
 
         await ctx.send(embed=embed)
 
+    async def _resolve_users(self, inter: disnake.AppCmdInter, users_str: str) -> list:
+        """Split ``users_str`` on whitespace and/or commas and resolve each token to
+        a :class:`disnake.User` (mirrors the prefix commands' resolution behavior).
+
+        Tokens that don't resolve to a user are skipped and reported back to the
+        invoker instead of raising."""
+        tokens = [token for token in re.split(r"[\s,]+", users_str.strip()) if token]
+
+        resolved_users = []
+        not_found = []
+        for token in tokens:
+            try:
+                user = await UserConverter().convert(inter, token)
+            except commands.UserNotFound:
+                not_found.append(token)
+            else:
+                resolved_users.append(user)
+
+        if not_found:
+            await inter.send(
+                ":x: Could not find the following user(s): " + ", ".join(not_found)
+            )
+        return resolved_users
+
     @_manager.sub_command(name="add")
     async def _manager_add(
         self,
         inter: disnake.AppCmdInter,
         template: str = commands.Param(autocomplete=autocomplete_user_templates),
-        user: disnake.User = commands.Param(),
+        users: str = commands.Param(
+            description="space- or comma-separated users (mention or ID)"
+        ),
     ):
-        """Add a manager to a template (so they can update the template).
+        """Add managers to a template (so they can update the template).
 
         Parameters
         ----------
         template: The name of the template you want to add managers.
-        user: The user you want to add as manager (a manager can update and rename the template)."""
+        users: The user(s) you want to add as manager (space- or comma-separated mentions or IDs)."""
         await inter.response.defer()
-        await self.manager_add(inter, template, [user])
+        resolved_users = await self._resolve_users(inter, users)
+        if not resolved_users:
+            return await inter.send(":x: No valid user found.")
+        await self.manager_add(inter, template, resolved_users)
 
     @manager.command(
         name="add",
@@ -1988,16 +2017,21 @@ class Progress(commands.Cog):
         self,
         inter: disnake.AppCmdInter,
         template: str = commands.Param(autocomplete=autocomplete_user_templates),
-        user: disnake.User = commands.Param(),
+        users: str = commands.Param(
+            description="space- or comma-separated users (mention or ID)"
+        ),
     ):
-        """Delete a manager from a template.
+        """Delete managers from a template.
 
         Parameters
         ----------
         template: The name of the template you want to delete managers.
-        user: The user you want to delete from the managers."""
+        users: The user(s) you want to delete from the managers (space- or comma-separated mentions or IDs)."""
         await inter.response.defer()
-        await self.manager_delete(inter, template, [user])
+        resolved_users = await self._resolve_users(inter, users)
+        if not resolved_users:
+            return await inter.send(":x: No valid user found.")
+        await self.manager_delete(inter, template, resolved_users)
 
     @manager.command(
         name="delete",

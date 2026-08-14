@@ -407,6 +407,13 @@ class UserConverter(commands.Converter):
 
             if found := disnake.utils.find(check, ctx.bot.users):
                 return found
+            # cache is sparse without the members intent — fall back to a REST
+            # fetch when the argument is a raw user id.
+            if argument.isdigit():
+                try:
+                    return await ctx.bot.fetch_user(int(argument))
+                except disnake.NotFound:
+                    pass
             raise commands.UserNotFound(argument)
 
 

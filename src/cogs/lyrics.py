@@ -33,13 +33,19 @@ class Lyrics(commands.Cog):
             if hasattr(user, "activities"):
                 activities = user.activities
             else:
-                # if DM, get the activities from a member object from a mutual guild
-                if user.mutual_guilds:
-                    activities = user.mutual_guilds[0].get_member(user.id).activities
-                else:
+                # if DM, get the activities from a member object from a mutual guild.
+                # get_member can be None (member cache is sparse without the members
+                # intent), so guard it instead of crashing on .activities.
+                member = (
+                    user.mutual_guilds[0].get_member(user.id)
+                    if user.mutual_guilds
+                    else None
+                )
+                if member is None:
                     return await ctx.send(
                         "❌ You must share at least one server with me for this to work in DM."
                     )
+                activities = member.activities
             for activity in activities:
                 if isinstance(activity, Spotify):
                     spotify_title = activity.title

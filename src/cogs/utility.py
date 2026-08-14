@@ -382,7 +382,7 @@ class Utility(commands.Cog):
         )
         embed.add_field(name=f"**Your stats** ({ctx.author})", value=user_info)
 
-        embed.set_author(name=me)
+        embed.set_author(name=self.bot.user)
         versions = "This bot runs on Python {} using disnake {} 🐍".format(
             platform.python_version(), disnake.__version__
         )

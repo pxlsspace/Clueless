@@ -25,7 +25,7 @@ class PxlsMilestones(commands.Cog):
         msg = "✅ Tracking " + name + "'s all-time counter."
 
         if await db_servers.get_alert_channel(ctx.guild.id) is None:
-            msg += "\nYou haven't set any alert channel, use `>milestones channel [#channel|here]`"
+            msg += "\nYou haven't set any alert channel, use `/milestones channel [#channel|here]`"
         await ctx.send(msg)
 
     async def remove(self, ctx, name=None):

@@ -362,7 +362,7 @@ class Template(commands.Cog):
             elif host == "s3compat":
                 if not pxls_user_id:
                     await ctx.send(
-                        ":x: Sorry, file uploads to S3compat is only available to users who have linked their pxls account with >setname."
+                        ":x: Sorry, file uploads to S3compat is only available to users who have linked their pxls account with /user setname."
                     )
                     return False
 

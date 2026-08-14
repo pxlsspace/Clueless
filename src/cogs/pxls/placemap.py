@@ -120,7 +120,7 @@ class Placemap(commands.Cog):
         if log_key is None:
             if isinstance(ctx, commands.Context):
                 return await ctx.send(
-                    f":x: You haven't added your log key for this canvas, use `>setkey` to add it.\n(You can also use the slash command `/placemap canvas-code:{canvas_code_input}` to input your log key directly)"
+                    f":x: You haven't added your log key for this canvas, use `/user setkey` to add it.\n(You can also use the slash command `/placemap canvas-code:{canvas_code_input}` to input your log key directly)"
                 )
             else:
                 modal_id = os.urandom(16).hex()

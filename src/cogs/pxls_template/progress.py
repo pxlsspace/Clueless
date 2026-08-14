@@ -1532,6 +1532,7 @@ class Progress(commands.Cog):
     @commands.is_owner()
     async def _reload_admins(self, inter):
         """Update the list of progress admins (owner only)."""
+        await inter.response.defer()
         await self._do_reload_admins(inter)
 
     @_progress.sub_command(name="timelapse")

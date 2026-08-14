@@ -173,6 +173,7 @@ class Blacklist(commands.Cog):
     @_blacklist.sub_command(name="add", description="Add a user to the blacklist.")
     @commands.is_owner()
     async def _blacklist_add(self, inter, user: disnake.User):
+        await inter.response.defer()
         await self._do_blacklist_add(inter, user)
 
     @_blacklist.sub_command(
@@ -180,11 +181,13 @@ class Blacklist(commands.Cog):
     )
     @commands.is_owner()
     async def _blacklist_remove(self, inter, user: disnake.User):
+        await inter.response.defer()
         await self._do_blacklist_remove(inter, user)
 
     @_blacklist.sub_command(name="list", description="Show all the blacklisted users.")
     @commands.is_owner()
     async def _blacklist_list(self, inter):
+        await inter.response.defer()
         await self._do_blacklist_list(inter)
 
     @commands.slash_command(
@@ -200,6 +203,7 @@ class Blacklist(commands.Cog):
     )
     @commands.check_any(commands.is_owner(), commands.has_permissions(manage_roles=True))
     async def _roleblacklist_add(self, inter, role: disnake.Role):
+        await inter.response.defer()
         await self._do_roleblacklist_add(inter, role)
 
     @_roleblacklist.sub_command(
@@ -207,6 +211,7 @@ class Blacklist(commands.Cog):
     )
     @commands.check_any(commands.is_owner(), commands.has_permissions(manage_roles=True))
     async def _roleblacklist_remove(self, inter):
+        await inter.response.defer()
         await self._do_roleblacklist_remove(inter)
 
 

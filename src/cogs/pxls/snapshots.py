@@ -293,6 +293,7 @@ class Snapshots(commands.Cog):
         commands.is_owner(), commands.has_permissions(manage_channels=True)
     )
     async def _setsnapshots_disable(self, inter):
+        await inter.response.defer()
         await self._do_setsnapshots_disable(inter)
 
     @commands.slash_command(name="snapshot")

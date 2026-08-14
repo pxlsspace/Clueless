@@ -740,6 +740,7 @@ class Utility(commands.Cog):
         Parameters
         ----------
         extension: The name of the extension (cog) to reload."""
+        await inter.response.defer()
         await self._do_reload(inter, extension)
 
     @_owner.sub_command(name="sql", description="Run a read-only SQL query. (owner only)")
@@ -818,6 +819,7 @@ class Utility(commands.Cog):
     @commands.is_owner()
     async def _owner_serverlist(self, inter: disnake.AppCmdInter):
         """Show the list of servers the bot is in. (owner only)"""
+        await inter.response.defer()
         await self._do_serverlist(inter)
 
     # Populate the snapshot database with snapshot URLs sent in the snapshots channel

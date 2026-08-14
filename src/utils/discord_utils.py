@@ -109,7 +109,9 @@ def format_number(num):
 
 
 EMOJI_REGEX = r"<(?P<animated>a?):(?P<name>[a-zA-Z0-9_]{2,32}):(?P<id>[0-9]{18,22})>"
-IMAGE_URL_REGEX = r"(?:http\:|https\:)?\/\/.*\.(?:png|jpg|jpeg|gif|webp)"
+# keep any trailing query string (?...) — Discord's signed CDN URLs carry the
+# required ?ex=..&is=..&hm=.. params; stripping them makes the URL 404.
+IMAGE_URL_REGEX = r"(?:http\:|https\:)?\/\/.*\.(?:png|jpg|jpeg|gif|webp)(?:\?\S*)?"
 URL_REGEX = (
     r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+"
 )

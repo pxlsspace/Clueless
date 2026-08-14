@@ -410,18 +410,17 @@ class UserConverter(commands.Converter):
 
 
 async def get_embed_author(inter: disnake.MessageInteraction) -> disnake.User:
-    """Get the author User from an embed if it has "Requested by name#0000" in the footer,
+    """Get the author User from an embed footer "Requested by <username>",
     return ``None`` if not found."""
     embeds = inter.message.embeds
     if not embeds:
         return None
     try:
-        found = re.findall(r"Requested by (.*)#([0-9]{4})", embeds[0].footer.text)
+        found = re.search(r"Requested by (.+)", embeds[0].footer.text)
         if not found:
             return None
-        name = found[0][0]
-        discrim = found[0][1]
-        predicate = lambda u: u.name == name and u.discriminator == discrim  # noqa: E731
+        name = found.group(1).strip()
+        predicate = lambda u: str(u) == name or u.name == name  # noqa: E731
         result = disnake.utils.find(predicate, inter.bot.users)
         return result
     except Exception:

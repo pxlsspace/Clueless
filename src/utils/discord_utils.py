@@ -411,19 +411,18 @@ class UserConverter(commands.Converter):
 
 
 async def get_embed_author(inter: disnake.MessageInteraction) -> disnake.User:
-    """Get the author User from an embed if it has "Requested by name#0000" in the footer,
-    return ``None`` if not found."""
+    """Get the author User from an embed with "Requested by <username>" in the footer,
+    return ``None`` if not found. Discord usernames are unique now (no #discriminator)."""
     embeds = inter.message.embeds
     if not embeds:
         return None
     try:
-        found = re.findall(r"Requested by (.*)#([0-9]{4})", embeds[0].footer.text)
+        found = re.search(r"Requested by (\S+)", embeds[0].footer.text)
         if not found:
             return None
-        name = found[0][0]
-        discrim = found[0][1]
-        predicate = lambda u: u.name == name and u.discriminator == discrim  # noqa: E731
-        result = disnake.utils.find(predicate, inter.bot.users)
+        name = found.group(1)
+        # match on the unique username (str(user) == name for the new username system)
+        result = disnake.utils.find(lambda u: str(u) == name, inter.bot.users)
         return result
     except Exception:
         return None

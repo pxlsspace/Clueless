@@ -257,9 +257,8 @@ class Utility(commands.Cog):
     async def botinfo(self, ctx):
         app_info = await self.bot.application_info()
         owner = app_info.owner
-        me = ctx.me
+        me = self.bot.user
         bot_age = td_format(disnake.utils.utcnow() - me.created_at, hide_seconds=True)
-        server_prefix = await db_servers.get_prefix(self.bot, ctx)
         # get some bot stats
         guild_count = len(self.bot.guilds)
         commands_count = len(self.bot.commands)
@@ -294,7 +293,7 @@ class Utility(commands.Cog):
         for i, command in enumerate(top_commands_array):
             command_name = command["command_name"]
             usage = format_number(command["usage"])
-            top_commands += "{}) `>{}` | used **{}** times (**{}%**)\n".format(
+            top_commands += "{}) `{}` | used **{}** times (**{}%**)\n".format(
                 i + 1,
                 command_name,
                 usage,
@@ -334,7 +333,7 @@ class Utility(commands.Cog):
         user_info = f"• You have used this bot **{user_usage_count}** times!\n"
         user_info += f"• Your user rank is: **{user_usage_rank}**"
         if most_used_command:
-            user_info += "\n• Your most used command is `>{}` with **{}** uses, that's **{}%** of your total uses.".format(
+            user_info += "\n• Your most used command is `{}` with **{}** uses, that's **{}%** of your total uses.".format(
                 most_used_command[0]["command_name"],
                 most_used_command[0]["usage"],
                 format_number(
@@ -348,8 +347,7 @@ class Utility(commands.Cog):
         embed.description += (
             f"Bot version: `{VERSION}` - Ping: `{round(self.bot.latency*1000,2)} ms`\n"
         )
-        embed.description += f"Bot age: {bot_age}\n"
-        embed.description += f"Server prefix: `{server_prefix}`"
+        embed.description += f"Bot age: {bot_age}"
         embed.add_field(name="**Bot Stats**", value=stats, inline=False)
         embed.add_field(
             name=f"**Top {len(top_commands_array)} Commands**",

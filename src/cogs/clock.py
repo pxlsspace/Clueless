@@ -166,9 +166,7 @@ class Clock(commands.Cog):
 
         logger.debug("All stats updated.")
 
-    @commands.command(hidden=True)
-    @commands.is_owner()
-    async def forceupdate(self, ctx):
+    async def _do_forceupdate(self, ctx):
         try:
             await self._update_stats_data()
         except Exception as e:
@@ -176,6 +174,21 @@ class Clock(commands.Cog):
                 f":x: **An error occurred during the update:**\n ```{type(e).__name__}: {e}```"
             )
         await ctx.send(":white_check_mark: Successfully updated stats")
+
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def forceupdate(self, ctx):
+        await self._do_forceupdate(ctx)
+
+    @commands.slash_command(
+        name="forceupdate",
+        default_member_permissions=disnake.Permissions(administrator=True),
+    )
+    @commands.is_owner()
+    async def _forceupdate(self, inter):
+        """Force an update of the stats (owner only)."""
+        await inter.response.defer()
+        await self._do_forceupdate(inter)
 
     @tasks.loop(minutes=5)
     async def update_online_count(self):

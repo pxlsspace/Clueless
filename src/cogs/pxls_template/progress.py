@@ -1500,13 +1500,7 @@ class Progress(commands.Cog):
 
         await ctx.send(embed=embed, file=res_file)
 
-    @progress.command(
-        hidden=True,
-        description="Update the list of progress admins (owner only)",
-        aliases=["rladmins", "updateadmins"],
-    )
-    @commands.is_owner()
-    async def reload_admins(self, ctx: commands.Context):
+    async def _do_reload_admins(self, ctx):
         app_info = await self.bot.application_info()
         # checks if owner_ids is set
         if getattr(self.bot, "owner_ids", None):
@@ -1524,6 +1518,21 @@ class Progress(commands.Cog):
         for admin_id in admins:
             msg += f"- <@{admin_id}>\n"
         await ctx.send(embed=disnake.Embed(description=msg, color=0x66C5CC))
+
+    @progress.command(
+        hidden=True,
+        description="Update the list of progress admins (owner only)",
+        aliases=["rladmins", "updateadmins"],
+    )
+    @commands.is_owner()
+    async def reload_admins(self, ctx: commands.Context):
+        await self._do_reload_admins(ctx)
+
+    @_progress.sub_command(name="reload-admins")
+    @commands.is_owner()
+    async def _reload_admins(self, inter):
+        """Update the list of progress admins (owner only)."""
+        await self._do_reload_admins(inter)
 
     @_progress.sub_command(name="timelapse")
     async def _timelapse(

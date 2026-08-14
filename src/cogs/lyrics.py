@@ -146,4 +146,7 @@ def is_similar(string1, string2):
 
 
 def setup(bot: commands.Bot):
+    # /lyrics disabled: the "detect the song from your Discord activity" feature
+    # needs the privileged presences intent, which the bot intentionally lacks.
+    return
     bot.add_cog(Lyrics(bot))

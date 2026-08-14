@@ -285,7 +285,6 @@ class Utility(commands.Cog):
         )
         # get some bot stats
         guild_count = len(self.bot.guilds)
-        commands_count = len(self.bot.commands)
         slash_commands_count = len(self.bot.slash_commands)
         usage_count = await db_servers.db.sql_select("SELECT COUNT(*) FROM command_usage")
         usage_count = usage_count[0][0]
@@ -293,16 +292,9 @@ class Utility(commands.Cog):
             "SELECT COUNT(DISTINCT author_id) FROM command_usage"
         )
         user_count = user_count[0][0]
-        prefix_usage = await db_servers.db.sql_select(
-            "SELECT COUNT(*) FROM command_usage WHERE is_slash = FALSE"
-        )
-        prefix_usage_percentage = round((prefix_usage[0][0] / usage_count) * 100, 2)
         stats = f"• Currently in **{guild_count}** servers\n"
-        stats += f"• Number of commands: **{commands_count}** prefix commands | **{slash_commands_count}** slash commands\n"
-        stats += f"• Used **{format_number(usage_count)}** times by **{user_count}** different users\n"
-        stats += (
-            f"• **{prefix_usage_percentage}%** of the commands are used with a prefix"
-        )
+        stats += f"• Number of commands: **{slash_commands_count}** slash commands\n"
+        stats += f"• Used **{format_number(usage_count)}** times by **{user_count}** different users"
 
         # get the top 5 of the most used commands
         sql = """

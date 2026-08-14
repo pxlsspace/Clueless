@@ -2,7 +2,6 @@ import disnake
 from disnake.ext import commands
 
 from utils.discord_utils import get_embed_author
-from utils.setup import db_servers
 
 TYPES = {
     3: "text",
@@ -106,6 +105,10 @@ class Help(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot: commands.Bot = bot
 
+    def _display_prefix(self):
+        """Human-friendly prefix shown in help/usage text (mention dispatch)."""
+        return f"@{self.bot.user.name} "
+
     async def send_home_help(self, ctx, author, is_slash):
         """Called when >help or /help is used."""
         if is_slash:
@@ -113,7 +116,7 @@ class Help(commands.Cog):
             prefix = "/"
         else:
             categories = get_bot_mapping(self.bot)
-            prefix = await db_servers.get_prefix(self.bot, ctx)
+            prefix = self._display_prefix()
 
         # create the embed header
         home_emoji = HOME_EMOJI
@@ -174,7 +177,7 @@ class Help(commands.Cog):
             prefix = "/"
         else:
             categories = get_bot_mapping(self.bot)
-            prefix = await db_servers.get_prefix(self.bot, ctx)
+            prefix = self._display_prefix()
 
         category_infos = CATEGORIES[category_name]
         commands = categories[category_name]
@@ -222,12 +225,12 @@ class Help(commands.Cog):
             command_params = get_slash_command_parameters(command)
             description = command.body.description
         else:
-            prefix = ctx.prefix
+            prefix = self._display_prefix()
             command_name = command.qualified_name
             command_usage = command.usage
             command_params = command.help
             description = command.description
-        prefix = "/" if is_slash else ctx.prefix
+        prefix = "/" if is_slash else self._display_prefix()
         emb = disnake.Embed(title=f"**Command {command_name}**", color=EMBED_COLOR)
         emb.set_author(name=ctx.me)
         emb.add_field(
@@ -253,7 +256,7 @@ class Help(commands.Cog):
 
     async def send_group_help(self, ctx, group):
         """Called when ">help <group command> is used."""
-        prefix = ctx.prefix
+        prefix = self._display_prefix()
         emb = disnake.Embed(title=f"**Command {group.name}**", color=EMBED_COLOR)
         emb.set_author(name=ctx.me)
         emb.add_field(

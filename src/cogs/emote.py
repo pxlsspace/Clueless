@@ -169,6 +169,7 @@ class Emote(commands.Cog):
     @_emote.sub_command(name="add", description="Add the image as a custom emoji.")
     @commands.has_permissions(manage_emojis=True)
     async def _emote_add(self, inter, name: str, image: InterImage = None):
+        await inter.response.defer()
         await self._do_emote_add(inter, name, image.url if image else None)
 
     @_emote.sub_command(
@@ -176,6 +177,7 @@ class Emote(commands.Cog):
     )
     @commands.has_permissions(manage_emojis=True)
     async def _emote_remove(self, inter, name: str):
+        await inter.response.defer()
         await self._do_emote_remove(inter, name)
 
     @_emote.sub_command(
@@ -183,7 +185,6 @@ class Emote(commands.Cog):
         description="Show all of the server custom emojis and their names.",
     )
     async def _emote_list(self, inter):
-        await inter.response.defer()
         await self._do_emote_list(inter)
 
     @_emote.sub_command(
@@ -191,6 +192,7 @@ class Emote(commands.Cog):
         description="Give the number of emojis and animated emojis on the server.",
     )
     async def _emote_number(self, inter):
+        await inter.response.defer()
         await self._do_emote_number(inter)
 
 

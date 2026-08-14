@@ -150,7 +150,16 @@ class Font(commands.Cog):
         # send the image(s)
         await ctx.send(files=files)
 
-    @commands.command(description="Show the list of the fonts available.")
+    @commands.slash_command(name="fonts")
+    async def _fonts(self, inter: disnake.AppCmdInter):
+        """Show the list of the fonts available."""
+        await inter.response.defer()
+        await self.fonts(inter)
+
+    @commands.command(name="fonts", description="Show the list of the fonts available.")
+    async def p_fonts(self, ctx):
+        await self.fonts(ctx)
+
     async def fonts(self, ctx):
         fonts = get_all_fonts()
         allowed_fonts = get_allowed_fonts()

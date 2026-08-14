@@ -108,7 +108,8 @@ class TemplateView(AuthorView):
         # confirmation message (because we HAVE to respond something to the modal inter)
         await modal_inter.response.send_message(
             embed=disnake.Embed(
-                color=0x66C5CC, title=":white_check_mark: Template title successfully added."
+                color=0x66C5CC,
+                title=":white_check_mark: Template title successfully added.",
             ),
             ephemeral=True,
         )
@@ -196,7 +197,9 @@ class Template(commands.Cog):
         parser.add_argument("-glow", action="store_true", default=False)
         parser.add_argument("-ox", action="store", required=False)
         parser.add_argument("-oy", action="store", required=False)
-        parser.add_argument("-host", choices=["s3compat", "discord", "imgur"], default="s3compat")
+        parser.add_argument(
+            "-host", choices=["s3compat", "discord", "imgur"], default="s3compat"
+        )
         parser.add_argument("-nocrop", action="store_true", default=False)
         parser.add_argument("-matching", choices=["fast", "accurate"], required=False)
         parser.add_argument("-palette", action="store", nargs="*")
@@ -411,7 +414,7 @@ class Template(commands.Cog):
                         ":x: An error occurred while uploading the image to imgur, please try again with an other host."
                     )
                     return False
-            elif host == 's3compat':
+            elif host == "s3compat":
                 if not pxls_user_id:
                     await ctx.send(
                         ":x: Sorry, file uploads to S3compat is only available to users who have linked their pxls account with >setname."
@@ -424,7 +427,9 @@ class Template(commands.Cog):
                         "pxls_user_id": f"{pxls_user_id}",
                         "canvas_code": f"{canvas_code}",
                     }
-                    template_image_url = await s3compat_app.upload_image(template_image, metadata)
+                    template_image_url = await s3compat_app.upload_image(
+                        template_image, metadata
+                    )
                 except ValueError as e:
                     await ctx.send(f":x: {e}")
                     return False
@@ -479,7 +484,9 @@ class Template(commands.Cog):
 
             # update the embed with the link in a new field
             embed.add_field(name="**Template Link**", value=template_url, inline=False)
-            warning = ":warning: Warning: if you delete this message the template WILL break."
+            warning = (
+                ":warning: Warning: if you delete this message the template WILL break."
+            )
             embed.set_footer(
                 text="⏲️ Generated in {}s | Uploaded in {}s\n{}".format(
                     processing_time, upload_time, warning
@@ -491,11 +498,20 @@ class Template(commands.Cog):
             await m.edit(embed=embed, view=view)
             return True
 
+    @commands.slash_command(name="styles")
+    async def _styles(self, inter: disnake.AppCmdInter):
+        """List the template styles available."""
+        await inter.response.defer()
+        await self.styles(inter)
+
     @commands.command(
         name="styles",
         description="List the template styles available.",
         aliases=["style"],
     )
+    async def p_styles(self, ctx):
+        await self.styles(ctx)
+
     async def styles(self, ctx):
         styles_available = "**Available Styles:**\n"
         for s in STYLES:

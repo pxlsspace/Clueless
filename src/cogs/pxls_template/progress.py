@@ -9,8 +9,8 @@ import aiohttp
 import disnake
 import numpy as np
 import pandas as pd
-from disnake.ext import commands
 from disnake import Team, User
+from disnake.ext import commands
 from PIL import Image
 
 from cogs.pxls.speed import get_grouped_graph, get_stats_graph
@@ -26,6 +26,7 @@ from utils.discord_utils import (
     autocomplete_templates,
     autocomplete_user_templates,
     format_number,
+    get_display_prefix,
     get_image_url,
     image_to_file,
 )
@@ -84,7 +85,7 @@ class Progress(commands.Cog):
                 await self.p_check(ctx, template, display)
         else:
             await ctx.send(
-                f"Usage: `{ctx.prefix}{self.progress.qualified_name} {self.progress.usage}`\n*(Use `{ctx.prefix}help {self.progress.qualified_name}` for more information)*"
+                f"Usage: `{get_display_prefix(self.bot)}{self.progress.qualified_name} {self.progress.usage}`\n*(Use `{get_display_prefix(self.bot)}help {self.progress.qualified_name}` for more information)*"
             )
 
     display_options = {
@@ -559,7 +560,8 @@ class Progress(commands.Cog):
         total_pixels = format_number(int(template.total_size))
 
         embed = disnake.Embed(
-            title=f":white_check_mark: Template `{name}` added to the tracker.", color=0x66C5CC
+            title=f":white_check_mark: Template `{name}` added to the tracker.",
+            color=0x66C5CC,
         )
         embed.description = f"**Title**: {template.title or '`N/A`'}\n"
         embed.description += f"[Template link]({template.url})\n"
@@ -1043,7 +1045,8 @@ class Progress(commands.Cog):
         except ValueError as e:
             return await ctx.send(f":x: {e}")
         embed = disnake.Embed(
-            title=f"**:white_check_mark: Template {old_temp.name} Updated**", color=0x66C5CC
+            title=f"**:white_check_mark: Template {old_temp.name} Updated**",
+            color=0x66C5CC,
         )
 
         # Show name update
@@ -1886,8 +1889,8 @@ class Progress(commands.Cog):
 • Managers can only be added/deleted by the template owner.
 • You can see the managers of a template if you click the down arrow on `>progress check`
 • You can see the templates you can manage with `>progress list -filter managed`"""
-        msg = f"```{ctx.prefix}{self.manager.qualified_name} {self.manager.usage}```\n"
-        msg += f"*(Use `{ctx.prefix}help {self.manager.qualified_name}` for more information)*"
+        msg = f"```{get_display_prefix(self.bot)}{self.manager.qualified_name} {self.manager.usage}```\n"
+        msg += f"*(Use `{get_display_prefix(self.bot)}help {self.manager.qualified_name}` for more information)*"
         embed = disnake.Embed(title="Progress Manager", color=0x66C5CC)
         embed.add_field(name="Information", value=help, inline=False)
         embed.add_field(name="Usage", value=msg, inline=False)

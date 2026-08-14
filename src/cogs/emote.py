@@ -5,7 +5,12 @@ import disnake
 from disnake.ext import commands
 from PIL import Image
 
-from utils.discord_utils import format_emoji, get_image_from_message, number_emoji
+from utils.discord_utils import (
+    format_emoji,
+    get_display_prefix,
+    get_image_from_message,
+    number_emoji,
+)
 from utils.image.img_to_gif import img_to_animated_gif
 
 
@@ -21,7 +26,7 @@ class Emote(commands.Cog):
     )
     async def emote(self, ctx, subcommand):
         return await ctx.send(
-            f":x: Sub-command {subcommand} is not found\nUsage: `{ctx.prefix}{ctx.command.name} {ctx.command.usage}`"
+            f":x: Sub-command {subcommand} is not found\nUsage: `{get_display_prefix(self.bot)}{ctx.command.name} {ctx.command.usage}`"
         )
 
     @emote.command(
@@ -72,7 +77,11 @@ class Emote(commands.Cog):
                 ":x: You're getting ratelimited by discord, retry again in 20/30 min"
             )
 
-        await ctx.send(":white_check_mark: Successfully added the emoji {}".format(format_emoji(emoji)))
+        await ctx.send(
+            ":white_check_mark: Successfully added the emoji {}".format(
+                format_emoji(emoji)
+            )
+        )
 
     @emote.command(
         usage="<name>",

@@ -10,6 +10,7 @@ from utils.discord_utils import (
     InterImage,
     ResizeView,
     format_number,
+    get_display_prefix,
     get_image_from_message,
     get_urls_from_list,
     image_to_file,
@@ -89,7 +90,7 @@ class Scale(commands.Cog):
             resize_command = (
                 "/resize"
                 if isinstance(ctx, disnake.AppCmdInter)
-                else f"{ctx.prefix}resize"
+                else f"{get_display_prefix(self.bot)}resize"
             )
             msg = f"If your image is NOT a pixel art, use `{resize_command}` instead.\n\n"
             msg += "If it is, make sure that:\n"
@@ -99,7 +100,7 @@ class Scale(commands.Cog):
             downscale_command = (
                 "/downscale image:... pixel-size:..."
                 if isinstance(ctx, disnake.AppCmdInter)
-                else f"{ctx.prefix}downscale <image> <pixel size>"
+                else f"{get_display_prefix(self.bot)}downscale <image> <pixel size>"
             )
             msg += f"\n*Note: If you know the scale factor (how big each pixel is), you can try\n`{downscale_command}`*\n"
 

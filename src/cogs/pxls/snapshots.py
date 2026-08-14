@@ -11,6 +11,7 @@ from utils.arguments_parser import MyParser, valid_datetime_type
 from utils.discord_utils import (
     AuthorView,
     autocomplete_templates,
+    get_display_prefix,
     get_urls_from_list,
     image_to_file,
 )
@@ -170,7 +171,7 @@ class Snapshots(commands.Cog):
         channel_id = await db_servers.get_snapshots_channel(ctx.guild.id)
         if channel_id is None:
             return await ctx.send(
-                f"No snapshots channel set.\nYou can enable automatic canvas snapshots every 15 minutes with: `{ctx.prefix}snapshots setchannel <#channel|here|none>`"
+                f"No snapshots channel set.\nYou can enable automatic canvas snapshots every 15 minutes with: `{get_display_prefix(self.bot)}snapshots setchannel <#channel|here|none>`"
             )
         else:
             return await ctx.send(
@@ -195,7 +196,7 @@ class Snapshots(commands.Cog):
             channel_id = await db_servers.get_snapshots_channel(ctx.guild.id)
             if channel_id is None:
                 return await ctx.send(
-                    f":x: No snapshots channel set\n (use `{ctx.prefix}setsnapshot channel <#channel|here|none>`)"
+                    f":x: No snapshots channel set\n (use `{get_display_prefix(self.bot)}setsnapshot channel <#channel|here|none>`)"
                 )
             else:
                 return await ctx.send("Snapshots are set to <#" + str(channel_id) + ">")
@@ -222,7 +223,11 @@ class Snapshots(commands.Cog):
         else:
             # saves the new channel id in the db
             await db_servers.update_snapshots_channel(ctx.guild.id, channel_id)
-            await ctx.send(":white_check_mark: Snapshots successfully set to <#" + str(channel_id) + ">")
+            await ctx.send(
+                ":white_check_mark: Snapshots successfully set to <#"
+                + str(channel_id)
+                + ">"
+            )
 
     @setsnapshots.command(description="Disable snapshots.", aliases=["unset"])
     @commands.check_any(

@@ -16,6 +16,7 @@ from utils.discord_utils import (
     UserConverter,
     format_number,
     format_table,
+    get_display_prefix,
     get_image_url,
     image_to_file,
 )
@@ -155,7 +156,9 @@ class Utility(commands.Cog):
             if timezone is None:
                 err_msg = (
                     ":x: You haven't set your timezone!\n(use `{}{} <timezone>`)".format(
-                        ctx.prefix if isinstance(ctx, commands.Context) else "/",
+                        get_display_prefix(self.bot)
+                        if isinstance(ctx, commands.Context)
+                        else "/",
                         "settimezone"
                         if isinstance(ctx, commands.Context)
                         else "user settimezone",

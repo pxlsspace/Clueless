@@ -212,8 +212,13 @@ async def on_command_error(ctx, error):
 
     # handled errors
     if not slash_command and isinstance(error, commands.MissingRequiredArgument):
+        # local import: utils.discord_utils imports `tracked_templates` from this
+        # module, so importing it at module level here would create a circular
+        # import during startup.
+        from utils.discord_utils import get_display_prefix
+
         text = ":x: " + str(error) + "\n"
-        text += f"Usage: `{ctx.prefix}{command_name} {ctx.command.usage}`"
+        text += f"Usage: `{get_display_prefix(bot)}{command_name} {ctx.command.usage}`"
         return await ctx.send(text)
 
     if isinstance(error, (commands.MissingPermissions, commands.NotOwner)):
@@ -393,7 +398,7 @@ async def on_message(message):
                 await message.add_reaction("<a:GoodBot:955658963171565658>")
             elif "bad bot" in content.lower():
                 await message.add_reaction("<a:BadBot:955659116506935336>")
-            else:
+            elif not content:
                 await message.add_reaction("<:peepoPinged:943594603632816188>")
     except Exception:
         pass

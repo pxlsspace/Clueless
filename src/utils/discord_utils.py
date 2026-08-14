@@ -409,6 +409,11 @@ class UserConverter(commands.Converter):
             raise commands.UserNotFound(argument)
 
 
+def get_display_prefix(bot) -> str:
+    """User-facing prefix shown in command usage/error copy (mention dispatch)."""
+    return f"@{bot.user.name} "
+
+
 async def get_embed_author(inter: disnake.MessageInteraction) -> disnake.User:
     """Get the author User from an embed footer "Requested by <username>",
     return ``None`` if not found."""

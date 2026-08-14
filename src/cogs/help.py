@@ -1,7 +1,7 @@
 import disnake
 from disnake.ext import commands
 
-from utils.discord_utils import get_embed_author
+from utils.discord_utils import get_display_prefix, get_embed_author
 
 TYPES = {
     3: "text",
@@ -107,7 +107,7 @@ class Help(commands.Cog):
 
     def _display_prefix(self):
         """Human-friendly prefix shown in help/usage text (mention dispatch)."""
-        return f"@{self.bot.user.name} "
+        return get_display_prefix(self.bot)
 
     async def send_home_help(self, ctx, author, is_slash):
         """Called when >help or /help is used."""

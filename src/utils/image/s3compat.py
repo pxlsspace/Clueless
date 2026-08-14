@@ -1,10 +1,10 @@
+import hashlib
 import json
 import os
 from io import BytesIO
-import hashlib
 
-from botocore.exceptions import ClientError
 import boto3
+from botocore.exceptions import ClientError
 from dotenv import find_dotenv, load_dotenv, set_key
 from PIL import Image
 
@@ -16,7 +16,9 @@ SIZE_LIMIT = 5 * 2**20  # 5 MB
 
 
 class S3Compat:
-    def __init__(self, access_key, secret_key, endpoint_url, bucket_name, access_url = None):
+    def __init__(
+        self, access_key, secret_key, endpoint_url, bucket_name, access_url=None
+    ):
         self.access_key = access_key
         self.secret_key = secret_key
         self.endpoint_url = endpoint_url
@@ -33,26 +35,28 @@ class S3Compat:
             payload_image = image
 
         # Generate hash from image content
-        image_hash = hashlib.sha256(payload_image).hexdigest()[:16]  # Adjust the length as needed
+        image_hash = hashlib.sha256(payload_image).hexdigest()[
+            :16
+        ]  # Adjust the length as needed
 
         # Create S3 client
         s3_client = boto3.client(
-            's3',
+            "s3",
             aws_access_key_id=self.access_key,
             aws_secret_access_key=self.secret_key,
-            endpoint_url=self.endpoint_url
+            endpoint_url=self.endpoint_url,
         )
 
         # Upload image
-        filename = f'{image_hash}.png'
+        filename = f"{image_hash}.png"
         try:
             metadata = custom_metadata if custom_metadata else {}
             response = s3_client.put_object(
                 Bucket=self.bucket_name,
                 Key=filename,
                 Body=payload_image,
-                ContentType='image/png',
-                Metadata=metadata
+                ContentType="image/png",
+                Metadata=metadata,
             )
         except ClientError as e:
             print(f"Error uploading image: {e}")
@@ -60,13 +64,14 @@ class S3Compat:
             raise  # Re-raise the exception if necessary
 
         # Get the image URL
-        if self.access_url:
-            image_url = f"{self.access_url}/{filename}"
-        else:
-            image_url = f"{self.access_url}/{self.bucket_name}/{filename}"
+        if not self.access_url:
+            raise ValueError(
+                "S3_COMPAT_ACCESS_URL is not configured; cannot build a stable image URL."
+            )
+        image_url = f"{self.access_url}/{filename}"
 
         return image_url
-    
+
     @in_executor()
     def image_to_bytes(self, image: Image.Image, format="PNG"):
         """converts PIL.Image -> bytes"""

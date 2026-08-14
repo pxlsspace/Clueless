@@ -4,7 +4,7 @@ from disnake.ext import commands
 from disnake.ext.commands.converter import RoleConverter
 from disnake.ext.commands.errors import RoleNotFound
 
-from utils.discord_utils import UserConverter
+from utils.discord_utils import UserConverter, get_display_prefix
 from utils.setup import db_servers, db_users
 
 
@@ -81,7 +81,9 @@ class Blacklist(commands.Cog):
         # remove from the blacklist
         await db_users.set_user_blacklist(user.id, False)
         return await ctx.send(
-            ":white_check_mark: <@{}> has been removed from the blacklist.".format(user.id),
+            ":white_check_mark: <@{}> has been removed from the blacklist.".format(
+                user.id
+            ),
             allowed_mentions=no_user_mention,
         )
 
@@ -107,12 +109,12 @@ class Blacklist(commands.Cog):
         current_role_id = await db_servers.get_blacklist_role(ctx.guild.id)
         if current_role_id is None:
             return await ctx.send(
-                f"No blacklist role assigned, use `{ctx.prefix}{ctx.command} add <role>`"
+                f"No blacklist role assigned, use `{get_display_prefix(self.bot)}{ctx.command} add <role>`"
             )
         current_role = ctx.guild.get_role(int(current_role_id))
         if current_role is None:
             return await ctx.send(
-                f"The current blacklist role is invalid, use `{ctx.prefix}{ctx.command} <role>`"
+                f"The current blacklist role is invalid, use `{get_display_prefix(self.bot)}{ctx.command} <role>`"
             )
         else:
             return await ctx.send(f"Current blacklist role: <@&{current_role.id}>.")

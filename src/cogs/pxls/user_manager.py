@@ -10,6 +10,7 @@ from utils.discord_utils import (
     UserConverter,
     autocomplete_log_canvases,
     autocomplete_pxls_name,
+    get_display_prefix,
 )
 from utils.font.font_manager import DEFAULT_FONT, get_all_fonts, get_allowed_fonts
 from utils.image.image_utils import hex_str_to_int
@@ -52,7 +53,9 @@ class UserManager(commands.Cog):
         if pxls_user_id is None:
             return await ctx.send(":x: Can't find this pxls username.")
         await db_users.set_pxls_user(ctx.author.id, pxls_user_id)
-        await ctx.send(f":white_check_mark: Pxls username successfully set to **{username}**.")
+        await ctx.send(
+            f":white_check_mark: Pxls username successfully set to **{username}**."
+        )
 
     @user.sub_command(name="unsetname")
     async def _unsetname(self, inter: disnake.AppCmdInter):
@@ -103,9 +106,7 @@ class UserManager(commands.Cog):
 
         if theme is None:
             if isinstance(ctx, commands.Context):
-                set_theme_text = (
-                    f"\n*Use `{ctx.prefix }theme <theme name>` to change your theme.*"
-                )
+                set_theme_text = f"\n*Use `{get_display_prefix(self.bot)}theme <theme name>` to change your theme.*"
             else:
                 set_theme_text = (
                     "\n*Use `/user settheme <theme name>` to change your theme.*"
@@ -166,7 +167,7 @@ class UserManager(commands.Cog):
 
         discord_user = await db_users.get_discord_user(user.id)
         is_slash = not isinstance(ctx, commands.Context)
-        prefix = "/" if is_slash else ctx.prefix
+        prefix = "/" if is_slash else get_display_prefix(self.bot)
         # get the pxls username
         if discord_user["pxls_user_id"] is None:
             cmd_name = "user setname" if is_slash else "setname"
@@ -428,9 +429,7 @@ class UserManager(commands.Cog):
                 color=disnake.Color.green(),
                 description=f":white_check_mark: Log key for canvas `{canvas_code}` successfully {'updated' if is_update else 'added'}.",
             )
-            embed.set_author(
-                name=modal_inter.author
-            )
+            embed.set_author(name=modal_inter.author)
             await modal_inter.response.send_message(embed=embed, ephemeral=True)
 
     @user.sub_command(name="keys")
@@ -442,7 +441,7 @@ class UserManager(commands.Cog):
     @commands.command(name="keys", description="Check the status of your log keys.")
     async def p_keys(self, ctx):
         await self.keys(ctx)
-    
+
     async def keys(self, ctx):
         canvases_with_logs = await db_canvas.get_logs_canvases()
         res = []
@@ -455,17 +454,17 @@ class UserManager(commands.Cog):
             res.append(f"{STATUS_EMOJIS.get(status)} `c{canvas_code}`")
         if not res:
             return await ctx.send("You haven't added any log keys yet.")
-        
+
         coming_fields = []
         current_field = ""
-        for line in res: 
+        for line in res:
             if len(current_field) + len(line) + 1 > 1024:
                 coming_fields.append(current_field)
                 current_field = line
             else:
                 if current_field:
-                    current_field += f"\n{line}" 
-                else: 
+                    current_field += f"\n{line}"
+                else:
                     current_field = line
         coming_fields.append(current_field)
 
@@ -477,12 +476,16 @@ class UserManager(commands.Cog):
         columns = ["", "", ""]
         for i, line in enumerate(res):
             col_index = i % 3
-            if (len(columns[col_index]) + len(line) + 1) > 1024 or \
-                (total_chars + len(line) + 1 > 6000) or \
-                (len(current_embed.fields) >= 25):
+            if (
+                (len(columns[col_index]) + len(line) + 1) > 1024
+                or (total_chars + len(line) + 1 > 6000)
+                or (len(current_embed.fields) >= 25)
+            ):
                 for col_text in columns:
                     if col_text:
-                        current_embed.add_field(name="\u200b", value=col_text, inline=True)
+                        current_embed.add_field(
+                            name="\u200b", value=col_text, inline=True
+                        )
                 coming_embeds.append(current_embed)
                 current_embed = disnake.Embed(color=0x66C5CC).set_author(name=ctx.author)
                 total_chars = 0
@@ -493,15 +496,17 @@ class UserManager(commands.Cog):
             if col_text:
                 if len(current_embed.fields) >= 25:
                     coming_embeds.append(current_embed)
-                    current_embed = disnake.Embed(color=0x66C5CC).set_author(name=ctx.author)
+                    current_embed = disnake.Embed(color=0x66C5CC).set_author(
+                        name=ctx.author
+                    )
                 current_embed.add_field(name="\u200b", value=col_text, inline=True)
 
         coming_embeds.append(current_embed)
         coming_embeds[-1].add_field(
-                name="Key Status",
-                value=f"{STATUS_EMOJIS['online']} = `key added` {STATUS_EMOJIS['offline']} = `key not added`",
-                inline=False,
-                    )
+            name="Key Status",
+            value=f"{STATUS_EMOJIS['online']} = `key added` {STATUS_EMOJIS['offline']} = `key not added`",
+            inline=False,
+        )
         sent_messages = None
         slash = isinstance(ctx, disnake.AppCmdInter)
         for embed in coming_embeds:
@@ -512,7 +517,6 @@ class UserManager(commands.Cog):
                     sent_messages = await ctx.send(embed=embed)
                 else:
                     sent_messages = await sent_messages.reply(embed=embed)
-
 
     @user.sub_command(name="unsetkey")
     async def _unsetkey(
@@ -543,7 +547,9 @@ class UserManager(commands.Cog):
             for canvas_code in canvases:
                 await db_users.delete_key(ctx.author.id, canvas_code)
 
-            return await ctx.send(":white_check_mark: All your log keys were successfully deleted.")
+            return await ctx.send(
+                ":white_check_mark: All your log keys were successfully deleted."
+            )
         else:
             canvas_code = check_canvas_code(canvas_code_input)
             if canvas_code is None:

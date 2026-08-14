@@ -312,7 +312,7 @@ class UserManager(commands.Cog):
         if isinstance(inter, disnake.AppCmdInter):
             usage = "/placemap canvas-code:<the canvas you want>"
         else:
-            usage = f"{inter.prefix}placemap <canvas code>"
+            usage = f"{get_display_prefix(self.bot)}placemap <canvas code>"
         info_embed.add_field(name="How does this work?", value=instructions)
         info_embed.add_field(
             name="Now how do I get my placemaps?",

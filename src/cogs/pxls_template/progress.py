@@ -31,6 +31,7 @@ from utils.discord_utils import (
     image_to_file,
 )
 from utils.image.image_utils import find_upscale, v_concatenate
+from utils.log import get_logger
 from utils.plot_utils import (
     fig2img,
     get_gradient_palette,
@@ -55,6 +56,8 @@ from utils.time_converter import (
 )
 from utils.timezoneslib import get_timezone
 from utils.utils import BadResponseError, make_progress_bar, shorten_list
+
+logger = get_logger(__name__)
 
 
 class Progress(commands.Cog):
@@ -1737,10 +1740,29 @@ class Progress(commands.Cog):
                             timeout=MAX_TIME,
                         )
                     )
-                snapshot_images = await asyncio.gather(*tasks)
+                snapshot_images = await asyncio.gather(*tasks, return_exceptions=True)
         except Exception:
             embed.description = "**:x: Downloading snapshots**... error\n"
             embed.description += "An error occurred while downloading the snapshots."
+            embed.color = disnake.Color.red()
+            await m.edit(embed=embed)
+            return
+
+        # a snapshot can be unreachable (e.g. an old row pointing at an image
+        # host that has since expired) or time out: skip those frames instead of
+        # failing the whole timelapse on them
+        available = [
+            (row, image)
+            for row, image in zip(snapshot_urls, snapshot_images)
+            if isinstance(image, Image.Image)
+        ]
+        skipped = len(snapshot_images) - len(available)
+        if len(available) < 2:
+            embed.description = "**:x: Downloading snapshots**... error\n"
+            embed.description += "Only {}/{} snapshots could be downloaded, which isn't enough to make a timelapse.".format(
+                len(available), len(snapshot_images)
+            )
+            embed.description += "\nThe snapshots for this time frame are most likely unavailable, try a more recent one."
             embed.color = disnake.Color.red()
             await m.edit(embed=embed)
             return
@@ -1749,33 +1771,53 @@ class Progress(commands.Cog):
         embed.description = ":white_check_mark: **Downloading the snapshots**... done!\n\n<a:typing:675416675591651329> **Cropping the snapshots**..."
         await m.edit(embed=embed)
         frames = []
-        for snapshot_image in snapshot_images:
-            if display == "canvas":
-                offset = 5  # offset around the template area
-                ss_frame = snapshot_image.crop(
-                    (
-                        template.ox - offset,
-                        template.oy - offset,
-                        template.ox + template.width + offset,
-                        template.oy + template.height + offset,
+        kept_rows = []
+        for row, snapshot_image in available:
+            try:
+                if display == "canvas":
+                    offset = 5  # offset around the template area
+                    ss_frame = snapshot_image.crop(
+                        (
+                            template.ox - offset,
+                            template.oy - offset,
+                            template.ox + template.width + offset,
+                            template.oy + template.height + offset,
+                        )
                     )
-                )
-                snapshot_image.close()
-            elif display == "progress":
-                snapshot_array = reduce(snapshot_image, get_rgba_palette())
-                template.update_progress(snapshot_array)
-                ss_frame = template.get_progress_image(board_array=snapshot_array)
+                    snapshot_image.close()
+                elif display == "progress":
+                    snapshot_array = reduce(snapshot_image, get_rgba_palette())
+                    template.update_progress(snapshot_array)
+                    ss_frame = template.get_progress_image(board_array=snapshot_array)
 
-            # upscale the images if they're too big
-            scale = find_upscale(ss_frame)
-            if scale > 1:
-                ss_frame_resized = ss_frame.resize(
-                    (ss_frame.width * scale, ss_frame.height * scale), Image.NEAREST
-                )
-                ss_frame.close()
-            else:
-                ss_frame_resized = ss_frame
+                # upscale the images if they're too big
+                scale = find_upscale(ss_frame)
+                if scale > 1:
+                    ss_frame_resized = ss_frame.resize(
+                        (ss_frame.width * scale, ss_frame.height * scale), Image.NEAREST
+                    )
+                    ss_frame.close()
+                else:
+                    ss_frame_resized = ss_frame
+            except Exception:
+                # a corrupted image only fails here, as Image.open() is lazy
+                logger.exception(f"Failed to process the snapshot at {row[0]}")
+                skipped += 1
+                continue
             frames.append(ss_frame_resized)
+            kept_rows.append(row)
+
+        if len(frames) < 2:
+            embed.description = "**:x: Cropping the snapshots**... error\n"
+            embed.description += (
+                "Not enough usable snapshots were found to make a timelapse."
+            )
+            embed.color = disnake.Color.red()
+            await m.edit(embed=embed)
+            return
+        # only keep the rows that made it to a frame so the times below match
+        snapshot_urls = kept_rows
+        nb_frames = len(frames)
 
         embed.description = ":white_check_mark: **Downloading the snapshots**... done!\n\n:white_check_mark: **Cropping the snapshots**... done!"
         embed.description += (
@@ -1808,6 +1850,10 @@ class Progress(commands.Cog):
             frame_duration,
             format_number(1 / (frame_duration / 1000)),
         )
+        if skipped:
+            description += (
+                f"\n• Skipped frames: `{skipped}` (snapshot images unavailable)"
+            )
         embed.description = description
         embed.set_footer(text=f"Done in {format_number(time.time()-start)}s")
         file = disnake.File(fp=animated_img, filename="timelapse.gif")

@@ -17,7 +17,7 @@ from utils.pxls.websocket_client import WebsocketClient
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 load_dotenv()
 
-VERSION = "2.8.1"
+VERSION = "2.9.0"
 BOT_INVITE = os.getenv("BOT_INVITE")
 SERVER_INVITE = os.getenv("SERVER_INVITE")
 

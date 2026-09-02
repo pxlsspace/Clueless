@@ -359,8 +359,8 @@ class PxlsStats(commands.Cog):
             dt2 = user_row["datetime"]
             dt1 = record_list[0]["datetime"]
             best_possible, average_cooldown = await get_best_possible(dt1, dt2)
-            perfect_amount = int(best_possible * 0.995)
             fast_amount = int(best_possible * 0.95)
+            perfect_amount = int(best_possible)
 
             if last_15m > best_possible:
                 status = "online (botting)"

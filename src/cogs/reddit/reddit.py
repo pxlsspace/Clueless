@@ -95,16 +95,34 @@ class Reddit(commands.Cog, name="Image"):
                 submission_url, image_url, title, subreddit_name, ex_time
             )
             await ctx.send(embed=embed)
-        except Exception: 
-            await ctx.send(":x: Failed to query reddit for an image. We're possibly being blocked :-()")
+        except Exception:
+            await ctx.send(
+                ":x: Failed to query reddit for an image. We're possibly being blocked :-()"
+            )
+
+    @commands.cooldown(1, 2)
+    @commands.slash_command(name="kitten", description="Send a random kitten image.")
+    async def _kitten(self, inter):
+        await inter.response.defer()
+        subreddit = random.choice(["tuckedinkitties", "kitten"])
+        await self.send_random_image(inter, subreddit, "Here, have a kitten!")
 
     @commands.cooldown(1, 2)
     @commands.command(
-        aliases=["kitty", "neko", "cat"], description="Send a random kitten image.", ratelimit=1
+        aliases=["kitty", "neko", "cat"],
+        description="Send a random kitten image.",
+        ratelimit=1,
     )
     async def kitten(self, ctx):
         subreddit = random.choice(["tuckedinkitties", "kitten"])
         await self.send_random_image(ctx, subreddit, "Here, have a kitten!")
+
+    @commands.cooldown(1, 2)
+    @commands.slash_command(name="duck", description="Send a random duck image.")
+    async def _duck(self, inter):
+        await inter.response.defer()
+        subreddit = "duck"
+        await self.send_random_image(inter, subreddit, "quack quack")
 
     @commands.cooldown(1, 2)
     @commands.command(description="Send a random duck image.")
@@ -113,16 +131,37 @@ class Reddit(commands.Cog, name="Image"):
         await self.send_random_image(ctx, subreddit, "quack quack")
 
     @commands.cooldown(1, 2)
+    @commands.slash_command(name="bird", description="Send a random bird image.")
+    async def _bird(self, inter):
+        await inter.response.defer()
+        subreddit = random.choice(["birding", "birdpics"])
+        await self.send_random_image(inter, subreddit, "Here, have a bird!")
+
+    @commands.cooldown(1, 2)
     @commands.command(description="Send a random bird image.")
     async def bird(self, ctx):
         subreddit = random.choice(["birding", "birdpics"])
         await self.send_random_image(ctx, subreddit, "Here, have a bird!")
 
     @commands.cooldown(1, 2)
+    @commands.slash_command(name="snek", description="Send a random snek image.")
+    async def _snek(self, inter):
+        await inter.response.defer()
+        subreddit = "Sneks"
+        await self.send_random_image(inter, subreddit, "s  n  e  k")
+
+    @commands.cooldown(1, 2)
     @commands.command(description="Send a random snek image.")
     async def snek(self, ctx):
         subreddit = "Sneks"
         await self.send_random_image(ctx, subreddit, "s  n  e  k")
+
+    @commands.cooldown(1, 2)
+    @commands.slash_command(name="doggo", description="Send a random doggo image.")
+    async def _doggo(self, inter):
+        await inter.response.defer()
+        subreddit = random.choice(["dog", "dogpictures", "puppies", "PuppySmiles"])
+        await self.send_random_image(inter, subreddit, "Here, have a doggo!")
 
     @commands.cooldown(1, 2)
     @commands.command(description="Send a random doggo image.")

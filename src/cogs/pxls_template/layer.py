@@ -10,7 +10,7 @@ from main import tracked_templates
 from utils.arguments_parser import MyParser
 from utils.discord_utils import CreateTemplateView, get_image_url, image_to_file
 from utils.pxls.template_manager import Combo, layer
-from utils.setup import stats, s3compat_app
+from utils.setup import s3compat_app, stats
 
 
 class Layer(commands.Cog):
@@ -76,7 +76,15 @@ class Layer(commands.Cog):
         metadata = {
             "discord_id": f"{ctx.author.id}",
         }
-        template_image_url = await s3compat_app.upload_image(img, metadata)
+        try:
+            template_image_url = await s3compat_app.upload_image(img, metadata)
+        except ValueError as e:
+            return await ctx.send(f":x: {e}")
+        except Exception as e:
+            print(e)
+            return await ctx.send(
+                ":x: An error occurred while uploading the image to s3compat, please try again later."
+            )
         embed.set_image(url=template_image_url)
 
         # Use the combo object here because it doesn't generate a placeable mask

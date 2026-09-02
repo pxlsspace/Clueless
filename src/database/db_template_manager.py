@@ -191,6 +191,13 @@ class DbTemplateManager:
         """Save the combo stats in the database, create a combo template in the
         database if it's not found"""
         if not await self.get_template_id(combo):
+            # the combo is owned by the bot itself, which never goes through
+            # get_discord_user(), so register it to satisfy the owner_id
+            # foreign key on discord_user
+            await self.db.sql_insert(
+                "INSERT OR IGNORE INTO discord_user(discord_id) VALUES(?)",
+                combo.owner_id,
+            )
             await self.create_template(combo)
             logger.info("New combo created in the database")
         return await self.create_template_stat(combo, datetime, progress)

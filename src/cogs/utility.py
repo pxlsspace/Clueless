@@ -1,7 +1,7 @@
 import platform
 import time
-from sys import exit
 from datetime import datetime, timedelta, timezone
+from sys import exit
 
 import disnake
 from disnake.ext import commands
@@ -16,6 +16,7 @@ from utils.discord_utils import (
     UserConverter,
     format_number,
     format_table,
+    get_display_prefix,
     get_image_url,
     image_to_file,
 )
@@ -43,18 +44,6 @@ class Utility(commands.Cog):
     @commands.command(description="pong! (show the bot latency)")
     async def ping(self, ctx):
         await ctx.send(f"pong! (bot latency: `{round(self.bot.latency*1000,2)}` ms)")
-
-    @commands.command(usage="[prefix]", description="Change or display the bot prefix.")
-    @commands.check_any(
-        commands.is_owner(), commands.has_permissions(administrator=True)
-    )
-    async def prefix(self, ctx, prefix=None):
-        if prefix is None:
-            prefix = ctx.prefix
-            await ctx.send("Current prefix: `" + prefix + "`")
-        else:
-            await db_servers.update_prefix(prefix, ctx.guild.id)
-            await ctx.send(":white_check_mark: Prefix set to `" + prefix + "`")
 
     choices = ["years", "months", "weeks", "days", "hours", "minutes", "seconds"]
 
@@ -122,15 +111,18 @@ class Utility(commands.Cog):
 
         await ctx.send(f"{str_to_td(input,raw=True)} = {res}.")
 
-    @commands.command(hidden=True)
-    @commands.is_owner()
-    async def rl(self, ctx, extension):
+    async def _do_reload(self, ctx, extension):
         try:
             self.bot.reload_extension("cogs." + extension)
         except Exception as e:
             return await ctx.send("```:x: {}: {} ```".format(type(e).__name__, e))
 
         await ctx.send(f":white_check_mark: Extension `{extension}` has been reloaded")
+
+    @commands.command(hidden=True)
+    @commands.is_owner()
+    async def rl(self, ctx, extension):
+        await self._do_reload(ctx, extension)
 
     @commands.slash_command(name="time")
     async def _time(self, inter: disnake.AppCmdInter, timezone: str = None):
@@ -167,7 +159,9 @@ class Utility(commands.Cog):
             if timezone is None:
                 err_msg = (
                     ":x: You haven't set your timezone!\n(use `{}{} <timezone>`)".format(
-                        ctx.prefix if isinstance(ctx, commands.Context) else "/",
+                        get_display_prefix(self.bot)
+                        if isinstance(ctx, commands.Context)
+                        else "/",
                         "settimezone"
                         if isinstance(ctx, commands.Context)
                         else "user settimezone",
@@ -201,7 +195,15 @@ class Utility(commands.Cog):
         await self.sql(ctx, sql_expression=sql_expression, as_text=True)
 
     async def sql(self, ctx, *, sql_expression, as_text=True):
-        async with ctx.typing():
+        # slash interactions have no `.typing()` (they're deferred by the caller instead)
+        if isinstance(ctx, commands.Context):
+            async with ctx.typing():
+                start = time.time()
+                try:
+                    rows = await db_servers.db.sql_select(sql_expression)
+                except Exception as e:
+                    return await ctx.send(f":x: SQL error: ```{e}```")
+        else:
             start = time.time()
             try:
                 rows = await db_servers.db.sql_select(sql_expression)
@@ -240,21 +242,34 @@ class Utility(commands.Cog):
             file = await image_to_file(img, "table.png", embed)
             return await ctx.send(file=file, embed=embed)
 
-    @commands.command(hidden=True, usage="<sql expression>")
-    @commands.is_owner()
-    async def sqlcommit(self, ctx, *, sql_expression):
-        async with ctx.typing():
+    async def _do_sqlcommit(self, ctx, sql_expression):
+        # slash interactions have no `.typing()` (they're deferred by the caller instead)
+        if isinstance(ctx, commands.Context):
+            async with ctx.typing():
+                try:
+                    nb_lines = await db_servers.db.sql_update(sql_expression)
+                except Exception as e:
+                    return await ctx.send(f":x: SQL error: ```{e}```")
+        else:
             try:
                 nb_lines = await db_servers.db.sql_update(sql_expression)
             except Exception as e:
                 return await ctx.send(f":x: SQL error: ```{e}```")
         return await ctx.send(f"Done! ({nb_lines} lines affected)")
 
+    @commands.command(hidden=True, usage="<sql expression>")
+    @commands.is_owner()
+    async def sqlcommit(self, ctx, *, sql_expression):
+        await self._do_sqlcommit(ctx, sql_expression)
+
+    async def _do_restart(self, ctx):
+        await ctx.send("Restarting now...")
+        exit()
+
     @commands.command(hidden=True)
     @commands.is_owner()
     async def restart(self, ctx):
-        await ctx.send("Restarting now...")
-        exit()
+        await self._do_restart(ctx)
 
     @commands.slash_command(name="botinfo")
     async def _botinfo(self, inter: disnake.AppCmdInter):
@@ -264,13 +279,13 @@ class Utility(commands.Cog):
     @commands.command(
         name="botinfo",
         aliases=["binfo"],
-        description="Show some stats and information about the bot.")
+        description="Show some stats and information about the bot.",
+    )
     async def botinfo(self, ctx):
         app_info = await self.bot.application_info()
         owner = app_info.owner
-        me = ctx.me
+        me = self.bot.user
         bot_age = td_format(disnake.utils.utcnow() - me.created_at, hide_seconds=True)
-        server_prefix = await db_servers.get_prefix(self.bot, ctx)
         # get some bot stats
         guild_count = len(self.bot.guilds)
         commands_count = len(self.bot.commands)
@@ -305,7 +320,7 @@ class Utility(commands.Cog):
         for i, command in enumerate(top_commands_array):
             command_name = command["command_name"]
             usage = format_number(command["usage"])
-            top_commands += "{}) `>{}` | used **{}** times (**{}%**)\n".format(
+            top_commands += "{}) `{}` | used **{}** times (**{}%**)\n".format(
                 i + 1,
                 command_name,
                 usage,
@@ -345,7 +360,7 @@ class Utility(commands.Cog):
         user_info = f"• You have used this bot **{user_usage_count}** times!\n"
         user_info += f"• Your user rank is: **{user_usage_rank}**"
         if most_used_command:
-            user_info += "\n• Your most used command is `>{}` with **{}** uses, that's **{}%** of your total uses.".format(
+            user_info += "\n• Your most used command is `{}` with **{}** uses, that's **{}%** of your total uses.".format(
                 most_used_command[0]["command_name"],
                 most_used_command[0]["usage"],
                 format_number(
@@ -359,8 +374,7 @@ class Utility(commands.Cog):
         embed.description += (
             f"Bot version: `{VERSION}` - Ping: `{round(self.bot.latency*1000,2)} ms`\n"
         )
-        embed.description += f"Bot age: {bot_age}\n"
-        embed.description += f"Server prefix: `{server_prefix}`"
+        embed.description += f"Bot age: {bot_age}"
         embed.add_field(name="**Bot Stats**", value=stats, inline=False)
         embed.add_field(
             name=f"**Top {len(top_commands_array)} Commands**",
@@ -584,14 +598,7 @@ class Utility(commands.Cog):
         embed.timestamp = dt
         await ctx.send(embed=embed)
 
-    @commands.command(
-        name="leave",
-        description="Make the bot leave a server. (owner only)",
-        hidden=True,
-        usage="<server ID>",
-    )
-    @commands.is_owner()
-    async def leave(self, ctx, guild_id):
+    async def _do_leave(self, ctx, guild_id):
         guild = self.bot.get_guild(guild_id)
         if guild is None:
             try:
@@ -609,13 +616,16 @@ class Utility(commands.Cog):
         )
 
     @commands.command(
-        name="verify",
-        description="Verify a server ID and get its name. (owner only)",
+        name="leave",
+        description="Make the bot leave a server. (owner only)",
         hidden=True,
         usage="<server ID>",
     )
     @commands.is_owner()
-    async def verify(self, ctx, guild_id):
+    async def leave(self, ctx, guild_id):
+        await self._do_leave(ctx, guild_id)
+
+    async def _do_verify(self, ctx, guild_id):
         guild = self.bot.get_guild(guild_id)
         if guild is None:
             try:
@@ -624,17 +634,19 @@ class Utility(commands.Cog):
                 return await ctx.send(f":x: {e}")
         guild_name = guild.name
         guild_id = guild.id
-        return await ctx.send(
-            f"ID `{guild_id}` returns **{guild_name}**"
-        )
+        return await ctx.send(f"ID `{guild_id}` returns **{guild_name}**")
 
     @commands.command(
-        name="serverlist",
-        description="Show the list of servers the bot is in. (owner only)",
+        name="verify",
+        description="Verify a server ID and get its name. (owner only)",
         hidden=True,
+        usage="<server ID>",
     )
     @commands.is_owner()
-    async def serverlist(self, ctx):
+    async def verify(self, ctx, guild_id):
+        await self._do_verify(ctx, guild_id)
+
+    async def _do_serverlist(self, ctx):
         sql = """
             SELECT
                 server_name,
@@ -701,6 +713,114 @@ class Utility(commands.Cog):
 
         view = ServerPagesView(ctx.author, embeds=embeds)
         await ctx.send(embed=embeds[0], view=view)
+
+    @commands.command(
+        name="serverlist",
+        description="Show the list of servers the bot is in. (owner only)",
+        hidden=True,
+    )
+    @commands.is_owner()
+    async def serverlist(self, ctx):
+        await self._do_serverlist(ctx)
+
+    # --- /owner slash group ---
+
+    @commands.slash_command(
+        name="owner",
+        default_member_permissions=disnake.Permissions(administrator=True),
+    )
+    async def _owner(self, inter: disnake.AppCmdInter):
+        pass
+
+    @_owner.sub_command(name="reload", description="Reload an extension. (owner only)")
+    @commands.is_owner()
+    async def _owner_reload(self, inter: disnake.AppCmdInter, extension: str):
+        """Reload an extension. (owner only)
+
+        Parameters
+        ----------
+        extension: The name of the extension (cog) to reload."""
+        await inter.response.defer()
+        await self._do_reload(inter, extension)
+
+    @_owner.sub_command(name="sql", description="Run a read-only SQL query. (owner only)")
+    @commands.is_owner()
+    async def _owner_sql(self, inter: disnake.AppCmdInter, expression: str):
+        """Run a read-only SQL query and show the result as an image. (owner only)
+
+        Parameters
+        ----------
+        expression: The SQL expression to run."""
+        await inter.response.defer()
+        await self.sql(inter, sql_expression=expression, as_text=False)
+
+    @_owner.sub_command(
+        name="sqltext", description="Run a read-only SQL query. (owner only)"
+    )
+    @commands.is_owner()
+    async def _owner_sqltext(self, inter: disnake.AppCmdInter, expression: str):
+        """Run a read-only SQL query and show the result as text. (owner only)
+
+        Parameters
+        ----------
+        expression: The SQL expression to run."""
+        await inter.response.defer()
+        await self.sql(inter, sql_expression=expression, as_text=True)
+
+    @_owner.sub_command(
+        name="sqlcommit", description="Run a write SQL query. (owner only)"
+    )
+    @commands.is_owner()
+    async def _owner_sqlcommit(self, inter: disnake.AppCmdInter, expression: str):
+        """Run a write (INSERT/UPDATE/DELETE) SQL query. (owner only)
+
+        Parameters
+        ----------
+        expression: The SQL expression to run."""
+        await inter.response.defer()
+        await self._do_sqlcommit(inter, expression)
+
+    @_owner.sub_command(name="restart", description="Restart the bot. (owner only)")
+    @commands.is_owner()
+    async def _owner_restart(self, inter: disnake.AppCmdInter):
+        """Restart the bot. (owner only)"""
+        await self._do_restart(inter)
+
+    @_owner.sub_command(
+        name="leave", description="Make the bot leave a server. (owner only)"
+    )
+    @commands.is_owner()
+    async def _owner_leave(self, inter: disnake.AppCmdInter, guild_id: str):
+        """Make the bot leave a server. (owner only)
+
+        Parameters
+        ----------
+        guild_id: The ID of the server to leave."""
+        await inter.response.defer()
+        await self._do_leave(inter, guild_id)
+
+    @_owner.sub_command(
+        name="verify", description="Verify a server ID and get its name. (owner only)"
+    )
+    @commands.is_owner()
+    async def _owner_verify(self, inter: disnake.AppCmdInter, guild_id: str):
+        """Verify a server ID and get its name. (owner only)
+
+        Parameters
+        ----------
+        guild_id: The ID of the server to verify."""
+        await inter.response.defer()
+        await self._do_verify(inter, guild_id)
+
+    @_owner.sub_command(
+        name="serverlist",
+        description="Show the list of servers the bot is in. (owner only)",
+    )
+    @commands.is_owner()
+    async def _owner_serverlist(self, inter: disnake.AppCmdInter):
+        """Show the list of servers the bot is in. (owner only)"""
+        await inter.response.defer()
+        await self._do_serverlist(inter)
 
     # Populate the snapshot database with snapshot URLs sent in the snapshots channel
     # (This is meant to be used only once)

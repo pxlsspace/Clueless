@@ -6,7 +6,7 @@ from disnake.ext import commands
 
 from cogs.pxls.speed import get_stats_graph
 from utils.arguments_parser import check_ranks, parse_leaderboard_args
-from utils.discord_utils import format_number, image_to_file
+from utils.discord_utils import format_number, get_display_prefix, image_to_file
 from utils.image.image_utils import hex_str_to_int
 from utils.plot_utils import fig2img, get_theme, hex_to_rgba_string
 from utils.pxls.cooldown import get_best_possible
@@ -137,7 +137,7 @@ class PxlsLeaderboard(commands.Cog, name="Pxls Leaderboard"):
             if pxls_user_id is None:
                 is_slash = not isinstance(ctx, commands.Context)
                 cmd_name = "user setname" if is_slash else "setname"
-                prefix = "/" if is_slash else ctx.prefix
+                prefix = "/" if is_slash else get_display_prefix(self.bot)
                 usage_text = f"(You can set your default username with `{prefix}{cmd_name} <username>`)"
                 return await ctx.send(
                     ":x: You need to have a set username to use `!`.\n" + usage_text

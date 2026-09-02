@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from disnake.ext import commands
 
 from utils.arguments_parser import parse_speed_args
-from utils.discord_utils import format_number, image_to_file
+from utils.discord_utils import format_number, get_display_prefix, image_to_file
 from utils.image.image_utils import hex_str_to_int, v_concatenate
 from utils.plot_utils import add_glow, fig2img, get_theme, hex_to_rgba_string
 from utils.pxls.cooldown import get_best_possible
@@ -116,7 +116,7 @@ class PxlsSpeed(commands.Cog):
         pxls_user_id = discord_user["pxls_user_id"]
         is_slash = not isinstance(ctx, commands.Context)
         cmd_name = "user setname" if is_slash else "setname"
-        prefix = "/" if is_slash else ctx.prefix
+        prefix = "/" if is_slash else get_display_prefix(self.bot)
         usage_text = f"(Use {'`/speed usernames:<your name>`' if is_slash else f'`{prefix}speed <your name>`'} or you can set your default name with `{prefix}{cmd_name} <your name>`)"
 
         if usernames is None:

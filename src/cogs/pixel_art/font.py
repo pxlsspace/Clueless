@@ -2,7 +2,11 @@ import disnake
 from disnake.ext import commands
 
 from utils.arguments_parser import parse_pixelfont_args
-from utils.discord_utils import autocomplete_palette_with_none, image_to_file
+from utils.discord_utils import (
+    autocomplete_palette_with_none,
+    get_display_prefix,
+    image_to_file,
+)
 from utils.font.font_manager import PixelText, get_all_fonts, get_allowed_fonts
 from utils.image.image_utils import get_color
 
@@ -91,7 +95,9 @@ class Font(commands.Cog):
             else:
                 font_color_name, font_rgba = get_color(font_color)
                 if font_rgba is None:
-                    return await ctx.send(f":x: The font color `{font_color}` is invalid.")
+                    return await ctx.send(
+                        f":x: The font color `{font_color}` is invalid."
+                    )
         else:
             font_rgba = None
 
@@ -144,7 +150,16 @@ class Font(commands.Cog):
         # send the image(s)
         await ctx.send(files=files)
 
-    @commands.command(description="Show the list of the fonts available.")
+    @commands.slash_command(name="fonts")
+    async def _fonts(self, inter: disnake.AppCmdInter):
+        """Show the list of the fonts available."""
+        await inter.response.defer()
+        await self.fonts(inter)
+
+    @commands.command(name="fonts", description="Show the list of the fonts available.")
+    async def p_fonts(self, ctx):
+        await self.fonts(ctx)
+
     async def fonts(self, ctx):
         fonts = get_all_fonts()
         allowed_fonts = get_allowed_fonts()
@@ -158,7 +173,9 @@ class Font(commands.Cog):
             else:
                 msg += f"\t• `{font}`\n"
         embed = disnake.Embed(title="Available Fonts", color=0x66C5CC, description=msg)
-        embed.set_footer(text=f"* = available for {ctx.prefix}setfont\n")
+        embed.set_footer(
+            text=f"* = available for {get_display_prefix(self.bot)}setfont\n"
+        )
         return await ctx.send(embed=embed)
 
 

@@ -1,8 +1,7 @@
 import disnake
 from disnake.ext import commands
 
-from utils.discord_utils import get_embed_author
-from utils.setup import db_servers
+from utils.discord_utils import get_display_prefix, get_embed_author
 
 TYPES = {
     3: "text",
@@ -106,14 +105,18 @@ class Help(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot: commands.Bot = bot
 
+    def _display_prefix(self):
+        """Human-friendly prefix shown in help/usage text (mention dispatch)."""
+        return get_display_prefix(self.bot)
+
     async def send_home_help(self, ctx, author, is_slash):
-        """Called when >help or /help is used."""
+        """Called when (by default) @Clueless help or /help is used."""
         if is_slash:
             categories = get_slash_mapping(self.bot)
             prefix = "/"
         else:
             categories = get_bot_mapping(self.bot)
-            prefix = await db_servers.get_prefix(self.bot, ctx)
+            prefix = self._display_prefix()
 
         # create the embed header
         home_emoji = HOME_EMOJI
@@ -165,7 +168,7 @@ class Help(commands.Cog):
     async def send_category_help(
         self, ctx, category_name, author, is_slash, send_buttons=True
     ):
-        """called when >help <category> or /help <category> is used."""
+        """called whenh (by default) @Clueless help <category> or /help <category> is used."""
         if category_name == "Home":
             return await self.send_home_help(ctx, author, is_slash)
 
@@ -174,7 +177,7 @@ class Help(commands.Cog):
             prefix = "/"
         else:
             categories = get_bot_mapping(self.bot)
-            prefix = await db_servers.get_prefix(self.bot, ctx)
+            prefix = self._display_prefix()
 
         category_infos = CATEGORIES[category_name]
         commands = categories[category_name]
@@ -214,7 +217,7 @@ class Help(commands.Cog):
             await ctx.send(embed=emb, view=view)
 
     async def send_command_help(self, ctx, command, is_slash):
-        """called when >help <command> or /help <command> is used."""
+        """called when (by default) @Clueless help <command> or /help <command> is used."""
         if is_slash:
             prefix = "/"
             command_name = command.qualified_name
@@ -222,12 +225,12 @@ class Help(commands.Cog):
             command_params = get_slash_command_parameters(command)
             description = command.body.description
         else:
-            prefix = ctx.prefix
+            prefix = self._display_prefix()
             command_name = command.qualified_name
             command_usage = command.usage
             command_params = command.help
             description = command.description
-        prefix = "/" if is_slash else ctx.prefix
+        prefix = "/" if is_slash else self._display_prefix()
         emb = disnake.Embed(title=f"**Command {command_name}**", color=EMBED_COLOR)
         emb.set_author(name=ctx.me)
         emb.add_field(
@@ -252,8 +255,8 @@ class Help(commands.Cog):
         await ctx.send(embed=emb)
 
     async def send_group_help(self, ctx, group):
-        """Called when ">help <group command> is used."""
-        prefix = ctx.prefix
+        """Called when (by default) @Clueless help <group command> is used."""
+        prefix = self._display_prefix()
         emb = disnake.Embed(title=f"**Command {group.name}**", color=EMBED_COLOR)
         emb.set_author(name=ctx.me)
         emb.add_field(

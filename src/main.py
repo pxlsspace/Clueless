@@ -5,6 +5,7 @@ from datetime import timezone
 import disnake
 from disnake.ext import commands
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from utils.log import close_loggers, get_logger, setup_loggers
@@ -23,7 +24,7 @@ from utils.setup import (
 intents = disnake.Intents.default()
 intents.members = False
 intents.presences = False
-intents.message_content = True
+intents.message_content = False
 activity = disnake.Activity(
     type=disnake.ActivityType.watching, name="Watching you place those pixels 👀"
 )
@@ -37,7 +38,7 @@ fetch_owner_ids = os.getenv("OWNER_IDS", "").strip()
 if fetch_owner_ids:
     owner_ids = {int(x) for x in fetch_owner_ids.split(",") if x}
     bot = commands.Bot(
-        command_prefix=db_servers.get_prefix,
+        command_prefix=commands.when_mentioned,
         help_command=None,
         intents=intents,
         case_insensitive=True,
@@ -45,11 +46,11 @@ if fetch_owner_ids:
         test_guilds=GUILD_IDS,
         reload=bool(GUILD_IDS),
         allowed_mentions=allowed_mentions,
-        owner_ids=owner_ids
+        owner_ids=owner_ids,
     )
 else:
     bot = commands.Bot(
-        command_prefix=db_servers.get_prefix,
+        command_prefix=commands.when_mentioned,
         help_command=None,
         intents=intents,
         case_insensitive=True,
@@ -211,8 +212,13 @@ async def on_command_error(ctx, error):
 
     # handled errors
     if not slash_command and isinstance(error, commands.MissingRequiredArgument):
+        # local import: utils.discord_utils imports `tracked_templates` from this
+        # module, so importing it at module level here would create a circular
+        # import during startup.
+        from utils.discord_utils import get_display_prefix
+
         text = ":x: " + str(error) + "\n"
-        text += f"Usage: `{ctx.prefix}{command_name} {ctx.command.usage}`"
+        text += f"Usage: `{get_display_prefix(bot)}{command_name} {ctx.command.usage}`"
         return await ctx.send(text)
 
     if isinstance(error, (commands.MissingPermissions, commands.NotOwner)):
@@ -372,26 +378,27 @@ async def on_message(message):
                     return
 
     try:
-        if message.content == ">_>":
-            return await message.channel.send("<_<")
-        if message.content == ">.>":
-            return await message.channel.send("<.<")
-        if message.content == ">_<":
-            return await message.channel.send("<_>")
-        if message.content == "aa":
-            await message.channel.send("<:watermeloneat:955627387666694155>")
-        if message.content == "AA":
-            await message.channel.send("<:watermelonDEATH:949447275753648268>")
-    except Exception:
-        pass
-
-    try:
         if bot.user in message.mentions:
-            if "good bot" in message.content.lower():
+            # content after stripping the leading mention(s)
+            content = message.content
+            for mention in (bot.user.mention, f"<@!{bot.user.id}>"):
+                content = content.replace(mention, "", 1)
+            content = content.strip()
+
+            egg_replies = {">_>": "<_<", ">.>": "<.<", ">_<": "<_>"}
+            egg_reactions = {
+                "aa": "<:watermeloneat:955627387666694155>",
+                "AA": "<:watermelonDEATH:949447275753648268>",
+            }
+            if content in egg_replies:
+                return await message.channel.send(egg_replies[content])
+            if content in egg_reactions:
+                await message.channel.send(egg_reactions[content])
+            elif "good bot" in content.lower():
                 await message.add_reaction("<a:GoodBot:955658963171565658>")
-            elif "bad bot" in message.content.lower():
+            elif "bad bot" in content.lower():
                 await message.add_reaction("<a:BadBot:955659116506935336>")
-            else:
+            elif not content:
                 await message.add_reaction("<:peepoPinged:943594603632816188>")
     except Exception:
         pass
@@ -413,7 +420,10 @@ async def on_guild_join(guild: disnake.Guild):
         return
 
     if GUILD_MEMBER_MIN and guild.member_count < GUILD_MEMBER_MIN:
-        general_channel = next((channel for channel in guild.text_channels if channel.name == 'general'), None)
+        general_channel = next(
+            (channel for channel in guild.text_channels if channel.name == "general"),
+            None,
+        )
         target_channel = None
         if general_channel and general_channel.permissions_for(guild.me).send_messages:
             target_channel = general_channel
@@ -422,10 +432,14 @@ async def on_guild_join(guild: disnake.Guild):
                 if channel.permissions_for(guild.me).send_messages:
                     target_channel = channel
                     break
-        
+
         if target_channel:
-            await target_channel.send("Due to the 100 server limit, using Clueless is not supported in guilds below {0} members. Please refer to the DMs for personal use.".format(GUILD_MEMBER_MIN))
-        
+            await target_channel.send(
+                "Due to the 100 server limit, using Clueless is not supported in guilds below {0} members. Please refer to the DMs for personal use.".format(
+                    GUILD_MEMBER_MIN
+                )
+            )
+
         await guild.leave()
         return
 
@@ -447,7 +461,10 @@ async def on_guild_join(guild: disnake.Guild):
         timestamp=guild.created_at,
     )
     embed.add_field(name="**Server Name**", value=guild.name)
-    embed.add_field(name="**Owner**", value=f"<@{guild.owner_id}> ({guild.owner if guild.owner else 'Unknown'})")
+    embed.add_field(
+        name="**Owner**",
+        value=f"<@{guild.owner_id}> ({guild.owner if guild.owner else 'Unknown'})",
+    )
     embed.add_field(name="**Members**", value=guild.member_count)
     if guild.icon:
         embed.set_thumbnail(url=guild.icon.url)
@@ -475,7 +492,10 @@ async def on_guild_remove(guild):
         timestamp=guild.created_at,
     )
     embed.add_field(name="**Server Name**", value=guild.name)
-    embed.add_field(name="**Owner**", value=f"<@{guild.owner_id}> ({guild.owner if guild.owner else 'Unknown'})")
+    embed.add_field(
+        name="**Owner**",
+        value=f"<@{guild.owner_id}> ({guild.owner if guild.owner else 'Unknown'})",
+    )
     embed.add_field(name="**Members**", value=guild.member_count)
     if guild.icon:
         embed.set_thumbnail(url=guild.icon.url)

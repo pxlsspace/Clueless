@@ -13,6 +13,7 @@ from utils.discord_utils import (
     UserinfoView,
     autocomplete_pxls_name,
     format_number,
+    get_display_prefix,
     image_to_file,
 )
 from utils.plot_utils import matplotlib_to_plotly
@@ -242,7 +243,7 @@ class PxlsStats(commands.Cog):
             if pxls_user_id is None:
                 is_slash = not isinstance(ctx, commands.Context)
                 cmd_name = "user setname" if is_slash else "setname"
-                prefix = "/" if is_slash else ctx.prefix
+                prefix = "/" if is_slash else get_display_prefix(self.bot)
                 return await ctx.send(
                     f":x: You need to specify a pxls username.\n(You can set your default username with `{prefix}{cmd_name} <username>`)"
                 )
@@ -358,8 +359,8 @@ class PxlsStats(commands.Cog):
             dt2 = user_row["datetime"]
             dt1 = record_list[0]["datetime"]
             best_possible, average_cooldown = await get_best_possible(dt1, dt2)
-            perfect_amount = int(best_possible * 0.995)
             fast_amount = int(best_possible * 0.95)
+            perfect_amount = int(best_possible)
 
             if last_15m > best_possible:
                 status = "online (botting)"

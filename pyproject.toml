@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "Clueless"
-version = "2.10.0"
+version = "2.11.0"
 description = "A pxls.space stats discord bot and more!"
 authors = ["GrayTurtles"]
 license = "MIT"

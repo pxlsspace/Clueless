@@ -106,6 +106,12 @@ class Progress(commands.Cog):
         "None": "none",
     }
 
+    timelapse_display_options = {
+        "Canvas (template area with a margin)": "canvas",
+        "Template only (cropped, transparent background)": "template",
+        "Progress (correct/incorrect pixels)": "progress",
+    }
+
     @_progress.sub_command(name="check")
     async def _check(
         self,
@@ -1543,7 +1549,9 @@ class Progress(commands.Cog):
         self,
         inter: disnake.AppCmdInter,
         template: str = commands.Param(autocomplete=autocomplete_templates),
-        # display=commands.Param(default="canvas", choices=["canvas", "progress"]),
+        display: str = commands.Param(
+            default="canvas", choices=timelapse_display_options
+        ),
         last: str = None,
         before=None,
         after=None,
@@ -1557,6 +1565,7 @@ class Progress(commands.Cog):
         Parameters
         ----------
         template: The name or URL of a template.
+        display: How to display the template. (default: canvas)
         last: Makes the timelapse in the last x week/day/hour/minute. (format: ?w?d?h?m)
         before: To get the timelapse before a specific date. (format: YYYY-mm-dd HH:MM)
         after: To show the timelapse after a specific date. (format: YYYY-mm-dd HH:MM)
@@ -1564,15 +1573,18 @@ class Progress(commands.Cog):
         duration: The duration of each frame in milliseconds. (default: 100)
         """
         await inter.response.defer()
-        await self.timelapse(inter, template, last, before, after, frames, duration)
+        await self.timelapse(
+            inter, template, last, before, after, frames, duration, display
+        )
 
     @progress.command(
         name="timelapse",
         description="Make a timelapse of a template.",
-        usage="<template> [-last ?w?d?h?m] [-before YYYY-mm-dd HH:MM] [-after YYYY-mm-dd HH:MM] [-frames <frames>] [-duration <duration>]",
+        usage="<template> [-display <display option>] [-last ?w?d?h?m] [-before YYYY-mm-dd HH:MM] [-after YYYY-mm-dd HH:MM] [-frames <frames>] [-duration <duration>]",
         aliases=["tl"],
         help="""
         `<template>`: the name or URL of a template
+        `[-display <display option>]`: how to display the template (`canvas`, `template` or `progress`, default: `canvas`)
         `[-last ?w?d?h?m]`: makes the timelapse in the last x week/day/hour/minute (format: ?w?d?h?m)
         `[-before ...]`: to get the timelapse before a specific date (format: YYYY-mm-dd HH:MM)
         `[-after ...]`: to show the timelapse after a specific date (format: YYYY-mm-dd HH:MM)
@@ -1584,12 +1596,12 @@ class Progress(commands.Cog):
         # parse the arguemnts
         parser = MyParser(add_help=False)
         parser.add_argument("template", action="store")
-        # parser.add_argument(
-        #     "-display",
-        #     action="store",
-        #     default="canvas",
-        #     choices=["canvas", "progress"],
-        # )
+        parser.add_argument(
+            "-display",
+            action="store",
+            default="canvas",
+            choices=list(self.timelapse_display_options.values()),
+        )
         parser.add_argument("-last", "-l", nargs="+", default=None)
         parser.add_argument("-after", nargs="+", default=None)
         parser.add_argument("-before", nargs="+", default=None)
@@ -1610,6 +1622,7 @@ class Progress(commands.Cog):
                 parsed_args.after,
                 parsed_args.frames,
                 parsed_args.duration,
+                parsed_args.display,
             )
 
     async def timelapse(
@@ -1644,6 +1657,13 @@ class Progress(commands.Cog):
             if template is None:
                 return await ctx.send(f"No template named `{template_name}` found.")
             is_tracked = True
+
+        if display == "progress":
+            # this mode calls update_progress() on every frame, which overwrites
+            # the placed mask and progress count. get_template() hands back the
+            # shared tracked instance, so work on a copy to avoid leaving the
+            # tracker describing an old snapshot.
+            template = deepcopy(template)
 
         min_frames = 2
         max_frames = 50
@@ -1784,6 +1804,21 @@ class Progress(commands.Cog):
                             template.oy + template.height + offset,
                         )
                     )
+                    snapshot_image.close()
+                elif display == "template":
+                    # crop tight to the template and hide everything that isn't
+                    # part of it, so only the template's own pixels are visible
+                    ss_frame = snapshot_image.convert("RGBA").crop(
+                        (
+                            template.ox,
+                            template.oy,
+                            template.ox + template.width,
+                            template.oy + template.height,
+                        )
+                    )
+                    frame_array = np.array(ss_frame)
+                    frame_array[template.palettized_array == 255] = [0, 0, 0, 0]
+                    ss_frame = Image.fromarray(frame_array)
                     snapshot_image.close()
                 elif display == "progress":
                     snapshot_array = reduce(snapshot_image, get_rgba_palette())

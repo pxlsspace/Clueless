@@ -16,6 +16,42 @@ TYPES = {
 }
 
 EMBED_COLOR = 0x66C5CC
+# discord rejects the whole message if a single embed field value is longer
+FIELD_VALUE_LIMIT = 1024
+
+
+def add_field_chunked(embed: disnake.Embed, name: str, value: str, inline=False):
+    """Add a field to the embed, splitting its value over as many fields as
+    needed to stay under discord's per-field character limit.
+
+    Splits on line breaks so a command never ends up cut in half, and only
+    falls back to a hard cut for a single line longer than the limit."""
+    chunks = []
+    current = ""
+    for line in value.splitlines(keepends=True):
+        while len(line) > FIELD_VALUE_LIMIT:
+            if current:
+                chunks.append(current)
+                current = ""
+            chunks.append(line[:FIELD_VALUE_LIMIT])
+            line = line[FIELD_VALUE_LIMIT:]
+        if len(current) + len(line) > FIELD_VALUE_LIMIT:
+            chunks.append(current)
+            current = line
+        else:
+            current += line
+    if current:
+        chunks.append(current)
+
+    for i, chunk in enumerate(chunks):
+        embed.add_field(
+            # the continuation fields use a blank name to read as one list
+            name=name if i == 0 else "​",
+            value=chunk,
+            inline=inline,
+        )
+
+
 CATEGORIES = {
     "Reddit": {
         "description": "Get random images from reddit.",
@@ -139,11 +175,7 @@ class Help(commands.Cog):
                         commands_text += f"`{c.qualified_name}` "
                     else:
                         commands_text += f"`{c.name}` "
-                emb.add_field(
-                    name=f"{category_emoji} {category}",
-                    value=commands_text,
-                    inline=False,
-                )
+                add_field_chunked(emb, f"{category_emoji} {category}", commands_text)
         # add the "Other" category after the loop so it's always last
         if "Other" in categories:
             commands = categories["Other"]
@@ -155,9 +187,7 @@ class Help(commands.Cog):
                     commands_text += f"`{c.qualified_name}` "
                 else:
                     commands_text += f"`{c.name}` "
-            emb.add_field(
-                name=f"{category_emoji} Other", value=commands_text, inline=False
-            )
+            add_field_chunked(emb, f"{category_emoji} Other", commands_text)
         view = HelpView(categories, None, is_slash)
 
         if isinstance(ctx, disnake.MessageInteraction):
@@ -251,7 +281,7 @@ class Help(commands.Cog):
             emb.add_field(name="Alias(es): ", value=value, inline=False)
 
         if command_params:
-            emb.add_field(name="Parameter(s):", value=command_params)
+            add_field_chunked(emb, "Parameter(s):", command_params, inline=True)
         await ctx.send(embed=emb)
 
     async def send_group_help(self, ctx, group):
@@ -289,7 +319,7 @@ class Help(commands.Cog):
                     command.usage or "",
                     command.description or "N/A",
                 )
-            emb.add_field(name="Sub-commands: ", value=commands_value, inline=False)
+            add_field_chunked(emb, "Sub-commands: ", commands_value)
 
         await ctx.send(embed=emb)
 

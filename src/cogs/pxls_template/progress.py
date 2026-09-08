@@ -1555,7 +1555,7 @@ class Progress(commands.Cog):
         last: str = None,
         before=None,
         after=None,
-        frames: int = commands.Param(default=40, lt=50, gt=2),
+        frames: int = commands.Param(default=40, ge=2, le=150),
         duration: int = commands.Param(
             name="frame-duration", default=100, lt=1000, gt=20
         ),
@@ -1666,7 +1666,7 @@ class Progress(commands.Cog):
             template = deepcopy(template)
 
         min_frames = 2
-        max_frames = 50
+        max_frames = 150
         if nb_frames > max_frames or nb_frames < min_frames:
             return await ctx.send(
                 f":x: The number of frame must be between `{min_frames}` and `{max_frames}`."
@@ -1900,7 +1900,7 @@ class Progress(commands.Cog):
         except Exception:
             embed.set_footer(text="")
             embed.description = ":white_check_mark: **Downloading the snapshots**... done!\n\n:white_check_mark: **Cropping the snapshots**... done!"
-            embed.description += "\n\n:x: **Saving and sending the GIF**... error\n(most likely the GIF is too big for discord's limit of 8MB)"
+            embed.description += "\n\n:x: **Saving and sending the GIF**... error\n(most likely the GIF is too big for discord's limit of 25MB)"
             embed.description += (
                 "\n\n<a:typing:675416675591651329> **Uploading to imgur**..."
             )
@@ -1921,7 +1921,7 @@ class Progress(commands.Cog):
                 else:
                     msg = "unexpected error"
                 embed.description = ":white_check_mark: **Downloading the snapshots**... done!\n\n:white_check_mark: **Cropping the snapshots**... done!"
-                embed.description += "\n\n:x: **Saving and sending the GIF**... error\n(most likely the GIF is too big for discord's limit of 8MB)"
+                embed.description += "\n\n:x: **Saving and sending the GIF**... error\n(most likely the GIF is too big for discord's limit of 25MB)"
                 embed.description += f"\n\n:x: **Uploading to imgur**... {msg}"
                 embed.color = disnake.Color.red()
                 await m.edit(embed=embed)
